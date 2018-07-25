@@ -90,6 +90,7 @@ shift
 export GEANT_NOSCONDARIES=$1
 
 export USER_BC=`which bc`
+export USER_PYTHON=`which python`
 
 #printenv
 #necessary to run swif, uses local directory if swif=0 is used
@@ -875,91 +876,55 @@ if [[ "$GENR" != "0" ]]; then
 		exit 12
 	fi
 
-	if [[ "$SMEAR" != "0" ]]; then
-	    echo "RUNNING MCSMEAR"
-	    
-	    if [[ "$BKGFOLDSTR" == "BeamPhotons" || "$BKGFOLDSTR" == "None" || "$BKGFOLDSTR" == "TagOnly" ]]; then
-		echo "running MCsmear without folding in random background"
-		mcsmear -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' $STANDARD_NAME'_geant'$GEANTVER'.hddm'
-		mcsmear_return_code=$?
-	    elif [[ "$BKGFOLDSTR" == "DEFAULT" || "$BKGFOLDSTR" == "Random" ]]; then
-		rm -f count.py
-	    echo "import hddm_s" > count.py
-	    echo "print(sum(1 for r in hddm_s.istream('$bkglocstring')))" >> count.py
-	    totalnum=$(python count.py)
-		fold_skip_num=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
-		echo "skipping: "$fold_skip_num
-		echo "mcsmear -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
-		mcsmear -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
-		mcsmear_return_code=$?
-		elif [[ "$bkgloc_pre" == "loc:" ]]; then
-		rm -f count.py
-	    echo "import hddm_s" > count.py
-	    echo "print(sum(1 for r in hddm_s.istream('$bkglocstring')))" >> count.py
-	    totalnum=`python count.py`
-		fold_skip_num=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
-		echo "mcsmear -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
-		mcsmear -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
-		mcsmear_return_code=$?
-		else
-		    #trust the user and use their string
-		    echo 'mcsmear -PTHREAD_TIMEOUT=500 -o'$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm'' '$STANDARD_NAME'_geant'$GEANTVER'.hddm'' '$BKGFOLDSTR
-		    mcsmear -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' $STANDARD_NAME'_geant'$GEANTVER'.hddm' $BKGFOLDSTR
-			mcsmear_return_code=$?
-
-	    fi
-		
-			if [[ $mcsmear_return_code != 0 ]]; then
-				echo
-				echo
-				echo "Something went wrong with mcsmear"
-				echo "status code: "$mcsmear_return_code
-				exit $mcsmear_return_code
-			fi
-
-	else
-			#cp $STANDARD_NAME'_geant'$GEANTVER'.hddm' $STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm'
-			if [[ "$BKGFOLDSTR" == "BeamPhotons" || "$BKGFOLDSTR" == "None" || "$BKGFOLDSTR" == "TagOnly" ]]; then
-		echo "running MCsmear without folding in random background"
-		mcsmear -s -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' $STANDARD_NAME'_geant'$GEANTVER'.hddm'
-		mcsmear_return_code=$?
-	    elif [[ "$BKGFOLDSTR" == "DEFAULT" || "$BKGFOLDSTR" == "Random" ]]; then
-		rm -f count.py
-	    echo "import hddm_s" > count.py
-	    echo "print(sum(1 for r in hddm_s.istream('$bkglocstring')))" >> count.py
-	    totalnum=$(python count.py)
-		fold_skip_num=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
-		echo "skipping: "$fold_skip_num
-		echo "mcsmear -s -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
-		mcsmear -s -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
-		mcsmear_return_code=$?
-		elif [[ "$bkgloc_pre" == "loc:" ]]; then
-		rm -f count.py
-	    echo "import hddm_s" > count.py
-	    echo "print(sum(1 for r in hddm_s.istream('$bkglocstring')))" >> count.py
-	    totalnum=`python count.py`
-		fold_skip_num=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
-		echo "mcsmear -s -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
-		mcsmear -s -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
-		mcsmear_return_code=$?
-		else
-		    #trust the user and use their string
-		    echo 'mcsmear -s -PTHREAD_TIMEOUT=500 -o'$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm'' '$STANDARD_NAME'_geant'$GEANTVER'.hddm'' '$BKGFOLDSTR
-		    mcsmear -s -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' $STANDARD_NAME'_geant'$GEANTVER'.hddm' $BKGFOLDSTR
-			mcsmear_return_code=$?
-
-	    fi
-		
-			if [[ $mcsmear_return_code != 0 ]]; then
-				echo
-				echo
-				echo "Something went wrong with mcsmear"
-				echo "status code: "$mcsmear_return_code
-				exit $mcsmear_return_code
-			fi
+	MCSMEAR_Flags=""
+	if [[ "$SMEAR" == "0" ]]; then
+		MCSMEAR_Flags="-s"
 	fi
+	
+	echo "RUNNING MCSMEAR"
+	   
+	if [[ "$BKGFOLDSTR" == "BeamPhotons" || "$BKGFOLDSTR" == "None" || "$BKGFOLDSTR" == "TagOnly" ]]; then
+		echo "running MCsmear without folding in random background"
+		mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' $STANDARD_NAME'_geant'$GEANTVER'.hddm'
+		mcsmear_return_code=$?
+	elif [[ "$BKGFOLDSTR" == "DEFAULT" || "$BKGFOLDSTR" == "Random" ]]; then
+		rm -f count.py
+	   echo "import hddm_s" > count.py
+	   echo "print(sum(1 for r in hddm_s.istream('$bkglocstring')))" >> count.py
+	   totalnum=$($USER_PYTHON count.py)
+	   rm count.py
+		fold_skip_num=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
+		echo "skipping: "$fold_skip_num
+		echo "mcsmear "$MCSMEAR_Flags " -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
+		mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
+		mcsmear_return_code=$?
+	elif [[ "$bkgloc_pre" == "loc:" ]]; then
+		rm -f count.py
+	   echo "import hddm_s" > count.py
+	   echo "print(sum(1 for r in hddm_s.istream('$bkglocstring')))" >> count.py
+	   totalnum=`$USER_PYTHON count.py`
+	   rm count.py
+		fold_skip_num=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
+		echo "mcsmear "$MCSMEAR_Flags " -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
+		mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
+		mcsmear_return_code=$?
+	else
+	    #trust the user and use their string
+	    echo 'mcsmear -PTHREAD_TIMEOUT=500 -o'$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm'' '$STANDARD_NAME'_geant'$GEANTVER'.hddm'' '$BKGFOLDSTR
+	    mcsmear -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' $STANDARD_NAME'_geant'$GEANTVER'.hddm' $BKGFOLDSTR
+		mcsmear_return_code=$?
+	fi
+	
+	if [[ $mcsmear_return_code != 0 ]]; then
+		echo
+		echo
+		echo "Something went wrong with mcsmear"
+		echo "status code: "$mcsmear_return_code
+		exit $mcsmear_return_code
+	fi
+	
 	    #run reconstruction
-	    if [[ "$CLEANGENR" == "1" ]]; then
+	if [[ "$CLEANGENR" == "1" ]]; then
 		if [[ "$GENERATOR" == "genr8" ]]; then
 		    rm *.ascii
 		elif [[ "$GENERATOR" == "bggen" || "$GENERATOR" == "bggen_jpsi" || "$GENERATOR" == "bggen_phi_ee" ]]; then
