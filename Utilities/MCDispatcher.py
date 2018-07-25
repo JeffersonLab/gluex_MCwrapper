@@ -155,9 +155,8 @@ def DispatchToSWIF(ID,order,PERCENT):
     else:
         print "All jobs submitted for this order"
 
-"NCORES=1\n"
 
-def WritePayloadConfig(order)
+def WritePayloadConfig(order):
     MCconfig_file= open("MCDispatched.config","a")
     splitlist=order["OutputLocation"].split("/")
     MCconfig_file.write("WORKFLOW_NAME="+splitlist[len(splitlist)-2]+"\n")
