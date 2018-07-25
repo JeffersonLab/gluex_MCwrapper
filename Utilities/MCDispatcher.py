@@ -173,7 +173,7 @@ def WritePayloadConfig(order):
     MCconfig_file.write("GEN_MAX_ENERGY="+MaxE+"\n")
     MCconfig_file.write("GENERATOR="+str(order["Generator"])+"\n")
     MCconfig_file.write("GENERATOR_CONFIG="+str(order["Generator_Config"])+"\n")
-    MCconfig_file.write("GEANT_VERSION="+str(order["G?eantVersion"])+"\n")
+    MCconfig_file.write("GEANT_VERSION="+str(order["GeantVersion"])+"\n")
     MCconfig_file.write("NOSECONDARIES="+str(abs(order["GeantSecondaries"]-1))+"\n")
     MCconfig_file.write("BKG="+str(order["BKG"])+"\n")
     MCconfig_file.write("DATA_OUTPUT_BASE_DIR="+str(order["OutputLocation"])+"\n")
