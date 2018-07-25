@@ -55,15 +55,14 @@ except:
 def checkSWIF():
         print "CHECKING SWIF JOBS"
         #queryswifjobs="SELECT OutputLocation,ID,NumEvents,Completed_Time FROM Project WHERE ID IN (SELECT Project_ID FROM Jobs WHERE IsActive=1 && ID IN (SELECT Job_ID FROM Attempts WHERE BatchSystem= 'SWIF') )"
-        queryswifjobs="SELECT * FROM Project WHERE ID IN (SELECT Project_ID FROM Jobs WHERE IsActive=1 && ID IN (SELECT DISTINCT Job_ID FROM Attempts WHERE BatchSystem= 'SWIF' && Completed_Time IS NULL) )"
+        queryswifjobs="SELECT * FROM Project WHERE ID IN (SELECT Project_ID FROM Jobs WHERE IsActive=1 && ID IN (SELECT DISTINCT Job_ID FROM Attempts WHERE BatchSystem= 'SWIF'))"# && Completed_Time IS NULL) )"
         dbcursor.execute(queryswifjobs)
         AllWkFlows = dbcursor.fetchall()
        
-        TOTCompletedEvtsquery="SELECT Project_ID,SUM(NumEvts) FROM Jobs WHERE ID IN (SELECT Job_ID FROM Attempts WHERE ExitCode=0) GROUP BY Project_ID"
-        dbcursor.execute(TOTCompletedEvtsquery)
-        TOTCompletedEvtret=dbcursor.fetchall()
+        
 
         #LOOP OVER SWIF WORKFLOWS
+        #print "================================="
         #print AllWkFlows
         projIDs=[]
         for workflow in AllWkFlows:
@@ -170,30 +169,37 @@ def checkSWIF():
                         loggedindex+=1
 
 
-        #CHECK IF ORDER IS DONE NOW
-        for ID in projIDs:
+            TOTCompletedEvtsquery="SELECT Project_ID,SUM(NumEvts) FROM Jobs WHERE ID IN (SELECT Job_ID FROM Attempts WHERE ExitCode=0) GROUP BY Project_ID"
+            dbcursor.execute(TOTCompletedEvtsquery)
+            TOTCompletedEvtret=dbcursor.fetchall()
+            #CHECK IF ORDER IS DONE NOW
+            #print TOTCompletedEvtret
+            #print projIDs
+            for ID in projIDs:
                 TOTCompletedEvt=0
                 if TOTCompletedEvtret:
-                        for proj in TOTCompletedEvtret:
-                                if str(proj["Project_ID"]) == str(ProjID):
-                                        TOTCompletedEvt=int(proj["SUM(NumEvts)"])
-                                        break
+                    for proj in TOTCompletedEvtret:
+                        if str(proj["Project_ID"]) == str(ID):
+                            TOTCompletedEvt=int(proj["SUM(NumEvts)"])
+                                        
         
 
-            #FIND THE RIGHT PROJECT AND IF APPLICABLE MARKE AS COMPLETED
-                for workflow in AllWkFlows:
-                #print str(ProjID) + " | "+workflow["ID"]
-                        if ProjID == workflow["ID"] and workflow["NumEvents"] == TOTCompletedEvt:
-                                getFinalCompleteTime="SELECT MAX(Completed_Time) FROM Attempts WHERE Job_ID IN (SELECT ID FROM Jobs WHERE Project_ID="+str(ProjID)+");"
-                                #print getFinalCompleteTime
-                                dbcursor.execute(getFinalCompleteTime)
-                                finalTimeRes=dbcursor.fetchall()
-                                #print "============"
-                                #print finalTimeRes[0]["MAX(Completed_Time)"]
-                                updateProjectstatus="UPDATE Project SET Completed_Time="+"'"+str(finalTimeRes[0]["MAX(Completed_Time)"])+"'"+ "WHERE ID="+str(ProjID)+" && Completed_Time IS NULL;"
-                                #print updatejobstatus
-                                dbcursor.execute(updateProjectstatus)
-                                dbcnx.commit()
+                #FIND THE RIGHT PROJECT AND IF APPLICABLE MARK AS COMPLETED
+                    for workflow in AllWkFlows:
+                        #print str(workflow["ID"])+ " | "+str(ID) 
+                        #print str(workflow["NumEvents"]) + " | "+str(TOTCompletedEvt)
+                        if str(ID) == str(workflow["ID"]) and str(workflow["NumEvents"]) == str(TOTCompletedEvt):
+                            getFinalCompleteTime="SELECT MAX(Completed_Time) FROM Attempts WHERE Job_ID IN (SELECT ID FROM Jobs WHERE Project_ID="+str(ProjID)+");"
+                            #print getFinalCompleteTime
+                            dbcursor.execute(getFinalCompleteTime)
+                            finalTimeRes=dbcursor.fetchall()
+                            #print "============"
+                            #print finalTimeRes[0]["MAX(Completed_Time)"]
+                            updateProjectstatus="UPDATE Project SET Completed_Time="+"'"+str(finalTimeRes[0]["MAX(Completed_Time)"])+"'"+ " WHERE ID="+str(ProjID)+" && Completed_Time IS NULL;"
+                            print updateProjectstatus
+                            #print "============"
+                            dbcursor.execute(updateProjectstatus)
+                            dbcnx.commit()
 
        
         
@@ -209,9 +215,6 @@ def checkOSG():
         dbcursor.execute(queryosgjobs)
         Alljobs = dbcursor.fetchall()
 
-        TOTCompletedEvtsquery="SELECT Project_ID,SUM(NumEvts) FROM Jobs WHERE ID IN (SELECT Job_ID FROM Attempts WHERE ExitCode=0) GROUP BY Project_ID"
-        dbcursor.execute(TOTCompletedEvtsquery)
-        TOTCompletedEvtret=dbcursor.fetchall()
         
         for job in Alljobs:
             #print job
@@ -287,10 +290,15 @@ def checkOSG():
                     dbcursor.execute(updatejobstatus)
                     dbcnx.commit()
 
+        TOTCompletedEvtsquery="SELECT Project_ID,SUM(NumEvts) FROM Jobs WHERE ID IN (SELECT Job_ID FROM Attempts WHERE ExitCode=0) GROUP BY Project_ID"
+        dbcursor.execute(TOTCompletedEvtsquery)
+        TOTCompletedEvtret=dbcursor.fetchall()
         TOTCompletedEvt=0
+        #print TOTCompletedEvtret
         if TOTCompletedEvtret:
             for proj in TOTCompletedEvtret:
                 for order in AllWkFlows:
+                    #print str(proj["Project_ID"])+" | "+str(order["ID"])
                     if str(proj["Project_ID"]) == str(order["ID"]):
                         TOTCompletedEvt=int(proj["SUM(NumEvts)"])
                         if( order["NumEvents"] == TOTCompletedEvt):

@@ -39,21 +39,7 @@ def DispatchProject(ID,SYSTEM,PERCENT):
     
     
 def DispatchToInteractive(ID,order,PERCENT):
-    MCconfig_file= open("MCDispatched.config","w+")
-    MCconfig_file.write(order["Config_Stub"])
-    MinE=str(order["GenMinE"])
-    if len(MinE) > 5:
-        cutnum=len(MinE)-5
-        MinE = MinE[:-cutnum]
-    MaxE=str(order["GenMaxE"])
-    if len(MaxE) > 5:
-        cutnum=len(MaxE)-5
-        MaxE = MaxE[:-cutnum]
-
-    MCconfig_file.write("GEN_MIN_ENERGY="+MinE+"\n")
-    MCconfig_file.write("GEN_MAX_ENERGY="+MaxE+"\n")
-    MCconfig_file.write("NOSECONDARIES="+str(abs(order["GeantSecondaries"]-1))+"\n")
-    MCconfig_file.close()
+    WritePayloadConfig(order)
     RunNumber=str(order["RunNumLow"])
     if order["RunNumLow"] != order["RunNumHigh"] :
         RunNumber = RunNumber + "-" + str(order["RunNumHigh"])
@@ -112,22 +98,7 @@ def DispatchToInteractive(ID,order,PERCENT):
 
 def DispatchToSWIF(ID,order,PERCENT):
     status = subprocess.call("cp $MCWRAPPER_CENTRAL/examples/SWIFShell.config ./MCDispatched.config", shell=True)
-    MCconfig_file= open("MCDispatched.config","a")
-    splitlist=order["OutputLocation"].split("/")
-    MCconfig_file.write("WORKFLOW_NAME="+splitlist[len(splitlist)-2]+"\n")
-    MCconfig_file.write(order["Config_Stub"])
-    MinE=str(order["GenMinE"])
-    if len(MinE) > 5:
-        cutnum=len(MinE)-5
-        MinE = MinE[:-cutnum]
-    MaxE=str(order["GenMaxE"])
-    if len(MaxE) > 5:
-        cutnum=len(MaxE)-5
-        MaxE = MaxE[:-cutnum]
-    MCconfig_file.write("GEN_MIN_ENERGY="+MinE+"\n")
-    MCconfig_file.write("GEN_MAX_ENERGY="+MaxE+"\n")
-    MCconfig_file.write("NOSECONDARIES="+str(abs(order["GeantSecondaries"]-1))+"\n")
-    MCconfig_file.close()
+    WritePayloadConfig(order)
     RunNumber=str(order["RunNumLow"])
     if order["RunNumLow"] != order["RunNumHigh"] :
         RunNumber = RunNumber + "-" + str(order["RunNumHigh"])
@@ -184,10 +155,9 @@ def DispatchToSWIF(ID,order,PERCENT):
     else:
         print "All jobs submitted for this order"
 
+"NCORES=1\n"
 
-
-def DispatchToOSG(ID,order,PERCENT):
-    status = subprocess.call("cp $MCWRAPPER_CENTRAL/examples/OSGShell.config ./MCDispatched.config", shell=True)
+def WritePayloadConfig(order)
     MCconfig_file= open("MCDispatched.config","a")
     splitlist=order["OutputLocation"].split("/")
     MCconfig_file.write("WORKFLOW_NAME="+splitlist[len(splitlist)-2]+"\n")
@@ -202,8 +172,18 @@ def DispatchToOSG(ID,order,PERCENT):
         MaxE = MaxE[:-cutnum]
     MCconfig_file.write("GEN_MIN_ENERGY="+MinE+"\n")
     MCconfig_file.write("GEN_MAX_ENERGY="+MaxE+"\n")
+    MCconfig_file.write("GENERATOR="+str(order["Generator"])+"\n")
+    MCconfig_file.write("GENERATOR_CONFIG="+str(order["Generator_Config"])+"\n")
+    MCconfig_file.write("GEANT_VERSION="+str(order["G?eantVersion"])+"\n")
     MCconfig_file.write("NOSECONDARIES="+str(abs(order["GeantSecondaries"]-1))+"\n")
+    MCconfig_file.write("BKG="+str(order["BKG"])+"\n")
+    MCconfig_file.write("DATA_OUTPUT_BASE_DIR="+str(order["OutputLocation"])+"\n")
     MCconfig_file.close()
+
+def DispatchToOSG(ID,order,PERCENT):
+    status = subprocess.call("cp $MCWRAPPER_CENTRAL/examples/OSGShell.config ./MCDispatched.config", shell=True)
+    WritePayloadConfig(order)
+
     RunNumber=str(order["RunNumLow"])
     if order["RunNumLow"] != order["RunNumHigh"] :
         RunNumber = RunNumber + "-" + str(order["RunNumHigh"])
