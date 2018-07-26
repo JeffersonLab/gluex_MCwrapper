@@ -92,6 +92,11 @@ shift
 export MCWRAPPER_VERSION=$1
 
 export USER_BC=`which bc`
+
+if [[ "$BATCHSYS" == "OSG" && $BATCHRUN==1 ]]; then
+export USER_BC='/usr/bin/bc'
+fi
+
 export USER_PYTHON=`which python`
 
 #printenv
@@ -316,6 +321,8 @@ echo ""
 echo ""
 echo "=======SOFTWARE USED======="
 echo "MCwrapper version v"$MCWRAPPER_VERSION
+echo "BC "$USER_BC
+echo "python "$USER_PYTHON
 echo `which $GENERATOR`
 if [[ "$GEANTVER" == "3" ]]; then
 	echo `which hdgeant`
@@ -327,6 +334,7 @@ echo `which hd_root`
 echo ""
 echo ""
 
+`echo $GEN_MAX_ENERGY'>'$eBEAM_ENERGY | $USER_BC`
 if [[ `echo $GEN_MAX_ENERGY'>'$eBEAM_ENERGY | $USER_BC` ]]; then
 echo "something went wrong with initialization"
 echo "Error: Requested Max photon energy is above the electron beam energy!"

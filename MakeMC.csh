@@ -95,6 +95,10 @@ setenv MCWRAPPER_VERSION $1
 setenv USER_BC `which bc`
 setenv USER_PYTHON `which python`
 
+if ( "$BATCHSYS" == "OSG" && $BATCHRUN==1 ) then
+setenv USER_BC '/usr/bin/bc'
+endif
+
 #necessary to run swif, uses local directory if swif=0 is used
 if ( "$BATCHRUN" != "0"  ) then
 # ENVIRONMENT
@@ -317,6 +321,8 @@ echo ""
 echo ""
 echo "=======SOFTWARE USED======="
 echo "MCwrapper version v"$MCWRAPPER_VERSION
+echo "BC "$USER_BC
+echo "python "$USER_PYTHON
 echo `which $GENERATOR`
 if ( "$GEANTVER" == "3" ) then
 	echo `which hdgeant`
