@@ -440,6 +440,7 @@ if ( "$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" == "
 	endif
 	
     if ( ! -f $bkglocstring ) then
+		echo "something went wrong with initialization"
 		echo "Could not find mix-in file "$bkglocstring
 		exit 1
     endif

@@ -440,6 +440,7 @@ if [[ "$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" == 
 			#set bkglocstring="/w/halld-scifs1a/home/tbritton/converted.hddm"
 		    
 		    if [[ ! -f $bkglocstring ]]; then
+			echo "something went wrong with initialization"
 			echo "Could not find mix-in file "$bkglocstring
 			exit
 		    fi
