@@ -313,6 +313,7 @@ echo "=============================================="
 echo ""
 echo ""
 echo "=======SOFTWARE USED======="
+echo "MCwrapper version v"$MCWRAPPER_VERSION
 echo `which $GENERATOR`
 if [[ "$GEANTVER" == "3" ]]; then
 	echo `which hdgeant`

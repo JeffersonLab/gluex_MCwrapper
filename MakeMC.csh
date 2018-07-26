@@ -89,6 +89,8 @@ shift
 setenv RECON_CALIBTIME $1
 shift
 setenv GEANT_NOSECONDARIES $1
+shift
+setenv MCWRAPPER_VERSION $1
 
 setenv USER_BC `which bc`
 setenv USER_PYTHON `which python`
@@ -314,6 +316,7 @@ echo "=============================================="
 echo ""
 echo ""
 echo "=======SOFTWARE USED======="
+echo "MCwrapper version v"$MCWRAPPER_VERSION
 echo `which $GENERATOR`
 if ( "$GEANTVER" == "3" ) then
 	echo `which hdgeant`
