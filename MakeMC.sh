@@ -88,6 +88,8 @@ shift
 export RECON_CALIBTIME=$1
 shift
 export GEANT_NOSCONDARIES=$1
+shift
+export MCWRAPPER_VERSION=$1
 
 export USER_BC=`which bc`
 export USER_PYTHON=`which python`
