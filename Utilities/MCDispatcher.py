@@ -73,11 +73,12 @@ def TestProject(ID):
         curs.execute(updatequery)
         conn.commit()
         print "rm -rf "+order["OutputLocation"]
-        #status = subprocess.call("rm -rf "+order["OutputLocation"],shell=True)
+        status = subprocess.call("rm -rf "+order["OutputLocation"],shell=True)
     else:
         updatequery="UPDATE Project SET Tested=-1"+" WHERE ID="+str(ID)+";"
         curs.execute(updatequery)
         conn.commit()
+        print "rm -rf "+order["OutputLocation"]
 
 def DispatchToInteractive(ID,order,PERCENT):
     WritePayloadConfig(order)
