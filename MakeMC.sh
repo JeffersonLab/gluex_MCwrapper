@@ -324,7 +324,7 @@ echo `which hd_root`
 echo ""
 echo ""
 
-if [[ $GEN_MAX_ENERGY > $eBEAM_ENERGY ]]; then
+if [[ `echo $GEN_MAX_ENERGY'>'$eBEAM_ENERGY | $USER_BC` ]]; then
 echo "Error: Requested Max photon energy is above the electron beam energy!"
 exit 1
 fi
