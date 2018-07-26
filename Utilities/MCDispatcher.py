@@ -17,7 +17,7 @@ curs=conn.cursor(MySQLdb.cursors.DictCursor)
 #DELETE FROM Attempts WHERE Job_ID IN (SELECT ID FROM Jobs WHERE Project_ID=65);
 
 def ListUnDispatched():
-    query = "SELECT * FROM Project WHERE Is_Dispatched='NO'"
+    query = "SELECT * FROM Project WHERE Is_Dispatched='0'"
     curs.execute(query) 
     rows=curs.fetchall()
     print(rows)
@@ -37,7 +37,48 @@ def DispatchProject(ID,SYSTEM,PERCENT):
     else:
         print("Error: Cannot find Project with ID="+ID)
     
+def TestProject(ID):
+    query = "SELECT * FROM Project WHERE ID="+str(ID)
+    curs.execute(query) 
+    rows=curs.fetchall()
+    order=rows[0]
+    WritePayloadConfig(order)
+    RunNumber=str(order["RunNumLow"])
+    if order["RunNumLow"] != order["RunNumHigh"] :
+        RunNumber = RunNumber + "-" + str(order["RunNumHigh"])
+
+
+    cleangen=1
+    if order["SaveGeneration"]==1:
+        cleangen=0
+
+    cleangeant=1
+    if order["SaveGeant"]==1:
+        cleangeant=0
     
+    cleansmear=1
+    if order["SaveSmear"]==1:
+        cleansmear=0
+    
+    cleanrecon=1
+    if order["SaveReconstruction"]==1:
+        cleanrecon=0
+
+    command="$MCWRAPPER_CENTRAL/gluex_MC.py MCDispatched.config "+str(RunNumber)+" "+str(100)+" per_file=250000 base_file_number=0"+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=0"
+    print(command)
+    status = subprocess.call(command, shell=True)
+    print "RETURN STATUS IS: "+str(status)
+    if(status==0):
+        updatequery="UPDATE Project SET Tested=1"+" WHERE ID="+str(ID)+";"
+        curs.execute(updatequery)
+        conn.commit()
+        print "rm -rf "+order["OutputLocation"]
+        #status = subprocess.call("rm -rf "+order["OutputLocation"],shell=True)
+    else:
+        updatequery="UPDATE Project SET Tested=-1"+" WHERE ID="+str(ID)+";"
+        curs.execute(updatequery)
+        conn.commit()
+
 def DispatchToInteractive(ID,order,PERCENT):
     WritePayloadConfig(order)
     RunNumber=str(order["RunNumLow"])
@@ -90,7 +131,7 @@ def DispatchToInteractive(ID,order,PERCENT):
         #print updatequery
         curs.execute(updatequery)
         conn.commit()
-        command="gluex_MC.py MCDispatched.config "+str(RunNumber)+" "+str(NumEventsToProduce)+" per_file=250000 base_file_number="+str(FileNumber_NewJob)+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=0"
+        command="$MCWRAPPER_CENTRAL/gluex_MC.py MCDispatched.config "+str(RunNumber)+" "+str(NumEventsToProduce)+" per_file=250000 base_file_number="+str(FileNumber_NewJob)+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=0"
         print(command)
         status = subprocess.call(command, shell=True)
     else:
@@ -270,17 +311,27 @@ def main(argv):
     #print SYSTEM
     #print ID
 
-    if MODE == "DISPATCH" and ID != "All":
-        DispatchProject(ID,SYSTEM,PERCENT)
-    elif MODE == "DISPATCH" and ID == "All":
-        query = "SELECT ID FROM Project WHERE Is_Dispatched!='1.0'"
-        curs.execute(query) 
-        rows=curs.fetchall()
-        for row in rows:
-            print(row["ID"])
-            DispatchProject(row["ID"],SYSTEM,PERCENT)
-    elif MODE=="VIEW" and ID == "Und":
+    if MODE == "DISPATCH":
+        if ID != "All":
+            DispatchProject(ID,SYSTEM,PERCENT)
+        elif ID == "All":
+            query = "SELECT ID FROM Project WHERE Is_Dispatched!='1.0'"
+            curs.execute(query) 
+            rows=curs.fetchall()
+            for row in rows:
+                print(row["ID"])
+                DispatchProject(row["ID"],SYSTEM,PERCENT)
+    elif MODE == "VIEW":
         ListUnDispatched()
+    elif MODE == "TEST":
+        TestProject(ID)
+    else:
+        print "MODE NOT FOUND"
+
+        
+        
+    
+        
 
 
 

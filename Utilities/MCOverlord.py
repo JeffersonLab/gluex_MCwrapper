@@ -201,8 +201,7 @@ def checkSWIF():
                             dbcursor.execute(updateProjectstatus)
                             dbcnx.commit()
 
-       
-        
+
 def checkOSG():
         print "CHECKING OSG JOBS"
         queryswifjobs="SELECT * FROM Project WHERE ID IN (SELECT Project_ID FROM Jobs WHERE IsActive=1 && ID IN (SELECT DISTINCT Job_ID FROM Attempts WHERE BatchSystem= 'OSG' && Completed_Time IS NULL) )"
@@ -228,6 +227,7 @@ def checkOSG():
                 JSON_jobar=json.loads(jsonOutputstr)
                 #print JSON_jobar[0]
                 JSON_job=JSON_jobar[0]
+                #print JSON_job
                 ExitCode="NULL"
                 if (JSON_job["JobStatus"]!=3 and JSON_job["JobStatus"]<=1):
                     ExitCode=str(JSON_job["ExitStatus"])
@@ -242,7 +242,7 @@ def checkOSG():
                 CpuTime=timedelta(seconds=JSON_job["RemoteUserCpu"])
                 Start_Time=timedelta(seconds=JSON_job["JobStartDate"])
                 #"MemoryUsage": "\/Expr(( ( ResidentSetSize + 1023 ) / 1024 ))\/"
-                RAMUSED=str(float(int(JSON_job["ResidentSetSize"]) + 1023) / float(1024))+"MB"
+                RAMUSED=str(float(JSON_job["ImageSize_RAW"])/ float(1024))+"GB"
                 TransINSize=JSON_job["TransferInputSizeMB"]
 
 
@@ -279,12 +279,13 @@ def checkOSG():
                     WallTime=timedelta(seconds=JSON_job["RemoteWallClockTime"])
                     CpuTime=timedelta(seconds=JSON_job["RemoteUserCpu"])
                     #"MemoryUsage": "\/Expr(( ( ResidentSetSize + 1023 ) / 1024 ))\/"
-                    RAMUSED=str(float(int(JSON_job["ResidentSetSize"]) + 1023) / float(1024))+"MB"
+                    RAMUSED=str(float(JSON_job["ImageSize_RAW"])/ float(1024))+"GB"
                     TransINSize=JSON_job["TransferInputSizeMB"]
 
                     updatejobstatus="UPDATE Attempts SET Status=\""+str(JSON_job["JobStatus"])+"\", ExitCode="+ExitCode+", RunningLocation="+"'"+str(JSON_job["LastRemoteHost"])+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+" WHERE BatchJobID="+str(job["BatchJobID"])+";"
+                   
                     if Completed_Time != 'NULL':
-                        updatejobstatus="UPDATE Attempts SET Status=\""+str(JSON_job["JobStatus"])+"\", ExitCode="+ExitCode+", Completed_Time='"+time.strftime("%H:%M:%S",time.gmtime(timedelta(seconds=Completed_Time)))+"'"+", RunningLocation="+"'"+str(JSON_job["LastRemoteHost"])+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+" WHERE BatchJobID="+str(job["BatchJobID"])+";"                    
+                        updatejobstatus="UPDATE Attempts SET Status=\""+str(JSON_job["JobStatus"])+"\", ExitCode="+ExitCode+", Completed_Time='"+str(datetime.fromtimestamp(float(Completed_Time)))+"'"+", RunningLocation="+"'"+str(JSON_job["LastRemoteHost"])+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+" WHERE BatchJobID="+str(job["BatchJobID"])+";"                    
 
                     #print updatejobstatus
                     dbcursor.execute(updatejobstatus)

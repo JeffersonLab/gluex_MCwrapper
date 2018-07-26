@@ -324,6 +324,11 @@ echo `which hd_root`
 echo ""
 echo ""
 
+if [[ $GEN_MAX_ENERGY > $eBEAM_ENERGY ]]; then
+echo "Error: Requested Max photon energy is above the electron beam energy!"
+exit 1
+fi
+
 if [[ "$CUSTOM_GCONTROL" == "0" ]]; then
     cp $MCWRAPPER_CENTRAL/Gcontrol.in ./temp_Gcontrol.in
     chmod 777 ./temp_Gcontrol.in

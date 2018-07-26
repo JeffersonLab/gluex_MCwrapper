@@ -411,8 +411,8 @@ def main(argv):
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         print( "*********************************")
-        print( "Welcome to v2.0 of the MCwrapper")
-        print( "Thomas Britton 7/24/18")
+        print( "Welcome to v2.1 of the MCwrapper")
+        print( "Thomas Britton 7/26/18")
         print( "*********************************")
 
         #load all argument passed in and set default options
