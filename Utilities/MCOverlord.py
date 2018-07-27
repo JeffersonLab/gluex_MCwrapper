@@ -240,15 +240,18 @@ def checkOSG():
 
                 WallTime=timedelta(seconds=JSON_job["RemoteWallClockTime"])
                 CpuTime=timedelta(seconds=JSON_job["RemoteUserCpu"])
-                Start_Time=timedelta(seconds=JSON_job["JobStartDate"])
+                Start_Time=JSON_job["JobStartDate"]
                 #"MemoryUsage": "\/Expr(( ( ResidentSetSize + 1023 ) / 1024 ))\/"
                 RAMUSED=str(float(JSON_job["ImageSize_RAW"])/ float(1024))+"GB"
                 TransINSize=JSON_job["TransferInputSizeMB"]
 
+                REMOTE_HOST="NA"
+                if JSON_job["RemoteHost"] :
+                    REMOTE_HOST=str(JSON_job["RemoteHost"])
 
-                updatejobstatus="UPDATE Attempts SET Status=\""+str(JSON_job["JobStatus"])+"\", ExitCode="+ExitCode+", Start_Time="+"'"+time.strftime("%H:%M:%S",time.gmtime(Start_Time.seconds))+"'"+", RunningLocation="+"'"+str(JSON_job["RemoteHost"])+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+" WHERE BatchJobID="+str(job["BatchJobID"])+";"
+                updatejobstatus="UPDATE Attempts SET Status=\""+str(JSON_job["JobStatus"])+"\", ExitCode="+ExitCode+", Start_Time="+"'"+str(datetime.fromtimestamp(float(Start_Time)))+"'"+", RunningLocation="+"'"+str(REMOTE_HOST)+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+" WHERE BatchJobID="+str(job["BatchJobID"])+";"
                 if Completed_Time != 'NULL':
-                        updatejobstatus="UPDATE Attempts SET Status=\""+str(JSON_job["JobStatus"])+"\", ExitCode="+ExitCode+", Completed_Time='"+time.strftime("%H:%M:%S",time.gmtime(timedelta(seconds=Completed_Time)))+"'"+", Start_Time="+"'"+time.strftime("%H:%M:%S",time.gmtime(Start_Time.seconds))+"'"+", RunningLocation="+"'"+str(JSON_job["RemoteHost"])+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+" WHERE BatchJobID="+str(job["BatchJobID"])+";"
+                        updatejobstatus="UPDATE Attempts SET Status=\""+str(JSON_job["JobStatus"])+"\", ExitCode="+ExitCode+", Completed_Time='"+str(datetime.fromtimestamp(float(Completed_Time)))+"'"+", Start_Time="+"'"+str(datetime.fromtimestamp(float(Start_Time)))+"'"+", RunningLocation="+"'"+str(REMOTE_HOST)+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+" WHERE BatchJobID="+str(job["BatchJobID"])+";"
 
 
                 #print updatejobstatus

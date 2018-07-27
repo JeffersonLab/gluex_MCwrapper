@@ -95,7 +95,7 @@ setenv MCWRAPPER_VERSION $1
 setenv USER_BC `which bc`
 setenv USER_PYTHON `which python`
 
-if ( "$BATCHSYS" == "OSG" && $BATCHRUN==1 ) then
+if ( "$BATCHSYS" == "OSG" && "$BATCHRUN" == "1" ) then
 setenv USER_BC '/usr/bin/bc'
 endif
 
