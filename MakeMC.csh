@@ -335,7 +335,10 @@ echo ""
 echo ""
 
 
-if ( `echo $GEN_MAX_ENERGY'>'$eBEAM_ENERGY | $USER_BC` ) then
+set isGreater=1
+set isGreater=`echo $GEN_MAX_ENERGY'>'$eBEAM_ENERGY | $USER_BC -l`
+
+if ( "$isGreater" == "1" ) then
 echo "something went wrong with initialization"
 echo "Error: Requested Max photon energy is above the electron beam energy!"
 exit 1

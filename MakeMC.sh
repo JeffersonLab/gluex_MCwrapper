@@ -93,7 +93,9 @@ export MCWRAPPER_VERSION=$1
 
 export USER_BC=`which bc`
 
-if [[ "$BATCHSYS" == "OSG" && $BATCHRUN==1 ]]; then
+
+
+if [[ "$BATCHSYS" == "OSG" && "$BATCHRUN"=="1" ]]; then
 export USER_BC='/usr/bin/bc'
 fi
 
@@ -334,8 +336,12 @@ echo `which hd_root`
 echo ""
 echo ""
 
-`echo $GEN_MAX_ENERGY'>'$eBEAM_ENERGY | $USER_BC`
-if [[ `echo $GEN_MAX_ENERGY'>'$eBEAM_ENERGY | $USER_BC` ]]; then
+isGreater=1
+#echo $isGreater
+isGreater=`echo $GEN_MAX_ENERGY'>'$eBEAM_ENERGY | $USER_BC -l`
+#echo $isGreater
+#echo "$isGreater"
+if [[ "$isGreater" == "1"  ]]; then 
 echo "something went wrong with initialization"
 echo "Error: Requested Max photon energy is above the electron beam energy!"
 exit 1
