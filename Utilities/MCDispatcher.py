@@ -139,10 +139,10 @@ def TestProject(ID):
    # print (command+command2).split(" ")
     p = Popen(command, stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True)
     #print p
-    print "p defined"
+    #print "p defined"
     output, errors = p.communicate()
     
-    print [p.returncode,errors,output]
+    #print [p.returncode,errors,output]
     print output.replace('\\n', '\n')
     STATUS=output.find("something went wrong")
 
