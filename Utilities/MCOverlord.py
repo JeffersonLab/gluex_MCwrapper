@@ -55,7 +55,7 @@ except:
 def checkSWIF():
         print "CHECKING SWIF JOBS"
         #queryswifjobs="SELECT OutputLocation,ID,NumEvents,Completed_Time FROM Project WHERE ID IN (SELECT Project_ID FROM Jobs WHERE IsActive=1 && ID IN (SELECT Job_ID FROM Attempts WHERE BatchSystem= 'SWIF') )"
-        queryswifjobs="SELECT * FROM Project WHERE ID IN (SELECT Project_ID FROM Jobs WHERE IsActive=1 && ID IN (SELECT DISTINCT Job_ID FROM Attempts WHERE BatchSystem= 'SWIF'))"# && Completed_Time IS NULL) )"
+        queryswifjobs="SELECT * FROM Project WHERE ID IN (SELECT Project_ID FROM Jobs WHERE IsActive=1 && ID IN (SELECT DISTINCT Job_ID FROM Attempts WHERE BatchSystem= 'SWIF' && Status!='succeeded') )"
         dbcursor.execute(queryswifjobs)
         AllWkFlows = dbcursor.fetchall()
        
@@ -142,10 +142,14 @@ def checkSWIF():
 
                             #print len(LoggedSWIFAttemps)
                             #print LinkToJob
-                            #print datetime.fromtimestamp(float(attempt["auger_ts_submitted"])/float(1000))
+                            submitTime=0.0
+                            if (attempt["auger_ts_submitted"] != "None"):
+                                submitTime=float(attempt["auger_ts_submitted"])
+                            print attempt["auger_ts_submitted"]
+                            print datetime.fromtimestamp(submitTime/float(1000))
                             
-                            addFoundAttempt="INSERT INTO Attempts (Job_ID,Creation_Time,BatchSystem,BatchJobID, ThreadsRequested, RAMRequested,Start_Time) VALUES (%s,'%s','SWIF',%s,%s,%s,%s)" % (LinkToJob[0]["Job_ID"],datetime.fromtimestamp(float(attempt["auger_ts_submitted"])/float(1000)),attempt["job_id"],attempt["cpu_cores"], "'"+str(float(attempt["ram_bytes"])/float(1000000000))+"GB"+"'",Start_Time)
-                            #print addFoundAttempt
+                            addFoundAttempt="INSERT INTO Attempts (Job_ID,Creation_Time,BatchSystem,BatchJobID, ThreadsRequested, RAMRequested,Start_Time) VALUES (%s,'%s','SWIF',%s,%s,%s,'%s')" % (LinkToJob[0]["Job_ID"],datetime.fromtimestamp(submitTime/float(1000)),attempt["job_id"],attempt["cpu_cores"], "'"+str(float(attempt["ram_bytes"])/float(1000000000))+"GB"+"'",Start_Time)
+                            print addFoundAttempt
                             dbcursor.execute(addFoundAttempt)
                             dbcnx.commit()
 
@@ -204,7 +208,7 @@ def checkSWIF():
 
 def checkOSG():
         print "CHECKING OSG JOBS"
-        queryswifjobs="SELECT * FROM Project WHERE ID IN (SELECT Project_ID FROM Jobs WHERE IsActive=1 && ID IN (SELECT DISTINCT Job_ID FROM Attempts WHERE BatchSystem= 'OSG' && Completed_Time IS NULL) )"
+        queryswifjobs="SELECT * FROM Project WHERE ID IN (SELECT Project_ID FROM Jobs WHERE IsActive=1 && ID IN (SELECT DISTINCT Job_ID FROM Attempts WHERE BatchSystem= 'OSG' && Status != '4') )"
         dbcursor.execute(queryswifjobs)
         AllWkFlows = dbcursor.fetchall()
 
@@ -218,7 +222,7 @@ def checkOSG():
         for job in Alljobs:
             #print job
             statuscommand="condor_q "+str(job["BatchJobID"])+" -json"
-            #print statuscommand
+            print statuscommand
             jsonOutputstr=subprocess.check_output(statuscommand.split(" "))
             #print "================"
             #print jsonOutputstr
@@ -240,15 +244,20 @@ def checkOSG():
 
                 WallTime=timedelta(seconds=JSON_job["RemoteWallClockTime"])
                 CpuTime=timedelta(seconds=JSON_job["RemoteUserCpu"])
-                Start_Time=timedelta(seconds=JSON_job["JobStartDate"])
+                Start_Time=0
+                if "JobStartDate" in JSON_job:
+                    JSON_job["JobStartDate"]
                 #"MemoryUsage": "\/Expr(( ( ResidentSetSize + 1023 ) / 1024 ))\/"
                 RAMUSED=str(float(JSON_job["ImageSize_RAW"])/ float(1024))+"GB"
                 TransINSize=JSON_job["TransferInputSizeMB"]
 
+                REMOTE_HOST="NA"
+                if "RemoteHost" in JSON_job :
+                    REMOTE_HOST=str(JSON_job["RemoteHost"])
 
-                updatejobstatus="UPDATE Attempts SET Status=\""+str(JSON_job["JobStatus"])+"\", ExitCode="+ExitCode+", Start_Time="+"'"+time.strftime("%H:%M:%S",time.gmtime(Start_Time.seconds))+"'"+", RunningLocation="+"'"+str(JSON_job["RemoteHost"])+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+" WHERE BatchJobID="+str(job["BatchJobID"])+";"
+                updatejobstatus="UPDATE Attempts SET Status=\""+str(JSON_job["JobStatus"])+"\", ExitCode="+ExitCode+", Start_Time="+"'"+str(datetime.fromtimestamp(float(Start_Time)))+"'"+", RunningLocation="+"'"+str(REMOTE_HOST)+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+" WHERE BatchJobID="+str(job["BatchJobID"])+";"
                 if Completed_Time != 'NULL':
-                        updatejobstatus="UPDATE Attempts SET Status=\""+str(JSON_job["JobStatus"])+"\", ExitCode="+ExitCode+", Completed_Time='"+time.strftime("%H:%M:%S",time.gmtime(timedelta(seconds=Completed_Time)))+"'"+", Start_Time="+"'"+time.strftime("%H:%M:%S",time.gmtime(Start_Time.seconds))+"'"+", RunningLocation="+"'"+str(JSON_job["RemoteHost"])+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+" WHERE BatchJobID="+str(job["BatchJobID"])+";"
+                        updatejobstatus="UPDATE Attempts SET Status=\""+str(JSON_job["JobStatus"])+"\", ExitCode="+ExitCode+", Completed_Time='"+str(datetime.fromtimestamp(float(Completed_Time)))+"'"+", Start_Time="+"'"+str(datetime.fromtimestamp(float(Start_Time)))+"'"+", RunningLocation="+"'"+str(REMOTE_HOST)+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+" WHERE BatchJobID="+str(job["BatchJobID"])+";"
 
 
                 #print updatejobstatus

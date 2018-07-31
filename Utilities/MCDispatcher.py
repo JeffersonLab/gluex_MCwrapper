@@ -4,6 +4,8 @@ import datetime
 from optparse import OptionParser
 import subprocess
 from subprocess import call
+from subprocess import Popen, PIPE
+import pprint
 
 dbhost = "hallddb.jlab.org"
 dbuser = 'mcuser'
@@ -13,11 +15,20 @@ dbname = 'gluex_mc'
 conn=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
 curs=conn.cursor(MySQLdb.cursors.DictCursor)
 
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
 
 #DELETE FROM Attempts WHERE Job_ID IN (SELECT ID FROM Jobs WHERE Project_ID=65);
 
 def ListUnDispatched():
-    query = "SELECT * FROM Project WHERE Is_Dispatched='0'"
+    query = "SELECT * FROM Project WHERE Is_Dispatched='0' || Is_Dispatched='0.0'"
     curs.execute(query) 
     rows=curs.fetchall()
     print(rows)
@@ -37,7 +48,65 @@ def DispatchProject(ID,SYSTEM,PERCENT):
     else:
         print("Error: Cannot find Project with ID="+ID)
     
+
+def RetryJob(ID):
+    query = "SELECT * FROM Attempts WHERE Job_ID="+str(ID)
+    curs.execute(query) 
+    rows=curs.fetchall()
+
+    queryproj = "SELECT * FROM Project WHERE ID IN (SELECT Project_ID FROM Jobs WHERE ID="+str(ID)+")"
+    curs.execute(queryproj) 
+    proj=curs.fetchall()
+
+    if(rows[0]["BatchSystem"] == "SWIF"):
+        splitL=len(proj[0]["OutputLocation"].split("/"))
+        command = "swif retry-jobs -workflow "+proj[0]["OutputLocation"].split("/")[splitL-2]+" "+rows[0]["BatchJobID"]
+        print command
+        status = subprocess.call(command, shell=True)
+
+def CancelJob(ID):
+    #deactivate
+    query = "UPDATE Jobs SET IsActive=0 WHERE ID="+str(ID)
+    curs.execute(query)
+    conn.commit()
+
+
+    #modify Is_Dispatched
+    queryprojID="SELECT Project_ID FROM Jobs WHERE ID="+str(ID)
+    curs.execute(queryprojID) 
+    projID=curs.fetchall()
+
+    queryproj = "SELECT SUM(NumEvts) FROM Jobs WHERE IsActive=1 && Project_ID="+str(projID[0]["Project_ID"])
+    curs.execute(queryproj) 
+    proj=curs.fetchall()
+
+    queryproj2 = "SELECT NumEvents FROM Project WHERE ID="+str(projID[0]["Project_ID"])
+    curs.execute(queryproj2) 
+    projNumevt=curs.fetchall()
+
+    totalActiveEvt=0
+    #print proj[0]["SUM(NumEvts)"]
+    if(str(proj[0]["SUM(NumEvts)"]) != "None"):
+        totalActiveEvt=proj[0]["SUM(NumEvts)"]
+
+    totalEvt=1
+    #print projNumevt[0]["NumEvents"]
+    if(projNumevt[0]["NumEvents"] != 'None'):
+        totalEvt=projNumevt[0]["NumEvents"]
+
+    newPrecent=float(totalActiveEvt)/float(totalEvt)
+
+    updatequery="UPDATE Project SET Is_Dispatched='"+str(newPrecent)+"' WHERE ID="+str(projID[0]["Project_ID"])
+    curs.execute(updatequery)
+    conn.commit()
+
+
+
+
+
 def TestProject(ID):
+    subprocess.call("rm -f MCDispatched.config", shell=True)
+    print "TESTING PROJECT "+str(ID)
     query = "SELECT * FROM Project WHERE ID="+str(ID)
     curs.execute(query) 
     rows=curs.fetchall()
@@ -66,21 +135,34 @@ def TestProject(ID):
 
     command="$MCWRAPPER_CENTRAL/gluex_MC.py MCDispatched.config "+str(RunNumber)+" "+str(100)+" per_file=250000 base_file_number=0"+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=0"
     print(command)
-    status = subprocess.call(command, shell=True)
-    print "RETURN STATUS IS: "+str(status)
-    if(status==0):
+    STATUS=-1
+   # print (command+command2).split(" ")
+    p = Popen(command, stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True)
+    #print p
+    print "p defined"
+    output, errors = p.communicate()
+    
+    print [p.returncode,errors,output]
+    print output.replace('\\n', '\n')
+    STATUS=output.find("something went wrong")
+
+    if(STATUS==-1):
         updatequery="UPDATE Project SET Tested=1"+" WHERE ID="+str(ID)+";"
         curs.execute(updatequery)
         conn.commit()
+        print bcolors.OKGREEN+"TEST SUCCEEDED"+bcolors.ENDC
         print "rm -rf "+order["OutputLocation"]
-        status = subprocess.call("rm -rf "+order["OutputLocation"],shell=True)
+        #status = subprocess.call("rm -rf "+order["OutputLocation"],shell=True)
     else:
         updatequery="UPDATE Project SET Tested=-1"+" WHERE ID="+str(ID)+";"
         curs.execute(updatequery)
         conn.commit()
+        
+        print bcolors.FAIL+"TEST FAILED"+bcolors.ENDC
         print "rm -rf "+order["OutputLocation"]
 
 def DispatchToInteractive(ID,order,PERCENT):
+    subprocess.call("rm -f MCDispatched.config", shell=True)
     WritePayloadConfig(order)
     RunNumber=str(order["RunNumLow"])
     if order["RunNumLow"] != order["RunNumHigh"] :
@@ -199,6 +281,7 @@ def DispatchToSWIF(ID,order,PERCENT):
 
 
 def WritePayloadConfig(order):
+    
     MCconfig_file= open("MCDispatched.config","a")
     splitlist=order["OutputLocation"].split("/")
     MCconfig_file.write("WORKFLOW_NAME="+splitlist[len(splitlist)-2]+"\n")
@@ -326,6 +409,10 @@ def main(argv):
         ListUnDispatched()
     elif MODE == "TEST":
         TestProject(ID)
+    elif MODE == "RETRYJOB":
+        RetryJob(ID)
+    elif MODE == "CANCELJOB":
+        CancelJob(ID)
     else:
         print "MODE NOT FOUND"
 

@@ -43,7 +43,7 @@ except:
         pass
 
 MCWRAPPER_VERSION="1.21"
-MCWRAPPER_DATE="7/26/18"
+MCWRAPPER_DATE="7/31/18"
 
 def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID):
 
@@ -356,7 +356,7 @@ def recordJob(PROJECT_ID,RUNNO,FILENO,BatchJobID, NUMEVTS):
         dbcursor.execute("INSERT INTO Jobs (Project_ID, RunNumber, FileNumber, Creation_Time, IsActive, NumEvts) VALUES ("+str(PROJECT_ID)+", "+str(RUNNO)+", "+str(FILENO)+", NOW(), 1, "+str(NUMEVTS)+")")
         dbcnx.commit()
 def recordFirstAttempt(PROJECT_ID,RUNNO,FILENO,BatchSYS,BatchJobID, NUMEVTS,NCORES, RAM):
-        findmyjob="SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(RUNNO)+" && FileNumber="+str(FILENO)+" && NumEvts="+str(NUMEVTS)+";"
+        findmyjob="SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(RUNNO)+" && FileNumber="+str(FILENO)+" && NumEvts="+str(NUMEVTS)+" && IsActive=1;"
         dbcursor.execute(findmyjob)
         MYJOB = dbcursor.fetchall()
 
