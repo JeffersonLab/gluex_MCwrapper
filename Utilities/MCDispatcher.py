@@ -101,9 +101,6 @@ def CancelJob(ID):
     conn.commit()
 
 
-
-
-
 def TestProject(ID):
     subprocess.call("rm -f MCDispatched.config", shell=True)
     print "TESTING PROJECT "+str(ID)

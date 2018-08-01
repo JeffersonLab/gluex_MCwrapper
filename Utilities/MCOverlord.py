@@ -53,7 +53,7 @@ except:
 
 
 def checkSWIF():
-        print "CHECKING SWIF JOBS"
+        #print "CHECKING SWIF JOBS"
         #queryswifjobs="SELECT OutputLocation,ID,NumEvents,Completed_Time FROM Project WHERE ID IN (SELECT Project_ID FROM Jobs WHERE IsActive=1 && ID IN (SELECT Job_ID FROM Attempts WHERE BatchSystem= 'SWIF') )"
         queryswifjobs="SELECT * FROM Project WHERE ID IN (SELECT Project_ID FROM Jobs WHERE IsActive=1 && ID IN (SELECT DISTINCT Job_ID FROM Attempts WHERE BatchSystem= 'SWIF' && Status!='succeeded') )"
         dbcursor.execute(queryswifjobs)
@@ -72,7 +72,7 @@ def checkSWIF():
             ProjID=workflow["ID"]
             projIDs.append(ProjID)
             #statuscommand="swif status -workflow "+str("pim_g3_1_70_v2_20180718011203pm")+" -jobs -display json"
-            statuscommand="swif status -workflow "+str(wkflowname)+" -jobs -display json"
+            statuscommand="/site/bin/swif status -workflow "+str(wkflowname)+" -jobs -display json"
             #print statuscommand
             jsonOutputstr=subprocess.check_output(statuscommand.split(" "))
             ReturnedJobs=json.loads(jsonOutputstr)
@@ -101,7 +101,7 @@ def checkSWIF():
                         WallTime=timedelta(seconds=0)
                         CpuTime=timedelta(seconds=0)
                         Start_Time=datetime.fromtimestamp(float(0.0)/float(1000))
-                        RAMUsed="0MB"
+                        RAMUsed="0"
                         ExitCode=0
                         #print attempt
                         #print "||||||||||||||||||||"
@@ -125,7 +125,7 @@ def checkSWIF():
                         if(attempt["auger_cpu_sec"]):
                             CpuTime=timedelta(seconds=attempt["auger_cpu_sec"])
                         if attempt["auger_vmem_kb"]:
-                            RAMUsed=str(float(attempt["auger_vmem_kb"])/1000.)+"MB"
+                            RAMUsed=str(float(attempt["auger_vmem_kb"])/1000.)
 
                         #print RAMUsed
                         #print "|||||||||||||||||||||"
@@ -199,21 +199,21 @@ def checkSWIF():
                             finalTimeRes=dbcursor.fetchall()
                             #print "============"
                             #print finalTimeRes[0]["MAX(Completed_Time)"]
-                            updateProjectstatus="UPDATE Project SET Completed_Time="+"'"+str(finalTimeRes[0]["MAX(Completed_Time)"])+"'"+ " WHERE ID="+str(ProjID)+" && Completed_Time IS NULL;"
-                            print updateProjectstatus
+                            updateProjectstatus="UPDATE Project SET Completed_Time="+"'"+str(finalTimeRes[0]["MAX(Completed_Time)"])+"'"+ " WHERE ID="+str(ProjID)+";"
+                            #print updateProjectstatus
                             #print "============"
                             dbcursor.execute(updateProjectstatus)
                             dbcnx.commit()
 
 
 def checkOSG():
-        print "CHECKING OSG JOBS"
+        #print "CHECKING OSG JOBS"
         queryswifjobs="SELECT * FROM Project WHERE ID IN (SELECT Project_ID FROM Jobs WHERE IsActive=1 && ID IN (SELECT DISTINCT Job_ID FROM Attempts WHERE BatchSystem= 'OSG' && Status != '4') )"
         dbcursor.execute(queryswifjobs)
         AllWkFlows = dbcursor.fetchall()
 
 
-        queryosgjobs="SELECT * from Attempts WHERE BatchSystem='OSG' ;"#&& Completed_Time IS NULL;"
+        queryosgjobs="SELECT * from Attempts WHERE BatchSystem='OSG' && Status !='4';"
         #print queryosgjobs
         dbcursor.execute(queryosgjobs)
         Alljobs = dbcursor.fetchall()
@@ -222,7 +222,7 @@ def checkOSG():
         for job in Alljobs:
             #print job
             statuscommand="condor_q "+str(job["BatchJobID"])+" -json"
-            print statuscommand
+            #print statuscommand
             jsonOutputstr=subprocess.check_output(statuscommand.split(" "))
             #print "================"
             #print jsonOutputstr
@@ -233,13 +233,14 @@ def checkOSG():
                 JSON_job=JSON_jobar[0]
                 #print JSON_job
                 ExitCode="NULL"
-                if (JSON_job["JobStatus"]!=3 and JSON_job["JobStatus"]<=1):
+                #print JSON_job["JobStatus"]
+                if (JSON_job["JobStatus"]!=3 ):
                     ExitCode=str(JSON_job["ExitStatus"])
-
+                    #print ExitCode
 
                 Completed_Time='NULL'
 
-                if(JSON_job["JobStatus"] >= 3):
+                if(JSON_job["JobStatus"] >= 3 and "JobFinishedHookDone" in JSON_job):
                     Completed_Time=JSON_job["JobFinishedHookDone"]
 
                 WallTime=timedelta(seconds=JSON_job["RemoteWallClockTime"])
@@ -248,7 +249,7 @@ def checkOSG():
                 if "JobStartDate" in JSON_job:
                     JSON_job["JobStartDate"]
                 #"MemoryUsage": "\/Expr(( ( ResidentSetSize + 1023 ) / 1024 ))\/"
-                RAMUSED=str(float(JSON_job["ImageSize_RAW"])/ float(1024))+"GB"
+                RAMUSED=str(float(JSON_job["ImageSize_RAW"])/ float(1024))
                 TransINSize=JSON_job["TransferInputSizeMB"]
 
                 REMOTE_HOST="NA"
@@ -278,7 +279,7 @@ def checkOSG():
                     ExitCode="NULL"
 
                     #print JSON_job["JobStatus"]
-                    if (JSON_job["JobStatus"]!=3 and JSON_job["JobStatus"]<=1):
+                    if (JSON_job["JobStatus"]!=3 ):
                         ExitCode=str(JSON_job["ExitStatus"])
                     
                     Completed_Time='NULL'
@@ -288,7 +289,7 @@ def checkOSG():
                     WallTime=timedelta(seconds=JSON_job["RemoteWallClockTime"])
                     CpuTime=timedelta(seconds=JSON_job["RemoteUserCpu"])
                     #"MemoryUsage": "\/Expr(( ( ResidentSetSize + 1023 ) / 1024 ))\/"
-                    RAMUSED=str(float(JSON_job["ImageSize_RAW"])/ float(1024))+"GB"
+                    RAMUSED=str(float(JSON_job["ImageSize_RAW"])/ float(1024))
                     TransINSize=JSON_job["TransferInputSizeMB"]
 
                     updatejobstatus="UPDATE Attempts SET Status=\""+str(JSON_job["JobStatus"])+"\", ExitCode="+ExitCode+", RunningLocation="+"'"+str(JSON_job["LastRemoteHost"])+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+" WHERE BatchJobID="+str(job["BatchJobID"])+";"
