@@ -783,6 +783,7 @@ if ( "$GENR" != "0" ) then
 
 
     if ( ! -f ./$STANDARD_NAME.hddm && "$GENERATOR" != "particle_gun" && "$gen_pre" != "file" ) then
+		echo "something went wrong with generation"
 		echo "An hddm file was not found after generation step.  Terminating MC production.  Please consult logs to diagnose"
 		exit 11
 	endif
