@@ -110,8 +110,8 @@ def TestProject(ID):
     order=rows[0]
     WritePayloadConfig(order)
     RunNumber=str(order["RunNumLow"])
-    if order["RunNumLow"] != order["RunNumHigh"] :
-        RunNumber = RunNumber + "-" + str(order["RunNumHigh"])
+    #if order["RunNumLow"] != order["RunNumHigh"] :
+    #    RunNumber = RunNumber + "-" + str(order["RunNumHigh"])
 
 
     cleangen=1
@@ -141,7 +141,7 @@ def TestProject(ID):
     
     #print [p.returncode,errors,output]
     print output.replace('\\n', '\n')
-    STATUS=output.find("something went wrong")
+    STATUS=output.find("went wrong")
 
     if(STATUS==-1):
         updatequery="UPDATE Project SET Tested=1"+" WHERE ID="+str(ID)+";"
