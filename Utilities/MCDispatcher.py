@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import MySQLdb
 import sys
 import datetime
@@ -49,19 +50,65 @@ def DispatchProject(ID,SYSTEM,PERCENT):
         print("Error: Cannot find Project with ID="+ID)
     
 
-def RetryJob(ID):
-    query = "SELECT * FROM Attempts WHERE Job_ID="+str(ID)
+def RetryJobsFromProject(ID):
+    query= "SELECT * FROM Attempts WHERE Creation_Time IN (SELECT Max(Creation_Time) FROM Attempts GROUP BY Job_ID) && Job_ID IN (SELECT ID FROM Jobs WHERE IsActive=1 && Project_ID="+str(ID)+");"
     curs.execute(query) 
     rows=curs.fetchall()
+
+    i=0
+    for row in rows:
+        if (row["BatchSystem"]=="SWIF"):
+            if((row["Status"] == "succeeded" and row["ExitCode"] != 0) or row["Status"]=="problems"):
+                RetryJob(row["Job_ID"])
+                i=i+1
+        elif (row["BatchSystem"]=="OSG"):
+            if(row["Status"] == "4" and row["ExitCode"] != 0):
+                RetryJob(row["Job_ID"])
+                i=i+1
+    print "retried "+str(i)+" Jobs"
+
+
+def RetryJob(ID):
+    #query = "SELECT * FROM Attempts WHERE Job_ID="+str(ID)
+    query= "SELECT Attempts.*,Max(Attempts.Creation_Time) FROM Attempts,Jobs WHERE Attempts.Job_ID = "+str(ID)
+    curs.execute(query) 
+    rows=curs.fetchall()
+
+    queryjob = "SELECT * FROM Jobs WHERE ID="+str(ID)
+    curs.execute(queryjob) 
+    job=curs.fetchall()
 
     queryproj = "SELECT * FROM Project WHERE ID IN (SELECT Project_ID FROM Jobs WHERE ID="+str(ID)+")"
     curs.execute(queryproj) 
     proj=curs.fetchall()
 
+    cleangen=1
+    if proj[0]["SaveGeneration"]==1:
+        cleangen=0
+
+    cleangeant=1
+    if proj[0]["SaveGeant"]==1:
+        cleangeant=0
+    
+    cleansmear=1
+    if proj[0]["SaveSmear"]==1:
+        cleansmear=0
+    
+    cleanrecon=1
+    if proj[0]["SaveReconstruction"]==1:
+        cleanrecon=0
+
     if(rows[0]["BatchSystem"] == "SWIF"):
         splitL=len(proj[0]["OutputLocation"].split("/"))
         command = "swif retry-jobs -workflow "+proj[0]["OutputLocation"].split("/")[splitL-2]+" "+rows[0]["BatchJobID"]
         print command
+        status = subprocess.call(command, shell=True)
+    elif(rows[0]["BatchSystem"] == "OSG"):
+        #print "OSG JOB FOUND"
+        status = subprocess.call("cp $MCWRAPPER_CENTRAL/examples/OSGShell.config ./MCDispatched.config", shell=True)
+        WritePayloadConfig(proj[0])
+        command="$MCWRAPPER_CENTRAL/gluex_MC.py MCDispatched.config "+str(job[0]["RunNumber"])+" "+str(job[0]["NumEvts"])+" per_file=100000 base_file_number="+str(job[0]["FileNumber"])+" generate="+str(proj[0]["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(proj[0]["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(proj[0]["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(proj[0]["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid=-"+str(ID)+" batch=1"
+        #print(command)
         status = subprocess.call(command, shell=True)
 
 def CancelJob(ID):
@@ -69,7 +116,6 @@ def CancelJob(ID):
     query = "UPDATE Jobs SET IsActive=0 WHERE ID="+str(ID)
     curs.execute(query)
     conn.commit()
-
 
     #modify Is_Dispatched
     queryprojID="SELECT Project_ID FROM Jobs WHERE ID="+str(ID)
@@ -408,6 +454,8 @@ def main(argv):
         TestProject(ID)
     elif MODE == "RETRYJOB":
         RetryJob(ID)
+    elif MODE == "RETRYJOBS":
+        RetryJobsFromProject(ID)
     elif MODE == "CANCELJOB":
         CancelJob(ID)
     else:

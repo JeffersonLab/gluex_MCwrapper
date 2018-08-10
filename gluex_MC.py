@@ -43,7 +43,7 @@ except:
         pass
 
 MCWRAPPER_VERSION="1.21"
-MCWRAPPER_DATE="7/31/18"
+MCWRAPPER_DATE="8/6/18"
 
 def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID):
 
@@ -91,9 +91,12 @@ def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,N
         if(len(idnumline) == 2 ):
                 SWIF_ID_NUM=str(idnumline[1])
 
-        if PROJECT_ID != -1:
+        if int(PROJECT_ID) > 0:
                 recordJob(PROJECT_ID,RUNNO,FILENO,SWIF_ID_NUM,COMMAND.split(" ")[6])
                 recordFirstAttempt(PROJECT_ID,RUNNO,FILENO,"SWIF",SWIF_ID_NUM,COMMAND.split(" ")[6],NCORES,RAM)
+        elif int(PROJECT_ID) < 0:
+                recordAttempt(abs(int(PROJECT_ID)),RUNNO,FILENO,"SWIF",SWIF_ID_NUM,COMMAND.split(" ")[6],NCORES,RAM)
+
 
         
 
@@ -150,9 +153,11 @@ def  qsub_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DA
         if ( VERBOSE == False ) :
                 status = subprocess.call("rm MCqsub.submit", shell=True)
         
-        if PROJECT_ID != -1:
+        if int(PROJECT_ID) > 0:
                 recordJob(PROJECT_ID,RUNNO,FILENO,SWIF_ID_NUM,COMMAND.split(" ")[6])
                 recordFirstAttempt(PROJECT_ID,RUNNO,FILENO,"QSUB",SWIF_ID_NUM,COMMAND.split(" ")[6],NCORES,MEMLIMIT)
+        elif int(PROJECT_ID) < 0:
+                recordAttempt(abs(int(PROJECT_ID)),RUNNO,FILENO,"QSUB",SWIF_ID_NUM,COMMAND.split(" ")[6],NCORES,MEMLIMIT)
         
 
 def  condor_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, PROJECT_ID ):
@@ -180,9 +185,11 @@ def  condor_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, 
         status = subprocess.call(add_command, shell=True)
         status = subprocess.call("rm MCcondor.submit", shell=True)
 
-        if PROJECT_ID != -1:
+        if int(PROJECT_ID) > 0:
                 recordJob(PROJECT_ID,RUNNO,FILENO,SWIF_ID_NUM,COMMAND.split(" ")[6])
                 recordFirstAttempt(PROJECT_ID,RUNNO,FILENO,"Condor",SWIF_ID_NUM,COMMAND.split(" ")[6],NCORES,"UnSet")
+        elif int(PROJECT_ID) < 0:
+                recordAttempt(abs(int(PROJECT_ID)),RUNNO,FILENO,"Condor",SWIF_ID_NUM,COMMAND.split(" ")[6],NCORES,"UnSet")
 
 
 def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID ):
@@ -298,6 +305,9 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DAT
                 print( "Nice try.....you cannot use ; or &")
                 exit(1)
 
+
+        
+
         status = subprocess.call(mkdircom, shell=True)
         jobSubout=subprocess.check_output(add_command.split(" "))
         print jobSubout
@@ -308,9 +318,16 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DAT
         #1 job(s) submitted to cluster 425013.
         status = subprocess.call("rm MCOSG.submit", shell=True)
         
-        if PROJECT_ID != -1:
+        #print "DECIDING IF FIRST JOB"
+        #print PROJECT_ID
+
+        if int(PROJECT_ID) > 0:
+                #print "FIRST ATTEMPT"
                 recordJob(PROJECT_ID,RUNNUM,FILENUM,SWIF_ID_NUM,COMMAND.split(" ")[6])
                 recordFirstAttempt(PROJECT_ID,RUNNUM,FILENUM,"OSG",SWIF_ID_NUM,COMMAND.split(" ")[6],NCORES,"Unset")
+        elif int(PROJECT_ID) < 0:
+                #print "A NEW ATTEMPT"
+                recordAttempt(abs(int(PROJECT_ID)),RUNNUM,FILENUM,"OSG",SWIF_ID_NUM,COMMAND.split(" ")[6],NCORES,"Unset")
         
 def  SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID ):
         STUBNAME = str(RUNNUM) + "_" + str(FILENUM)
@@ -340,15 +357,16 @@ def  SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, D
                 print( "Nice try.....you cannot use ; or &")
                 exit(1)
 
-        if PROJECT_ID != -1:
+        if int(PROJECT_ID) > 0:
                 recordJob(PROJECT_ID,RUNNO,FILENO,SWIF_ID_NUM,COMMAND.split(" ")[6])
-                recordFirstAttempt(PROJECT_ID,RUNNO,FILENO,"SLURM",SWIF_ID_NUM,COMMAND.split(" ")[6],NCORES, "NotSet")
+                recordFirstAttempt(PROJECT_ID,RUNNO,FILENO,"SLURM",SWIF_ID_NUM,COMMAND.split(" ")[6],NCORES, "UnSet")
+        elif int(PROJECT_ID) < 0:
+                recordAttempt(abs(int(PROJECT_ID)),RUNNO,FILENO,"SLURM",SWIF_ID_NUM,COMMAND.split(" ")[6],NCORES,"UnSet")
 
         status = subprocess.call(mkdircom, shell=True)
         status = subprocess.call(add_command, shell=True)
         status = subprocess.call("rm MCOSG.submit", shell=True)
 
-        
 
 
 def recordJob(PROJECT_ID,RUNNO,FILENO,BatchJobID, NUMEVTS):
@@ -371,6 +389,27 @@ def recordFirstAttempt(PROJECT_ID,RUNNO,FILENO,BatchSYS,BatchJobID, NUMEVTS,NCOR
         dbcursor.execute(addAttempt)
         dbcnx.commit()
         
+def recordAttempt(JOB_ID,RUNNO,FILENO,BatchSYS,BatchJobID, NUMEVTS,NCORES, RAM):
+        #print "RECORDING ATTEMPT"
+        #print JOB_ID
+        findmyjob="SELECT * FROM Jobs WHERE ID="+str(JOB_ID)
+        #print findmyjob
+        dbcursor.execute(findmyjob)
+        MYJOB = dbcursor.fetchall()
+
+        #print MYJOB
+
+        if len(MYJOB) != 1:
+                print "I either can't find a job or too many jobs might be mine"
+                exit(1)
+
+        Job_ID=MYJOB[0][0]
+
+        addAttempt="INSERT INTO Attempts (Job_ID,Creation_Time,BatchSystem,BatchJobID,Status,WallTime,CPUTime,ThreadsRequested,RAMRequested, RAMUsed) VALUES ("+str(JOB_ID)+", NOW(), "+str("'"+BatchSYS+"'")+", "+str(BatchJobID)+", 'Created', 0, 0, "+str(NCORES)+", "+str("'"+RAM+"'")+", '0'"+");"
+        print addAttempt
+        dbcursor.execute(addAttempt)
+        dbcnx.commit()
+
 
 def showhelp():
         helpstring= "variation=%s where %s is a valid jana_calib_context variation string (default is \"mc\")\n"
@@ -464,7 +503,8 @@ def main(argv):
         TIMELIMIT  = "300minutes"      # Max walltime
         OS         = "centos7"        # Specify CentOS65 machines
 
-        PROJECT_ID=-1 #internally used when needed
+        PROJECT_ID=0 #internally used when needed
+
         #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         VERSION  = "mc"
         CALIBTIME="notime"
