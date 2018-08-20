@@ -58,20 +58,32 @@ def checkProjectsForCompletion():
 
     for proj in OutstandingProjects:
         #print proj['ID']
-        TOTCompletedQuery ="SELECT ID From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1 && ID in (SELECT Job_ID FROM Attempts WHERE (ExitCode != 0 || ExitCode IS NULL));"
+        TOTCompletedQuery ="SELECT DISTINCT ID From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1 && ID in (SELECT DISTINCT Job_ID FROM Attempts WHERE ( (ExitCode = 0 || ExitCode = 127 || ExitCode = 126 || ExitCode = 134) ) && ExitCode IS NOT NULL);" #"SELECT DISTINCT ID From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1 && ID in (SELECT Job_ID FROM Attempts WHERE ( (ExitCode != 0 && ExitCode != 127 && ExitCode != 126 && ExitCode != 134) || ExitCode IS NULL));"        dbcursor.execute(TOTCompletedQuery)
         dbcursor.execute(TOTCompletedQuery)
-        UnfulfilledJobs=dbcursor.fetchall()
-        if(len(UnfulfilledJobs)==0):
+        fulfilledJobs=dbcursor.fetchall()
+
+        TOTJobs="SELECT ID From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1;"
+        dbcursor.execute(TOTJobs)
+        AllActiveJobs=dbcursor.fetchall()
+        #print "====================="
+        #print proj['ID']
+        #print len(fulfilledJobs)
+        #print len(AllActiveJobs)
+        if(len(fulfilledJobs)==len(AllActiveJobs)):
             #print("DONE")
-            getFinalCompleteTime="SELECT MAX(Completed_Time) FROM Attempts WHERE Job_ID IN (SELECT ID FROM Jobs WHERE Project_ID="+str(ProjID)+");"
+            getFinalCompleteTime="SELECT MAX(Completed_Time) FROM Attempts WHERE Job_ID IN (SELECT ID FROM Jobs WHERE Project_ID="+str(proj['ID'])+");"
             #print getFinalCompleteTime
             dbcursor.execute(getFinalCompleteTime)
             finalTimeRes=dbcursor.fetchall()
             #print "============"
             #print finalTimeRes[0]["MAX(Completed_Time)"]
-            updateProjectstatus="UPDATE Project SET Completed_Time="+"'"+str(finalTimeRes[0]["MAX(Completed_Time)"])+"'"+ " WHERE ID="+str(ProjID)+";"
+            updateProjectstatus="UPDATE Project SET Completed_Time="+"'"+str(finalTimeRes[0]["MAX(Completed_Time)"])+"'"+ " WHERE ID="+str(proj['ID'])+";"
             #print updateProjectstatus
             #print "============"
+            dbcursor.execute(updateProjectstatus)
+            dbcnx.commit()
+        else:
+            updateProjectstatus="UPDATE Project SET Completed_Time=NULL WHERE ID="+str(proj['ID'])+";"
             dbcursor.execute(updateProjectstatus)
             dbcnx.commit()
 
