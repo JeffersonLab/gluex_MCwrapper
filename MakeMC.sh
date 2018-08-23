@@ -92,14 +92,16 @@ shift
 export MCWRAPPER_VERSION=$1
 
 export USER_BC=`which bc`
-
+export USER_PYTHON=`which python`
+export USER_STAT=`which stat`
 
 
 if [[ "$BATCHSYS" == "OSG" && "$BATCHRUN"=="1" ]]; then
 export USER_BC='/usr/bin/bc'
+export USER_STAT='/usr/bin/stat'
 fi
 
-export USER_PYTHON=`which python`
+
 
 #printenv
 #necessary to run swif, uses local directory if swif=0 is used
@@ -129,6 +131,10 @@ fi
 cd $RUNNING_DIR/${RUN_NUMBER}_${FILE_NUMBER}
 
 if [[ "$ccdbSQLITEPATH" != "no_sqlite" && "$ccdbSQLITEPATH" != "batch_default" ]]; then
+	if [[ `$USER_STAT --file-system --format=%T $PWD` == "lustre" ]]; then
+		echo "Attempting to use sqlite on a lustre file system. This does not work.  Try running on a different file system!"
+		exit 1
+	fi
     cp $ccdbSQLITEPATH ./ccdb.sqlite
     export CCDB_CONNECTION=sqlite:///$PWD/ccdb.sqlite
     export JANA_CALIB_URL=$CCDB_CONNECTION
@@ -138,6 +144,10 @@ elif [[ "$ccdbSQLITEPATH" == "batch_default" ]]; then
 fi
 
 if [[ "$rcdbSQLITEPATH" != "no_sqlite" && "$rcdbSQLITEPATH" != "batch_default" ]]; then
+	if [[ `$USER_STAT --file-system --format=%T $PWD` == "lustre" ]]; then
+		echo "Attempting to use sqlite on a lustre file system. This does not work.  Try running on a different file system!"
+		exit 1
+	fi
     cp $rcdbSQLITEPATH ./rcdb.sqlite
     export RCDB_CONNECTION=sqlite:///$PWD/rcdb.sqlite
 elif [[ "$rcdbSQLITEPATH" == "batch_default" ]]; then
