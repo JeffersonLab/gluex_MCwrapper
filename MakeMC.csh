@@ -91,6 +91,8 @@ shift
 setenv GEANT_NOSECONDARIES $1
 shift
 setenv MCWRAPPER_VERSION $1
+shift
+setenv NOSIPMSATURATION $1
 
 setenv USER_BC `which bc`
 setenv USER_PYTHON `which python`
@@ -923,10 +925,14 @@ if ( "$GENR" != "0" ) then
 			echo "An hddm file was not created by Geant.  Terminating MC production.  Please consult logs to diagnose"
 			exit 12
 		endif
-	
+		
 		set MCSMEAR_Flags=""
 		if ( "$SMEAR" == "0" ) then
-			set MCSMEAR_Flags="-s"
+			set MCSMEAR_Flags="$MCSMEAR_Flags"" -s"
+		endif
+
+		if ( "$NOSIPMSATURATION" == "1" ) then
+			set MCSMEAR_Flags="$MCSMEAR_Flags"" -T"
 		endif
 
 		echo "RUNNING MCSMEAR"
