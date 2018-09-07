@@ -88,8 +88,22 @@ shift
 export RECON_CALIBTIME=$1
 shift
 export GEANT_NOSCONDARIES=$1
+shift
+export MCWRAPPER_VERSION=$1
+shift
+export NOSIPMSATURATION=$1
 
 export USER_BC=`which bc`
+export USER_PYTHON=`which python`
+export USER_STAT=`which stat`
+
+
+if [[ "$BATCHSYS" == "OSG" && "$BATCHRUN"=="1" ]]; then
+export USER_BC='/usr/bin/bc'
+export USER_STAT='/usr/bin/stat'
+fi
+
+
 
 #printenv
 #necessary to run swif, uses local directory if swif=0 is used
@@ -119,6 +133,10 @@ fi
 cd $RUNNING_DIR/${RUN_NUMBER}_${FILE_NUMBER}
 
 if [[ "$ccdbSQLITEPATH" != "no_sqlite" && "$ccdbSQLITEPATH" != "batch_default" ]]; then
+	if [[ `$USER_STAT --file-system --format=%T $PWD` == "lustre" ]]; then
+		echo "Attempting to use sqlite on a lustre file system. This does not work.  Try running on a different file system!"
+		exit 1
+	fi
     cp $ccdbSQLITEPATH ./ccdb.sqlite
     export CCDB_CONNECTION=sqlite:///$PWD/ccdb.sqlite
     export JANA_CALIB_URL=$CCDB_CONNECTION
@@ -128,6 +146,10 @@ elif [[ "$ccdbSQLITEPATH" == "batch_default" ]]; then
 fi
 
 if [[ "$rcdbSQLITEPATH" != "no_sqlite" && "$rcdbSQLITEPATH" != "batch_default" ]]; then
+	if [[ `$USER_STAT --file-system --format=%T $PWD` == "lustre" ]]; then
+		echo "Attempting to use sqlite on a lustre file system. This does not work.  Try running on a different file system!"
+		exit 1
+	fi
     cp $rcdbSQLITEPATH ./rcdb.sqlite
     export RCDB_CONNECTION=sqlite:///$PWD/rcdb.sqlite
 elif [[ "$rcdbSQLITEPATH" == "batch_default" ]]; then
@@ -312,6 +334,9 @@ echo "=============================================="
 echo ""
 echo ""
 echo "=======SOFTWARE USED======="
+echo "MCwrapper version v"$MCWRAPPER_VERSION
+echo "BC "$USER_BC
+echo "python "$USER_PYTHON
 echo `which $GENERATOR`
 if [[ "$GEANTVER" == "3" ]]; then
 	echo `which hdgeant`
@@ -322,6 +347,17 @@ echo `which mcsmear`
 echo `which hd_root`
 echo ""
 echo ""
+
+isGreater=1
+#echo $isGreater
+isGreater=`echo $GEN_MAX_ENERGY'>'$eBEAM_ENERGY | $USER_BC -l`
+#echo $isGreater
+#echo "$isGreater"
+if [[ "$isGreater" == "1"  ]]; then 
+echo "something went wrong with initialization"
+echo "Error: Requested Max photon energy is above the electron beam energy!"
+exit 1
+fi
 
 if [[ "$CUSTOM_GCONTROL" == "0" ]]; then
     cp $MCWRAPPER_CENTRAL/Gcontrol.in ./temp_Gcontrol.in
@@ -433,6 +469,7 @@ if [[ "$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" == 
 			#set bkglocstring="/w/halld-scifs1a/home/tbritton/converted.hddm"
 		    
 		    if [[ ! -f $bkglocstring ]]; then
+			echo "something went wrong with initialization"
 			echo "Could not find mix-in file "$bkglocstring
 			exit
 		    fi
@@ -454,7 +491,7 @@ gen_pre=""
 if [[ "$GENR" != "0" ]]; then
 
 	gen_pre=`echo $GENERATOR | cut -c1-4`
-    if [[ "$gen_pre" != "file" && "$GENERATOR" != "genr8" && "$GENERATOR" != "bggen" && "$GENERATOR" != "genEtaRegge" && "$GENERATOR" != "gen_2pi_amp" && "$GENERATOR" != "gen_pi0" && "$GENERATOR" != "gen_2pi_primakoff" && "$GENERATOR" != "gen_omega_3pi" && "$GENERATOR" != "gen_2k" && "$GENERATOR" != "bggen_jpsi" && "$GENERATOR" != "gen_ee" && "$GENERATOR" != "gen_ee_hb" && "$GENERATOR" != "particle_gun" && "$GENERATOR" != "bggen_phi_ee" && "$GENERATOR" != "genBH" && "$GENERATOR" != "gen_omega_radiative" && "$GENERATOR" != "gen_amp" ]]; then
+    if [[ "$gen_pre" != "file" && "$GENERATOR" != "genr8" && "$GENERATOR" != "bggen" && "$GENERATOR" != "genEtaRegge" && "$GENERATOR" != "gen_2pi_amp" && "$GENERATOR" != "gen_pi0" && "$GENERATOR" != "gen_2pi_primakoff" && "$GENERATOR" != "gen_omega_3pi" && "$GENERATOR" != "gen_2k" && "$GENERATOR" != "bggen_jpsi" && "$GENERATOR" != "gen_ee" && "$GENERATOR" != "gen_ee_hb" && "$GENERATOR" != "particle_gun" && "$GENERATOR" != "bggen_phi_ee" && "$GENERATOR" != "genBH" && "$GENERATOR" != "gen_omega_radiative" && "$GENERATOR" != "gen_amp" && "$GENERATOR" != "genr8_new" ]]; then
 		echo "NO VALID GENERATOR GIVEN"
 		echo "only [genr8, bggen, genEtaRegge, gen_2pi_amp, gen_pi0, gen_omega_3pi, gen_2k, bggen_jpsi, gen_ee, gen_ee_hb,  bggen_phi_ee, particle_gun, genBH, gen_omega_radiative, gen_amp] are supported"
 		exit 1
@@ -512,7 +549,11 @@ if [[ "$GENR" != "0" ]]; then
 			echo "Please specify the desired energy via the COHERENT_PEAK parameter and retry."
 			exit 1
 		fi
+	elif ( "$GENERATOR" == "genr8_new" ) then
+		echo "configuring new genr8"
 
+		STANDARD_NAME="genr8_new_"$STANDARD_NAME
+		cp $CONFIG_FILE ./$STANDARD_NAME.conf
     elif [[ "$GENERATOR" == "bggen" ]]; then
 		echo "configuring bggen"
 		STANDARD_NAME="bggen_"$STANDARD_NAME
@@ -602,6 +643,14 @@ if [[ "$GENR" != "0" ]]; then
 	genr8 -r$formatted_runNumber -M$EVT_TO_GEN -A$STANDARD_NAME.ascii < $STANDARD_NAME.conf #$config_file_name
 	generator_return_code=$?
 	genr8_2_hddm -V"0 0 50 80" $STANDARD_NAME.ascii
+	elif [[ "$GENERATOR" == "genr8_new" ]]; then
+		echo "RUNNING NEW GENR8"
+		RUNNUM=$formatted_runNumber+$formatted_fileNumber
+		#sed -i 's/TEMPCOHERENT/'$COHERENT_PEAK'/' $STANDARD_NAME.conf
+		# RUN genr8 and convert
+		genr8_new -r$formatted_runNumber -M$EVT_TO_GEN -C$GEN_MIN_ENERGY,$GEN_MAX_ENERGY -o$STANDARD_NAME.gamp < $STANDARD_NAME.conf #$config_file_name
+		generator_return_code=$status
+		gamp_2_hddm -r$formatted_runNumber -V"0 0 50 80" $STANDARD_NAME.gamp
     elif [[ "$GENERATOR" == "bggen" ]]; then
 	RANDOMnum=`bash -c 'echo $RANDOM'`
 	echo "Random number used: "$RANDOMnum
@@ -753,12 +802,12 @@ if [[ "$GENR" != "0" ]]; then
 	elif [[ "$GENERATOR" == "gen_ee" ]]; then
 	set RANDOMnum=`bash -c 'echo $RANDOM'`
 	echo "Random number used: "$RANDOMnum
-	ee_mc -n$EVT_TO_GEN -R2 -b2 -l$GEN_MIN_ENERGY -u$GEN_MAX_ENERGY -t2 -r$RANDOMnum -omc_ee.hddm
+	gen_ee -n$EVT_TO_GEN -R2 -b2 -l$GEN_MIN_ENERGY -u$GEN_MAX_ENERGY -t2 -r$RANDOMnum -omc_ee.hddm
 	generator_return_code=$?
 	mv mc_ee.hddm $STANDARD_NAME.hddm
 	elif [[ "$GENERATOR" == "gen_ee_hb" ]]; then
-		echo ee_mc_hb -N$RUN_NUMBER -n$EVT_TO_GEN
-		ee_mc_hb -N$RUN_NUMBER -n$EVT_TO_GEN
+		echo gen_ee_hb -N$RUN_NUMBER -n$EVT_TO_GEN
+		gen_ee_hb -N$RUN_NUMBER -n$EVT_TO_GEN
 		generator_return_code=$?
 		mv genOut.hddm $STANDARD_NAME.hddm
 	elif [[ "$GENERATOR" == "genBH" ]]; then
@@ -777,6 +826,7 @@ if [[ "$GENR" != "0" ]]; then
 	fi
 
 	if [[ ! -f ./$STANDARD_NAME.hddm && "$GENERATOR" != "particle_gun" && "$gen_pre" != "file" ]]; then
+		echo "something went wrong with generation"
 		echo "An hddm file was not found after generation step.  Terminating MC production.  Please consult logs to diagnose"
 		exit 11
 	fi
@@ -874,92 +924,60 @@ if [[ "$GENR" != "0" ]]; then
 		echo "An hddm file was not created by Geant.  Terminating MC production.  Please consult logs to diagnose"
 		exit 12
 	fi
-
-	if [[ "$SMEAR" != "0" ]]; then
-	    echo "RUNNING MCSMEAR"
-	    
-	    if [[ "$BKGFOLDSTR" == "BeamPhotons" || "$BKGFOLDSTR" == "None" || "$BKGFOLDSTR" == "TagOnly" ]]; then
-		echo "running MCsmear without folding in random background"
-		mcsmear -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' $STANDARD_NAME'_geant'$GEANTVER'.hddm'
-		mcsmear_return_code=$?
-	    elif [[ "$BKGFOLDSTR" == "DEFAULT" || "$BKGFOLDSTR" == "Random" ]]; then
-		rm -f count.py
-	    echo "import hddm_s" > count.py
-	    echo "print(sum(1 for r in hddm_s.istream('$bkglocstring')))" >> count.py
-	    totalnum=$(python count.py)
-		fold_skip_num=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
-		echo "skipping: "$fold_skip_num
-		echo "mcsmear -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
-		mcsmear -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
-		mcsmear_return_code=$?
-		elif [[ "$bkgloc_pre" == "loc:" ]]; then
-		rm -f count.py
-	    echo "import hddm_s" > count.py
-	    echo "print(sum(1 for r in hddm_s.istream('$bkglocstring')))" >> count.py
-	    totalnum=`python count.py`
-		fold_skip_num=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
-		echo "mcsmear -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
-		mcsmear -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
-		mcsmear_return_code=$?
-		else
-		    #trust the user and use their string
-		    echo 'mcsmear -PTHREAD_TIMEOUT=500 -o'$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm'' '$STANDARD_NAME'_geant'$GEANTVER'.hddm'' '$BKGFOLDSTR
-		    mcsmear -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' $STANDARD_NAME'_geant'$GEANTVER'.hddm' $BKGFOLDSTR
-			mcsmear_return_code=$?
-
-	    fi
-		
-			if [[ $mcsmear_return_code != 0 ]]; then
-				echo
-				echo
-				echo "Something went wrong with mcsmear"
-				echo "status code: "$mcsmear_return_code
-				exit $mcsmear_return_code
-			fi
-
-	else
-			#cp $STANDARD_NAME'_geant'$GEANTVER'.hddm' $STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm'
-			if [[ "$BKGFOLDSTR" == "BeamPhotons" || "$BKGFOLDSTR" == "None" || "$BKGFOLDSTR" == "TagOnly" ]]; then
-		echo "running MCsmear without folding in random background"
-		mcsmear -s -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' $STANDARD_NAME'_geant'$GEANTVER'.hddm'
-		mcsmear_return_code=$?
-	    elif [[ "$BKGFOLDSTR" == "DEFAULT" || "$BKGFOLDSTR" == "Random" ]]; then
-		rm -f count.py
-	    echo "import hddm_s" > count.py
-	    echo "print(sum(1 for r in hddm_s.istream('$bkglocstring')))" >> count.py
-	    totalnum=$(python count.py)
-		fold_skip_num=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
-		echo "skipping: "$fold_skip_num
-		echo "mcsmear -s -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
-		mcsmear -s -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
-		mcsmear_return_code=$?
-		elif [[ "$bkgloc_pre" == "loc:" ]]; then
-		rm -f count.py
-	    echo "import hddm_s" > count.py
-	    echo "print(sum(1 for r in hddm_s.istream('$bkglocstring')))" >> count.py
-	    totalnum=`python count.py`
-		fold_skip_num=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
-		echo "mcsmear -s -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
-		mcsmear -s -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
-		mcsmear_return_code=$?
-		else
-		    #trust the user and use their string
-		    echo 'mcsmear -s -PTHREAD_TIMEOUT=500 -o'$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm'' '$STANDARD_NAME'_geant'$GEANTVER'.hddm'' '$BKGFOLDSTR
-		    mcsmear -s -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' $STANDARD_NAME'_geant'$GEANTVER'.hddm' $BKGFOLDSTR
-			mcsmear_return_code=$?
-
-	    fi
-		
-			if [[ $mcsmear_return_code != 0 ]]; then
-				echo
-				echo
-				echo "Something went wrong with mcsmear"
-				echo "status code: "$mcsmear_return_code
-				exit $mcsmear_return_code
-			fi
+	
+	MCSMEAR_Flags=""
+	if [[ "$SMEAR" == "0" ]]; then
+		MCSMEAR_Flags="$MCSMEAR_Flags"" -s"
 	fi
+
+	if [[ "$NOSIPMSATURATION" == "1" ]]; then 
+		MCSMEAR_Flags="$MCSMEAR_Flags"" -T"
+	fi
+	
+	echo "RUNNING MCSMEAR"
+	   
+	if [[ "$BKGFOLDSTR" == "BeamPhotons" || "$BKGFOLDSTR" == "None" || "$BKGFOLDSTR" == "TagOnly" ]]; then
+		echo "running MCsmear without folding in random background"
+		mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' $STANDARD_NAME'_geant'$GEANTVER'.hddm'
+		mcsmear_return_code=$?
+	elif [[ "$BKGFOLDSTR" == "DEFAULT" || "$BKGFOLDSTR" == "Random" ]]; then
+		rm -f count.py
+	   echo "import hddm_s" > count.py
+	   echo "print(sum(1 for r in hddm_s.istream('$bkglocstring')))" >> count.py
+	   totalnum=$($USER_PYTHON count.py)
+	   rm count.py
+		fold_skip_num=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
+		echo "skipping: "$fold_skip_num
+		echo "mcsmear "$MCSMEAR_Flags " -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
+		mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
+		mcsmear_return_code=$?
+	elif [[ "$bkgloc_pre" == "loc:" ]]; then
+		rm -f count.py
+	   echo "import hddm_s" > count.py
+	   echo "print(sum(1 for r in hddm_s.istream('$bkglocstring')))" >> count.py
+	   totalnum=`$USER_PYTHON count.py`
+	   rm count.py
+		fold_skip_num=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
+		echo "mcsmear "$MCSMEAR_Flags " -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
+		mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
+		mcsmear_return_code=$?
+	else
+	    #trust the user and use their string
+	    echo 'mcsmear -PTHREAD_TIMEOUT=500 -o'$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm'' '$STANDARD_NAME'_geant'$GEANTVER'.hddm'' '$BKGFOLDSTR
+	    mcsmear -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' $STANDARD_NAME'_geant'$GEANTVER'.hddm' $BKGFOLDSTR
+		mcsmear_return_code=$?
+	fi
+	
+	if [[ $mcsmear_return_code != 0 ]]; then
+		echo
+		echo
+		echo "Something went wrong with mcsmear"
+		echo "status code: "$mcsmear_return_code
+		exit $mcsmear_return_code
+	fi
+	
 	    #run reconstruction
-	    if [[ "$CLEANGENR" == "1" ]]; then
+	if [[ "$CLEANGENR" == "1" ]]; then
 		if [[ "$GENERATOR" == "genr8" ]]; then
 		    rm *.ascii
 		elif [[ "$GENERATOR" == "bggen" || "$GENERATOR" == "bggen_jpsi" || "$GENERATOR" == "bggen_phi_ee" ]]; then
