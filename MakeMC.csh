@@ -799,13 +799,13 @@ if ( "$GENR" != "0" ) then
 	else if ( "$GENERATOR" == "gen_ee" ) then
 		set RANDOMnum=`bash -c 'echo $RANDOM'`
 		echo "Random number used: "$RANDOMnum
-		echo ee_mc -n$EVT_TO_GEN -R2 -b2 -l$GEN_MIN_ENERGY -u$GEN_MAX_ENERGY -t2 -r$RANDOMnum -omc_ee.hddm
-		ee_mc -n$EVT_TO_GEN -R2 -b2 -l$GEN_MIN_ENERGY -u$GEN_MAX_ENERGY -t2 -r$RANDOMnum -omc_ee.hddm
+		echo gen_ee -n$EVT_TO_GEN -R2 -b2 -l$GEN_MIN_ENERGY -u$GEN_MAX_ENERGY -t2 -r$RANDOMnum -omc_ee.hddm
+		gen_ee -n$EVT_TO_GEN -R2 -b2 -l$GEN_MIN_ENERGY -u$GEN_MAX_ENERGY -t2 -r$RANDOMnum -omc_ee.hddm
 		set generator_return_code=$status
 		mv mc_ee.hddm $STANDARD_NAME.hddm
 	else if ( "$GENERATOR" == "gen_ee_hb" ) then
-		echo ee_mc_hb -N$RUN_NUMBER -n$EVT_TO_GEN
-		ee_mc_hb -N$RUN_NUMBER -n$EVT_TO_GEN
+		echo gen_ee_hb -N$RUN_NUMBER -n$EVT_TO_GEN
+		gen_ee_hb -N$RUN_NUMBER -n$EVT_TO_GEN
 		set generator_return_code=$status
 		mv genOut.hddm $STANDARD_NAME.hddm
 	else if ( "$GENERATOR" == "genBH" ) then

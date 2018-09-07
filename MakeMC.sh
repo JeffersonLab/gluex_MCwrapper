@@ -802,12 +802,12 @@ if [[ "$GENR" != "0" ]]; then
 	elif [[ "$GENERATOR" == "gen_ee" ]]; then
 	set RANDOMnum=`bash -c 'echo $RANDOM'`
 	echo "Random number used: "$RANDOMnum
-	ee_mc -n$EVT_TO_GEN -R2 -b2 -l$GEN_MIN_ENERGY -u$GEN_MAX_ENERGY -t2 -r$RANDOMnum -omc_ee.hddm
+	gen_ee -n$EVT_TO_GEN -R2 -b2 -l$GEN_MIN_ENERGY -u$GEN_MAX_ENERGY -t2 -r$RANDOMnum -omc_ee.hddm
 	generator_return_code=$?
 	mv mc_ee.hddm $STANDARD_NAME.hddm
 	elif [[ "$GENERATOR" == "gen_ee_hb" ]]; then
-		echo ee_mc_hb -N$RUN_NUMBER -n$EVT_TO_GEN
-		ee_mc_hb -N$RUN_NUMBER -n$EVT_TO_GEN
+		echo gen_ee_hb -N$RUN_NUMBER -n$EVT_TO_GEN
+		gen_ee_hb -N$RUN_NUMBER -n$EVT_TO_GEN
 		generator_return_code=$?
 		mv genOut.hddm $STANDARD_NAME.hddm
 	elif [[ "$GENERATOR" == "genBH" ]]; then
