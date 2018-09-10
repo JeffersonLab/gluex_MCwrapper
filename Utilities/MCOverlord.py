@@ -91,7 +91,7 @@ def checkProjectsForCompletion():
 def checkSWIF():
         #print "CHECKING SWIF JOBS"
         #queryswifjobs="SELECT OutputLocation,ID,NumEvents,Completed_Time FROM Project WHERE ID IN (SELECT Project_ID FROM Jobs WHERE IsActive=1 && ID IN (SELECT Job_ID FROM Attempts WHERE BatchSystem= 'SWIF') )"
-        queryswifjobs="SELECT * FROM Project WHERE ID IN (SELECT Project_ID FROM Jobs WHERE IsActive=1 && ID IN (SELECT DISTINCT Job_ID FROM Attempts WHERE BatchSystem= 'SWIF' && Status!='succeeded') )"
+        queryswifjobs="SELECT * FROM Project WHERE ID IN (SELECT Project_ID FROM Jobs WHERE IsActive=1 && ID IN (SELECT DISTINCT Job_ID FROM Attempts WHERE BatchSystem= 'SWIF'))"# && Status!='succeeded') )"
         dbcursor.execute(queryswifjobs)
         AllWkFlows = dbcursor.fetchall()
        
@@ -142,6 +142,9 @@ def checkSWIF():
                         #print attempt
                         #print "||||||||||||||||||||"
                         #print attempt["exitcode"]
+                        #if not attempt["exitcode"]:
+                        #    continue
+
                         if attempt["exitcode"] or job["status"]=="succeeded":
                             ExitCode=attempt["exitcode"]
                         else:
@@ -150,7 +153,7 @@ def checkSWIF():
                   
                         Completed_Time='NULL'
 
-                        if(job["status"]=="problem" or job["status"]=="succeeded"):
+                        if(job["status"]=="problem" or job["status"]=="succeeded") and attempt["auger_ts_complete"] is not None:
                             Completed_Time=attempt["auger_ts_complete"]
                             #print datetime.fromtimestamp(float(attempt["auger_ts_complete"])/float(1000))
 
@@ -180,14 +183,14 @@ def checkSWIF():
                             #print len(LoggedSWIFAttemps)
                             #print LinkToJob
                             submitTime=0.0
-                            print attempt["auger_ts_submitted"]
+                            #print attempt["auger_ts_submitted"]
                             if attempt["auger_ts_submitted"]:
                                 submitTime=float(attempt["auger_ts_submitted"])
                             
-                            print datetime.fromtimestamp(submitTime/float(1000))
+                            #print datetime.fromtimestamp(submitTime/float(1000))
                             
                             addFoundAttempt="INSERT INTO Attempts (Job_ID,Creation_Time,BatchSystem,BatchJobID, ThreadsRequested, RAMRequested,Start_Time) VALUES (%s,'%s','SWIF',%s,%s,%s,'%s')" % (LinkToJob[0]["Job_ID"],datetime.fromtimestamp(submitTime/float(1000)),attempt["job_id"],attempt["cpu_cores"], "'"+str(float(attempt["ram_bytes"])/float(1000000000))+"GB"+"'",Start_Time)
-                            print addFoundAttempt
+                            #print addFoundAttempt
                             dbcursor.execute(addFoundAttempt)
                             dbcnx.commit()
 
@@ -198,11 +201,11 @@ def checkSWIF():
 
                         #print "UPDATING ATTEMPT"
                         #print (attempt["auger_ts_complete"])
-                        if not attempt["auger_ts_complete"]:
-                                Completed_Time='NULL'
+                        if attempt["auger_ts_complete"] is None:
+                            Completed_Time='NULL'
 
-                        if not ExitCode:
-                                ExitCode='NULL'
+                        if attempt["exitcode"] is None:
+                            ExitCode='NULL'
                         #print str(ExitCode)
                         #UPDATE THE SATUS
                         #print Completed_Time
@@ -322,7 +325,7 @@ def checkOSG():
 def main(argv):
 
         checkSWIF()
-        checkOSG()
+        #checkOSG()
         checkProjectsForCompletion()
         dbcnx.close()
                 
