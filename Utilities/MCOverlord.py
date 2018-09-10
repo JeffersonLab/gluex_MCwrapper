@@ -147,6 +147,7 @@ def checkSWIF():
                         else:
                             ExitCode=-1
                         
+                  
                         Completed_Time='NULL'
 
                         if(job["status"]=="problem" or job["status"]=="succeeded"):
@@ -179,9 +180,10 @@ def checkSWIF():
                             #print len(LoggedSWIFAttemps)
                             #print LinkToJob
                             submitTime=0.0
-                            if (attempt["auger_ts_submitted"] != "None"):
-                                submitTime=float(attempt["auger_ts_submitted"])
                             print attempt["auger_ts_submitted"]
+                            if attempt["auger_ts_submitted"]:
+                                submitTime=float(attempt["auger_ts_submitted"])
+                            
                             print datetime.fromtimestamp(submitTime/float(1000))
                             
                             addFoundAttempt="INSERT INTO Attempts (Job_ID,Creation_Time,BatchSystem,BatchJobID, ThreadsRequested, RAMRequested,Start_Time) VALUES (%s,'%s','SWIF',%s,%s,%s,'%s')" % (LinkToJob[0]["Job_ID"],datetime.fromtimestamp(submitTime/float(1000)),attempt["job_id"],attempt["cpu_cores"], "'"+str(float(attempt["ram_bytes"])/float(1000000000))+"GB"+"'",Start_Time)
@@ -195,11 +197,18 @@ def checkSWIF():
                             #print len(LoggedSWIFAttemps)
 
                         #print "UPDATING ATTEMPT"
+                        #print (attempt["auger_ts_complete"])
+                        if not attempt["auger_ts_complete"]:
+                                Completed_Time='NULL'
+
+                        if not ExitCode:
+                                ExitCode='NULL'
                         #print str(ExitCode)
                         #UPDATE THE SATUS
-                        
+                        #print Completed_Time
                         updatejobstatus="UPDATE Attempts SET Status=\""+str(job["status"])+"\", ExitCode="+str(ExitCode)+", RunningLocation="+"'"+str(attempt["auger_node"])+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", Start_Time="+"'"+str(Start_Time)+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUsed+"'"+" WHERE BatchJobID="+str(job["id"])+" && ID="+str(LoggedSWIFAttemps[loggedindex]["ID"])
                         if Completed_Time != 'NULL':
+                                #print "COMPLETED_TIME"
                                 updatejobstatus="UPDATE Attempts SET Status=\""+str(job["status"])+"\", ExitCode="+str(ExitCode)+", Completed_Time='"+str(datetime.fromtimestamp(float(attempt["auger_ts_complete"])/float(1000)))+"'"+", RunningLocation="+"'"+str(attempt["auger_node"])+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", Start_Time="+"'"+str(Start_Time)+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUsed+"'"+" WHERE BatchJobID="+str(job["id"])+" && ID="+str(LoggedSWIFAttemps[loggedindex]["ID"])
                        
 
