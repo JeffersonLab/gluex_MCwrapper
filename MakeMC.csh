@@ -509,6 +509,7 @@ if ( "$GENR" != "0" ) then
 			echo $CONFIG_FILE" not found"
 			exit 1
 		else
+			echo `grep KINE $CONFIG_FILE | awk '{print $2}' `
 			if ( `grep KINE $CONFIG_FILE | awk '{print $2}' ` < 100 && ` grep KINE $CONFIG_FILE | wc -w` > 3 ) then
 				echo "ERROR THETA AND PHI APPEAR TO BE SET BUT WILL BE IGNORED.  PLEASE REMOVE THESE SETTINGS FROM:"$CONFIG_FILE" AND RESUBMIT."
 				exit 1
@@ -517,6 +518,7 @@ if ( "$GENR" != "0" ) then
 				exit 1
 			endif
 		endif
+		echo "LEAVING PG"
 		set generator_return_code=0
     else 
 		if ( -f $CONFIG_FILE ) then
@@ -813,6 +815,7 @@ if ( "$GENR" != "0" ) then
 		genBH -n$EVT_TO_GEN -t$NUMTHREADS -E$COHERENT_PEAK -e$GEN_MAX_ENERGY $STANDARD_NAME.hddm
 		set generator_return_code=$status
 	endif
+
 
 
     if ( ! -f ./$STANDARD_NAME.hddm && "$GENERATOR" != "particle_gun" && "$gen_pre" != "file" ) then
