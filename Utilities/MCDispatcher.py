@@ -51,18 +51,24 @@ def DispatchProject(ID,SYSTEM,PERCENT):
     
 
 def RetryJobsFromProject(ID):
-    query= "SELECT * FROM Attempts WHERE Creation_Time IN (SELECT Max(Creation_Time) FROM Attempts GROUP BY Job_ID) && Job_ID IN (SELECT ID FROM Jobs WHERE IsActive=1 && Project_ID="+str(ID)+");"
+    query= "SELECT * FROM Attempts WHERE ID IN (SELECT Max(ID) FROM Attempts GROUP BY Job_ID) && Job_ID IN (SELECT ID FROM Jobs WHERE IsActive=1 && Project_ID="+str(ID)+");"
     curs.execute(query) 
     rows=curs.fetchall()
-
+   
     i=0
     for row in rows:
+        
         if (row["BatchSystem"]=="SWIF"):
             if((row["Status"] == "succeeded" and row["ExitCode"] != 0) or row["Status"]=="problems"):
                 RetryJob(row["Job_ID"])
                 i=i+1
         elif (row["BatchSystem"]=="OSG"):
-            if(row["Status"] == "4" and row["ExitCode"] != 0 and ros["ExitCode"] == 127):
+            #print "=========================="
+            #print row
+            #print row["Status"]
+            #print row["ExitCode"]
+            #print "=========================="
+            if(row["Status"] == "4" and row["ExitCode"] != 0):
                 RetryJob(row["Job_ID"])
                 i=i+1
     print "retried "+str(i)+" Jobs"

@@ -58,7 +58,7 @@ def checkProjectsForCompletion():
 
     for proj in OutstandingProjects:
         #print proj['ID']
-        TOTCompletedQuery ="SELECT DISTINCT ID From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1 && ID in (SELECT DISTINCT Job_ID FROM Attempts WHERE ( (ExitCode = 0 || ExitCode = 127 || ExitCode = 126 || ExitCode = 134) ) && ExitCode IS NOT NULL);" #"SELECT DISTINCT ID From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1 && ID in (SELECT Job_ID FROM Attempts WHERE ( (ExitCode != 0 && ExitCode != 127 && ExitCode != 126 && ExitCode != 134) || ExitCode IS NULL));"        dbcursor.execute(TOTCompletedQuery)
+        TOTCompletedQuery ="SELECT DISTINCT ID From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1 && ID in (SELECT DISTINCT Job_ID FROM Attempts WHERE ( (ExitCode = 0) ) && ExitCode IS NOT NULL);" #"SELECT DISTINCT ID From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1 && ID in (SELECT Job_ID FROM Attempts WHERE ( (ExitCode != 0 && ExitCode != 127 && ExitCode != 126 && ExitCode != 134) || ExitCode IS NULL));"        dbcursor.execute(TOTCompletedQuery)
         dbcursor.execute(TOTCompletedQuery)
         fulfilledJobs=dbcursor.fetchall()
 
@@ -221,18 +221,50 @@ def checkSWIF():
                         loggedindex+=1
 
 
+def UpdateOutputSize():
+
+    getUntotaled="SELECT ID FROM Project WHERE Completed_Time IS NULL;"
+    #print querygetLoc
+    dbcursor.execute(getUntotaled)
+    Projects = dbcursor.fetchall()
+
+    for pr in Projects:
+        id=pr["ID"]
+        #print "Updating size for: "+str(id)
+        querygetLoc="SELECT * FROM Project WHERE ID="+str(id)+";"
+        #print querygetLoc
+        dbcursor.execute(querygetLoc)
+        Project = dbcursor.fetchall()
+        location=Project[0]["OutputLocation"]
+
+        if Project[0]["FinalDestination"]:
+            location=Project[0]["FinalDestination"]
+
+        statuscommand="du -sh --total "+location
+        #print statuscommand
+        totalSizeStr=subprocess.check_output([statuscommand], shell=True)
+        #print "==============="
+        #print totalSizeStr.split("\n")[1].split("total")[0]
+
+        updateProjectSizeOut="UPDATE Project SET TotalSizeOut=\""+totalSizeStr.split("\n")[1].split("total")[0]+"\" WHERE ID="+str(id)
+        dbcursor.execute(updateProjectSizeOut)
+        dbcnx.commit()
 
 def checkOSG():
         #print "CHECKING OSG JOBS"
         queryswifjobs="SELECT * FROM Project WHERE ID IN (SELECT Project_ID FROM Jobs WHERE IsActive=1 && ID IN (SELECT DISTINCT Job_ID FROM Attempts WHERE BatchSystem= 'OSG' && Status != '4') )"
         dbcursor.execute(queryswifjobs)
         AllWkFlows = dbcursor.fetchall()
+        #for wk in AllWkFlows:
+        #    print wk["ID"]
+        #    UpdateOutputSize(wk["ID"])
 
 
         queryosgjobs="SELECT * from Attempts WHERE BatchSystem='OSG' && Status !='4';"
         #print queryosgjobs
         dbcursor.execute(queryosgjobs)
         Alljobs = dbcursor.fetchall()
+
 
         
         for job in Alljobs:
@@ -325,7 +357,8 @@ def checkOSG():
 def main(argv):
 
         checkSWIF()
-        #checkOSG()
+        checkOSG()
+        UpdateOutputSize()
         checkProjectsForCompletion()
         dbcnx.close()
                 
