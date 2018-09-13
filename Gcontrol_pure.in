@@ -132,7 +132,7 @@ c by SCAP. Note that this only affects the particle gun. Events read
 c from a file contain their own vertex information.
 c
 c            vertex_extent_r  vertex_extent_z
-TGTWIDTH           0.5              15
+cTGTWIDTH           0.5              15
 
 c If you specify a non-zero value for vertex_x and/or vertex_y above then
 c all tracks will emerge from the given point.  If you leave them at zero,
