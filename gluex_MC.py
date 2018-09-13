@@ -42,8 +42,8 @@ try:
 except:
         pass
 
-MCWRAPPER_VERSION="2.0.1"
-MCWRAPPER_DATE="9/06/18"
+MCWRAPPER_VERSION="2.0.2"
+MCWRAPPER_DATE="9/13/18"
 
 def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID):
 
@@ -762,7 +762,10 @@ def main(argv):
         #exit
 
         if (BATCHSYS.upper() =="SWIF" and int(BATCHRUN) != 0):
-                status = subprocess.call(["swif", "create", "-workflow", WORKFLOW])
+                # CREATE WORKFLOW IF IT DOESN'T ALREADY EXIST
+	        WORKFLOW_LIST = subprocess.check_output(["swif", "list"])
+	        if WORKFLOW not in WORKFLOW_LIST:
+                        status = subprocess.call(["swif", "create", "-workflow", WORKFLOW])
 
         #calculate files needed to gen
         FILES_TO_GEN=EVTS/PERFILE

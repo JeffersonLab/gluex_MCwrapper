@@ -313,6 +313,7 @@ echo "Run Number: "$RUN_NUMBER
 echo "Electron beam current to use: "$beam_on_current" uA"
 echo "Electron beam energy to use: "$eBEAM_ENERGY" GeV"
 echo "Radiator Thickness to use: "$radthick" m"
+echo "Collimator Diameter: "$colsize" m"
 echo "Photon Energy between "$GEN_MIN_ENERGY" and "$GEN_MAX_ENERGY" GeV"
 echo "Polarization Angle: "$polarization_angle "degrees"
 echo "Coherent Peak position: "$COHERENT_PEAK
@@ -570,6 +571,16 @@ if [[ "$GENR" != "0" ]]; then
 		echo "configuring gen_amp"
 		STANDARD_NAME="gen_amp_"$STANDARD_NAME
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
+		echo "ElectronBeamEnergy $eBEAM_ENERGY" > beam.config
+	    echo "CoherentPeakEnergy $COHERENT_PEAK" >> beam.config
+		echo "PhotonBeamLowEnergy $GEN_MIN_ENERGY" >> beam.config
+		echo "PhotonBeamHighEnergy $GEN_MAX_ENERGY" >> beam.config
+		echo "Emittance  10.e-9" >> beam.config
+		echo "RadiatorThickness $radthick" >> beam.config
+		echo "CollimatorDiameter $colsize" >> beam.config
+		echo "CollimatorDistance  76.0" >> beam.config
+		echo "Polarization $polarization_angle" >> beam.config
+		cp beam.config $STANDARD_NAME\_beam.conf
     elif [[ "$GENERATOR" == "gen_2pi_amp" ]]; then
 		echo "configuring gen_2pi_amp"
 		STANDARD_NAME="gen_2pi_amp_"$STANDARD_NAME
