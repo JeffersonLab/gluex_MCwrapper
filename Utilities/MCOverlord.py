@@ -223,14 +223,14 @@ def checkSWIF():
 
 def UpdateOutputSize():
 
-    getUntotaled="SELECT ID FROM Project WHERE Completed_Time IS NULL;"
+    getUntotaled="SELECT ID FROM Project WHERE Completed_Time IS NULL && Is_Dispatched != '0';"
     #print querygetLoc
     dbcursor.execute(getUntotaled)
     Projects = dbcursor.fetchall()
 
     for pr in Projects:
         id=pr["ID"]
-        #print "Updating size for: "+str(id)
+        print "Updating size for: "+str(id)
         querygetLoc="SELECT * FROM Project WHERE ID="+str(id)+";"
         #print querygetLoc
         dbcursor.execute(querygetLoc)
@@ -240,15 +240,19 @@ def UpdateOutputSize():
         if Project[0]["FinalDestination"]:
             location=Project[0]["FinalDestination"]
 
-        statuscommand="du -sh --total "+location
-        #print statuscommand
-        totalSizeStr=subprocess.check_output([statuscommand], shell=True)
-        #print "==============="
-        #print totalSizeStr.split("\n")[1].split("total")[0]
+        try:
+            statuscommand="du -sh --total "+location
+            #print statuscommand
+            totalSizeStr=subprocess.check_output([statuscommand], shell=True)
+            #print "==============="
+            #print totalSizeStr.split("\n")[1].split("total")[0]
 
-        updateProjectSizeOut="UPDATE Project SET TotalSizeOut=\""+totalSizeStr.split("\n")[1].split("total")[0]+"\" WHERE ID="+str(id)
-        dbcursor.execute(updateProjectSizeOut)
-        dbcnx.commit()
+            updateProjectSizeOut="UPDATE Project SET TotalSizeOut=\""+totalSizeStr.split("\n")[1].split("total")[0]+"\" WHERE ID="+str(id)
+            dbcursor.execute(updateProjectSizeOut)
+            dbcnx.commit()
+        except:
+            pass
+        
 
 def checkOSG():
         #print "CHECKING OSG JOBS"

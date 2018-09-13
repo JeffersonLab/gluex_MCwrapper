@@ -2,6 +2,7 @@
 import MySQLdb
 import sys
 import datetime
+import os.path
 from optparse import OptionParser
 import subprocess
 from subprocess import call
@@ -68,7 +69,7 @@ def RetryJobsFromProject(ID):
             #print row["Status"]
             #print row["ExitCode"]
             #print "=========================="
-            if(row["Status"] == "4" and row["ExitCode"] != 0):
+            if(row["Status"] == "4" and row["ExitCode"] != 0) or row["Status"] == "5":
                 RetryJob(row["Job_ID"])
                 i=i+1
     print "retried "+str(i)+" Jobs"
@@ -152,6 +153,24 @@ def CancelJob(ID):
     curs.execute(updatequery)
     conn.commit()
 
+def CheckGenConfig(order):
+    fileSTR=order["Generator_Config"]
+    file_split=fileSTR.split("/")
+    name=file_split[len(file_split)-1]
+    #print name
+    print fileSTR
+    if(os.path.isfile(fileSTR)==False):
+        copyTo="/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"
+        subprocess.call("rsync ifarm1402:"+fileSTR+" "+copyTo,shell=True)
+        updateOrderquery="UPDATE Project SET Generator_Config=\""+copyTo+name+"\" WHERE ID="+str(order["ID"])+";"
+        print updateOrderquery
+        curs.execute(updateOrderquery)
+        conn.commit()
+        order["Generator_Config"]=copyTo+name
+        return False
+    
+    return True
+
 
 def TestProject(ID):
     subprocess.call("rm -f MCDispatched.config", shell=True)
@@ -160,11 +179,15 @@ def TestProject(ID):
     curs.execute(query) 
     rows=curs.fetchall()
     order=rows[0]
+    if(CheckGenConfig(order)==False):
+        curs.execute(query) 
+        rows=curs.fetchall()
+        order=rows[0]
+
     WritePayloadConfig(order)
     RunNumber=str(order["RunNumLow"])
     #if order["RunNumLow"] != order["RunNumHigh"] :
     #    RunNumber = RunNumber + "-" + str(order["RunNumHigh"])
-
 
     cleangen=1
     if order["SaveGeneration"]==1:
@@ -194,8 +217,9 @@ def TestProject(ID):
     #print [p.returncode,errors,output]
     print output.replace('\\n', '\n')
     STATUS=output.find("went wrong")
+    STATUS2=output.find("does not exist")
 
-    if(STATUS==-1):
+    if(STATUS==-1 and STATUS2==-1):
         updatequery="UPDATE Project SET Tested=1"+" WHERE ID="+str(ID)+";"
         curs.execute(updatequery)
         conn.commit()
