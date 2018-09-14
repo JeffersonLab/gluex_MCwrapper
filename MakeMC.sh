@@ -433,6 +433,11 @@ bkglocstring=""
 bkgloc_pre=`echo $BKGFOLDSTR | cut -c 1-4`
 if [[ "$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" == "Random" ]]; then
 		    #find file and run:1
+
+			if [[ "$RANDBGTAG" == "none" ]]; then
+				echo "Random background requested but no tag given. Please provide the desired tag e.g Random:recon-2017_01-ver03"
+				exit 1
+			fi
 		    echo "Finding the right file to fold in during MCsmear step"
 		    
 			runperiod="RunPeriod-2017-01"
@@ -1124,3 +1129,5 @@ else
 fi
 
 #mv $PWD/*.root $OUTDIR/root/ #just in case
+echo `date`
+echo "Successfully completed"
