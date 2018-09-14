@@ -336,6 +336,7 @@ echo ""
 echo ""
 echo "=======SOFTWARE USED======="
 echo "MCwrapper version v"$MCWRAPPER_VERSION
+echo "MCwrapper location" $MCWRAPPER_CENTRAL
 echo "BC "$USER_BC
 echo "python "$USER_PYTHON
 echo `which $GENERATOR`
