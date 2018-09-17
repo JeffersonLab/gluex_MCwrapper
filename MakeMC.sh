@@ -556,7 +556,7 @@ if [[ "$GENR" != "0" ]]; then
 			echo "Please specify the desired energy via the COHERENT_PEAK parameter and retry."
 			exit 1
 		fi
-	elif ( "$GENERATOR" == "genr8_new" ) then
+    elif [[ "$GENERATOR" == "genr8_new" ]]; then
 		echo "configuring new genr8"
 
 		STANDARD_NAME="genr8_new_"$STANDARD_NAME
