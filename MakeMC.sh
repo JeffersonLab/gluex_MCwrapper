@@ -435,7 +435,7 @@ bkgloc_pre=`echo $BKGFOLDSTR | cut -c 1-4`
 if [[ "$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" == "Random" ]]; then
 		    #find file and run:1
 
-			if [[ "$RANDBGTAG" == "none" ]]; then
+			if [[ "$RANDBGTAG" == "none" && "$bkgloc_pre" != "loc:" ]]; then
 				echo "Random background requested but no tag given. Please provide the desired tag e.g Random:recon-2017_01-ver03"
 				exit 1
 			fi
