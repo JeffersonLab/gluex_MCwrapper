@@ -583,7 +583,7 @@ if [[ "$GENR" != "0" ]]; then
 		echo "PhotonBeamHighEnergy $GEN_MAX_ENERGY" >> beam.config
 		echo "Emittance  10.e-9" >> beam.config
 		echo "RadiatorThickness $radthick" >> beam.config
-		echo "CollimatorDiameter $colsize" >> beam.config
+		echo "CollimatorDiameter 0.00$colsize" >> beam.config
 		echo "CollimatorDistance  76.0" >> beam.config
 		echo "Polarization $polarization_angle" >> beam.config
 		cp beam.config $STANDARD_NAME\_beam.conf
