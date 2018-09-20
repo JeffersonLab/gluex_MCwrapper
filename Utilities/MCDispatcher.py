@@ -163,7 +163,8 @@ def CheckGenConfig(order):
     print fileSTR
     if(os.path.isfile(fileSTR)==False and socket.gethostname() == "scosg16.jlab.org" ):
         copyTo="/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"
-        subprocess.call("rsync -ruvt ifarm1402:"+fileSTR+" "+copyTo,shell=True)
+        subprocess.call("scp tbritton@ifarm1402:"+fileSTR+" "+copyTo+str(ID)+"_"+name,shell=True)
+        #subprocess.call("rsync -ruvt ifarm1402:"+fileSTR+" "+copyTo,shell=True)
         updateOrderquery="UPDATE Project SET Generator_Config=\""+copyTo+str(ID)+"_"+name+"\" WHERE ID="+str(order["ID"])+";"
         print updateOrderquery
         curs.execute(updateOrderquery)
