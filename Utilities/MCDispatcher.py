@@ -7,6 +7,7 @@ from optparse import OptionParser
 import subprocess
 from subprocess import call
 from subprocess import Popen, PIPE
+import socket
 import pprint
 
 dbhost = "hallddb.jlab.org"
@@ -154,20 +155,24 @@ def CancelJob(ID):
     conn.commit()
 
 def CheckGenConfig(order):
+    ID=order["ID"]
     fileSTR=order["Generator_Config"]
     file_split=fileSTR.split("/")
     name=file_split[len(file_split)-1]
     #print name
     print fileSTR
-    if(os.path.isfile(fileSTR)==False):
+    if(os.path.isfile(fileSTR)==False and socket.gethostname() == "scosg16.jlab.org" ):
         copyTo="/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"
         subprocess.call("rsync -ruvt ifarm1402:"+fileSTR+" "+copyTo,shell=True)
-        updateOrderquery="UPDATE Project SET Generator_Config=\""+copyTo+name+"\" WHERE ID="+str(order["ID"])+";"
+        updateOrderquery="UPDATE Project SET Generator_Config=\""+copyTo+str(ID)+"_"+name+"\" WHERE ID="+str(order["ID"])+";"
         print updateOrderquery
         curs.execute(updateOrderquery)
         conn.commit()
         order["Generator_Config"]=copyTo+name
         return False
+    elif os.path.isfile(fileSTR)==False and socket.gethostname() != "scosg16.jlab.org":
+        return False
+
     
     return True
 
@@ -495,12 +500,6 @@ def main(argv):
         
     conn.close()
         
-
-
-
-
-
-    
 
 if __name__ == "__main__":
    main(sys.argv[1:])
