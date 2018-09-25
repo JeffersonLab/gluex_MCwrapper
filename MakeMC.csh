@@ -7,7 +7,14 @@ shift
 setenv ENVIRONMENT $1 
 shift
 if ( "$BATCHRUN" != "0" ) then
+
+set xmltest=`echo $ENVIRONMENT | rev | cut -c -4 | rev`
+if ( "$xmltest" == ".xml" ) then
+source /group/halld/Software/build_scripts/gluex_env_jlab.csh $ENVIRONMENT
+else
 source $ENVIRONMENT
+endif
+
 endif
 setenv CONFIG_FILE $1
 shift
