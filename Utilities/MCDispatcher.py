@@ -381,6 +381,7 @@ def WritePayloadConfig(order):
     MCconfig_file.write("NOSECONDARIES="+str(abs(order["GeantSecondaries"]-1))+"\n")
     MCconfig_file.write("BKG="+str(order["BKG"])+"\n")
     MCconfig_file.write("DATA_OUTPUT_BASE_DIR="+str(order["OutputLocation"])+"\n")
+    MCconfig_file.write("ENVIRONMENT_FILE=/group/halld/www/halldweb/html/dist/"+str(order["VersionSet"])+"\n")
     MCconfig_file.close()
 
 def DispatchToOSG(ID,order,PERCENT):
