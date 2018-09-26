@@ -165,17 +165,12 @@ def CheckGenConfig(order):
         copyTo="/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"
         subprocess.call("scp tbritton@ifarm1402:"+fileSTR+" "+copyTo+str(ID)+"_"+name,shell=True)
         #subprocess.call("rsync -ruvt ifarm1402:"+fileSTR+" "+copyTo,shell=True)
-        updateOrderquery="UPDATE Project SET Generator_Config=\""+copyTo+str(ID)+"_"+name+"\" WHERE ID="+str(order["ID"])+";"
-        print updateOrderquery
-        curs.execute(updateOrderquery)
-        conn.commit()
         order["Generator_Config"]=copyTo+name
-        return False
+        return copyTo+str(ID)+"_"+name
     elif os.path.isfile(fileSTR)==False and socket.gethostname() != "scosg16.jlab.org":
-        return False
+        return copyTo+str(ID)+"_"+name
 
-    
-    return True
+    return "True"
 
 
 def TestProject(ID):
@@ -185,7 +180,8 @@ def TestProject(ID):
     curs.execute(query) 
     rows=curs.fetchall()
     order=rows[0]
-    if(CheckGenConfig(order)==False):
+    newLoc=CheckGenConfig(order)
+    if(newLoc!="True"):
         curs.execute(query) 
         rows=curs.fetchall()
         order=rows[0]
@@ -229,6 +225,11 @@ def TestProject(ID):
         updatequery="UPDATE Project SET Tested=1"+" WHERE ID="+str(ID)+";"
         curs.execute(updatequery)
         conn.commit()
+        updateOrderquery="UPDATE Project SET Generator_Config=\""+newLoc+"\" WHERE ID="+str(ID)+";"
+        print updateOrderquery
+        curs.execute(updateOrderquery)
+        conn.commit()
+        
         print bcolors.OKGREEN+"TEST SUCCEEDED"+bcolors.ENDC
         print "rm -rf "+order["OutputLocation"]
         #status = subprocess.call("rm -rf "+order["OutputLocation"],shell=True)
