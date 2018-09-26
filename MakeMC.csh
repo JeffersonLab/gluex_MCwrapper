@@ -657,6 +657,7 @@ if ( "$GENR" != "0" ) then
     if ( "$GENERATOR" == "genr8" ) then
 		echo "RUNNING GENR8"
 		set RUNNUM=$formatted_runNumber+$formatted_fileNumber
+		sed -i 's/TEMPMAXE/'$GEN_MAX_ENERGY'/' $STANDARD_NAME.conf
 		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
 		# RUN genr8 and convert
 		genr8 -r$formatted_runNumber -M$EVT_TO_GEN -A$STANDARD_NAME.ascii < $STANDARD_NAME.conf #$config_file_name
@@ -689,7 +690,14 @@ if ( "$GENR" != "0" ) then
 		set generator_return_code=$status
 		mv bggen.hddm $STANDARD_NAME.hddm
     else if ( "$GENERATOR" == "genEtaRegge" ) then
-		echo "RUNNING GENETAREGGE" 	
+		echo "RUNNING GENETAREGGE" 
+		sed -i 's/TEMPCOLD/'0.00$colsize'/' $STANDARD_NAME.conf
+		sed -i 's/TEMPELECE/'$eBEAM_ENERGY'/' $STANDARD_NAME.conf
+		sed -i 's/TEMPCOHERENT/'$COHERENT_PEAK'/' $STANDARD_NAME.conf
+		sed -i 's/TEMPRADTHICK/'"$radthick"'/' $STANDARD_NAME.conf
+		sed -i 's/TEMPMINGENE/'$GEN_MIN_ENERGY'/' $STANDARD_NAME.conf
+		sed -i 's/TEMPMAXGENE/'$GEN_MAX_ENERGY'/' $STANDARD_NAME.conf
+
 		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
 		genEtaRegge -N$EVT_TO_GEN -O$STANDARD_NAME.hddm -I$STANDARD_NAME.conf
 	    set generator_return_code=$status
@@ -739,7 +747,7 @@ if ( "$GENR" != "0" ) then
 			sed -i 's/TEMPPOLFRAC/'.4'/' $STANDARD_NAME.conf
 			sed -i 's/TEMPPOLANGLE/'$polarization_angle'/' $STANDARD_NAME.conf
 		endif
-
+		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
 		echo $optionals_line
 		echo gen_omega_3pi -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER $optionals_line
 		gen_omega_3pi -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER $optionals_line
