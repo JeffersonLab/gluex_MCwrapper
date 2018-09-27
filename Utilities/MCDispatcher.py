@@ -382,15 +382,15 @@ def WritePayloadConfig(order,foundConfig):
     MCconfig_file.write("GEN_MIN_ENERGY="+MinE+"\n")
     MCconfig_file.write("GEN_MAX_ENERGY="+MaxE+"\n")
     MCconfig_file.write("GENERATOR="+str(order["Generator"])+"\n")
-    MCconfig_file.write("GENERATOR_CONFIG="+str(order["Generator_Config"])+"\n")
     MCconfig_file.write("GEANT_VERSION="+str(order["GeantVersion"])+"\n")
     MCconfig_file.write("NOSECONDARIES="+str(abs(order["GeantSecondaries"]-1))+"\n")
     MCconfig_file.write("BKG="+str(order["BKG"])+"\n")
+    MCconfig_file.write("DATA_OUTPUT_BASE_DIR="+str(order["OutputLocation"])+"\n")
     print "FOUND CONFIG="+foundConfig
     if foundConfig=="True":
-        MCconfig_file.write("DATA_OUTPUT_BASE_DIR="+str(order["OutputLocation"])+"\n")
+        MCconfig_file.write("GENERATOR_CONFIG="+str(order["Generator_Config"])+"\n")
     else:
-        MCconfig_file.write("DATA_OUTPUT_BASE_DIR="+foundConfig+"\n")
+        MCconfig_file.write("GENERATOR_CONFIG="+foundConfig+"\n")
     MCconfig_file.write("ENVIRONMENT_FILE=/group/halld/www/halldweb/html/dist/"+str(order["VersionSet"])+"\n")
     MCconfig_file.close()
 
