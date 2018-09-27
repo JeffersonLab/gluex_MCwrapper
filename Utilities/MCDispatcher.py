@@ -114,7 +114,7 @@ def RetryJob(ID):
     elif(rows[0]["BatchSystem"] == "OSG"):
         #print "OSG JOB FOUND"
         status = subprocess.call("cp $MCWRAPPER_CENTRAL/examples/OSGShell.config ./MCDispatched.config", shell=True)
-        WritePayloadConfig(proj[0])
+        WritePayloadConfig(proj[0],"True")
         command="$MCWRAPPER_CENTRAL/gluex_MC.py MCDispatched.config "+str(job[0]["RunNumber"])+" "+str(job[0]["NumEvts"])+" per_file=50000 base_file_number="+str(job[0]["FileNumber"])+" generate="+str(proj[0]["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(proj[0]["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(proj[0]["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(proj[0]["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid=-"+str(ID)+" batch=1"
         #print(command)
         status = subprocess.call(command, shell=True)
@@ -180,13 +180,18 @@ def TestProject(ID):
     curs.execute(query) 
     rows=curs.fetchall()
     order=rows[0]
+    print "========================"
+    print order["Generator_Config"]
     newLoc=CheckGenConfig(order)
+    print order["Generator_Config"]
+    print "========================"
+    print newLoc
     if(newLoc!="True"):
         curs.execute(query) 
         rows=curs.fetchall()
         order=rows[0]
 
-    WritePayloadConfig(order)
+    WritePayloadConfig(order,newLoc)
     RunNumber=str(order["RunNumLow"])
     #if order["RunNumLow"] != order["RunNumHigh"] :
     #    RunNumber = RunNumber + "-" + str(order["RunNumHigh"])
@@ -243,7 +248,7 @@ def TestProject(ID):
 
 def DispatchToInteractive(ID,order,PERCENT):
     subprocess.call("rm -f MCDispatched.config", shell=True)
-    WritePayloadConfig(order)
+    WritePayloadConfig(order,"True")
     RunNumber=str(order["RunNumLow"])
     if order["RunNumLow"] != order["RunNumHigh"] :
         RunNumber = RunNumber + "-" + str(order["RunNumHigh"])
@@ -302,7 +307,7 @@ def DispatchToInteractive(ID,order,PERCENT):
 
 def DispatchToSWIF(ID,order,PERCENT):
     status = subprocess.call("cp $MCWRAPPER_CENTRAL/examples/SWIFShell.config ./MCDispatched.config", shell=True)
-    WritePayloadConfig(order)
+    WritePayloadConfig(order,"True")
     RunNumber=str(order["RunNumLow"])
     if order["RunNumLow"] != order["RunNumHigh"] :
         RunNumber = RunNumber + "-" + str(order["RunNumHigh"])
@@ -360,7 +365,7 @@ def DispatchToSWIF(ID,order,PERCENT):
         print "All jobs submitted for this order"
 
 
-def WritePayloadConfig(order):
+def WritePayloadConfig(order,foundConfig):
     
     MCconfig_file= open("MCDispatched.config","a")
     splitlist=order["OutputLocation"].split("/")
@@ -381,13 +386,17 @@ def WritePayloadConfig(order):
     MCconfig_file.write("GEANT_VERSION="+str(order["GeantVersion"])+"\n")
     MCconfig_file.write("NOSECONDARIES="+str(abs(order["GeantSecondaries"]-1))+"\n")
     MCconfig_file.write("BKG="+str(order["BKG"])+"\n")
-    MCconfig_file.write("DATA_OUTPUT_BASE_DIR="+str(order["OutputLocation"])+"\n")
+    print "FOUND CONFIG="+foundConfig
+    if foundConfig=="True":
+        MCconfig_file.write("DATA_OUTPUT_BASE_DIR="+str(order["OutputLocation"])+"\n")
+    else:
+        MCconfig_file.write("DATA_OUTPUT_BASE_DIR="+foundConfig+"\n")
     MCconfig_file.write("ENVIRONMENT_FILE=/group/halld/www/halldweb/html/dist/"+str(order["VersionSet"])+"\n")
     MCconfig_file.close()
 
 def DispatchToOSG(ID,order,PERCENT):
     status = subprocess.call("cp $MCWRAPPER_CENTRAL/examples/OSGShell.config ./MCDispatched.config", shell=True)
-    WritePayloadConfig(order)
+    WritePayloadConfig(order,"True")
 
     RunNumber=str(order["RunNumLow"])
     if order["RunNumLow"] != order["RunNumHigh"] :
