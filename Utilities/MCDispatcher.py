@@ -160,7 +160,7 @@ def CheckGenConfig(order):
     file_split=fileSTR.split("/")
     name=file_split[len(file_split)-1]
     #print name
-    print fileSTR
+    #print fileSTR
     if(os.path.isfile(fileSTR)==False and socket.gethostname() == "scosg16.jlab.org" ):
         copyTo="/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"
         subprocess.call("scp tbritton@ifarm1402:"+fileSTR+" "+copyTo+str(ID)+"_"+name,shell=True)
@@ -180,12 +180,12 @@ def TestProject(ID):
     curs.execute(query) 
     rows=curs.fetchall()
     order=rows[0]
-    print "========================"
-    print order["Generator_Config"]
+    #print "========================"
+    #print order["Generator_Config"]
     newLoc=CheckGenConfig(order)
-    print order["Generator_Config"]
-    print "========================"
-    print newLoc
+    #print order["Generator_Config"]
+    #print "========================"
+    #print newLoc
     if(newLoc!="True"):
         curs.execute(query) 
         rows=curs.fetchall()
@@ -212,7 +212,7 @@ def TestProject(ID):
     if order["SaveReconstruction"]==1:
         cleanrecon=0
 
-    command="$MCWRAPPER_CENTRAL/gluex_MC.py MCDispatched.config "+str(RunNumber)+" "+str(100)+" per_file=250000 base_file_number=0"+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=0"
+    command="$MCWRAPPER_CENTRAL/gluex_MC.py MCDispatched.config "+str(RunNumber)+" "+str(10)+" per_file=250000 base_file_number=0"+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=0"
     print(command)
     STATUS=-1
    # print (command+command2).split(" ")
