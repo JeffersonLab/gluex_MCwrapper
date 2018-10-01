@@ -567,22 +567,43 @@ if [[ "$GENR" != "0" ]]; then
 	echo "PhotonBeamLowEnergy $GEN_MIN_ENERGY" >>! beam.config
     echo "PhotonBeamHighEnergy $GEN_MAX_ENERGY" >>! beam.config
 
-	if [[ "$FLUX_TO_GEN" == "unset" ]]; then
+	if [[ "$FLUX_TO_GEN" == "ccdb" ]]; then
+		echo "ROOTFluxFile $FLUX_TO_GEN" >>! beam.config
+		if [[ "$POL_TO_GEN" == "ccdb" ]]; then
+			echo "ROOTPolFile $POL_TO_GEN" >>! beam.config
+		elif [[ "$POL_HIST" == "unset" ]]; then
+			echo "PolarizationMagnitude $POL_TO_GEN" >>! beam.config
+		else
+			echo "ROOTPolFile $POL_TO_GEN" >>! beam.config
+			echo "ROOTPolName $POL_HIST" >>! beam.config
+		fi
+	elif [[ "$FLUX_TO_GEN" == "cobrems" ]]; then
     	echo "ElectronBeamEnergy $eBEAM_ENERGY" >>! beam.config
     	echo "CoherentPeakEnergy $COHERENT_PEAK" >>! beam.config
     	echo "Emittance  2.5.e-9" >>! beam.config
     	echo "RadiatorThickness $radthick" >>! beam.config
     	echo "CollimatorDiameter 0.00$colsize" >>! beam.config
     	echo "CollimatorDistance  76.0" >>! beam.config
+
+		if [[ "$POL_TO_GEN" == "ccdb" ]]; then
+			echo "Ignoring TPOL from ccdb in favor of cobrems generated values"
+		elif [[ "$POL_HIST" == "unset" ]]; then
+			echo "PolarizationMagnitude $POL_TO_GEN" >>! beam.config
+		else
+			echo "Ignoring TPOL from $POL_TO_GEN in favor of cobrems generated values"
+		fi
+
     else
 		echo "ROOTFluxFile $FLUX_TO_GEN" >>! beam.config
 		echo "ROOTFluxName $FLUX_HIST" >>! beam.config
-
-		if [[ "$POL_TO_GEN" != "unset" ]]; then
+		if [[ "$POL_TO_GEN" == "ccdb" ]]; then
+			echo "Can't use a flux file and Polarization from ccdb"
+			exit 1
+		elif [[ "$POL_HIST" == "unset" ]]; then
+			echo "PolarizationMagnitude $POL_TO_GEN" >>! beam.config
+		else
 			echo "ROOTPolFile $POL_TO_GEN" >>! beam.config
 			echo "ROOTPolName $POL_HIST" >>! beam.config
-		else
-			echo "PolarizationMagnitude 0.4" >>! beam.config
 		fi
 	fi
 

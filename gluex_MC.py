@@ -482,9 +482,9 @@ def main(argv):
 
         eBEAM_ENERGY="rcdb"
         COHERENT_PEAK="rcdb"
-        FLUX_TO_GEN="unset"
+        FLUX_TO_GEN="ccdb"
         FLUX_HIST="unset"
-        POL_TO_GEN="unset"
+        POL_TO_GEN="0"
         POL_HIST="unset"
         MIN_GEN_ENERGY="3"
         MAX_GEN_ENERGY="12"
@@ -680,20 +680,19 @@ def main(argv):
                         NOSIPMSATURATION=rm_comments[0].strip()
                 elif str(parts[0]).upper()=="FLUX_TO_GEN":
                         fluxbits=rm_comments[0].strip().split(":")
-                        if( len(fluxbits) >1 ):
+                        if( len(fluxbits) ==2 ):
                                 FLUX_TO_GEN=fluxbits[0]
                                 FLUX_HIST=fluxbits[1]
-                        else:
-                                FLUX_TO_GEN="ccdb"
-                                FLUX_HIST="ccdb"
+                        else if (len(fluxbits)==1):
+                                FLUX_TO_GEN="cobrems"
                 elif str(parts[0]).upper()=="POL_TO_GEN":
                         polbits=rm_comments[0].strip().split(":")
-                        if( len(polbits) >1 ):
+                        if( len(polbits) == 2 ):
                                 POL_TO_GEN=polbits[0]
                                 POL_HIST=polbits[1]
-                        else:
-                                POL_TO_GEN="ccdb"
-                                POL_HIST="ccdb"
+                        else if (len(polbits)==1):
+                                POL_TO_GEN=polbits[0]
+
                 else:
                         print( "unknown config parameter!! "+str(parts[0]))
         #loop over command line arguments 
