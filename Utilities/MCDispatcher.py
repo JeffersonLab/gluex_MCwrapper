@@ -30,6 +30,21 @@ class bcolors:
 
 #DELETE FROM Attempts WHERE Job_ID IN (SELECT ID FROM Jobs WHERE Project_ID=65);
 
+def AutoLaunch():
+    query = "SELECT ID FROM Project WHERE Is_Dispatched='0' || Is_Dispatched='0.0'"
+    curs.execute(query) 
+    rows=curs.fetchall()
+    print(rows)
+    for row in rows:
+        status=TestProject(row['ID'])
+        if(status[1]==-1):
+            subprocess.call("/osgpool/halld/tbritton/gluex_MCwrapper/Utilities/MCDispatcher.py dispatch -sys OSG "+str(row['ID']),shell=True)
+        else:
+            print status[0]
+            
+
+
+
 def ListUnDispatched():
     query = "SELECT * FROM Project WHERE Is_Dispatched='0' || Is_Dispatched='0.0'"
     curs.execute(query) 
@@ -222,7 +237,8 @@ def TestProject(ID):
     output, errors = p.communicate()
     
     #print [p.returncode,errors,output]
-    print output.replace('\\n', '\n')
+    output=output.replace('\\n', '\n')
+    
     STATUS=output.find("Successfully completed")
     
 
@@ -245,6 +261,7 @@ def TestProject(ID):
         
         print bcolors.FAIL+"TEST FAILED"+bcolors.ENDC
         print "rm -rf "+order["OutputLocation"]
+    return {output,STATUS}
 
 def DispatchToInteractive(ID,order,PERCENT):
     subprocess.call("rm -f MCDispatched.config", shell=True)
@@ -505,6 +522,8 @@ def main(argv):
         RetryJobsFromProject(ID)
     elif MODE == "CANCELJOB":
         CancelJob(ID)
+    elif MODE == "AUTOLAUNCH":
+        AutoLaunch(ID)
     else:
         print "MODE NOT FOUND"
 

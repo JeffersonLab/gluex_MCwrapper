@@ -99,6 +99,14 @@ shift
 export MCWRAPPER_VERSION=$1
 shift
 export NOSIPMSATURATION=$1
+shift
+export FLUX_TO_GEN=$1
+shift
+export FLUX_HIST=$1
+shift
+export POL_TO_GEN=$1
+shift
+export POL_HIST=$1
 
 export USER_BC=`which bc`
 export USER_PYTHON=`which python`
@@ -326,6 +334,8 @@ echo "Polarization Angle: "$polarization_angle "degrees"
 echo "Coherent Peak position: "$COHERENT_PEAK
 echo "----------------------------------------------"
 echo "Run generation step? "$GENR"  Will be cleaned?" $CLEANGENR
+echo "Flux Hist to use: " "$FLUX_TO_GEN" " : " "$FLUX_HIST"
+echo "Polarization to use: " "$POL_TO_GEN" " : " "$POL_HIST"
 echo "Using "$GENERATOR"  with config: "$CONFIG_FILE
 echo "----------------------------------------------"
 echo "Run geant step? "$GEANT"  Will be cleaned?" $CLEANGEANT
@@ -553,15 +563,31 @@ if [[ "$GENR" != "0" ]]; then
 	fi
 
 
-	echo "ElectronBeamEnergy $eBEAM_ENERGY" > beam.config
-    echo "CoherentPeakEnergy $COHERENT_PEAK" >>! beam.config
-    echo "PhotonBeamLowEnergy $GEN_MIN_ENERGY" >>! beam.config
+	echo "PolarizationAngle $polarization_angle" > beam.config
+	echo "PhotonBeamLowEnergy $GEN_MIN_ENERGY" >>! beam.config
     echo "PhotonBeamHighEnergy $GEN_MAX_ENERGY" >>! beam.config
-    echo "Emittance  2.5.e-9" >>! beam.config
-    echo "RadiatorThickness $radthick" >>! beam.config
-    echo "CollimatorDiameter 0.00$colsize" >>! beam.config
-    echo "CollimatorDistance  76.0" >>! beam.config
-    echo "PolarizationAngle $polarization_angle" >>! beam.config
+
+	if [[ "$FLUX_TO_GEN" == "unset" ]]; then
+    	echo "ElectronBeamEnergy $eBEAM_ENERGY" >>! beam.config
+    	echo "CoherentPeakEnergy $COHERENT_PEAK" >>! beam.config
+    	echo "Emittance  2.5.e-9" >>! beam.config
+    	echo "RadiatorThickness $radthick" >>! beam.config
+    	echo "CollimatorDiameter 0.00$colsize" >>! beam.config
+    	echo "CollimatorDistance  76.0" >>! beam.config
+    else
+		echo "ROOTFluxFile $FLUX_TO_GEN" >>! beam.config
+		echo "ROOTFluxName $FLUX_HIST" >>! beam.config
+
+		if [[ "$POL_TO_GEN" != "unset" ]]; then
+			echo "ROOTPolFile $POL_TO_GEN" >>! beam.config
+			echo "ROOTPolName $POL_HIST" >>! beam.config
+		else
+			echo "PolarizationMagnitude 0.4" >>! beam.config
+		fi
+	fi
+
+	
+
 	cp beam.config $GENERATOR\_$STANDARD_NAME\_beam.conf
 
     if [[ "$GENERATOR" == "genr8" ]]; then
@@ -679,7 +705,7 @@ if [[ "$GENR" != "0" ]]; then
 	# RUN genr8 and convert
 	genr8 -r$formatted_runNumber -M$EVT_TO_GEN -A$STANDARD_NAME.ascii < $STANDARD_NAME.conf #$config_file_name
 	generator_return_code=$?
-	genr8_2_hddm -V"0 0 50 80" $STANDARD_NAME.ascii
+	genr8_2_hddm -V"0 0 0 0" $STANDARD_NAME.ascii
 	elif [[ "$GENERATOR" == "genr8_new" ]]; then
 		echo "RUNNING NEW GENR8"
 		RUNNUM=$formatted_runNumber+$formatted_fileNumber
@@ -687,7 +713,7 @@ if [[ "$GENR" != "0" ]]; then
 		# RUN genr8 and convert
 		genr8_new -r$formatted_runNumber -M$EVT_TO_GEN -C$GEN_MIN_ENERGY,$GEN_MAX_ENERGY -o$STANDARD_NAME.gamp < $STANDARD_NAME.conf #$config_file_name
 		generator_return_code=$status
-		gamp_2_hddm -r$formatted_runNumber -V"0 0 50 80" $STANDARD_NAME.gamp
+		gamp_2_hddm -r$formatted_runNumber -V"0 0 0 0" $STANDARD_NAME.gamp
     elif [[ "$GENERATOR" == "bggen" ]]; then
 	RANDOMnum=`bash -c 'echo $RANDOM'`
 	echo "Random number used: "$RANDOMnum
@@ -1022,6 +1048,7 @@ if [[ "$GENR" != "0" ]]; then
 	
 	    #run reconstruction
 	if [[ "$CLEANGENR" == "1" ]]; then
+		rm beam.config
 		if [[ "$GENERATOR" == "genr8" ]]; then
 		    rm *.ascii
 		elif [[ "$GENERATOR" == "bggen" || "$GENERATOR" == "bggen_jpsi" || "$GENERATOR" == "bggen_phi_ee" ]]; then
