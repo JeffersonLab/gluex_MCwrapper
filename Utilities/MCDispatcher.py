@@ -10,6 +10,7 @@ from subprocess import Popen, PIPE
 import socket
 import pprint
 
+
 dbhost = "hallddb.jlab.org"
 dbuser = 'mcuser'
 dbpass = ''
@@ -31,21 +32,29 @@ class bcolors:
 #DELETE FROM Attempts WHERE Job_ID IN (SELECT ID FROM Jobs WHERE Project_ID=65);
 
 def AutoLaunch():
-    print "in autolaunch"
-    query = "SELECT ID FROM Project WHERE Dispatched_Time is NULL;"
-    print query
+    #print "in autolaunch"
+    query = "SELECT ID,Email FROM Project WHERE Dispatched_Time is NULL;"
+    #print query
     curs.execute(query) 
     rows=curs.fetchall()
-    print rows
-    print len(rows)
+    #print rows
+    #print len(rows)
     for row in rows:
-        print row['ID']
+        #print row['ID']
         status=TestProject(row['ID'])
-        if(status[1]==-1):
+
+        #print "STATUS IS"
+        #print status[0]
+        #print status[1]
+        if(status[1]!=-1):
             print "TEST success"
-            #subprocess.call("/osgpool/halld/tbritton/gluex_MCwrapper/Utilities/MCDispatcher.py dispatch -sys OSG "+str(row['ID']),shell=True)
+            #EMAIL SUCCESS AND DISPATCH
+            subprocess.call("/osgpool/halld/tbritton/gluex_MCwrapper/Utilities/MCDispatcher.py dispatch -sys OSG "+str(row['ID']),shell=True)
         else:
-            print status[0]
+            #EMAIL FAIL AND LOG
+            print "echo 'Your Project ID "+str(row['ID'])+" failed the to properly test.  The log information is reproduced below:\n\n\n"+status[0]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+str(row['email']
+            subprocess.call("echo 'Your Project ID "+str(row['ID'])+" failed the to properly test.  The log information is reproduced below:\n\n\n"+status[0]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+str(row['email']),shell=True)
+            #print status[0]
             
 
 
@@ -251,10 +260,11 @@ def TestProject(ID):
         updatequery="UPDATE Project SET Tested=1"+" WHERE ID="+str(ID)+";"
         curs.execute(updatequery)
         conn.commit()
-        updateOrderquery="UPDATE Project SET Generator_Config=\""+newLoc+"\" WHERE ID="+str(ID)+";"
-        print updateOrderquery
-        curs.execute(updateOrderquery)
-        conn.commit()
+        if(newLoc != "True"):
+            updateOrderquery="UPDATE Project SET Generator_Config=\""+newLoc+"\" WHERE ID="+str(ID)+";"
+            print updateOrderquery
+            curs.execute(updateOrderquery)
+            conn.commit()
         
         print bcolors.OKGREEN+"TEST SUCCEEDED"+bcolors.ENDC
         print "rm -rf "+order["OutputLocation"]
@@ -266,7 +276,7 @@ def TestProject(ID):
         
         print bcolors.FAIL+"TEST FAILED"+bcolors.ENDC
         print "rm -rf "+order["OutputLocation"]
-    return {output,STATUS}
+    return [output,STATUS]
 
 def DispatchToInteractive(ID,order,PERCENT):
     subprocess.call("rm -f MCDispatched.config", shell=True)
@@ -408,7 +418,7 @@ def WritePayloadConfig(order,foundConfig):
     MCconfig_file.write("NOSECONDARIES="+str(abs(order["GeantSecondaries"]-1))+"\n")
     MCconfig_file.write("BKG="+str(order["BKG"])+"\n")
     MCconfig_file.write("DATA_OUTPUT_BASE_DIR="+str(order["OutputLocation"])+"\n")
-    print "FOUND CONFIG="+foundConfig
+    #print "FOUND CONFIG="+foundConfig
     if foundConfig=="True":
         MCconfig_file.write("GENERATOR_CONFIG="+str(order["Generator_Config"])+"\n")
     else:
@@ -488,10 +498,14 @@ def main(argv):
     argindex=-1
 
     for argu in argv:
+            #print "ARGS"
+            #print argu
             argindex=argindex+1
 
-            if argindex == 1:
+            if argindex == 1 or len(argv)==1:
+                #print str(argv[0]).upper()
                 MODE=str(argv[0]).upper()
+                #print MODE
             
             if argindex == len(argv)-1:
                 ID=argv[argindex]
@@ -503,7 +517,7 @@ def main(argv):
                     PERCENT=argv[argindex+1]
 
 
-    print MODE
+    #print MODE
     #print SYSTEM
     #print ID
 
@@ -515,7 +529,7 @@ def main(argv):
             curs.execute(query) 
             rows=curs.fetchall()
             for row in rows:
-                print(row["ID"])
+                #print(row["ID"])
                 DispatchProject(row["ID"],SYSTEM,PERCENT)
     elif MODE == "VIEW":
         ListUnDispatched()
@@ -528,7 +542,7 @@ def main(argv):
     elif MODE == "CANCELJOB":
         CancelJob(ID)
     elif MODE == "AUTOLAUNCH":
-        print "AUTOLAUNCHING NOW"
+        #print "AUTOLAUNCHING NOW"
         AutoLaunch()
     else:
         print "MODE NOT FOUND"
