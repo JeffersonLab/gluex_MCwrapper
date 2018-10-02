@@ -31,14 +31,19 @@ class bcolors:
 #DELETE FROM Attempts WHERE Job_ID IN (SELECT ID FROM Jobs WHERE Project_ID=65);
 
 def AutoLaunch():
-    query = "SELECT ID FROM Project WHERE Is_Dispatched='0' || Is_Dispatched='0.0'"
+    print "in autolaunch"
+    query = "SELECT ID FROM Project WHERE Dispatched_Time is NULL;"
+    print query
     curs.execute(query) 
     rows=curs.fetchall()
-    print(rows)
+    print rows
+    print len(rows)
     for row in rows:
+        print row['ID']
         status=TestProject(row['ID'])
         if(status[1]==-1):
-            subprocess.call("/osgpool/halld/tbritton/gluex_MCwrapper/Utilities/MCDispatcher.py dispatch -sys OSG "+str(row['ID']),shell=True)
+            print "TEST success"
+            #subprocess.call("/osgpool/halld/tbritton/gluex_MCwrapper/Utilities/MCDispatcher.py dispatch -sys OSG "+str(row['ID']),shell=True)
         else:
             print status[0]
             
@@ -498,7 +503,7 @@ def main(argv):
                     PERCENT=argv[argindex+1]
 
 
-    #print MODE
+    print MODE
     #print SYSTEM
     #print ID
 
@@ -523,7 +528,8 @@ def main(argv):
     elif MODE == "CANCELJOB":
         CancelJob(ID)
     elif MODE == "AUTOLAUNCH":
-        AutoLaunch(ID)
+        print "AUTOLAUNCHING NOW"
+        AutoLaunch()
     else:
         print "MODE NOT FOUND"
 

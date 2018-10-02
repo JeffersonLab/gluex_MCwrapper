@@ -43,7 +43,7 @@ except:
         pass
 
 MCWRAPPER_VERSION="2.0.2"
-MCWRAPPER_DATE="10/01/18"
+MCWRAPPER_DATE="10/02/18"
 
 def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID):
 
@@ -683,14 +683,14 @@ def main(argv):
                         if( len(fluxbits) ==2 ):
                                 FLUX_TO_GEN=fluxbits[0]
                                 FLUX_HIST=fluxbits[1]
-                        else if (len(fluxbits)==1):
+                        elif (len(fluxbits)==1):
                                 FLUX_TO_GEN="cobrems"
                 elif str(parts[0]).upper()=="POL_TO_GEN":
                         polbits=rm_comments[0].strip().split(":")
                         if( len(polbits) == 2 ):
                                 POL_TO_GEN=polbits[0]
                                 POL_HIST=polbits[1]
-                        else if (len(polbits)==1):
+                        elif (len(polbits)==1):
                                 POL_TO_GEN=polbits[0]
 
                 else:
