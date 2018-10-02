@@ -482,7 +482,7 @@ def main(argv):
 
     #print(args)
     ID=-1
-    MODE="VIEW"
+    MODE=""
     SYSTEM="NULL"
     PERCENT=1.0
     argindex=-1

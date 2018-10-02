@@ -262,19 +262,19 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DAT
                 additional_passins+=COMMAND_parts[32]+", "
                 COMMAND_parts[32]="/srv/"+rcdbsqlite_to_use
 
-        if additional_passins != "":
-                additional_passins=", "+additional_passins
-                additional_passins=additional_passins[:-2]
-
-        if COMMAND_parts[41] != "unset" and COMMAND_parts[41]!="ccdb" :
+        if COMMAND_parts[41] != "unset" and COMMAND_parts[41]!="ccdb" and COMMAND_parts[41]!="cobrems" :
                 flux_to_use=COMMAND_parts[41]
                 additional_passins+=COMMAND_parts[41]+", "
                 COMMAND_parts[41]="/srv/"+flux_to_use
         
-        if COMMAND_parts[43] != "unset" and COMMAND_parts[43]!="ccdb" :
+        if COMMAND_parts[43]!="ccdb" and COMMAND_parts[44] != "unset":
                 tpol_to_use=COMMAND_parts[43]
                 additional_passins+=COMMAND_parts[43]+", "
                 COMMAND_parts[43]="/srv/"+tpol_to_use
+
+        if additional_passins != "":
+                additional_passins=", "+additional_passins
+                additional_passins=additional_passins[:-2]
 
         modified_COMMAND=""
 
