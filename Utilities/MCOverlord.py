@@ -52,13 +52,13 @@ except:
         pass
 
 def checkProjectsForCompletion():
-    OutstandingProjectsQuery="SELECT ID FROM Project WHERE Completed_Time IS NULL && Is_Dispatched != '0'"
+    OutstandingProjectsQuery="SELECT ID FROM Project WHERE Completed_Time IS NULL && Is_Dispatched != '0' && Notified is NULL"
     dbcursor.execute(OutstandingProjectsQuery)
     OutstandingProjects=dbcursor.fetchall()
 
     for proj in OutstandingProjects:
         #print proj['ID']
-        TOTCompletedQuery ="SELECT DISTINCT ID From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1 && ID in (SELECT DISTINCT Job_ID FROM Attempts WHERE ( (ExitCode = 0 || ExitCode = 127 || ExitCode = 126 || ExitCode = 134) ) && ExitCode IS NOT NULL);" #"SELECT DISTINCT ID From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1 && ID in (SELECT Job_ID FROM Attempts WHERE ( (ExitCode != 0 && ExitCode != 127 && ExitCode != 126 && ExitCode != 134) || ExitCode IS NULL));"        dbcursor.execute(TOTCompletedQuery)
+        TOTCompletedQuery ="SELECT DISTINCT ID From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1 && ID in (SELECT DISTINCT Job_ID FROM Attempts WHERE ( (ExitCode = 0) ) && ExitCode IS NOT NULL);" #"SELECT DISTINCT ID From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1 && ID in (SELECT Job_ID FROM Attempts WHERE ( (ExitCode != 0 && ExitCode != 127 && ExitCode != 126 && ExitCode != 134) || ExitCode IS NULL));"        dbcursor.execute(TOTCompletedQuery)
         dbcursor.execute(TOTCompletedQuery)
         fulfilledJobs=dbcursor.fetchall()
 
@@ -91,7 +91,7 @@ def checkProjectsForCompletion():
 def checkSWIF():
         #print "CHECKING SWIF JOBS"
         #queryswifjobs="SELECT OutputLocation,ID,NumEvents,Completed_Time FROM Project WHERE ID IN (SELECT Project_ID FROM Jobs WHERE IsActive=1 && ID IN (SELECT Job_ID FROM Attempts WHERE BatchSystem= 'SWIF') )"
-        queryswifjobs="SELECT * FROM Project WHERE ID IN (SELECT Project_ID FROM Jobs WHERE IsActive=1 && ID IN (SELECT DISTINCT Job_ID FROM Attempts WHERE BatchSystem= 'SWIF' && Status!='succeeded') )"
+        queryswifjobs="SELECT * FROM Project WHERE ID IN (SELECT Project_ID FROM Jobs WHERE IsActive=1 && ID IN (SELECT DISTINCT Job_ID FROM Attempts WHERE BatchSystem= 'SWIF'))"# && Status!='succeeded') )"
         dbcursor.execute(queryswifjobs)
         AllWkFlows = dbcursor.fetchall()
        
@@ -142,14 +142,18 @@ def checkSWIF():
                         #print attempt
                         #print "||||||||||||||||||||"
                         #print attempt["exitcode"]
+                        #if not attempt["exitcode"]:
+                        #    continue
+
                         if attempt["exitcode"] or job["status"]=="succeeded":
                             ExitCode=attempt["exitcode"]
                         else:
                             ExitCode=-1
                         
+                  
                         Completed_Time='NULL'
 
-                        if(job["status"]=="problem" or job["status"]=="succeeded"):
+                        if(job["status"]=="problem" or job["status"]=="succeeded") and attempt["auger_ts_complete"] is not None:
                             Completed_Time=attempt["auger_ts_complete"]
                             #print datetime.fromtimestamp(float(attempt["auger_ts_complete"])/float(1000))
 
@@ -179,13 +183,14 @@ def checkSWIF():
                             #print len(LoggedSWIFAttemps)
                             #print LinkToJob
                             submitTime=0.0
-                            if (attempt["auger_ts_submitted"] != "None"):
+                            #print attempt["auger_ts_submitted"]
+                            if attempt["auger_ts_submitted"]:
                                 submitTime=float(attempt["auger_ts_submitted"])
-                            print attempt["auger_ts_submitted"]
-                            print datetime.fromtimestamp(submitTime/float(1000))
+                            
+                            #print datetime.fromtimestamp(submitTime/float(1000))
                             
                             addFoundAttempt="INSERT INTO Attempts (Job_ID,Creation_Time,BatchSystem,BatchJobID, ThreadsRequested, RAMRequested,Start_Time) VALUES (%s,'%s','SWIF',%s,%s,%s,'%s')" % (LinkToJob[0]["Job_ID"],datetime.fromtimestamp(submitTime/float(1000)),attempt["job_id"],attempt["cpu_cores"], "'"+str(float(attempt["ram_bytes"])/float(1000000000))+"GB"+"'",Start_Time)
-                            print addFoundAttempt
+                            #print addFoundAttempt
                             dbcursor.execute(addFoundAttempt)
                             dbcnx.commit()
 
@@ -195,11 +200,18 @@ def checkSWIF():
                             #print len(LoggedSWIFAttemps)
 
                         #print "UPDATING ATTEMPT"
+                        #print (attempt["auger_ts_complete"])
+                        if attempt["auger_ts_complete"] is None:
+                            Completed_Time='NULL'
+
+                        if attempt["exitcode"] is None:
+                            ExitCode='NULL'
                         #print str(ExitCode)
                         #UPDATE THE SATUS
-                        
+                        #print Completed_Time
                         updatejobstatus="UPDATE Attempts SET Status=\""+str(job["status"])+"\", ExitCode="+str(ExitCode)+", RunningLocation="+"'"+str(attempt["auger_node"])+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", Start_Time="+"'"+str(Start_Time)+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUsed+"'"+" WHERE BatchJobID="+str(job["id"])+" && ID="+str(LoggedSWIFAttemps[loggedindex]["ID"])
                         if Completed_Time != 'NULL':
+                                #print "COMPLETED_TIME"
                                 updatejobstatus="UPDATE Attempts SET Status=\""+str(job["status"])+"\", ExitCode="+str(ExitCode)+", Completed_Time='"+str(datetime.fromtimestamp(float(attempt["auger_ts_complete"])/float(1000)))+"'"+", RunningLocation="+"'"+str(attempt["auger_node"])+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", Start_Time="+"'"+str(Start_Time)+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUsed+"'"+" WHERE BatchJobID="+str(job["id"])+" && ID="+str(LoggedSWIFAttemps[loggedindex]["ID"])
                        
 
@@ -209,18 +221,54 @@ def checkSWIF():
                         loggedindex+=1
 
 
+def UpdateOutputSize():
+
+    getUntotaled="SELECT ID FROM Project WHERE Completed_Time IS NULL && Is_Dispatched != '0';"
+    #print querygetLoc
+    dbcursor.execute(getUntotaled)
+    Projects = dbcursor.fetchall()
+
+    for pr in Projects:
+        id=pr["ID"]
+        print "Updating size for: "+str(id)
+        querygetLoc="SELECT * FROM Project WHERE ID="+str(id)+";"
+        #print querygetLoc
+        dbcursor.execute(querygetLoc)
+        Project = dbcursor.fetchall()
+        location=Project[0]["OutputLocation"]
+
+        if Project[0]["FinalDestination"]:
+            location=Project[0]["FinalDestination"]
+
+        try:
+            statuscommand="du -sh --total "+location
+            #print statuscommand
+            totalSizeStr=subprocess.check_output([statuscommand], shell=True)
+            #print "==============="
+            #print totalSizeStr.split("\n")[1].split("total")[0]
+
+            updateProjectSizeOut="UPDATE Project SET TotalSizeOut=\""+totalSizeStr.split("\n")[1].split("total")[0]+"\" WHERE ID="+str(id)
+            dbcursor.execute(updateProjectSizeOut)
+            dbcnx.commit()
+        except:
+            pass
+        
 
 def checkOSG():
         #print "CHECKING OSG JOBS"
         queryswifjobs="SELECT * FROM Project WHERE ID IN (SELECT Project_ID FROM Jobs WHERE IsActive=1 && ID IN (SELECT DISTINCT Job_ID FROM Attempts WHERE BatchSystem= 'OSG' && Status != '4') )"
         dbcursor.execute(queryswifjobs)
         AllWkFlows = dbcursor.fetchall()
+        #for wk in AllWkFlows:
+        #    print wk["ID"]
+        #    UpdateOutputSize(wk["ID"])
 
 
         queryosgjobs="SELECT * from Attempts WHERE BatchSystem='OSG' && Status !='4';"
         #print queryosgjobs
         dbcursor.execute(queryosgjobs)
         Alljobs = dbcursor.fetchall()
+
 
         
         for job in Alljobs:
@@ -314,6 +362,7 @@ def main(argv):
 
         checkSWIF()
         checkOSG()
+        UpdateOutputSize()
         checkProjectsForCompletion()
         dbcnx.close()
                 

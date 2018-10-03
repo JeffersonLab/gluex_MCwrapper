@@ -6,7 +6,14 @@ shift
 export ENVIRONMENT=$1 
 shift
 if [[ "$BATCHRUN" != "0" ]]; then
-	source $ENVIRONMENT
+
+xmltest=`echo $ENVIRONMENT | rev | cut -c -4 | rev`
+if [[ "$xmltest" == ".xml" ]]; then
+source /group/halld/Software/build_scripts/gluex_env_jlab.sh $ENVIRONMENT
+else
+source $ENVIRONMENT
+fi
+
 fi
 export CONFIG_FILE=$1
 shift
@@ -92,6 +99,14 @@ shift
 export MCWRAPPER_VERSION=$1
 shift
 export NOSIPMSATURATION=$1
+shift
+export FLUX_TO_GEN=$1
+shift
+export FLUX_HIST=$1
+shift
+export POL_TO_GEN=$1
+shift
+export POL_HIST=$1
 
 export USER_BC=`which bc`
 export USER_PYTHON=`which python`
@@ -313,11 +328,14 @@ echo "Run Number: "$RUN_NUMBER
 echo "Electron beam current to use: "$beam_on_current" uA"
 echo "Electron beam energy to use: "$eBEAM_ENERGY" GeV"
 echo "Radiator Thickness to use: "$radthick" m"
+echo "Collimator Diameter: "$colsize" m"
 echo "Photon Energy between "$GEN_MIN_ENERGY" and "$GEN_MAX_ENERGY" GeV"
 echo "Polarization Angle: "$polarization_angle "degrees"
 echo "Coherent Peak position: "$COHERENT_PEAK
 echo "----------------------------------------------"
 echo "Run generation step? "$GENR"  Will be cleaned?" $CLEANGENR
+echo "Flux Hist to use: " "$FLUX_TO_GEN" " : " "$FLUX_HIST"
+echo "Polarization to use: " "$POL_TO_GEN" " : " "$POL_HIST"
 echo "Using "$GENERATOR"  with config: "$CONFIG_FILE
 echo "----------------------------------------------"
 echo "Run geant step? "$GEANT"  Will be cleaned?" $CLEANGEANT
@@ -335,6 +353,7 @@ echo ""
 echo ""
 echo "=======SOFTWARE USED======="
 echo "MCwrapper version v"$MCWRAPPER_VERSION
+echo "MCwrapper location" $MCWRAPPER_CENTRAL
 echo "BC "$USER_BC
 echo "python "$USER_PYTHON
 echo `which $GENERATOR`
@@ -432,6 +451,11 @@ bkglocstring=""
 bkgloc_pre=`echo $BKGFOLDSTR | cut -c 1-4`
 if [[ "$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" == "Random" ]]; then
 		    #find file and run:1
+
+			if [[ "$RANDBGTAG" == "none" && "$bkgloc_pre" != "loc:" ]]; then
+				echo "Random background requested but no tag given. Please provide the desired tag e.g Random:recon-2017_01-ver03"
+				exit 1
+			fi
 		    echo "Finding the right file to fold in during MCsmear step"
 		    
 			runperiod="RunPeriod-2017-01"
@@ -538,6 +562,55 @@ if [[ "$GENR" != "0" ]]; then
 
 	fi
 
+
+	echo "PolarizationAngle $polarization_angle" > beam.config
+	echo "PhotonBeamLowEnergy $GEN_MIN_ENERGY" >>! beam.config
+    echo "PhotonBeamHighEnergy $GEN_MAX_ENERGY" >>! beam.config
+
+	if [[ "$FLUX_TO_GEN" == "ccdb" ]]; then
+		echo "ROOTFluxFile $FLUX_TO_GEN" >>! beam.config
+		if [[ "$POL_TO_GEN" == "ccdb" ]]; then
+			echo "ROOTPolFile $POL_TO_GEN" >>! beam.config
+		elif [[ "$POL_HIST" == "unset" ]]; then
+			echo "PolarizationMagnitude $POL_TO_GEN" >>! beam.config
+		else
+			echo "ROOTPolFile $POL_TO_GEN" >>! beam.config
+			echo "ROOTPolName $POL_HIST" >>! beam.config
+		fi
+	elif [[ "$FLUX_TO_GEN" == "cobrems" ]]; then
+    	echo "ElectronBeamEnergy $eBEAM_ENERGY" >>! beam.config
+    	echo "CoherentPeakEnergy $COHERENT_PEAK" >>! beam.config
+    	echo "Emittance  2.5.e-9" >>! beam.config
+    	echo "RadiatorThickness $radthick" >>! beam.config
+    	echo "CollimatorDiameter 0.00$colsize" >>! beam.config
+    	echo "CollimatorDistance  76.0" >>! beam.config
+
+		if [[ "$POL_TO_GEN" == "ccdb" ]]; then
+			echo "Ignoring TPOL from ccdb in favor of cobrems generated values"
+		elif [[ "$POL_HIST" == "unset" ]]; then
+			echo "PolarizationMagnitude $POL_TO_GEN" >>! beam.config
+		else
+			echo "Ignoring TPOL from $POL_TO_GEN in favor of cobrems generated values"
+		fi
+
+    else
+		echo "ROOTFluxFile $FLUX_TO_GEN" >>! beam.config
+		echo "ROOTFluxName $FLUX_HIST" >>! beam.config
+		if [[ "$POL_TO_GEN" == "ccdb" ]]; then
+			echo "Can't use a flux file and Polarization from ccdb"
+			exit 1
+		elif [[ "$POL_HIST" == "unset" ]]; then
+			echo "PolarizationMagnitude $POL_TO_GEN" >>! beam.config
+		else
+			echo "ROOTPolFile $POL_TO_GEN" >>! beam.config
+			echo "ROOTPolName $POL_HIST" >>! beam.config
+		fi
+	fi
+
+	
+
+	cp beam.config $GENERATOR\_$STANDARD_NAME\_beam.conf
+
     if [[ "$GENERATOR" == "genr8" ]]; then
 		echo "configuring genr8"
 		STANDARD_NAME="genr8_"$STANDARD_NAME
@@ -549,7 +622,7 @@ if [[ "$GENR" != "0" ]]; then
 			echo "Please specify the desired energy via the COHERENT_PEAK parameter and retry."
 			exit 1
 		fi
-	elif ( "$GENERATOR" == "genr8_new" ) then
+    elif [[ "$GENERATOR" == "genr8_new" ]]; then
 		echo "configuring new genr8"
 
 		STANDARD_NAME="genr8_new_"$STANDARD_NAME
@@ -570,6 +643,16 @@ if [[ "$GENR" != "0" ]]; then
 		echo "configuring gen_amp"
 		STANDARD_NAME="gen_amp_"$STANDARD_NAME
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
+		echo "ElectronBeamEnergy $eBEAM_ENERGY" > beam.config
+	    echo "CoherentPeakEnergy $COHERENT_PEAK" >> beam.config
+		echo "PhotonBeamLowEnergy $GEN_MIN_ENERGY" >> beam.config
+		echo "PhotonBeamHighEnergy $GEN_MAX_ENERGY" >> beam.config
+		echo "Emittance  10.e-9" >> beam.config
+		echo "RadiatorThickness $radthick" >> beam.config
+		echo "CollimatorDiameter 0.00$colsize" >> beam.config
+		echo "CollimatorDistance  76.0" >> beam.config
+		echo "Polarization $polarization_angle" >> beam.config
+		cp beam.config $STANDARD_NAME\_beam.conf
     elif [[ "$GENERATOR" == "gen_2pi_amp" ]]; then
 		echo "configuring gen_2pi_amp"
 		STANDARD_NAME="gen_2pi_amp_"$STANDARD_NAME
@@ -639,10 +722,11 @@ if [[ "$GENR" != "0" ]]; then
 	echo "RUNNING GENR8"
 	RUNNUM=$formatted_runNumber+$formatted_fileNumber
 	sed -i 's/TEMPMAXE/'$GEN_MAX_ENERGY'/' $STANDARD_NAME.conf
+	sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
 	# RUN genr8 and convert
 	genr8 -r$formatted_runNumber -M$EVT_TO_GEN -A$STANDARD_NAME.ascii < $STANDARD_NAME.conf #$config_file_name
 	generator_return_code=$?
-	genr8_2_hddm -V"0 0 50 80" $STANDARD_NAME.ascii
+	genr8_2_hddm -V"0 0 0 0" $STANDARD_NAME.ascii
 	elif [[ "$GENERATOR" == "genr8_new" ]]; then
 		echo "RUNNING NEW GENR8"
 		RUNNUM=$formatted_runNumber+$formatted_fileNumber
@@ -650,7 +734,7 @@ if [[ "$GENR" != "0" ]]; then
 		# RUN genr8 and convert
 		genr8_new -r$formatted_runNumber -M$EVT_TO_GEN -C$GEN_MIN_ENERGY,$GEN_MAX_ENERGY -o$STANDARD_NAME.gamp < $STANDARD_NAME.conf #$config_file_name
 		generator_return_code=$status
-		gamp_2_hddm -r$formatted_runNumber -V"0 0 50 80" $STANDARD_NAME.gamp
+		gamp_2_hddm -r$formatted_runNumber -V"0 0 0 0" $STANDARD_NAME.gamp
     elif [[ "$GENERATOR" == "bggen" ]]; then
 	RANDOMnum=`bash -c 'echo $RANDOM'`
 	echo "Random number used: "$RANDOMnum
@@ -678,6 +762,9 @@ if [[ "$GENR" != "0" ]]; then
 	sed -i 's/TEMPRADTHICK/'"$radthick"'/' $STANDARD_NAME.conf
 	sed -i 's/TEMPMINGENE/'$GEN_MIN_ENERGY'/' $STANDARD_NAME.conf
 	sed -i 's/TEMPMAXGENE/'$GEN_MAX_ENERGY'/' $STANDARD_NAME.conf
+
+	sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
+
 	genEtaRegge -N$EVT_TO_GEN -O$STANDARD_NAME.hddm -I$STANDARD_NAME.conf
     generator_return_code=$?
 	elif [[ "$GENERATOR" == "gen_amp" ]]; then
@@ -691,6 +778,7 @@ if [[ "$GENR" != "0" ]]; then
 			sed -i 's/TEMPPOLFRAC/'.4'/' $STANDARD_NAME.conf
 			sed -i 's/TEMPPOLANGLE/'$polarization_angle'/' $STANDARD_NAME.conf
 		fi
+		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
 		
 	echo gen_amp -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY  $optionals_line
 	gen_amp -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
@@ -706,7 +794,7 @@ if [[ "$GENR" != "0" ]]; then
 			sed -i 's/TEMPPOLFRAC/'.4'/' $STANDARD_NAME.conf
 			sed -i 's/TEMPPOLANGLE/'$polarization_angle'/' $STANDARD_NAME.conf
 		fi
-		
+	sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
 	echo gen_2pi_amp -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY  $optionals_line
 	gen_2pi_amp -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
 	generator_return_code=$?
@@ -737,7 +825,7 @@ if [[ "$GENR" != "0" ]]; then
 			sed -i 's/TEMPPOLFRAC/'.4'/' $STANDARD_NAME.conf
 			sed -i 's/TEMPPOLANGLE/'$polarization_angle'/' $STANDARD_NAME.conf
 		fi
-
+	sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
 	echo $optionals_line
 	echo gen_omega_radiative -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -m $eBEAM_ENERGY -p $COHERENT_PEAK $optionals_line
 	gen_omega_radiative -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -m $eBEAM_ENERGY -p $COHERENT_PEAK $optionals_line
@@ -745,6 +833,7 @@ if [[ "$GENR" != "0" ]]; then
 	elif [[ "$GENERATOR" == "gen_2pi_primakoff" ]]; then
 	echo "RUNNING GEN_2PI_PRIMAKOFF" 
     optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
+	sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
 	echo $optionals_line
 	echo gen_2pi_primakoff -c $STANDARD_NAME.conf -o  $STANDARD_NAME.hddm -hd  $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
 	gen_2pi_primakoff -c $STANDARD_NAME.conf -hd  $STANDARD_NAME.hddm -o  $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
@@ -753,6 +842,7 @@ if [[ "$GENR" != "0" ]]; then
 	echo "RUNNING GEN_PI0" 
     optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
 	echo $optionals_line
+	sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
 	gen_pi0 -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK  -s $formatted_fileNumber -m $eBEAM_ENERGY $optionals_line
     generator_return_code=$?
 	elif [[ "$GENERATOR" == "gen_2k" ]]; then
@@ -760,6 +850,7 @@ if [[ "$GENR" != "0" ]]; then
     set optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
 	#set RANDOMnum=`bash -c 'echo $RANDOM'`
 	echo $optionals_line
+	sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
 	echo gen_2k -c $STANDARD_NAME.conf -o $STANDARD_NAME.hddm -hd $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
 	gen_2k -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
 	generator_return_code=$?
@@ -978,6 +1069,7 @@ if [[ "$GENR" != "0" ]]; then
 	
 	    #run reconstruction
 	if [[ "$CLEANGENR" == "1" ]]; then
+		rm beam.config
 		if [[ "$GENERATOR" == "genr8" ]]; then
 		    rm *.ascii
 		elif [[ "$GENERATOR" == "bggen" || "$GENERATOR" == "bggen_jpsi" || "$GENERATOR" == "bggen_phi_ee" ]]; then
@@ -1113,3 +1205,5 @@ else
 fi
 
 #mv $PWD/*.root $OUTDIR/root/ #just in case
+echo `date`
+echo "Successfully completed"
