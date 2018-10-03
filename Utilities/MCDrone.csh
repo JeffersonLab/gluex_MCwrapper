@@ -2,6 +2,6 @@
 
 source /osgpool/halld/tbritton/local_setup.csh
 
-if (`ps -u tbritton | grep MCDispatcher.py` == "" ) then
+if (`ps all -u tbritton | grep MCDispatcher.py` == "" ) then
     $MCWRAPPER_CENTRAL/Utilities/MCDispatcher.py autolaunch
 endif
