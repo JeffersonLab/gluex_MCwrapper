@@ -614,13 +614,7 @@ if ( "$GENR" != "0" ) then
 
 		set STANDARD_NAME="genr8_new_"$STANDARD_NAME
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
-		#set replacementNum=`grep TEMPCOHERENT ./$STANDARD_NAME.conf | wc -l`
-
-		#if ( "$polarization_angle" == "-1.0" && "$COHERENT_PEAK" == "0." && $replacementNum != 0 ) then
-		#	echo "Running genr8 with an AMO run number without supplying the energy desired to COHERENT_PEAK causes an inifinite loop."
-		#	echo "Please specify the desired energy via the COHERENT_PEAK parameter and retry."
-		#	exit 1
-		#endif
+		
     else if ( "$GENERATOR" == "bggen" ) then
 		echo "configuring bggen"
 		set STANDARD_NAME="bggen_"$STANDARD_NAME
