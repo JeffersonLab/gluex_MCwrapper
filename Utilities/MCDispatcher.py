@@ -33,7 +33,7 @@ class bcolors:
 
 def AutoLaunch():
     #print "in autolaunch"
-    query = "SELECT ID,Email FROM Project WHERE Dispatched_Time is NULL;"
+    query = "SELECT ID,Email FROM Project WHERE Tested != -1 && Dispatched_Time is NULL;"
     #print query
     curs.execute(query) 
     rows=curs.fetchall()
@@ -47,7 +47,7 @@ def AutoLaunch():
         #print status[0]
         #print status[1]
         if(status[1]!=-1):
-            print "TEST success"
+            #print "TEST success"
             #EMAIL SUCCESS AND DISPATCH
             subprocess.call("/osgpool/halld/tbritton/gluex_MCwrapper/Utilities/MCDispatcher.py dispatch -sys OSG "+str(row['ID']),shell=True)
         else:
