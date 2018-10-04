@@ -33,13 +33,15 @@ class bcolors:
 
 def AutoLaunch():
     #print "in autolaunch"
-    query = "SELECT ID,Email FROM Project WHERE Tested != -1 && Dispatched_Time is NULL;"
+    query = "SELECT ID,Email,VersionSet FROM Project WHERE Tested != -1 && Dispatched_Time is NULL;"
     #print query
     curs.execute(query) 
     rows=curs.fetchall()
     #print rows
     #print len(rows)
     for row in rows:
+        subprocess.call("gxclean",shell=True)
+        subprocess.call("source /group/halld/Software/build_scripts/gluex_env_jlab.csh /group/halld/www/halldweb/html/dist/"+str(row["VersionSet"]), shell=True)
         #print row['ID']
         status=TestProject(row['ID'])
 
