@@ -230,7 +230,7 @@ def UpdateOutputSize():
 
     for pr in Projects:
         id=pr["ID"]
-        print "Updating size for: "+str(id)
+        #print "Updating size for: "+str(id)
         querygetLoc="SELECT * FROM Project WHERE ID="+str(id)+";"
         #print querygetLoc
         dbcursor.execute(querygetLoc)
