@@ -42,8 +42,8 @@ try:
 except:
         pass
 
-MCWRAPPER_VERSION="2.0.2"
-MCWRAPPER_DATE="10/02/18"
+MCWRAPPER_VERSION="2.0.3"
+MCWRAPPER_DATE="10/05/18"
 
 def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID):
 
@@ -289,6 +289,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DAT
         #f.write("Arguments  = "+indir+" "+COMMAND+"\n")
         f.write("Arguments  = "+"./"+script_to_use+" "+modified_COMMAND+"\n")
         f.write("Requirements = (HAS_SINGULARITY == TRUE) && (HAS_CVMFS_oasis_opensciencegrid_org == True)"+"\n") 
+        #f.write('wantjobrouter=true'+"\n")
         f.write('+SingularityImage = "/cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_devel:latest"'+"\n") 
         f.write('+SingularityBindCVMFS = True'+"\n") 
         f.write('+SingularityAutoLoad = True'+"\n") 
