@@ -41,7 +41,7 @@ def AutoLaunch():
     #print len(rows)
     for row in rows:
         subprocess.call("gxclean",shell=True)
-        subprocess.call("source /group/halld/Software/build_scripts/gluex_env_jlab.csh /group/halld/www/halldweb/html/dist/"+str(row["VersionSet"]), shell=True)
+        subprocess.call("source /group/halld/Software/build_scripts/gluex_env_jlab.sh /group/halld/www/halldweb/html/dist/"+str(row["VersionSet"]), shell=True)
         #print row['ID']
         status=TestProject(row['ID'])
 
