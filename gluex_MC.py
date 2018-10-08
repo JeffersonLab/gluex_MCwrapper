@@ -883,6 +883,7 @@ def main(argv):
                         print( str(runlow)+"-->"+str(runhigh))
 
                 query_to_do="@is_production and @status_approved"
+                print "RCDB_QUERY IS: "+str(RCDB_QUERY)
                 if(RCDB_QUERY!=""):
                         query_to_do=RCDB_QUERY
 
