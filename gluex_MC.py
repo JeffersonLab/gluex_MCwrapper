@@ -43,7 +43,7 @@ except:
         pass
 
 MCWRAPPER_VERSION="2.0.3"
-MCWRAPPER_DATE="10/05/18"
+MCWRAPPER_DATE="10/08/18"
 
 def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID):
 
@@ -474,7 +474,7 @@ def main(argv):
         TAGSTR="I_dont_have_one"
 
         DATA_OUTPUT_BASE_DIR    = "UNKNOWN_LOCATION"#your desired output location
-        
+        RCDB_QUERY=""
        
         ENVFILE = "my-environment-file"#change this to your own environment file
         
@@ -675,6 +675,8 @@ def main(argv):
                         ccdbSQLITEPATH=rm_comments[0].strip()
                 elif str(parts[0]).upper()=="RCDBSQLITEPATH" :
                         rcdbSQLITEPATH=rm_comments[0].strip()
+                elif str(parts[0]).upper()=="RCDB_QUERY" :
+                        RCDB_QUERY=rm_comments[0].strip()
                 elif str(parts[0]).upper()=="NOSECONDARIES" :
                         NOSECONDARIES=rm_comments[0].strip()
                 elif str(parts[0]).upper()=="NOSIPMSATURATION" :
@@ -880,7 +882,11 @@ def main(argv):
                         #cnx.close()
                         print( str(runlow)+"-->"+str(runhigh))
 
-                table = db.select_runs("@is_production and @status_approved",runlow,runhigh).get_values(['event_count'],True)
+                query_to_do="@is_production and @status_approved"
+                if(RCDB_QUERY!=""):
+                        query_to_do=RCDB_QUERY
+
+                table = db.select_runs("\""+str(RCDB_QUERY)+"\"",runlow,runhigh).get_values(['event_count'],True)
                 #print table
                 #print len(table)
                 for runs in table:
