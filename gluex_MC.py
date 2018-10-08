@@ -887,7 +887,7 @@ def main(argv):
                 if(RCDB_QUERY!=""):
                         query_to_do=RCDB_QUERY
 
-                table = db.select_runs("\""+str(RCDB_QUERY)+"\"",runlow,runhigh).get_values(['event_count'],True)
+                table = db.select_runs(str(query_to_do),runlow,runhigh).get_values(['event_count'],True)
                 #print table
                 #print len(table)
                 for runs in table:
