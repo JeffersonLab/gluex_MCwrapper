@@ -554,7 +554,7 @@ def main(argv):
                         #print "Warning! No Sets given"
                         continue
                 
-                if len(parts)>2 and str(parts[0]).upper() != "VARIATION":
+                if len(parts)>2 and str(parts[0]).upper() != "VARIATION" and str(parts[0]).upper() != "RCDB_QUERY":
                         print( "warning! I am going to have a really difficult time with:")
                         print( line)
                         print( "I'm going to just ignore it and hope it isn't a problem....")
