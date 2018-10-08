@@ -676,7 +676,7 @@ def main(argv):
                 elif str(parts[0]).upper()=="RCDBSQLITEPATH" :
                         rcdbSQLITEPATH=rm_comments[0].strip()
                 elif str(parts[0]).upper()=="RCDB_QUERY" :
-                        RCDB_QUERY=rm_comments[0].strip()
+                        RCDB_QUERY=rm_comments[0]
                 elif str(parts[0]).upper()=="NOSECONDARIES" :
                         NOSECONDARIES=rm_comments[0].strip()
                 elif str(parts[0]).upper()=="NOSIPMSATURATION" :
