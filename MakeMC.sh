@@ -553,7 +553,7 @@ if [[ "$GENR" != "0" ]]; then
 	else 
 		if [[ -f $CONFIG_FILE ]]; then
 	    	echo "input file found"
-		elif [[ "$GENERATOR" == "gen_ee" || "$GENERATOR" == "gen_ee_hb" ]]; then
+		elif [[ "$GENERATOR" == "gen_ee" || "$GENERATOR" == "gen_ee_hb" || "$GENERATOR" == "genBH" ]]; then
 			echo "Config file not applicable"
 		else
 	    	echo $CONFIG_FILE" does not exist"
