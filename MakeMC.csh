@@ -881,8 +881,8 @@ if ( "$GENR" != "0" ) then
 		set generator_return_code=$status
 		mv genOut.hddm $STANDARD_NAME.hddm
 	else if ( "$GENERATOR" == "genBH" ) then
-		echo genBH -n$EVT_TO_GEN -t$NUMTHREADS -m$GEN_MIN_ENERGY -e$GEN_MAX_ENERGY $STANDARD_NAME.hddm
-		genBH -n$EVT_TO_GEN -t$NUMTHREADS -m$GEN_MIN_ENERGY -e$GEN_MAX_ENERGY $STANDARD_NAME.hddm
+		echo genBH -n$EVT_TO_GEN -t$NUMTHREADS -m0.5 -e$GEN_MAX_ENERGY $STANDARD_NAME.hddm
+		genBH -n$EVT_TO_GEN -t$NUMTHREADS -m0.5 -e$GEN_MAX_ENERGY $STANDARD_NAME.hddm
 		sed -i 's/class="mc_s"/'class=\"s\"'/' $STANDARD_NAME.hddm
 		set generator_return_code=$status
 	endif
