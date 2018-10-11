@@ -902,8 +902,8 @@ if [[ "$GENR" != "0" ]]; then
 		generator_return_code=$?
 		mv genOut.hddm $STANDARD_NAME.hddm
 	elif [[ "$GENERATOR" == "genBH" ]]; then
-		echo genBH -n$EVT_TO_GEN -t$NUMTHREADS -E$COHERENT_PEAK -e$GEN_MAX_ENERGY $STANDARD_NAME.hddm
-		genBH -n$EVT_TO_GEN -t$NUMTHREADS -E$COHERENT_PEAK -e$GEN_MAX_ENERGY $STANDARD_NAME.hddm
+		echo genBH -n$EVT_TO_GEN -t$NUMTHREADS -m$GEN_MIN_ENERGY -e$GEN_MAX_ENERGY $STANDARD_NAME.hddm
+		genBH -n$EVT_TO_GEN -t$NUMTHREADS -m$GEN_MIN_ENERGY -e$GEN_MAX_ENERGY $STANDARD_NAME.hddm
 
 		sed -i 's/class="mc_s"/'class=\"s\"'/' $STANDARD_NAME.hddm
 		generator_return_code=$status
