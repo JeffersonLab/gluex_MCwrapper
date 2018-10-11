@@ -318,7 +318,7 @@ def checkOSG():
                 dbcnx.commit()
             else:
                 #print "looking up history"
-                historystatuscommand="condor_history "+str(job["BatchJobID"])+" -json"
+                historystatuscommand="condor_history -limit 1 "+str(job["BatchJobID"])+" -json"
                 #print historystatuscommand
                 jsonOutputstr=subprocess.check_output(historystatuscommand.split(" "))
                 #print "================"
