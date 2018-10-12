@@ -686,6 +686,9 @@ if ( "$GENR" != "0" ) then
 	else if ( "$GENERATOR" == "genBH" ) then
 		echo "configuring genBH"
 		set STANDARD_NAME="genBH_"$STANDARD_NAME
+		echo "note: this generator is run completely from command line, thus no config file will be made and/or modified"
+		cp $CONFIG_FILE ./cobrems.root
+		cp $MCWRAPPER_CENTRAL/Generators/gen_ee_hb/CFFs_DD_Feb2012.dat ./
     endif
 
     if ( "$gen_pre" != "file" ) then
