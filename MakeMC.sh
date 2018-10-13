@@ -710,8 +710,9 @@ if [[ "$GENR" != "0" ]]; then
 		echo "configuring genBH"
 		set STANDARD_NAME="genBH_"$STANDARD_NAME
 		echo "note: this generator is run completely from command line, thus no config file will be made and/or modified"
+
 		cp $CONFIG_FILE ./cobrems.root
-		cp $MCWRAPPER_CENTRAL/Generators/gen_ee_hb/CFFs_DD_Feb2012.dat ./
+	
     fi
 	
 	if [[ "$gen_pre" != "file" ]]; then
@@ -894,7 +895,7 @@ if [[ "$GENR" != "0" ]]; then
 	generator_return_code=$?
 	mv bggen.hddm $STANDARD_NAME.hddm
 	elif [[ "$GENERATOR" == "gen_ee" ]]; then
-	set RANDOMnum=`bash -c 'echo $RANDOM'`
+	RANDOMnum=`bash -c 'echo $RANDOM'`
 	echo "Random number used: "$RANDOMnum
 	gen_ee -n$EVT_TO_GEN -R2 -b2 -l$GEN_MIN_ENERGY -u$GEN_MAX_ENERGY -t2 -r$RANDOMnum -omc_ee.hddm
 	generator_return_code=$?
@@ -905,8 +906,10 @@ if [[ "$GENR" != "0" ]]; then
 		generator_return_code=$?
 		mv genOut.hddm $STANDARD_NAME.hddm
 	elif [[ "$GENERATOR" == "genBH" ]]; then
-		echo genBH -n$EVT_TO_GEN -t$NUMTHREADS -m0.5 -e$GEN_MAX_ENERGY $STANDARD_NAME.hddm
-		genBH -n$EVT_TO_GEN -t$NUMTHREADS -m0.5 -e$GEN_MAX_ENERGY $STANDARD_NAME.hddm
+		RANDOMnum=`bash -c 'echo $RANDOM'`
+		echo "Random number used: "$RANDOMnum
+		echo genBH -n$EVT_TO_GEN -t$NUMTHREADS -m0.5 -e$GEN_MAX_ENERGY -r$RANDOMnum $STANDARD_NAME.hddm
+		genBH -n$EVT_TO_GEN -t$NUMTHREADS -m0.5 -e$GEN_MAX_ENERGY -r$RANDOMnum $STANDARD_NAME.hddm
 
 		sed -i 's/class="mc_s"/'class=\"s\"'/' $STANDARD_NAME.hddm
 		generator_return_code=$status

@@ -688,7 +688,7 @@ if ( "$GENR" != "0" ) then
 		set STANDARD_NAME="genBH_"$STANDARD_NAME
 		echo "note: this generator is run completely from command line, thus no config file will be made and/or modified"
 		cp $CONFIG_FILE ./cobrems.root
-		cp $MCWRAPPER_CENTRAL/Generators/gen_ee_hb/CFFs_DD_Feb2012.dat ./
+
     endif
 
     if ( "$gen_pre" != "file" ) then
@@ -884,8 +884,10 @@ if ( "$GENR" != "0" ) then
 		set generator_return_code=$status
 		mv genOut.hddm $STANDARD_NAME.hddm
 	else if ( "$GENERATOR" == "genBH" ) then
-		echo genBH -n$EVT_TO_GEN -t$NUMTHREADS -m0.5 -e$GEN_MAX_ENERGY $STANDARD_NAME.hddm
-		genBH -n$EVT_TO_GEN -t$NUMTHREADS -m0.5 -e$GEN_MAX_ENERGY $STANDARD_NAME.hddm
+		set RANDOMnum=`bash -c 'echo $RANDOM'`
+		echo Random Number used: $RANDOMnum
+		echo genBH -n$EVT_TO_GEN -t$NUMTHREADS -m0.5 -e$GEN_MAX_ENERGY -r$RANDOMnum $STANDARD_NAME.hddm
+		genBH -n$EVT_TO_GEN -t$NUMTHREADS -m0.5 -e$GEN_MAX_ENERGY -r$RANDOMnum $STANDARD_NAME.hddm
 		sed -i 's/class="mc_s"/'class=\"s\"'/' $STANDARD_NAME.hddm
 		set generator_return_code=$status
 	endif
