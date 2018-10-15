@@ -43,7 +43,7 @@ except:
         pass
 
 MCWRAPPER_VERSION="2.0.3"
-MCWRAPPER_DATE="10/09/18"
+MCWRAPPER_DATE="10/15/18"
 
 def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID):
 
@@ -230,7 +230,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DAT
                 formattedRUNNUM=formattedRUNNUM+str(RUNNUM)
                 if COMMAND_parts[21] == "Random":
                         #print "/cache/halld/Simulation/random_triggers/"+RANDBGTAG+"/run"+formattedRUNNUM+"_random.hddm"
-                        additional_passins+="/cache/halld/gluex_simulations/random_triggers/"+RANDBGTAG+"/run"+formattedRUNNUM+"_random.hddm"+", "
+                        additional_passins+="/osgpool/halld/random_triggers/"+RANDBGTAG+"/run"+formattedRUNNUM+"_random.hddm"+", "
                 elif COMMAND_parts[21][:4] == "loc:":
                         #print COMMAND_parts[21][4:]
                         additional_passins+=COMMAND_parts[21][4:]+"/run"+formattedRUNNUM+"_random.hddm"+", "
