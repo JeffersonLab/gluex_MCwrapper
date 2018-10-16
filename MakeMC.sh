@@ -772,7 +772,7 @@ if [[ "$GENR" != "0" ]]; then
 	genEtaRegge -N$EVT_TO_GEN -O$STANDARD_NAME.hddm -I$STANDARD_NAME.conf
     generator_return_code=$?
 	elif [[ "$GENERATOR" == "gen_amp" ]]; then
-	echo "RUNNING GEN_2PI_AMP" 
+	echo "RUNNING GEN_AMP" 
     optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
 	echo $optionals_line
 		if [[ "$polarization_angle" == "-1.0" ]]; then
