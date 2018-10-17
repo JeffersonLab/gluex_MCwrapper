@@ -931,7 +931,7 @@ def main(argv):
                                         os.system(str(indir)+" "+COMMAND)
                                 else:
                                         if PROJECT_ID != 0:
-                                                findmyjob="SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(RUNNO)+" && FileNumber="+str(FILENO)+" && NumEvts="+str(NUMEVTS)
+                                                findmyjob="SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(runs[0])+" && FileNumber="+str(FILENO)+" && NumEvts="+str(NUMEVTS)
                                                 dbcursor.execute(findmyjob)
                                                 MYJOB = dbcursor.fetchall()
                                                 print len(MYJOB) 
