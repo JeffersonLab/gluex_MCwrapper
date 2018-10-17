@@ -931,7 +931,7 @@ def main(argv):
                                         os.system(str(indir)+" "+COMMAND)
                                 else:
                                         if PROJECT_ID != 0:
-                                                findmyjob="SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(runs[0])+" && FileNumber="+str(FILENO)+" && NumEvts="+str(NUMEVTS)
+                                                findmyjob="SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(runs[0])+" && FileNumber="+str(BASEFILENUM+FILENUM_this_run+-1)+" && NumEvts="+str(num_this_file)
                                                 dbcursor.execute(findmyjob)
                                                 MYJOB = dbcursor.fetchall()
                                                 print len(MYJOB) 
@@ -968,7 +968,7 @@ def main(argv):
                                 os.system(str(indir)+" "+COMMAND)
                         else:
                                 if PROJECT_ID != 0:
-                                        findmyjob="SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(RUNNUM)+" && FileNumber="+str(FILENO)+" && NumEvts="+str(NUMEVTS)
+                                        findmyjob="SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(RUNNUM)+" && FileNumber="+str(BASEFILENUM+FILENUM+-1)+" && NumEvts="+str(num)
                                         dbcursor.execute(findmyjob)
                                         MYJOB = dbcursor.fetchall() 
                                         print len(MYJOB) 
