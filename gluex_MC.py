@@ -933,7 +933,8 @@ def main(argv):
                                         if PROJECT_ID != 0:
                                                 findmyjob="SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(RUNNO)+" && FileNumber="+str(FILENO)+" && NumEvts="+str(NUMEVTS)
                                                 dbcursor.execute(findmyjob)
-                                                MYJOB = dbcursor.fetchall() 
+                                                MYJOB = dbcursor.fetchall()
+                                                print len(MYJOB) 
                                         if len(MYJOB) == 0:
                                                 if BATCHSYS.upper()=="SWIF":
                                                         swif_add_job(WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1,str(indir),COMMAND,VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID)
@@ -970,6 +971,7 @@ def main(argv):
                                         findmyjob="SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(RUNNO)+" && FileNumber="+str(FILENO)+" && NumEvts="+str(NUMEVTS)
                                         dbcursor.execute(findmyjob)
                                         MYJOB = dbcursor.fetchall() 
+                                        print len(MYJOB) 
                                 if len(MYJOB) == 0:
                                         if BATCHSYS.upper()=="SWIF":
                                                 swif_add_job(WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1,str(indir),COMMAND,VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID)
