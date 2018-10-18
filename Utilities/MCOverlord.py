@@ -364,7 +364,7 @@ def main(argv):
         numprocesses_running=subprocess.check_output(["echo `ps all -u tbritton | grep MCOverlord.py | wc -l`"], shell=True)
 
         #print int(numprocesses_running)
-        if(int(numprocesses_running) <15):
+        if(int(numprocesses_running) <2):
             checkSWIF()
             checkOSG()
             UpdateOutputSize()

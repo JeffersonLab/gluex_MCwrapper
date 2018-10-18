@@ -1043,7 +1043,7 @@ if [[ "$GENR" != "0" ]]; then
 		rm -f count.py
 	   echo "import hddm_s" > count.py
 	   echo "print(sum(1 for r in hddm_s.istream('$bkglocstring')))" >> count.py
-	   totalnum=$($USER_PYTHON count.py)
+	   totalnum=$( $USER_PYTHON count.py )
 	   rm count.py
 		fold_skip_num=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
 		echo "skipping: "$fold_skip_num

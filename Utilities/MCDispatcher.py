@@ -40,10 +40,13 @@ def AutoLaunch():
     #print rows
     #print len(rows)
     for row in rows:
-        subprocess.call("gxclean",shell=True)
-        subprocess.call("echo $PYTHONPATH",shell=True)
-        subprocess.call("source /group/halld/Software/build_scripts/gluex_env_jlab.sh /group/halld/www/halldweb/html/dist/"+str(row["VersionSet"]), shell=True)
-        #print row['ID']
+        commands_to_call="source /group/halld/Software/build_scripts/gluex_env_boot_jlab.sh;"
+        commands_to_call+="gxclean;"
+        #subprocess.call("source /group/halld/Software/build_scripts/gluex_env_boot_jlab.sh;",shell=True)                                                                                                          
+        #subprocess.call("gxclean",shell=True)                                                                                                                                                                     
+        commands_to_call+="source /group/halld/Software/build_scripts/gluex_env_jlab.sh /group/halld/www/halldweb/html/dist/"+str(row["VersionSet"])+";"
+        commands_to_call+="export MCWRAPPER_CENTRAL=/osgpool/halld/tbritton/gluex_MCwrapper/;"
+        commands_to_call+="export PATH=/apps/bin:${PATH};"
         status=TestProject(row['ID'])
 
         #print "STATUS IS"
@@ -205,7 +208,7 @@ def CheckGenConfig(order):
     return "True"
 
 
-def TestProject(ID):
+def TestProject(ID,commands_to_call=""):
     subprocess.call("rm -f MCDispatched.config", shell=True)
     print "TESTING PROJECT "+str(ID)
     query = "SELECT * FROM Project WHERE ID="+str(ID)
@@ -248,7 +251,7 @@ def TestProject(ID):
     print(command)
     STATUS=-1
    # print (command+command2).split(" ")
-    p = Popen(command, stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True)
+    p = Popen(commands_to_call+command, stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True)
     #print p
     #print "p defined"
     output, errors = p.communicate()
