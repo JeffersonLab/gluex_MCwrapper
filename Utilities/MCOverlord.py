@@ -33,6 +33,7 @@ import sys
 import re
 import subprocess
 from subprocess import call
+import socket
 import glob
 import json
 import time
@@ -365,10 +366,19 @@ def main(argv):
 
         #print int(numprocesses_running)
         if(int(numprocesses_running) <2):
+            dbcursor.execute("INSERT INTO MCOverlord (Host,StartTime) VALUES ("+str(socket.gethostname())+", NOW() )"
+            dbcnx.commit()
+            queryoverlords="SELECT MAX(ID) FROM MCOverlord;"
+            dbcursor.execute(queryoverlords)
+            lastid = dbcursor.fetchall()
             checkSWIF()
             checkOSG()
             UpdateOutputSize()
             checkProjectsForCompletion()
+            dbcursor.execute("UPDATE MCOverlord SET EndTime=NOW() where ID="+str(lastid[0])
+            dbcnx.commit()
+
+
 
         dbcnx.close()
               
