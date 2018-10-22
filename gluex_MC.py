@@ -43,7 +43,7 @@ except:
         pass
 
 MCWRAPPER_VERSION="2.0.3"
-MCWRAPPER_DATE="10/19/18"
+MCWRAPPER_DATE="10/22/18"
 
 def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID):
 
@@ -899,7 +899,6 @@ def main(argv):
                         event_sum = event_sum + runs[1]
 
                 print( event_sum)
-                exit
                 sum2=0.
                 for runs in table: #do for each job
                         #print runs[0]
