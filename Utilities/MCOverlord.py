@@ -366,7 +366,7 @@ def main(argv):
 
         #print int(numprocesses_running)
         if(int(numprocesses_running) <5):
-            dbcursor.execute("INSERT INTO MCOverlord (Host,StartTime) VALUES ('"+str(socket.gethostname())+"', NOW() )"
+            dbcursor.execute("INSERT INTO MCOverlord (Host,StartTime) VALUES ('"+str(socket.gethostname())+"', NOW() )")
             dbcnx.commit()
             queryoverlords="SELECT MAX(ID) FROM MCOverlord;"
             dbcursor.execute(queryoverlords)
@@ -375,8 +375,8 @@ def main(argv):
             checkOSG()
             UpdateOutputSize()
             checkProjectsForCompletion()
-            dbcursor.execute("UPDATE MCOverlord SET EndTime=NOW() where ID="+str(lastid[0])
-            dbcnx.commit()
+            dbcursor.execute("UPDATE MCOverlord SET EndTime=NOW() where ID="+str(lastid[0]))
+
 
 
 
