@@ -481,12 +481,11 @@ def DispatchToOSG(ID,order,PERCENT):
     
     percentDisp=float(NumEventsToProduce+OutstandingEvents)/float(TotalRequestedEvents)
 
-    if 1:#NumEventsToProduce > 0:
-        if(TotalRequestedEventsret[0]["Is_Dispatched"] != '1.0'):
-            updatequery="UPDATE Project SET Is_Dispatched='"+str(percentDisp) +"', Dispatched_Time="+"NOW() "+"WHERE ID="+str(ID)+";"
-            #print updatequery
-            curs.execute(updatequery)
-            conn.commit()
+    if NumEventsToProduce > 0:
+        updatequery="UPDATE Project SET Is_Dispatched='"+str(percentDisp) +"', Dispatched_Time="+"NOW() "+"WHERE ID="+str(ID)+";"
+        #print updatequery
+        curs.execute(updatequery)
+        conn.commit()
         command="$MCWRAPPER_CENTRAL/gluex_MC.py MCDispatched.config "+str(RunNumber)+" "+str(NumEventsToProduce)+" per_file=20000 base_file_number="+str(FileNumber_NewJob)+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=1"
         print(command)
         status = subprocess.call(command, shell=True)

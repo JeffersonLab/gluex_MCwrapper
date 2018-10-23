@@ -308,10 +308,17 @@ def checkOSG():
                 REMOTE_HOST="NA"
                 if "RemoteHost" in JSON_job :
                     REMOTE_HOST=str(JSON_job["RemoteHost"])
+                
+                RunIP="NULL"
+                    if "LastPublicClaimId" in JSON_job:
+                        ipstr=str(JSON_job["LastPublicClaimId"])
+                        ipstr=ipstr.split("#")[0]
+                        ipstr=ipstr[1:-1].split(":")[0]
+                        RunIP=ipstr
 
-                updatejobstatus="UPDATE Attempts SET Status=\""+str(JSON_job["JobStatus"])+"\", ExitCode="+ExitCode+", Start_Time="+"'"+str(datetime.fromtimestamp(float(Start_Time)))+"'"+", RunningLocation="+"'"+str(REMOTE_HOST)+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+" WHERE BatchJobID="+str(job["BatchJobID"])+";"
+                updatejobstatus="UPDATE Attempts SET Status=\""+str(JSON_job["JobStatus"])+"\", ExitCode="+ExitCode+", Start_Time="+"'"+str(datetime.fromtimestamp(float(Start_Time)))+"'"+", RunningLocation="+"'"+str(REMOTE_HOST)+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+", RunIP="+str(RunIP)+" WHERE BatchJobID="+str(job["BatchJobID"])+";"
                 if Completed_Time != 'NULL':
-                        updatejobstatus="UPDATE Attempts SET Status=\""+str(JSON_job["JobStatus"])+"\", ExitCode="+ExitCode+", Completed_Time='"+str(datetime.fromtimestamp(float(Completed_Time)))+"'"+", Start_Time="+"'"+str(datetime.fromtimestamp(float(Start_Time)))+"'"+", RunningLocation="+"'"+str(REMOTE_HOST)+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+" WHERE BatchJobID="+str(job["BatchJobID"])+";"
+                        updatejobstatus="UPDATE Attempts SET Status=\""+str(JSON_job["JobStatus"])+"\", ExitCode="+ExitCode+", Completed_Time='"+str(datetime.fromtimestamp(float(Completed_Time)))+"'"+", Start_Time="+"'"+str(datetime.fromtimestamp(float(Start_Time)))+"'"+", RunningLocation="+"'"+str(REMOTE_HOST)+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+", RunIP="+str(RunIP)+" WHERE BatchJobID="+str(job["BatchJobID"])+";"
 
 
                 #print updatejobstatus
@@ -348,10 +355,17 @@ def checkOSG():
                     RAMUSED=str(float(JSON_job["ImageSize_RAW"])/ float(1024))
                     TransINSize=JSON_job["TransferInputSizeMB"]
 
-                    updatejobstatus="UPDATE Attempts SET Status=\""+str(JSON_job["JobStatus"])+"\", ExitCode="+ExitCode+", Start_Time="+"'"+str(datetime.fromtimestamp(float(Start_Time)))+"'"+", RunningLocation="+"'"+str(JSON_job["LastRemoteHost"])+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+" WHERE BatchJobID="+str(job["BatchJobID"])+";"
+                    RunIP="NULL"
+                    if "LastPublicClaimId" in JSON_job:
+                        ipstr=str(JSON_job["LastPublicClaimId"])
+                        ipstr=ipstr.split("#")[0]
+                        ipstr=ipstr[1:-1].split(":")[0]
+                        RunIP=ipstr
+
+                    updatejobstatus="UPDATE Attempts SET Status=\""+str(JSON_job["JobStatus"])+"\", ExitCode="+ExitCode+", Start_Time="+"'"+str(datetime.fromtimestamp(float(Start_Time)))+"'"+", RunningLocation="+"'"+str(JSON_job["LastRemoteHost"])+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+", RunIP="+str(RunIP)+" WHERE BatchJobID="+str(job["BatchJobID"])+";"
                    
                     if Completed_Time != 'NULL':
-                        updatejobstatus="UPDATE Attempts SET Status=\""+str(JSON_job["JobStatus"])+"\", ExitCode="+ExitCode+", Start_Time="+"'"+str(datetime.fromtimestamp(float(Start_Time)))+"'"+", Completed_Time='"+str(datetime.fromtimestamp(float(Completed_Time)))+"'"+", RunningLocation="+"'"+str(JSON_job["LastRemoteHost"])+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+" WHERE BatchJobID="+str(job["BatchJobID"])+";"                    
+                        updatejobstatus="UPDATE Attempts SET Status=\""+str(JSON_job["JobStatus"])+"\", ExitCode="+ExitCode+", Start_Time="+"'"+str(datetime.fromtimestamp(float(Start_Time)))+"'"+", Completed_Time='"+str(datetime.fromtimestamp(float(Completed_Time)))+"'"+", RunningLocation="+"'"+str(JSON_job["LastRemoteHost"])+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+", RunIP="+str(RunIP)+" WHERE BatchJobID="+str(job["BatchJobID"])+";"                    
 
                     #print updatejobstatus
                     dbcursor.execute(updatejobstatus)
@@ -371,12 +385,13 @@ def main(argv):
             queryoverlords="SELECT MAX(ID) FROM MCOverlord;"
             dbcursor.execute(queryoverlords)
             lastid = dbcursor.fetchall()
+            #print lastid
             checkSWIF()
             checkOSG()
             UpdateOutputSize()
             checkProjectsForCompletion()
-            dbcursor.execute("UPDATE MCOverlord SET EndTime=NOW() where ID="+str(lastid[0]))
-
+            dbcursor.execute("UPDATE MCOverlord SET EndTime=NOW() where ID="+str(lastid[0]["MAX(ID)"]))
+            dbcnx.commit()
 
 
 
