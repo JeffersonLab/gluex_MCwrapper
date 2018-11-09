@@ -97,7 +97,7 @@ def RetryJobsFromProject(ID):
         
         if (row["BatchSystem"]=="SWIF"):
             if((row["Status"] == "succeeded" and row["ExitCode"] != 0) or row["Status"]=="problems"):
-                RetryJob(row["Job_ID"])
+                RetryJob(row["Job_ID"],ID)
                 i=i+1
         elif (row["BatchSystem"]=="OSG"):
             #print "=========================="
@@ -106,12 +106,23 @@ def RetryJobsFromProject(ID):
             #print row["ExitCode"]
             #print "=========================="
             if(row["Status"] == "4" and row["ExitCode"] != 0) or row["Status"] == "5":
-                RetryJob(row["Job_ID"])
+                RetryJob(row["Job_ID"],ID)
                 i=i+1
     print "retried "+str(i)+" Jobs"
 
+#def DoMissingJobs(ID,SYS):
+#    query="SELECT ID FROM Jobs where ID NOT IN (SELECT Job_ID FROM Attempts) && IsActive=1 && Project_ID="+str(ID)+";"
+#    curs.execute(query) 
+#    rows=curs.fetchall()
+    #GET PROJECT INFO
+    
+#    for row in rows:
+#        if(SYS == "OSG"):
+        #TREAT LIKE NEW PROJECT WITH JUST THE JOB
 
-def RetryJob(ID):
+
+
+def RetryJob(ID,ProjID):
     #query = "SELECT * FROM Attempts WHERE Job_ID="+str(ID)
     query= "SELECT Attempts.*,Max(Attempts.Creation_Time) FROM Attempts,Jobs WHERE Attempts.Job_ID = "+str(ID)
     curs.execute(query) 
@@ -150,7 +161,7 @@ def RetryJob(ID):
         #print "OSG JOB FOUND"
         status = subprocess.call("cp $MCWRAPPER_CENTRAL/examples/OSGShell.config ./MCDispatched.config", shell=True)
         WritePayloadConfig(proj[0],"True")
-        command="$MCWRAPPER_CENTRAL/gluex_MC.py MCDispatched.config "+str(job[0]["RunNumber"])+" "+str(job[0]["NumEvts"])+" per_file=50000 base_file_number="+str(job[0]["FileNumber"])+" generate="+str(proj[0]["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(proj[0]["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(proj[0]["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(proj[0]["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid=-"+str(ID)+" batch=1"
+        command="$MCWRAPPER_CENTRAL/gluex_MC.py MCDispatched.config "+str(job[0]["RunNumber"])+" "+str(job[0]["NumEvts"])+" per_file=50000 base_file_number="+str(job[0]["FileNumber"])+" generate="+str(proj[0]["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(proj[0]["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(proj[0]["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(proj[0]["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ProjID)+" batch=1"
         #print(command)
         status = subprocess.call(command, shell=True)
 
@@ -495,65 +506,65 @@ def DispatchToOSG(ID,order,PERCENT):
 def main(argv):
     #print(argv)
 
-
+    numprocesses_running=subprocess.check_output(["echo `ps all -u tbritton | grep MCDispatcher.py | wc -l`"], shell=True)
     #print(args)
-    ID=-1
-    MODE=""
-    SYSTEM="NULL"
-    PERCENT=1.0
-    argindex=-1
+    if(int(numprocesses_running) <2 ):
+        ID=-1
+        MODE=""
+        SYSTEM="NULL"
+        PERCENT=1.0
+        argindex=-1
 
-    for argu in argv:
-            #print "ARGS"
-            #print argu
-            argindex=argindex+1
+        for argu in argv:
+                #print "ARGS"
+                #print argu
+                argindex=argindex+1
 
-            if argindex == 1 or len(argv)==1:
-                #print str(argv[0]).upper()
-                MODE=str(argv[0]).upper()
-                #print MODE
-            
-            if argindex == len(argv)-1:
-                ID=argv[argindex]
-            
-            if argu[0] == "-":
-                if argu == "-sys":
-                    SYSTEM=str(argv[argindex+1]).upper()
-                if argu == "-percent":
-                    PERCENT=argv[argindex+1]
+                if argindex == 1 or len(argv)==1:
+                    #print str(argv[0]).upper()
+                    MODE=str(argv[0]).upper()
+                    #print MODE
+
+                if argindex == len(argv)-1:
+                    ID=argv[argindex]
+
+                if argu[0] == "-":
+                    if argu == "-sys":
+                        SYSTEM=str(argv[argindex+1]).upper()
+                    if argu == "-percent":
+                        PERCENT=argv[argindex+1]
 
 
-    #print MODE
-    #print SYSTEM
-    #print ID
+        #print MODE
+        #print SYSTEM
+        #print ID
 
-    if MODE == "DISPATCH":
-        if ID != "All":
-            DispatchProject(ID,SYSTEM,PERCENT)
-        elif ID == "All":
-            query = "SELECT ID FROM Project WHERE Is_Dispatched!='1.0'"
-            curs.execute(query) 
-            rows=curs.fetchall()
-            for row in rows:
-                #print(row["ID"])
-                DispatchProject(row["ID"],SYSTEM,PERCENT)
-    elif MODE == "VIEW":
-        ListUnDispatched()
-    elif MODE == "TEST":
-        TestProject(ID)
-    elif MODE == "RETRYJOB":
-        RetryJob(ID)
-    elif MODE == "RETRYJOBS":
-        RetryJobsFromProject(ID)
-    elif MODE == "CANCELJOB":
-        CancelJob(ID)
-    elif MODE == "AUTOLAUNCH":
-        #print "AUTOLAUNCHING NOW"
-        AutoLaunch()
-    else:
-        print "MODE NOT FOUND"
+        if MODE == "DISPATCH":
+            if ID != "All":
+                DispatchProject(ID,SYSTEM,PERCENT)
+            elif ID == "All":
+                query = "SELECT ID FROM Project WHERE Is_Dispatched!='1.0'"
+                curs.execute(query) 
+                rows=curs.fetchall()
+                for row in rows:
+                    #print(row["ID"])
+                    DispatchProject(row["ID"],SYSTEM,PERCENT)
+        elif MODE == "VIEW":
+            ListUnDispatched()
+        elif MODE == "TEST":
+            TestProject(ID)
+        elif MODE == "RETRYJOB":
+            RetryJob(ID,-1)
+        elif MODE == "RETRYJOBS":
+            RetryJobsFromProject(ID)
+        elif MODE == "CANCELJOB":
+            CancelJob(ID)
+        elif MODE == "AUTOLAUNCH":
+            #print "AUTOLAUNCHING NOW"
+            AutoLaunch()
+        else:
+            print "MODE NOT FOUND"
 
-        
         
     conn.close()
         
