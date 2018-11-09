@@ -508,7 +508,7 @@ def main(argv):
 
     numprocesses_running=subprocess.check_output(["echo `ps all -u tbritton | grep MCDispatcher.py | wc -l`"], shell=True)
     #print(args)
-    if(int(numprocesses_running) <2 ):
+    if(int(numprocesses_running) <3 ):
         ID=-1
         MODE=""
         SYSTEM="NULL"
