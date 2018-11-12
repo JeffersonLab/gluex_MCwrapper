@@ -47,6 +47,7 @@ def AutoLaunch():
         commands_to_call+="source /group/halld/Software/build_scripts/gluex_env_jlab.sh /group/halld/www/halldweb/html/dist/"+str(row["VersionSet"])+";"
         commands_to_call+="export MCWRAPPER_CENTRAL=/osgpool/halld/tbritton/gluex_MCwrapper/;"
         commands_to_call+="export PATH=/apps/bin:${PATH};"
+        subprocess.call(commands_to_call,shell=True) 
         status=TestProject(row['ID'])
 
         #print "STATUS IS"
@@ -508,7 +509,7 @@ def main(argv):
 
     numprocesses_running=subprocess.check_output(["echo `ps all -u tbritton | grep MCDispatcher.py | wc -l`"], shell=True)
     #print(args)
-    if(int(numprocesses_running) <5 ):
+    if(int(numprocesses_running) <6 ):
         ID=-1
         MODE=""
         SYSTEM="NULL"
