@@ -441,7 +441,6 @@ def WritePayloadConfig(order,foundConfig):
     if(order["ReactionLines"] != ""):
         jana_config_file=open("/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config","w")
         jana_config_file.write("PLUGINS danarest,monitoring_hists,ReactionFilter\n"+order["ReactionLines"])
-        jana_config_file.write()
         jana_config_file.close()
         MCconfig_file.write("CUSTOM_PLUGINS=file:/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config\n")
 
@@ -544,7 +543,7 @@ def main(argv):
                 SYSTEM=str(argv[argindex+1]).upper()
             if argu == "-percent":
                 PERCENT=argv[argindex+1]
-            if argu == "-rlim"
+            if argu == "-rlim":
                 RUNNING_LIMIT_OVERRIDE=True
 
     if(int(numprocesses_running) < 5 or RUNNING_LIMIT_OVERRIDE ):
