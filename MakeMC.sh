@@ -568,6 +568,7 @@ if [[ "$GENR" != "0" ]]; then
     echo "PhotonBeamHighEnergy $GEN_MAX_ENERGY" >>! beam.config
 
 	if [[ "$FLUX_TO_GEN" == "ccdb" ]]; then
+		echo "CCDBRunNumber $RUN_NUMBER" >>! beam.config
 		echo "ROOTFluxFile $FLUX_TO_GEN" >>! beam.config
 		if [[ "$POL_TO_GEN" == "ccdb" ]]; then
 			echo "ROOTPolFile $POL_TO_GEN" >>! beam.config
@@ -587,9 +588,9 @@ if [[ "$GENR" != "0" ]]; then
 
 		if [[ "$POL_TO_GEN" == "ccdb" ]]; then
 			echo "Ignoring TPOL from ccdb in favor of cobrems generated values"
-		elif [[ "$POL_HIST" == "unset" ]]; then
+		elif [[ "$POL_HIST" == "cobrems" ]]; then
 			echo "PolarizationMagnitude $POL_TO_GEN" >>! beam.config
-		else
+		elif [[ "$POL_HIST" != "unset" ]]; then
 			echo "Ignoring TPOL from $POL_TO_GEN in favor of cobrems generated values"
 		fi
 
@@ -725,10 +726,11 @@ if [[ "$GENR" != "0" ]]; then
     if [[ "$GENERATOR" == "genr8" ]]; then
 	echo "RUNNING GENR8"
 	RUNNUM=$formatted_runNumber+$formatted_fileNumber
+	sed -i 's/TEMPCOHERENT/'$COHERENT_PEAK'/' $STANDARD_NAME.conf
 	sed -i 's/TEMPMAXE/'$GEN_MAX_ENERGY'/' $STANDARD_NAME.conf
 	sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
 	# RUN genr8 and convert
-	genr8 -r$formatted_runNumber -M$EVT_TO_GEN -A$STANDARD_NAME.ascii < $STANDARD_NAME.conf #$config_file_name
+	genr8 -r$formatted_runNumber -M$EVT_TO_GEN -A$STANDARD_NAME.ascii -B$STANDARD_NAME\_beam.conf < $STANDARD_NAME.conf #$config_file_name
 	generator_return_code=$?
 	genr8_2_hddm -V"0 0 0 0" $STANDARD_NAME.ascii
 	elif [[ "$GENERATOR" == "genr8_new" ]]; then
@@ -839,8 +841,8 @@ if [[ "$GENR" != "0" ]]; then
     optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
 	sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
 	echo $optionals_line
-	echo gen_2pi_primakoff -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -c $STANDARD_NAME.conf -o  $STANDARD_NAME.hddm -hd  $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
-	gen_2pi_primakoff -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -c $STANDARD_NAME.conf -hd  $STANDARD_NAME.hddm -o  $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
+	echo gen_2pi_primakoff -c $STANDARD_NAME.conf -o  $STANDARD_NAME.hddm -hd  $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
+	gen_2pi_primakoff -c $STANDARD_NAME.conf -hd  $STANDARD_NAME.hddm -o  $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
     generator_return_code=$?
 	elif [[ "$GENERATOR" == "gen_pi0" ]]; then
 	echo "RUNNING GEN_PI0" 

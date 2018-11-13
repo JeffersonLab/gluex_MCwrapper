@@ -686,11 +686,12 @@ def main(argv):
                         NOSIPMSATURATION=rm_comments[0].strip()
                 elif str(parts[0]).upper()=="FLUX_TO_GEN":
                         fluxbits=rm_comments[0].strip().split(":")
-                        if( len(fluxbits) ==2 ):
+                        if( len(fluxbits) == 2 ): # use flux histogram file
                                 FLUX_TO_GEN=fluxbits[0]
                                 FLUX_HIST=fluxbits[1]
-                        elif (len(fluxbits)==1):
-                                FLUX_TO_GEN="cobrems"
+                        elif ( len(fluxbits) == 1):
+                                if( str(fluxbits[0]).upper()=="COBREMS"): # COBREM calculation
+					FLUX_TO_GEN="cobrems"
                 elif str(parts[0]).upper()=="POL_TO_GEN":
                         polbits=rm_comments[0].strip().split(":")
                         if( len(polbits) == 2 ):
@@ -698,6 +699,8 @@ def main(argv):
                                 POL_HIST=polbits[1]
                         elif (len(polbits)==1):
                                 POL_TO_GEN=polbits[0]
+				if (FLUX_TO_GEN == "cobrems"):
+					POL_HIST="cobrems"
 
                 else:
                         print( "unknown config parameter!! "+str(parts[0]))
