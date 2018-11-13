@@ -553,7 +553,7 @@ if [[ "$GENR" != "0" ]]; then
 	else 
 		if [[ -f $CONFIG_FILE ]]; then
 	    	echo "input file found"
-		elif [[ "$GENERATOR" == "gen_ee" || "$GENERATOR" == "gen_ee_hb" ]]; then
+		elif [[ "$GENERATOR" == "gen_ee" || "$GENERATOR" == "gen_ee_hb" || "$GENERATOR" == "genBH" ]]; then
 			echo "Config file not applicable"
 		else
 	    	echo $CONFIG_FILE" does not exist"
@@ -709,6 +709,10 @@ if [[ "$GENR" != "0" ]]; then
 	elif [[ "$GENERATOR" == "genBH" ]]; then
 		echo "configuring genBH"
 		set STANDARD_NAME="genBH_"$STANDARD_NAME
+		echo "note: this generator is run completely from command line, thus no config file will be made and/or modified"
+
+		cp $CONFIG_FILE ./cobrems.root
+	
     fi
 	
 	if [[ "$gen_pre" != "file" ]]; then
@@ -768,7 +772,7 @@ if [[ "$GENR" != "0" ]]; then
 	genEtaRegge -N$EVT_TO_GEN -O$STANDARD_NAME.hddm -I$STANDARD_NAME.conf
     generator_return_code=$?
 	elif [[ "$GENERATOR" == "gen_amp" ]]; then
-	echo "RUNNING GEN_2PI_AMP" 
+	echo "RUNNING GEN_AMP" 
     optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
 	echo $optionals_line
 		if [[ "$polarization_angle" == "-1.0" ]]; then
@@ -835,8 +839,8 @@ if [[ "$GENR" != "0" ]]; then
     optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
 	sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
 	echo $optionals_line
-	echo gen_2pi_primakoff -c $STANDARD_NAME.conf -o  $STANDARD_NAME.hddm -hd  $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
-	gen_2pi_primakoff -c $STANDARD_NAME.conf -hd  $STANDARD_NAME.hddm -o  $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
+	echo gen_2pi_primakoff -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -c $STANDARD_NAME.conf -o  $STANDARD_NAME.hddm -hd  $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
+	gen_2pi_primakoff -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -c $STANDARD_NAME.conf -hd  $STANDARD_NAME.hddm -o  $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
     generator_return_code=$?
 	elif [[ "$GENERATOR" == "gen_pi0" ]]; then
 	echo "RUNNING GEN_PI0" 
@@ -891,7 +895,7 @@ if [[ "$GENR" != "0" ]]; then
 	generator_return_code=$?
 	mv bggen.hddm $STANDARD_NAME.hddm
 	elif [[ "$GENERATOR" == "gen_ee" ]]; then
-	set RANDOMnum=`bash -c 'echo $RANDOM'`
+	RANDOMnum=`bash -c 'echo $RANDOM'`
 	echo "Random number used: "$RANDOMnum
 	gen_ee -n$EVT_TO_GEN -R2 -b2 -l$GEN_MIN_ENERGY -u$GEN_MAX_ENERGY -t2 -r$RANDOMnum -omc_ee.hddm
 	generator_return_code=$?
@@ -902,8 +906,12 @@ if [[ "$GENR" != "0" ]]; then
 		generator_return_code=$?
 		mv genOut.hddm $STANDARD_NAME.hddm
 	elif [[ "$GENERATOR" == "genBH" ]]; then
-		echo genBH -n$EVT_TO_GEN
-		genBH -n$EVT_TO_GEN -t$NUMTHREADS -E$COHERENT_PEAK -e$GEN_MAX_ENERGY $STANDARD_NAME.hddm
+		RANDOMnum=`bash -c 'echo $RANDOM'`
+		echo "Random number used: "$RANDOMnum
+		echo genBH -n$EVT_TO_GEN -t$NUMTHREADS -m0.5 -e$GEN_MAX_ENERGY -r$RANDOMnum $STANDARD_NAME.hddm
+		genBH -n$EVT_TO_GEN -t$NUMTHREADS -m0.5 -e$GEN_MAX_ENERGY -r$RANDOMnum $STANDARD_NAME.hddm
+
+		sed -i 's/class="mc_s"/'class=\"s\"'/' $STANDARD_NAME.hddm
 		generator_return_code=$status
 	fi
     
@@ -1035,7 +1043,7 @@ if [[ "$GENR" != "0" ]]; then
 		rm -f count.py
 	   echo "import hddm_s" > count.py
 	   echo "print(sum(1 for r in hddm_s.istream('$bkglocstring')))" >> count.py
-	   totalnum=$($USER_PYTHON count.py)
+	   totalnum=$( $USER_PYTHON count.py )
 	   rm count.py
 		fold_skip_num=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
 		echo "skipping: "$fold_skip_num

@@ -542,7 +542,7 @@ if ( "$GENR" != "0" ) then
     else 
 		if ( -f $CONFIG_FILE ) then
 		    echo "input file found"
-		else if( "$GENERATOR" == "gen_ee" || "$GENERATOR" == "gen_ee_hb" ) then
+		else if( "$GENERATOR" == "gen_ee" || "$GENERATOR" == "gen_ee_hb" || "$GENERATOR" == "genBH" ) then
 			echo "Config file not applicable"
 		else
 	    	echo $CONFIG_FILE" does not exist"
@@ -614,13 +614,7 @@ if ( "$GENR" != "0" ) then
 
 		set STANDARD_NAME="genr8_new_"$STANDARD_NAME
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
-		#set replacementNum=`grep TEMPCOHERENT ./$STANDARD_NAME.conf | wc -l`
-
-		#if ( "$polarization_angle" == "-1.0" && "$COHERENT_PEAK" == "0." && $replacementNum != 0 ) then
-		#	echo "Running genr8 with an AMO run number without supplying the energy desired to COHERENT_PEAK causes an inifinite loop."
-		#	echo "Please specify the desired energy via the COHERENT_PEAK parameter and retry."
-		#	exit 1
-		#endif
+		
     else if ( "$GENERATOR" == "bggen" ) then
 		echo "configuring bggen"
 		set STANDARD_NAME="bggen_"$STANDARD_NAME
@@ -692,6 +686,9 @@ if ( "$GENR" != "0" ) then
 	else if ( "$GENERATOR" == "genBH" ) then
 		echo "configuring genBH"
 		set STANDARD_NAME="genBH_"$STANDARD_NAME
+		echo "note: this generator is run completely from command line, thus no config file will be made and/or modified"
+		cp $CONFIG_FILE ./cobrems.root
+
     endif
 
     if ( "$gen_pre" != "file" ) then
@@ -760,8 +757,8 @@ if ( "$GENR" != "0" ) then
 		endif
 		
 		echo $optionals_line
-		echo gen_amp -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER $optionals_line
-		gen_amp -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER $optionals_line
+		echo gen_amp -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY  $optionals_line
+		gen_amp -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
 		set generator_return_code=$status
 	else if ( "$GENERATOR" == "gen_2pi_amp" ) then
 		echo "RUNNING GEN_2PI_AMP" 
@@ -819,8 +816,8 @@ if ( "$GENR" != "0" ) then
         set optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
 		echo $optionals_line
 		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
-		echo gen_2pi_primakoff -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER $optionals_line
-		gen_2pi_primakoff -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER $optionals_line
+		echo gen_2pi_primakoff -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER $optionals_line
+		gen_2pi_primakoff -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER $optionals_line
 		set generator_return_code=$status
 	else if ( "$GENERATOR" == "gen_pi0" ) then
 		echo "RUNNING GEN_PI0" 
@@ -887,8 +884,11 @@ if ( "$GENR" != "0" ) then
 		set generator_return_code=$status
 		mv genOut.hddm $STANDARD_NAME.hddm
 	else if ( "$GENERATOR" == "genBH" ) then
-		echo genBH -n$EVT_TO_GEN
-		genBH -n$EVT_TO_GEN -t$NUMTHREADS -E$COHERENT_PEAK -e$GEN_MAX_ENERGY $STANDARD_NAME.hddm
+		set RANDOMnum=`bash -c 'echo $RANDOM'`
+		echo Random Number used: $RANDOMnum
+		echo genBH -n$EVT_TO_GEN -t$NUMTHREADS -m0.5 -e$GEN_MAX_ENERGY -r$RANDOMnum $STANDARD_NAME.hddm
+		genBH -n$EVT_TO_GEN -t$NUMTHREADS -m0.5 -e$GEN_MAX_ENERGY -r$RANDOMnum $STANDARD_NAME.hddm
+		sed -i 's/class="mc_s"/'class=\"s\"'/' $STANDARD_NAME.hddm
 		set generator_return_code=$status
 	endif
 

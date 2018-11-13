@@ -42,8 +42,8 @@ try:
 except:
         pass
 
-MCWRAPPER_VERSION="2.0.2"
-MCWRAPPER_DATE="10/02/18"
+MCWRAPPER_VERSION="2.0.3"
+MCWRAPPER_DATE="11/12/18"
 
 def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID):
 
@@ -230,7 +230,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DAT
                 formattedRUNNUM=formattedRUNNUM+str(RUNNUM)
                 if COMMAND_parts[21] == "Random":
                         #print "/cache/halld/Simulation/random_triggers/"+RANDBGTAG+"/run"+formattedRUNNUM+"_random.hddm"
-                        additional_passins+="/cache/halld/gluex_simulations/random_triggers/"+RANDBGTAG+"/run"+formattedRUNNUM+"_random.hddm"+", "
+                        additional_passins+="/osgpool/halld/random_triggers/"+RANDBGTAG+"/run"+formattedRUNNUM+"_random.hddm"+", "
                 elif COMMAND_parts[21][:4] == "loc:":
                         #print COMMAND_parts[21][4:]
                         additional_passins+=COMMAND_parts[21][4:]+"/run"+formattedRUNNUM+"_random.hddm"+", "
@@ -289,6 +289,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DAT
         #f.write("Arguments  = "+indir+" "+COMMAND+"\n")
         f.write("Arguments  = "+"./"+script_to_use+" "+modified_COMMAND+"\n")
         f.write("Requirements = (HAS_SINGULARITY == TRUE) && (HAS_CVMFS_oasis_opensciencegrid_org == True)"+"\n") 
+        #f.write('wantjobrouter=true'+"\n")
         f.write('+SingularityImage = "/cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_devel:latest"'+"\n") 
         f.write('+SingularityBindCVMFS = True'+"\n") 
         f.write('+SingularityAutoLoad = True'+"\n") 
@@ -473,7 +474,7 @@ def main(argv):
         TAGSTR="I_dont_have_one"
 
         DATA_OUTPUT_BASE_DIR    = "UNKNOWN_LOCATION"#your desired output location
-        
+        RCDB_QUERY=""
        
         ENVFILE = "my-environment-file"#change this to your own environment file
         
@@ -537,6 +538,7 @@ def main(argv):
         NOSECONDARIES=0
         NOSIPMSATURATION=0
         SHELL_TO_USE="csh"
+        MYJOB=[]
         #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         #loop over config file and set the "parameters"
         f = open(CONFIG_FILE,"r")
@@ -553,7 +555,7 @@ def main(argv):
                         #print "Warning! No Sets given"
                         continue
                 
-                if len(parts)>2 and str(parts[0]).upper() != "VARIATION":
+                if len(parts)>2 and str(parts[0]).upper() != "VARIATION" and str(parts[0]).upper() != "RCDB_QUERY":
                         print( "warning! I am going to have a really difficult time with:")
                         print( line)
                         print( "I'm going to just ignore it and hope it isn't a problem....")
@@ -674,6 +676,10 @@ def main(argv):
                         ccdbSQLITEPATH=rm_comments[0].strip()
                 elif str(parts[0]).upper()=="RCDBSQLITEPATH" :
                         rcdbSQLITEPATH=rm_comments[0].strip()
+                elif str(parts[0]).upper()=="RCDB_QUERY" :
+                        print line.split("#")[0].find('=')
+                        query=line.split("#")[0][10:]
+                        RCDB_QUERY=query
                 elif str(parts[0]).upper()=="NOSECONDARIES" :
                         NOSECONDARIES=rm_comments[0].strip()
                 elif str(parts[0]).upper()=="NOSIPMSATURATION" :
@@ -794,7 +800,7 @@ def main(argv):
                 # CREATE WORKFLOW IF IT DOESN'T ALREADY EXIST
 	        WORKFLOW_LIST = subprocess.check_output(["swif", "list"])
 	        if WORKFLOW not in WORKFLOW_LIST:
-                        status = subprocess.call(["swif", "create", "-workflow", WORKFLOW])
+                        status = subprocess.call(["swif", "create", "-workflow", WORKFLOW,">&","/dev/null"])
 
         #calculate files needed to gen
         FILES_TO_GEN=EVTS/PERFILE
@@ -879,7 +885,12 @@ def main(argv):
                         #cnx.close()
                         print( str(runlow)+"-->"+str(runhigh))
 
-                table = db.select_runs("@is_production and @status_approved",runlow,runhigh).get_values(['event_count'],True)
+                query_to_do="@is_production and @status_approved"
+                print "RCDB_QUERY IS: "+str(RCDB_QUERY)
+                if(RCDB_QUERY!=""):
+                        query_to_do=RCDB_QUERY
+
+                table = db.select_runs(str(query_to_do),runlow,runhigh).get_values(['event_count'],True)
                 #print table
                 #print len(table)
                 for runs in table:
@@ -888,7 +899,6 @@ def main(argv):
                         event_sum = event_sum + runs[1]
 
                 print( event_sum)
-                exit
                 sum2=0.
                 for runs in table: #do for each job
                         #print runs[0]
@@ -919,16 +929,23 @@ def main(argv):
                                         #print str(runs[0])+" "+str(BASEFILENUM+FILENUM_this_run+-1)+" "+str(num_this_file)
                                         os.system(str(indir)+" "+COMMAND)
                                 else:
-                                        if BATCHSYS.upper()=="SWIF":
-                                                swif_add_job(WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1,str(indir),COMMAND,VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID)
-                                        elif BATCHSYS.upper()=="QSUB":
-                                                qsub_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, RAM, QUEUENAME, LOG_DIR, PROJECT_ID )
-                                        elif BATCHSYS.upper()=="CONDOR":
-                                                condor_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, PROJECT_ID )
-                                        elif BATCHSYS.upper()=="OSG":
-                                                OSG_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID)
-                                        elif BATCHSYS.upper()=="SLURM":
-                                                SLURM_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
+                                        if PROJECT_ID != 0:
+                                                print "SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(runs[0])+" && FileNumber="+str(BASEFILENUM+FILENUM_this_run+-1)+" && NumEvts="+str(num_this_file)
+                                                findmyjob="SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(runs[0])+" && FileNumber="+str(BASEFILENUM+FILENUM_this_run+-1)+" && NumEvts="+str(num_this_file)
+                                                dbcursor.execute(findmyjob)
+                                                MYJOB = dbcursor.fetchall()
+                                                print len(MYJOB) 
+                                        if len(MYJOB) == 0:
+                                                if BATCHSYS.upper()=="SWIF":
+                                                        swif_add_job(WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1,str(indir),COMMAND,VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID)
+                                                elif BATCHSYS.upper()=="QSUB":
+                                                        qsub_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, RAM, QUEUENAME, LOG_DIR, PROJECT_ID )
+                                                elif BATCHSYS.upper()=="CONDOR":
+                                                        condor_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, PROJECT_ID )
+                                                elif BATCHSYS.upper()=="OSG":
+                                                        OSG_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID)
+                                                elif BATCHSYS.upper()=="SLURM":
+                                                        SLURM_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
                         #print "----------------"
                 
         else:
@@ -950,16 +967,23 @@ def main(argv):
                         if BATCHRUN == 0 or BATCHSYS=="NULL":
                                 os.system(str(indir)+" "+COMMAND)
                         else:
-                                if BATCHSYS.upper()=="SWIF":
-                                        swif_add_job(WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1,str(indir),COMMAND,VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID)
-                                elif BATCHSYS.upper()=="QSUB":
-                                        qsub_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, RAM, QUEUENAME, LOG_DIR, PROJECT_ID )
-                                elif BATCHSYS.upper()=="CONDOR":
-                                        condor_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, PROJECT_ID )
-                                elif BATCHSYS.upper()=="OSG":
-                                        OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
-                                elif BATCHSYS.upper()=="SLURM":
-                                        SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
+                                if PROJECT_ID != 0:
+                                        print "SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(RUNNUM)+" && FileNumber="+str(BASEFILENUM+FILENUM+-1)+" && NumEvts="+str(num)
+                                        findmyjob="SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(RUNNUM)+" && FileNumber="+str(BASEFILENUM+FILENUM+-1)+" && NumEvts="+str(num)
+                                        dbcursor.execute(findmyjob)
+                                        MYJOB = dbcursor.fetchall() 
+                                        print len(MYJOB) 
+                                if len(MYJOB) == 0:
+                                        if BATCHSYS.upper()=="SWIF":
+                                                swif_add_job(WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1,str(indir),COMMAND,VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID)
+                                        elif BATCHSYS.upper()=="QSUB":
+                                                qsub_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, RAM, QUEUENAME, LOG_DIR, PROJECT_ID )
+                                        elif BATCHSYS.upper()=="CONDOR":
+                                                condor_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, PROJECT_ID )
+                                        elif BATCHSYS.upper()=="OSG":
+                                                OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
+                                        elif BATCHSYS.upper()=="SLURM":
+                                                SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
 
                                         
         if BATCHRUN == 1 and BATCHSYS.upper() == "SWIF":

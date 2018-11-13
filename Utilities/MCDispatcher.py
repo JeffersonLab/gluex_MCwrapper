@@ -33,14 +33,21 @@ class bcolors:
 
 def AutoLaunch():
     #print "in autolaunch"
-    query = "SELECT ID,Email FROM Project WHERE Tested != -1 && Dispatched_Time is NULL;"
+    query = "SELECT ID,Email,VersionSet FROM Project WHERE Tested != -1 && Dispatched_Time is NULL;"
     #print query
     curs.execute(query) 
     rows=curs.fetchall()
     #print rows
     #print len(rows)
     for row in rows:
-        #print row['ID']
+        commands_to_call="source /group/halld/Software/build_scripts/gluex_env_boot_jlab.sh;"
+        commands_to_call+="gxclean;"
+        #subprocess.call("source /group/halld/Software/build_scripts/gluex_env_boot_jlab.sh;",shell=True)                                                                                                          
+        #subprocess.call("gxclean",shell=True)                                                                                                                                                                     
+        commands_to_call+="source /group/halld/Software/build_scripts/gluex_env_jlab.sh /group/halld/www/halldweb/html/dist/"+str(row["VersionSet"])+";"
+        commands_to_call+="export MCWRAPPER_CENTRAL=/osgpool/halld/tbritton/gluex_MCwrapper/;"
+        commands_to_call+="export PATH=/apps/bin:${PATH};"
+        subprocess.call(commands_to_call,shell=True) 
         status=TestProject(row['ID'])
 
         #print "STATUS IS"
@@ -49,11 +56,11 @@ def AutoLaunch():
         if(status[1]!=-1):
             #print "TEST success"
             #EMAIL SUCCESS AND DISPATCH
-            subprocess.call("/osgpool/halld/tbritton/gluex_MCwrapper/Utilities/MCDispatcher.py dispatch -sys OSG "+str(row['ID']),shell=True)
+            subprocess.call("/osgpool/halld/tbritton/gluex_MCwrapper/Utilities/MCDispatcher.py dispatch -rlim -sys OSG "+str(row['ID']),shell=True)
         else:
             #EMAIL FAIL AND LOG
             print "echo 'Your Project ID "+str(row['ID'])+" failed the to properly test.  The log information is reproduced below:\n\n\n"+status[0]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+str(row['Email'])
-            subprocess.call("echo 'Your Project ID "+str(row['ID'])+" failed the to properly test.  The log information is reproduced below:\n\n\n"+status[0]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+str(row['Email']),shell=True)
+            subprocess.call("echo 'Your Project ID "+str(row['ID'])+" failed the test.  Please correct this issue and do NOT resubmit this request.  Write tbritton@jlab.org for assistance or if you are ready for a retest.\n\n The log information is reproduced below:\n\n\n"+status[0]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+str(row['Email']),shell=True)
             #print status[0]
             
 
@@ -103,6 +110,17 @@ def RetryJobsFromProject(ID):
                 RetryJob(row["Job_ID"])
                 i=i+1
     print "retried "+str(i)+" Jobs"
+
+#def DoMissingJobs(ID,SYS):
+#    query="SELECT ID FROM Jobs where ID NOT IN (SELECT Job_ID FROM Attempts) && IsActive=1 && Project_ID="+str(ID)+";"
+#    curs.execute(query) 
+#    rows=curs.fetchall()
+    #GET PROJECT INFO
+    
+#    for row in rows:
+#        if(SYS == "OSG"):
+        #TREAT LIKE NEW PROJECT WITH JUST THE JOB
+
 
 
 def RetryJob(ID):
@@ -202,7 +220,7 @@ def CheckGenConfig(order):
     return "True"
 
 
-def TestProject(ID):
+def TestProject(ID,commands_to_call=""):
     subprocess.call("rm -f MCDispatched.config", shell=True)
     print "TESTING PROJECT "+str(ID)
     query = "SELECT * FROM Project WHERE ID="+str(ID)
@@ -245,7 +263,7 @@ def TestProject(ID):
     print(command)
     STATUS=-1
    # print (command+command2).split(" ")
-    p = Popen(command, stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True)
+    p = Popen(commands_to_call+command, stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True)
     #print p
     #print "p defined"
     output, errors = p.communicate()
@@ -419,6 +437,13 @@ def WritePayloadConfig(order,foundConfig):
     MCconfig_file.write("BKG="+str(order["BKG"])+"\n")
     MCconfig_file.write("DATA_OUTPUT_BASE_DIR="+str(order["OutputLocation"])+"\n")
     #print "FOUND CONFIG="+foundConfig
+
+    if(order["ReactionLines"] != ""):
+        jana_config_file=open("/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config","w")
+        jana_config_file.write("PLUGINS danarest,monitoring_hists,ReactionFilter\n"+order["ReactionLines"])
+        jana_config_file.close()
+        MCconfig_file.write("CUSTOM_PLUGINS=file:/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config\n")
+
     if foundConfig=="True":
         MCconfig_file.write("GENERATOR_CONFIG="+str(order["Generator_Config"])+"\n")
     else:
@@ -456,7 +481,7 @@ def DispatchToOSG(ID,order,PERCENT):
     curs.execute(TotalOutstanding_Events_check)
     TOTALOUTSTANDINGEVENTS = curs.fetchall()
 
-    RequestedEvents_query = "SELECT NumEvents FROM Project WHERE ID="+str(ID)+";"
+    RequestedEvents_query = "SELECT NumEvents, Is_Dispatched FROM Project WHERE ID="+str(ID)+";"
     curs.execute(RequestedEvents_query)
     TotalRequestedEventsret = curs.fetchall()
     TotalRequestedEvents= TotalRequestedEventsret[0]["NumEvents"]
@@ -480,7 +505,7 @@ def DispatchToOSG(ID,order,PERCENT):
         #print updatequery
         curs.execute(updatequery)
         conn.commit()
-        command="$MCWRAPPER_CENTRAL/gluex_MC.py MCDispatched.config "+str(RunNumber)+" "+str(NumEventsToProduce)+" per_file=50000 base_file_number="+str(FileNumber_NewJob)+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=1"
+        command="$MCWRAPPER_CENTRAL/gluex_MC.py MCDispatched.config "+str(RunNumber)+" "+str(NumEventsToProduce)+" per_file=20000 base_file_number="+str(FileNumber_NewJob)+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=1"
         print(command)
         status = subprocess.call(command, shell=True)
     else:
@@ -489,65 +514,71 @@ def DispatchToOSG(ID,order,PERCENT):
 def main(argv):
     #print(argv)
 
-
+    numprocesses_running=subprocess.check_output(["echo `ps all -u tbritton | grep MCDispatcher.py | wc -l`"], shell=True)
     #print(args)
+
     ID=-1
     MODE=""
     SYSTEM="NULL"
     PERCENT=1.0
+    RUNNING_LIMIT_OVERRIDE=False
     argindex=-1
 
+
     for argu in argv:
-            #print "ARGS"
-            #print argu
-            argindex=argindex+1
+        #print "ARGS"
+        #print argu
+        argindex=argindex+1
 
-            if argindex == 1 or len(argv)==1:
-                #print str(argv[0]).upper()
-                MODE=str(argv[0]).upper()
-                #print MODE
-            
-            if argindex == len(argv)-1:
-                ID=argv[argindex]
-            
-            if argu[0] == "-":
-                if argu == "-sys":
-                    SYSTEM=str(argv[argindex+1]).upper()
-                if argu == "-percent":
-                    PERCENT=argv[argindex+1]
+        if argindex == 1 or len(argv)==1:
+            #print str(argv[0]).upper()
+            MODE=str(argv[0]).upper()
+            #print MODE
 
+        if argindex == len(argv)-1:
+            ID=argv[argindex]
 
-    #print MODE
-    #print SYSTEM
-    #print ID
+        if argu[0] == "-":
+            if argu == "-sys":
+                SYSTEM=str(argv[argindex+1]).upper()
+            if argu == "-percent":
+                PERCENT=argv[argindex+1]
+            if argu == "-rlim":
+                RUNNING_LIMIT_OVERRIDE=True
 
-    if MODE == "DISPATCH":
-        if ID != "All":
-            DispatchProject(ID,SYSTEM,PERCENT)
-        elif ID == "All":
-            query = "SELECT ID FROM Project WHERE Is_Dispatched!='1.0'"
-            curs.execute(query) 
-            rows=curs.fetchall()
-            for row in rows:
-                #print(row["ID"])
-                DispatchProject(row["ID"],SYSTEM,PERCENT)
-    elif MODE == "VIEW":
-        ListUnDispatched()
-    elif MODE == "TEST":
-        TestProject(ID)
-    elif MODE == "RETRYJOB":
-        RetryJob(ID)
-    elif MODE == "RETRYJOBS":
-        RetryJobsFromProject(ID)
-    elif MODE == "CANCELJOB":
-        CancelJob(ID)
-    elif MODE == "AUTOLAUNCH":
-        #print "AUTOLAUNCHING NOW"
-        AutoLaunch()
-    else:
-        print "MODE NOT FOUND"
+    if(int(numprocesses_running) < 5 or RUNNING_LIMIT_OVERRIDE ):
+       
 
-        
+        #print MODE
+        #print SYSTEM
+        #print ID
+
+        if MODE == "DISPATCH":
+            if ID != "All":
+                DispatchProject(ID,SYSTEM,PERCENT)
+            elif ID == "All":
+                query = "SELECT ID FROM Project WHERE Is_Dispatched!='1.0'"
+                curs.execute(query) 
+                rows=curs.fetchall()
+                for row in rows:
+                    #print(row["ID"])
+                    DispatchProject(row["ID"],SYSTEM,PERCENT)
+        elif MODE == "VIEW":
+            ListUnDispatched()
+        elif MODE == "TEST":
+            TestProject(ID)
+        elif MODE == "RETRYJOB":
+            RetryJob(ID)
+        elif MODE == "RETRYJOBS":
+            RetryJobsFromProject(ID)
+        elif MODE == "CANCELJOB":
+            CancelJob(ID)
+        elif MODE == "AUTOLAUNCH":
+            #print "AUTOLAUNCHING NOW"
+            AutoLaunch()
+        else:
+            print "MODE NOT FOUND"
+
         
     conn.close()
         
