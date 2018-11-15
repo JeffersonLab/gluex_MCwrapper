@@ -256,16 +256,8 @@ def UpdateOutputSize():
         
 
 def checkOSG():
-        #print "CHECKING OSG JOBS"
-        queryswifjobs="SELECT * FROM Project WHERE ID IN (SELECT Project_ID FROM Jobs WHERE IsActive=1 && ID IN (SELECT DISTINCT Job_ID FROM Attempts WHERE BatchSystem= 'OSG' && Status != '4' && Status != '5') )"
-        dbcursor.execute(queryswifjobs)
-        AllWkFlows = dbcursor.fetchall()
-        #for wk in AllWkFlows:
-        #    print wk["ID"]
-        #    UpdateOutputSize(wk["ID"])
 
-
-        queryosgjobs="SELECT * from Attempts WHERE BatchSystem='OSG' && Status !='4' && Status !='5';"
+        queryosgjobs="SELECT * from Attempts WHERE BatchSystem='OSG' && Status !='4' && Status !='5' && Status != '3';"
         #print queryosgjobs
         dbcursor.execute(queryosgjobs)
         Alljobs = dbcursor.fetchall()
