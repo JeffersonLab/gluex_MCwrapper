@@ -302,11 +302,11 @@ def checkOSG():
                     REMOTE_HOST=str(JSON_job["RemoteHost"])
                 
                 RunIP="NULL"
-                    if "LastPublicClaimId" in JSON_job:
-                        ipstr=str(JSON_job["LastPublicClaimId"])
-                        ipstr=ipstr.split("#")[0]
-                        ipstr=ipstr[1:-1].split(":")[0]
-                        RunIP=ipstr
+                if "LastPublicClaimId" in JSON_job:
+                    ipstr=str(JSON_job["LastPublicClaimId"])
+                    ipstr=ipstr.split("#")[0]
+                    ipstr=ipstr[1:-1].split(":")[0]
+                    RunIP=ipstr
 
                 updatejobstatus="UPDATE Attempts SET Status=\""+str(JSON_job["JobStatus"])+"\", ExitCode="+ExitCode+", Start_Time="+"'"+str(datetime.fromtimestamp(float(Start_Time)))+"'"+", RunningLocation="+"'"+str(REMOTE_HOST)+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+", RunIP="+str(RunIP)+" WHERE BatchJobID="+str(job["BatchJobID"])+";"
                 if Completed_Time != 'NULL':
