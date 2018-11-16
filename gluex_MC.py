@@ -42,8 +42,8 @@ try:
 except:
         pass
 
-MCWRAPPER_VERSION="2.0.3"
-MCWRAPPER_DATE="11/12/18"
+MCWRAPPER_VERSION="2.0.4"
+MCWRAPPER_DATE="11/16/18"
 
 def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID):
 
@@ -339,7 +339,27 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DAT
         elif int(PROJECT_ID) < 0:
                 #print "A NEW ATTEMPT"
                 recordAttempt(abs(int(PROJECT_ID)),RUNNUM,FILENUM,"OSG",SWIF_ID_NUM,COMMAND.split(" ")[6],NCORES,"Unset")
+
+def JSUB_add_job(VERBOSE, WORKFLOW, PROJECT,TRACK, RUNNUM, FILENUM, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID):
+        STUBNAME = str(RUNNUM) + "_" + str(FILENUM)
+        JOBNAME = WORKFLOW + "_" + STUBNAME
+
+        #mkdircom="mkdir -p "+DATA_OUTPUT_BASE_DIR+"/log/"
+
+        f=open('MCJSLURM.submit','w')
+        f.write("<Request>"+"\n")
         
+        f.write("<Project name=\""+PROJECT+"\"/>"+"\n")
+        f.write("<Track name=\""+TRACK+"\"/>"+"\n")
+        f.write("<Name name=\""+JOBNAME+"\"/>"+"\n")
+        f.write("<Command><![CDATA[ "+indir+" "+COMMAND+" ]]></Command>"+"\n")
+        f.write("<Job> </Job>"+"\n")
+        f.write("</Request>"+"\n")
+
+        f.close()
+        
+        exit(1)
+
 def  SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID ):
         STUBNAME = str(RUNNUM) + "_" + str(FILENUM)
         JOBNAME = WORKFLOW + "_" + STUBNAME
@@ -357,6 +377,7 @@ def  SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, D
         f.write("#SBATCH --qos=regular"+"\n")
         f.write("#SBATCH -C haswell"+"\n")
         f.write("#SBATCH -L project"+"\n")
+        #f.write("srun "+indir+" "+COMMAND+"\n")
         f.write("shifter $MCWRAPPER_CENTRAL/MakeMC.sh"+COMMAND+"\n")
 
         f.close()
@@ -949,7 +970,8 @@ def main(argv):
                                                         OSG_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID)
                                                 elif BATCHSYS.upper()=="SLURM":
                                                         SLURM_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
-                        #print "----------------"
+                                                elif BATCHSYS.upper()=="JSLURM":
+                                                        JSUB_add_job(VERBOSE, WORKFLOW, PROJECT, TRACK, runs[0], BASEFILENUM+FILENUM_this_run+-1, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
                 
         else:
                 if FILES_TO_GEN >= 500 and ( ccdbSQLITEPATH == "no_sqlite" or rcdbSQLITEPATH == "no_sqlite"):
@@ -987,6 +1009,8 @@ def main(argv):
                                                 OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
                                         elif BATCHSYS.upper()=="SLURM":
                                                 SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
+                                        elif BATCHSYS.upper()=="JSLURM":
+                                                JSUB_add_job(VERBOSE, WORKFLOW, PROJECT, TRACK, RUNNUM, BASEFILENUM+FILENUM+-1, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
 
                                         
         if BATCHRUN == 1 and BATCHSYS.upper() == "SWIF":
