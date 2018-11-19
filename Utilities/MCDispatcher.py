@@ -106,7 +106,7 @@ def RetryJobsFromProject(ID):
             #print row["Status"]
             #print row["ExitCode"]
             #print "=========================="
-            if(row["Status"] == "4" and row["ExitCode"] != 0) or row["Status"] == "5" or row["Status"] == "3":
+            if(row["Status"] == "4" and row["ExitCode"] != 0) or row["Status"] == "3":
                 RetryJob(row["Job_ID"])
                 i=i+1
     print "retried "+str(i)+" Jobs"
