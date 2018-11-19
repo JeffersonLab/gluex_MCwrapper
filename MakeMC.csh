@@ -712,7 +712,7 @@ if ( "$GENR" != "0" ) then
 		sed -i 's/TEMPMAXE/'$GEN_MAX_ENERGY'/' $STANDARD_NAME.conf
 		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
 		# RUN genr8 and convert
-		genr8 -r$formatted_runNumber -M$EVT_TO_GEN -A$STANDARD_NAME.ascii -B$STANDARD_NAME\_beam.conf < $STANDARD_NAME.conf #$config_file_name
+		genr8 -r$formatted_runNumber -M$EVT_TO_GEN -A$STANDARD_NAME.ascii < $STANDARD_NAME.conf
 		set generator_return_code=$status
 		genr8_2_hddm -V"0 0 0 0" $STANDARD_NAME.ascii
 	else if ( "$GENERATOR" == "genr8_new" ) then
