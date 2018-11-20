@@ -516,7 +516,7 @@ def DispatchToOSG(ID,order,PERCENT):
 def main(argv):
     #print(argv)
 
-    numprocesses_running=subprocess.check_output(["echo `ps all -u tbritton | grep MCDispatcher.py | wc -l`"], shell=True)
+    numprocesses_running=subprocess.check_output(["echo `ps all -u tbritton | grep MCDispatcher.py | grep -v grep | wc -l`"], shell=True)
     #print(args)
 
     ID=-1
@@ -548,7 +548,7 @@ def main(argv):
             if argu == "-rlim":
                 RUNNING_LIMIT_OVERRIDE=True
 
-    if(int(numprocesses_running) < 5 or RUNNING_LIMIT_OVERRIDE ):
+    if(int(numprocesses_running) < 2 or RUNNING_LIMIT_OVERRIDE ):
        
 
         #print MODE
