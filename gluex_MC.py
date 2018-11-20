@@ -698,8 +698,8 @@ def main(argv):
                 elif str(parts[0]).upper()=="RCDBSQLITEPATH" :
                         rcdbSQLITEPATH=rm_comments[0].strip()
                 elif str(parts[0]).upper()=="RCDB_QUERY" :
-                        print line.split("#")[0].find('=')
-                        query=line.split("#")[0][10:]
+                        #print line.split("#")[0].find('=')
+                        query=line.split("#")[0][line.split("#")[0].find('=')+1:]
                         RCDB_QUERY=query
                 elif str(parts[0]).upper()=="NOSECONDARIES" :
                         NOSECONDARIES=rm_comments[0].strip()
