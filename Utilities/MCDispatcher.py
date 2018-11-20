@@ -438,6 +438,9 @@ def WritePayloadConfig(order,foundConfig):
     MCconfig_file.write("DATA_OUTPUT_BASE_DIR="+str(order["OutputLocation"])+"\n")
     #print "FOUND CONFIG="+foundConfig
 
+    if(order["RCDBQuery"] != ""):
+        MCconfig_file.write("RCDB_QUERY="+order["RCDBQuery"]+"\n")
+
     if(order["ReactionLines"] != ""):
         jana_config_file=open("/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config","w")
         jana_config_file.write("PLUGINS danarest,monitoring_hists,ReactionFilter\n"+order["ReactionLines"])
