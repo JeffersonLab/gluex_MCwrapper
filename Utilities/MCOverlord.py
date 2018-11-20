@@ -274,6 +274,8 @@ def checkOSG():
             if( jsonOutputstr != ""):
                 JSON_jobar=json.loads(jsonOutputstr)
                 #print JSON_jobar[0]
+                if JSON_jobar == []:
+                    continue
                 JSON_job=JSON_jobar[0]
                 #print JSON_job
                 ExitCode="NULL"
@@ -307,7 +309,13 @@ def checkOSG():
                     HELDREASON=JSON_job["HoldReasonCode"]
 
                 if JOB_STATUS == 5 and  HELDREASON == 13:
-                    JOB_STATUS=6
+                    missingF=False
+                    for f in JSON_job["TransferInput"].split(","):
+                        if ".hddm" in f:
+                            missingF=os.path.isfile(f)
+                    if missingF:
+                        JOB_STATUS=6
+
                 
                 RunIP="NULL"
                 if "LastPublicClaimId" in JSON_job:
@@ -335,6 +343,8 @@ def checkOSG():
                 if( jsonOutputstr != ""):
                     JSON_jobar=json.loads(jsonOutputstr)
                     #print JSON_jobar[0]
+                    if JSON_jobar == []:
+                        continue
                     JSON_job=JSON_jobar[0]
                     
                     ExitCode="NULL"
@@ -363,6 +373,11 @@ def checkOSG():
                         HELDREASON=JSON_job["HoldReasonCode"]
 
                     if JOB_STATUS == 5 and  HELDREASON == 13:
+                    missingF=False
+                    for f in JSON_job["TransferInput"].split(","):
+                        if ".hddm" in f:
+                            missingF=os.path.isfile(f)
+                    if missingF:
                         JOB_STATUS=6
 
                     RunIP="NULL"
