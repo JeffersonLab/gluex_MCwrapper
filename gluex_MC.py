@@ -318,8 +318,10 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DAT
 
 
         
-
+        mkdircom2="mkdir -p "+LOG_DIR+"/log/"
+        status2 = subprocess.call(mkdircom2, shell=True)
         status = subprocess.call(mkdircom, shell=True)
+        
         jobSubout=subprocess.check_output(add_command.split(" "))
         print jobSubout
         idnumline=jobSubout.split("\n")[1].split(".")[0].split(" ")

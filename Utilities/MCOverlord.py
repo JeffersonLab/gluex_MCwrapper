@@ -257,16 +257,18 @@ def UpdateOutputSize():
 
 def checkOSG():
 
-        queryosgjobs="SELECT * from Attempts WHERE BatchSystem='OSG' && Status !='4' && Status !='3';"
+        queryosgjobs="SELECT * from Attempts WHERE BatchSystem='OSG' && Status !='4' && Status !='3' && Status!= '6';"
         #print queryosgjobs
         dbcursor.execute(queryosgjobs)
         Alljobs = dbcursor.fetchall()
-
+        count=0
         print "UPDATING "+str(len(Alljobs))
         for job in Alljobs:
             #print job
+            count+=1
+            print count
             statuscommand="condor_q "+str(job["BatchJobID"])+" -json"
-            #print statuscommand
+            print statuscommand
             jsonOutputstr=subprocess.check_output(statuscommand.split(" "))
             #print "================"
             #print jsonOutputstr
@@ -308,12 +310,15 @@ def checkOSG():
                 if "HoldReasonCode" in JSON_job:
                     HELDREASON=JSON_job["HoldReasonCode"]
 
-                if JOB_STATUS == 5 and  HELDREASON == 13:
+                if JOB_STATUS == 5:
                     missingF=False
                     for f in JSON_job["TransferInput"].split(","):
                         if ".hddm" in f:
+                            print f
                             missingF=os.path.isfile(f)
-                    if missingF:
+                            print missingF
+                    if missingF == False:
+                        print "set to 6"
                         JOB_STATUS=6
 
                 
@@ -335,7 +340,7 @@ def checkOSG():
             else:
                 #print "looking up history"
                 historystatuscommand="condor_history -limit 1 "+str(job["BatchJobID"])+" -json"
-                #print historystatuscommand
+                print historystatuscommand
                 jsonOutputstr=subprocess.check_output(historystatuscommand.split(" "))
                 #print "================"
                 #print jsonOutputstr
@@ -372,12 +377,12 @@ def checkOSG():
                     if "HoldReasonCode" in JSON_job:
                         HELDREASON=JSON_job["HoldReasonCode"]
 
-                    if JOB_STATUS == 5 and  HELDREASON == 13:
+                    if JOB_STATUS == 5:
                         missingF=False
                         for f in JSON_job["TransferInput"].split(","):
                             if ".hddm" in f:
                                 missingF=os.path.isfile(f)
-                        if missingF:
+                        if missingF == False:
                             JOB_STATUS=6
 
                     RunIP="NULL"
@@ -404,7 +409,7 @@ def main(argv):
         numprocesses_running=subprocess.check_output(["echo `ps all -u tbritton | grep MCOverlord.py | grep -v grep | wc -l`"], shell=True)
 
         print int(numprocesses_running)
-        if(int(numprocesses_running) <2):
+        if(int(numprocesses_running) <6):
             dbcursor.execute("INSERT INTO MCOverlord (Host,StartTime) VALUES ('"+str(socket.gethostname())+"', NOW() )")
             dbcnx.commit()
             queryoverlords="SELECT MAX(ID) FROM MCOverlord;"

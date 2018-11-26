@@ -106,7 +106,7 @@ def RetryJobsFromProject(ID):
             #print row["Status"]
             #print row["ExitCode"]
             #print "=========================="
-            if(row["Status"] == "4" and row["ExitCode"] != 0) or row["Status"] == "3" or row["Status"] == "6":
+            if(row["Status"] == "4" and row["ExitCode"] != 0) or row["Status"] == "3" or row["Status"] == "6" or row["Status"]=="5":
                 RetryJob(row["Job_ID"])
                 i=i+1
     print "retried "+str(i)+" Jobs"
@@ -548,7 +548,7 @@ def main(argv):
             if argu == "-rlim":
                 RUNNING_LIMIT_OVERRIDE=True
 
-    if(int(numprocesses_running) < 2 or RUNNING_LIMIT_OVERRIDE ):
+    if(int(numprocesses_running) <2 or RUNNING_LIMIT_OVERRIDE ):
        
 
         #print MODE
