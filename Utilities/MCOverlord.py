@@ -314,11 +314,11 @@ def checkOSG():
                     missingF=False
                     for f in JSON_job["TransferInput"].split(","):
                         if ".hddm" in f:
-                            print f
+                            #print f
                             missingF=os.path.isfile(f)
-                            print missingF
+                            #print missingF
                     if missingF == False:
-                        print "set to 6"
+                        #print "set to 6"
                         JOB_STATUS=6
 
                 

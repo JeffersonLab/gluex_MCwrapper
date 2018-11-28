@@ -43,7 +43,7 @@ except:
         pass
 
 MCWRAPPER_VERSION="2.0.4"
-MCWRAPPER_DATE="11/20/18"
+MCWRAPPER_DATE="11/28/18"
 
 def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID):
 
@@ -329,6 +329,17 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DAT
         if(len(idnumline) == 6 ):
                 SWIF_ID_NUM=str(idnumline[5])+".0"
         #1 job(s) submitted to cluster 425013.
+
+        if int(PROJECT_ID) !=0:
+                findmyjob="SELECT * FROM Attempts where BatchJobID='"+str(SWIF_ID_NUM)+"';"
+                dbcursor.execute(findmyjob)
+                MYJOB = dbcursor.fetchall()
+
+                if len(MYJOB) != 0:
+                        print "THE TIMELINE HAS BEEN FRACTURED. TERMINATING SUBMITS AND SHUTTING THE ROBOT DOWN!!!"
+                        f=open("/osgpool/halld/tbritton/.ALLSTOP","x")
+                        exit(1)
+
         status = subprocess.call("rm MCOSG.submit", shell=True)
         
         #print "DECIDING IF FIRST JOB"
