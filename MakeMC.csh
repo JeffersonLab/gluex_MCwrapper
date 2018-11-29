@@ -1130,7 +1130,7 @@ if ( "$GENR" != "0" ) then
 				rm jana_config.cfg
 			else
 				
-		   		set pluginlist=("danarest" "monitoring_hists")
+		   		set pluginlist=("danarest" "monitoring_hists" "mcthrown_tree" )
 
 		   		if ( "$CUSTOM_PLUGINS" != "None" ) then
 					set pluginlist=( "$pluginlist" "$CUSTOM_PLUGINS" )

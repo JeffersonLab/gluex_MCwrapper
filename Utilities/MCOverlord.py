@@ -59,17 +59,18 @@ def checkProjectsForCompletion():
 
     for proj in OutstandingProjects:
         #print proj['ID']
-        TOTCompletedQuery ="SELECT DISTINCT ID From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1 && ID in (SELECT DISTINCT Job_ID FROM Attempts WHERE ( (ExitCode = 0) ) && ExitCode IS NOT NULL);" #"SELECT DISTINCT ID From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1 && ID in (SELECT Job_ID FROM Attempts WHERE ( (ExitCode != 0 && ExitCode != 127 && ExitCode != 126 && ExitCode != 134) || ExitCode IS NULL));"        dbcursor.execute(TOTCompletedQuery)
+        TOTCompletedQuery ="SELECT DISTINCT ID From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1 && ID in (SELECT DISTINCT Job_ID FROM Attempts WHERE ( (ExitCode = 0) ) && ExitCode IS NOT NULL);" 
         dbcursor.execute(TOTCompletedQuery)
         fulfilledJobs=dbcursor.fetchall()
 
         TOTJobs="SELECT ID From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1;"
         dbcursor.execute(TOTJobs)
         AllActiveJobs=dbcursor.fetchall()
-        #print "====================="
-        #print proj['ID']
-        #print len(fulfilledJobs)
-        #print len(AllActiveJobs)
+        print "====================="
+        print proj['ID']
+        print len(fulfilledJobs)
+        print len(AllActiveJobs)
+        
         if(len(fulfilledJobs)==len(AllActiveJobs)):
             #print("DONE")
             getFinalCompleteTime="SELECT MAX(Completed_Time) FROM Attempts WHERE Job_ID IN (SELECT ID FROM Jobs WHERE Project_ID="+str(proj['ID'])+");"
@@ -92,7 +93,7 @@ def checkProjectsForCompletion():
 def checkSWIF():
         #print "CHECKING SWIF JOBS"
         #queryswifjobs="SELECT OutputLocation,ID,NumEvents,Completed_Time FROM Project WHERE ID IN (SELECT Project_ID FROM Jobs WHERE IsActive=1 && ID IN (SELECT Job_ID FROM Attempts WHERE BatchSystem= 'SWIF') )"
-        queryswifjobs="SELECT * FROM Project WHERE ID IN (SELECT Project_ID FROM Jobs WHERE IsActive=1 && ID IN (SELECT DISTINCT Job_ID FROM Attempts WHERE BatchSystem= 'SWIF'))"# && Status!='succeeded') )"
+        queryswifjobs="SELECT * FROM Project WHERE ID IN (SELECT Project_ID FROM Jobs WHERE IsActive=1 && ID IN (SELECT DISTINCT Job_ID FROM Attempts WHERE BatchSystem= 'SWIF')) && Status!='succeeded') )"
         dbcursor.execute(queryswifjobs)
         AllWkFlows = dbcursor.fetchall()
        

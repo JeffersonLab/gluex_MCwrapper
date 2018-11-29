@@ -33,7 +33,7 @@ class bcolors:
 
 def AutoLaunch():
     #print "in autolaunch"
-    query = "SELECT ID,Email,VersionSet FROM Project WHERE Tested != -1 && Dispatched_Time is NULL;"
+    query = "SELECT ID,Email,VersionSet,Tested FROM Project WHERE Tested != -1 && Dispatched_Time is NULL;"
     #print query
     curs.execute(query) 
     rows=curs.fetchall()
@@ -47,8 +47,13 @@ def AutoLaunch():
         commands_to_call+="source /group/halld/Software/build_scripts/gluex_env_jlab.sh /group/halld/www/halldweb/html/dist/"+str(row["VersionSet"])+";"
         commands_to_call+="export MCWRAPPER_CENTRAL=/osgpool/halld/tbritton/gluex_MCwrapper/;"
         commands_to_call+="export PATH=/apps/bin:${PATH};"
-        subprocess.call(commands_to_call,shell=True) 
-        status=TestProject(row['ID'])
+        subprocess.call(commands_to_call,shell=True)
+
+        status=-1
+        if(row['Tested'] !=1):
+            status=TestProject(row['ID'])
+        else:
+            status=0
 
         #print "STATUS IS"
         #print status[0]
@@ -106,7 +111,7 @@ def RetryJobsFromProject(ID):
             #print row["Status"]
             #print row["ExitCode"]
             #print "=========================="
-            if(row["Status"] == "4" and row["ExitCode"] != 0) or row["Status"] == "3" or row["Status"] == "6" or row["Status"]=="5":
+            if(row["Status"] == "4" and row["ExitCode"] != 0) or row["Status"] == "3" or row["Status"]=="5":
                 RetryJob(row["Job_ID"])
                 i=i+1
     print "retried "+str(i)+" Jobs"
@@ -443,7 +448,7 @@ def WritePayloadConfig(order,foundConfig):
 
     if(order["ReactionLines"] != ""):
         jana_config_file=open("/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config","w")
-        jana_config_file.write("PLUGINS danarest,monitoring_hists,ReactionFilter\n"+order["ReactionLines"])
+        jana_config_file.write("PLUGINS danarest,monitoring_hists,mcthrown_tree,ReactionFilter\n"+order["ReactionLines"])
         jana_config_file.close()
         MCconfig_file.write("CUSTOM_PLUGINS=file:/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config\n")
 
@@ -515,6 +520,10 @@ def DispatchToOSG(ID,order,PERCENT):
 
 def main(argv):
     #print(argv)
+
+    if(os.path.isfile("/osgpool/halld/tbritton/.ALLSTOP")==True):
+        print "ALL STOP DETECTED"
+        exit(1)
 
     numprocesses_running=subprocess.check_output(["echo `ps all -u tbritton | grep MCDispatcher.py | grep -v grep | wc -l`"], shell=True)
     #print(args)

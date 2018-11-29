@@ -1141,7 +1141,7 @@ if [[ "$GENR" != "0" ]]; then
 			rm jana_config.cfg
 		else
 		
-			declare -a pluginlist=("danarest" "monitoring_hists")
+			declare -a pluginlist=("danarest" "monitoring_hists" "mcthrown_tree")
 			
             if [[ "$CUSTOM_PLUGINS" != "None" ]]; then
 				pluginlist=("${pluginlist[@]}" $CUSTOM_PLUGINS)
