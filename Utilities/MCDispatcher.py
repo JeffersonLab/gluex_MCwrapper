@@ -49,11 +49,14 @@ def AutoLaunch():
         commands_to_call+="export PATH=/apps/bin:${PATH};"
         subprocess.call(commands_to_call,shell=True)
 
-        status=-1
+        status=[]
+        status.append(-1)
+        status.append(-1)
         if(row['Tested'] !=1):
             status=TestProject(row['ID'])
         else:
-            status=0
+            status[0]=0
+            status[1]=0
 
         #print "STATUS IS"
         #print status[0]
@@ -97,9 +100,9 @@ def RetryAllJobs():
     curs.execute(query) 
     rows=curs.fetchall()
     for row in rows:
-        print "Retrying Project "+row["ID"]
+        print "Retrying Project "+str(row["ID"])
         RetryJobsFromProject(row["ID"])
-        
+
 def RetryJobsFromProject(ID):
     query= "SELECT * FROM Attempts WHERE ID IN (SELECT Max(ID) FROM Attempts GROUP BY Job_ID) && Job_ID IN (SELECT ID FROM Jobs WHERE IsActive=1 && Project_ID="+str(ID)+");"
     curs.execute(query) 
