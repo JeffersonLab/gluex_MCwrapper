@@ -10,7 +10,7 @@ if [[ `ps all -u tbritton | grep MCDrone.csh | grep -v grep | wc -l` == 2 ]]; th
 
     export PATH=/apps/bin:${PATH};
     $MCWRAPPER_CENTRAL/Utilities/MCDispatcher.py autolaunch
-else
-    echo "too many running"
+#else
+#    echo "too many running"
 
 fi
