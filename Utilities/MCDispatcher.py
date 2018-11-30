@@ -458,7 +458,12 @@ def WritePayloadConfig(order,foundConfig):
 
     if(order["ReactionLines"] != ""):
         jana_config_file=open("/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config","w")
-        jana_config_file.write("PLUGINS danarest,monitoring_hists,mcthrown_tree,ReactionFilter\n"+order["ReactionLines"])
+        janaplugins="PLUGINS danarest,monitoring_hists,mcthrown_tree"
+        if(order["ReactionLines"]):
+            janaplugins+=",ReactionFilter\n"+order["ReactionLines"]
+        else:
+            janaplugins+="\n"
+        jana_config_file.write(janaplugins)
         jana_config_file.close()
         MCconfig_file.write("CUSTOM_PLUGINS=file:/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config\n")
 
