@@ -59,7 +59,7 @@ def checkProjectsForCompletion():
 
     for proj in OutstandingProjects:
         #print proj['ID']
-        TOTCompletedQuery ="SELECT DISTINCT ID From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1 && ID in (SELECT DISTINCT Job_ID FROM Attempts WHERE ( (ExitCode = 0) ) && ExitCode IS NOT NULL);" 
+        TOTCompletedQuery ="SELECT DISTINCT ID From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1 && ID in (SELECT DISTINCT Job_ID FROM Attempts WHERE ( (ExitCode = 0 && (Status ='4' || Status='success') ) && ExitCode IS NOT NULL);" 
         dbcursor.execute(TOTCompletedQuery)
         fulfilledJobs=dbcursor.fetchall()
 
@@ -406,7 +406,11 @@ def checkOSG():
         
 def main(argv):
 
+        numOverRide=False
 
+        if(len(argv) !=0):
+		    numOverRide=True
+        
         numprocesses_running=subprocess.check_output(["echo `ps all -u tbritton | grep MCOverlord.py | grep -v grep | wc -l`"], shell=True)
 
         print int(numprocesses_running)
