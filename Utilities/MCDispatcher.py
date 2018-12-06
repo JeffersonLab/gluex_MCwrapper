@@ -33,6 +33,9 @@ class bcolors:
 
 def AutoLaunch():
     #print "in autolaunch"
+
+    RetryAllJobs()
+
     query = "SELECT ID,Email,VersionSet,Tested FROM Project WHERE Tested != -1 && Dispatched_Time is NULL;"
     #print query
     curs.execute(query) 
