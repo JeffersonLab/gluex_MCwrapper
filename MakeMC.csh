@@ -67,6 +67,8 @@ setenv CUSTOM_GCONTROL $1
 shift
 setenv eBEAM_ENERGY $1
 shift
+setenv eBEAM_CURRENT $1
+shift
 setenv COHERENT_PEAK $1
 shift
 setenv GEN_MIN_ENERGY $1
@@ -281,6 +283,7 @@ if ( "$colsize" == "B" || "$colsize" == "R" || "$JANA_CALIB_CONTEXT" != "variati
 	set colsize="50"
 endif
 
+
 set beam_on_current=`rcnd $RUN_NUMBER beam_on_current | awk '{print $1}'`
 
 if ( $beam_on_current == "" ) then
@@ -289,6 +292,10 @@ if ( $beam_on_current == "" ) then
 endif
 
 set beam_on_current=`echo "$beam_on_current / 1000." | $USER_BC -l`
+
+if ( "$eBEAM_CURRENT" != "rcdb" ) then
+set beam_on_current=$eBEAM_CURRENT
+endif
 
 set BGRATE_toUse=$BGRATE
 
