@@ -71,7 +71,7 @@ def checkProjectsForCompletion():
         print len(fulfilledJobs)
         print len(AllActiveJobs)
         
-        if(len(fulfilledJobs)==len(AllActiveJobs)):
+        if(len(fulfilledJobs)==len(AllActiveJobs) and len(AllActiveJobs) != 0):
             #print("DONE")
             getFinalCompleteTime="SELECT MAX(Completed_Time) FROM Attempts WHERE Job_ID IN (SELECT ID FROM Jobs WHERE Project_ID="+str(proj['ID'])+");"
             #print getFinalCompleteTime
@@ -321,6 +321,9 @@ def checkOSG():
                     if missingF == False:
                         #print "set to 6"
                         JOB_STATUS=6
+                        deactivate_Job="UPDATE Jobs set IsActive=0 where ID="+str(job["Job_ID"])+";"
+                        dbcursor.execute(deactivate_Job)
+                        dbcnx.commit()
 
                 
                 RunIP="NULL"
