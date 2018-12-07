@@ -217,11 +217,18 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DAT
                 gen_config_to_use=gen_config_parts[len(gen_config_parts)-1]
                 additional_passins+=COMMAND_parts[2][5:]+", "
                 COMMAND_parts[2]="file:/srv/"+gen_config_to_use
-        else:
+        elif COMMAND_parts[2] != "NA":
                 gen_config_parts=COMMAND_parts[2].split("/")
                 gen_config_to_use=gen_config_parts[len(gen_config_parts)-1]
                 additional_passins+=COMMAND_parts[2]+", "
                 COMMAND_parts[2]="/srv/"+gen_config_to_use
+
+        if COMMAND_parts[19][:5] == "file:":
+                filegen_parts=COMMAND_parts[19].split(":")
+                print filegen_parts
+                additional_passins+=COMMAND_parts[19][5:]+", "
+                COMMAND_parts[19]="file:/srv/"+COMMAND_parts[19][5:]
+        
 
         if COMMAND_parts[21] == "Random" or COMMAND_parts[21][:4] == "loc:":
                 formattedRUNNUM=""
