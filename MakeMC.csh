@@ -290,11 +290,11 @@ if ( $beam_on_current == "" ) then
 	set beam_on_current=`rcnd $RUN_NUMBER beam_current | awk '{print $1}'`
 endif
 
-if ( "$eBEAM_CURRENT"!= "rcdb" ) then
+set beam_on_current=`echo "$beam_on_current / 1000." | $USER_BC -l`
+
+if ( "$eBEAM_CURRENT" != "rcdb" ) then
 	set beam_on_current=$eBEAM_CURRENT
 endif
-
-set beam_on_current=`echo "$beam_on_current / 1000." | $USER_BC -l`
 
 set BGRATE_toUse=$BGRATE
 
