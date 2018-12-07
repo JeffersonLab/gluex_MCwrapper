@@ -1126,6 +1126,9 @@ if [[ "$GENR" != "0" ]]; then
 		if [[ "$GENERATOR" != "particle_gun" && "$gen_pre" != "file" ]]; then
 			rm $STANDARD_NAME.hddm
 		fi
+		if [[ "$gen_pre" == "file" ]]; then
+			rm $STANDARD_NAME.hddm
+		fi
 	    fi
 	    
 		if [[ ! -f ./$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' ]]; then
