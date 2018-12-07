@@ -66,8 +66,6 @@ export CUSTOM_GCONTROL=$1
 shift
 export eBEAM_ENERGY=$1
 shift
-export eBEAM_CURRENT=$1
-shift
 export COHERENT_PEAK=$1
 shift
 export GEN_MIN_ENERGY=$1
@@ -109,6 +107,8 @@ shift
 export POL_TO_GEN=$1
 shift
 export POL_HIST=$1
+shift
+export eBEAM_CURRENT=$1
 
 export USER_BC=`which bc`
 export USER_PYTHON=`which python`

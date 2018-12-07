@@ -67,8 +67,6 @@ setenv CUSTOM_GCONTROL $1
 shift
 setenv eBEAM_ENERGY $1
 shift
-setenv eBEAM_CURRENT $1
-shift
 setenv COHERENT_PEAK $1
 shift
 setenv GEN_MIN_ENERGY $1
@@ -110,6 +108,8 @@ shift
 setenv POL_TO_GEN $1
 shift
 setenv POL_HIST $1
+shift
+setenv eBEAM_CURRENT $1
 
 setenv USER_BC `which bc`
 setenv USER_PYTHON `which python`
