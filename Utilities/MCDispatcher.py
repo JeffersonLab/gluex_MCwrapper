@@ -462,7 +462,7 @@ def WritePayloadConfig(order,foundConfig):
     MCconfig_file.write("GEANT_VERSION="+str(order["GeantVersion"])+"\n")
     MCconfig_file.write("NOSECONDARIES="+str(abs(order["GeantSecondaries"]-1))+"\n")
     MCconfig_file.write("BKG="+str(order["BKG"])+"\n")
-    MCconfig_file.write("DATA_OUTPUT_BASE_DIR="+str(order["OutputLocation"])+"\n")
+    MCconfig_file.write("DATA_OUTPUT_BASE_DIR=/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/"+str(order["OutputLocation"]).split("/")[6]+"\n")
     #print "FOUND CONFIG="+foundConfig
 
     if(order["RCDBQuery"] != ""):
