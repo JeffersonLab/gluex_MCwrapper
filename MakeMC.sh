@@ -107,6 +107,8 @@ shift
 export POL_TO_GEN=$1
 shift
 export POL_HIST=$1
+shift
+export eBEAM_CURRENT=$1
 
 export USER_BC=`which bc`
 export USER_PYTHON=`which python`
@@ -287,10 +289,15 @@ fi
 
 beam_on_current=`echo "$beam_on_current / 1000." | $USER_BC -l`
 
+if [[ "$eBEAM_CURRENT" != "rcdb" ]]; then
+beam_on_current=$eBEAM_CURRENT
+fi
+
 colsize=`rcnd $RUN_NUMBER collimator_diameter | awk '{print $1}' | sed -r 's/.{2}$//' | sed -e 's/\.//g'`
 if [[ "$colsize" == "B" || "$colsize" == "R" || "$JANA_CALIB_CONTEXT" != "variation=mc" ]]; then
     colsize="50"
 fi
+
 
 BGRATE_toUse=$BGRATE
 
