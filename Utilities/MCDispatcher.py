@@ -450,7 +450,10 @@ def WritePayloadConfig(order,foundConfig):
     MCconfig_file.write("GEN_MIN_ENERGY="+MinE+"\n")
     MCconfig_file.write("GEN_MAX_ENERGY="+MaxE+"\n")
     if str(order["Generator"]) == "file":
-        MCconfig_file.write("GENERATOR="+str(order["Generator"])+":/"+foundConfig+"\n")
+        if foundConfig == "True":
+             MCconfig_file.write("GENERATOR="+str(order["Generator"])+":/"+str(order["Generator_Config"])+"\n")
+        else:
+            MCconfig_file.write("GENERATOR="+str(order["Generator"])+":/"+foundConfig+"\n")
 
     else:
         MCconfig_file.write("GENERATOR="+str(order["Generator"])+"\n")
