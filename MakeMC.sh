@@ -107,8 +107,6 @@ shift
 export POL_TO_GEN=$1
 shift
 export POL_HIST=$1
-shift
-export eBEAM_CURRENT=$1
 
 export USER_BC=`which bc`
 export USER_PYTHON=`which python`
@@ -285,10 +283,6 @@ beam_on_current=`rcnd $RUN_NUMBER beam_on_current | awk '{print $1}'`
 if [[ $beam_on_current == "" ]]; then
 echo "Run $RUN_NUMBER does not have a beam_on_current.  Defaulting to beam_current."
 beam_on_current=`rcnd $RUN_NUMBER beam_current | awk '{print $1}'`
-fi
-
-if [[ "$eBEAM_CURRENT" != "rcdb" ]]; then
-beam_on_current="$eBEAM_CURRENT"
 fi
 
 beam_on_current=`echo "$beam_on_current / 1000." | $USER_BC -l`
