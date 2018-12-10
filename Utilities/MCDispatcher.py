@@ -33,6 +33,8 @@ class bcolors:
 
 def AutoLaunch():
     #print "in autolaunch"
+    RetryAllJobs()
+
     query = "SELECT ID,Email,VersionSet,Tested FROM Project WHERE Tested != -1 && Dispatched_Time is NULL;"
     #print query
     curs.execute(query) 
@@ -101,16 +103,17 @@ def RetryAllJobs():
     rows=curs.fetchall()
     for row in rows:
         print "Retrying Project "+str(row["ID"])
-        RetryJobsFromProject(row["ID"])
+        RetryJobsFromProject(row["ID"],True)
 
-def RetryJobsFromProject(ID):
+def RetryJobsFromProject(ID, countLim):
     query= "SELECT * FROM Attempts WHERE ID IN (SELECT Max(ID) FROM Attempts GROUP BY Job_ID) && Job_ID IN (SELECT ID FROM Jobs WHERE IsActive=1 && Project_ID="+str(ID)+");"
     curs.execute(query) 
     rows=curs.fetchall()
    
     i=0
+    j=0
     for row in rows:
-        
+
         if (row["BatchSystem"]=="SWIF"):
             if((row["Status"] == "succeeded" and row["ExitCode"] != 0) or row["Status"]=="problems"):
                 RetryJob(row["Job_ID"])
@@ -122,9 +125,17 @@ def RetryJobsFromProject(ID):
             #print row["ExitCode"]
             #print "=========================="
             if(row["Status"] == "4" and row["ExitCode"] != 0) or row["Status"] == "3" or row["Status"]=="5":
+                if ( countLim ):
+                    countq="SELECT Count(Job_ID) from Attempts where Job_ID="+row["Job_ID"]
+                    curs.execute(countq)
+                    count=curs.fetchall()
+                    if int(count[0]["Count(Job_ID)"]) > 3 :
+                        j=j+1
+                        continue
                 RetryJob(row["Job_ID"])
                 i=i+1
     print "retried "+str(i)+" Jobs"
+    print str(j)+" jobs over restart limit of 3"
 
 #def DoMissingJobs(ID,SYS):
 #    query="SELECT ID FROM Jobs where ID NOT IN (SELECT Job_ID FROM Attempts) && IsActive=1 && Project_ID="+str(ID)+";"
@@ -581,7 +592,7 @@ def main(argv):
         elif MODE == "RETRYJOB":
             RetryJob(ID)
         elif MODE == "RETRYJOBS":
-            RetryJobsFromProject(ID)
+            RetryJobsFromProject(ID, False)
         elif MODE == "RETRYALLJOBS":
             RetryAllJobs()
         elif MODE == "CANCELJOB":
