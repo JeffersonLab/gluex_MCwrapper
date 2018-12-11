@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<head>
+    <title>Active MC Dashboard by Thomas Britton</title>
+</head>
+
+<link rel="stylesheet" type="text/css" href="./animations.css"/>
+<link rel="stylesheet" type="text/css" href="./Dashboard2.css"/>
+<link href="https://code.jquery.com/ui/1.10.4/themes/ui-lightness/jquery-ui.css" rel="stylesheet">
+<script src="../data_monitoring/js_utilities/jquery-3.3.1.min.js" type="text/javascript"></script>
+<script src="../data_monitoring/js_utilities/jquery-ui.js"></script>
+
+<script src="../data_monitoring/js_utilities/plotly-latest.min.js"></script>
+<!--<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>-->
+<link rel="stylesheet" type="text/css" href="./datatables.css"/>
+<link rel="stylesheet" type="text/css" href="./animations.css"/>
+<script type="text/javascript" src="../data_monitoring/js_utilities/datatables.min.js"></script>
+<script src="js/three.min.js"></script>
+<script src="js/globe/globe.js"></script>
+
+
+<script>
+var result=[];
+        var ipTable= [];
+        var subIPs=[];
+        var runIPs=[];
+        var mouseOverObject;
+        var ProjTable;
+        var ProjDataSet=[];
+        var ProjColumnDefs=[];
+        var Jobsresult= [];
+        var JobsTable;
+        var JobsDataSet=[];
+        var JobsColumnDefs=[];
+        var globe;
+    
+        var Attemptsresult= [];
+        var AttemptsTable;
+        var AttemptsDataSet=[];
+        var AttemptsColumnDefs=[];
+    
+        var return_code="";
+        var foreman=false;
+        var locX,locY;
+    
+    
+        setInterval(function (){
+            newsource="https://scicomp.jlab.org/ganglia/graph.php?r=hour&z=xlarge&c=Scicomp+Misc&h=scosg16.jlab.org&jr=&js=&v=102&m=TotalRunningJobs&vl=jobs?"+Date.now()
+            document.getElementById('condor_running').src=newsource
+            newsource_idle="https://scicomp.jlab.org/ganglia/graph.php?r=hour&z=xlarge&c=Scicomp+Misc&h=scosg16.jlab.org&jr=&js=&v=0&m=TotalIdleJobs&vl=jobs?"+Date.now()
+            document.getElementById('condor_idle').src=newsource_idle
+        },5000)
+        
+        $(document).ready(QueryDatabase()); 
+
+    $(document).ready(function() {
+    try {
+        var ticker_holder = $('.ticker-holder').get(0);
+        var ticker_text = $('.ticker').get(0);
+        var ticker_pos = ticker_text.parentNode.offsetWidth;
+
+        var ticker_data = $(ticker_holder).html();
+        $(ticker_text).parent().html('<marquee scrollamount="10" scrolldelay="">' + ticker_data + '</marquee>');
+
+        $('.news-ticker').hover(
+
+        function() {
+            $('marquee', this).get(0).stop();
+        }, function() {
+            $('marquee', this).get(0).start();
+        });
+
+
+    }
+    catch (o) {}
+});
+    document.addEventListener("mousemove",function (e){locX=e.clientX;locY=e.clientY;})
+
+
+    document.addEventListener("contextmenu",function(e){
+
+        if(foreman)
+        {
+    e.preventDefault();
+    console.log(e.pageX + "," + e.pageY);
+    $("#cntnr").css("left",e.clientX);
+    $("#cntnr").css("top",e.clientY);
+    locX=e.clientX;
+    locY=e.clientY;
+ // $("#cntnr").hide(100); 
+    mouseOverObject=document.elementFromPoint(locX,locY)
+
+    $("#cntnr").fadeIn(200,startFocusOut());
+       //DoMenu(e.pageX,e.pageY);
+
+        }
+});
+
+   function SetSceneGlobe()
+   { 
+    var globe3d = document.getElementById("globe");
+    if(globe)
+    {
+        globe.renderer.dispose()
+    disposeHierarchy (globe.points, disposeNode);
+    disposeHierarchy (globe, disposeNode);
+    disposeHierarchy (globe.scene, disposeNode);
+    
+    globe3d.innerHTML="";
+    }
+
+    globe = new DAT.Globe( globe3d );
+    var xhr = new XMLHttpRequest();
+    //console.log("sub: ")
+    //console.log(subIPs)
+    var total=[]
+    var longlatarr=[]
+    var baseUrlip= "http://api.ipapi.com/"
+
+    var countedsubIPs=[]
+
+    for(var i=0;i<subIPs.length;i++)
+    {
+        long=null;
+        lat=null;
+        for(var q=0;q<ipTable.length;q++)
+        {
+            if(subIPs[i]==ipTable[q].IP)
+            {
+                long=ipTable[q].Longitude;
+                lat=ipTable[q].Latitude;
+                break;
+            }
+        }
+        var found=false;
+        for(var j=0;j<countedsubIPs.length;j++)
+        {
+            if(countedsubIPs[j].long==long && countedsubIPs[j].lat==lat)
+            {
+                countedsubIPs[j].count=countedsubIPs[j].count+1;
+                found=true;
+                break;
+            }
+
+            
+        }
+        if(!found && long && lat )
+        {
+            countedsubIPs.push({"long":long, "lat":lat, "count":1})
+        }
+    }
+    //console.log("counted")
+
+    var denom=1.
+    for(var k=0;k<countedsubIPs.length;k++)
+    { 
+        denom+=countedsubIPs[k].count;
+    }
+    console.log("counted subs")
+    console.log(countedsubIPs)
+    
+    for(var i=0;i<countedsubIPs.length;i++)
+    {
+        toRet=[]
+        
+        toRet.push(countedsubIPs[i].lat)
+        toRet.push(countedsubIPs[i].long)
+        toRet.push(3*countedsubIPs[i].count/denom)
+        
+        
+
+        globe.addData( toRet, {format: 'magnitude', name: "subDATA"} );
+        globe.createPoints();
+        // Begin animation
+        globe.animate();
+    }
+
+}
+function SetRunGlobe()
+   { 
+    
+    var rglobe3d = document.getElementById("globe");
+    globe.renderer.dispose()
+    disposeHierarchy (globe.points, disposeNode);
+    disposeHierarchy (globe, disposeNode);
+    disposeHierarchy (globe.scene, disposeNode);
+    rglobe3d.innerHTML="";
+    var rglobe = new DAT.Globe( rglobe3d );
+    console.log(globe.scene)
+
+    var xhr = new XMLHttpRequest();
+    //console.log("sub: ")
+    //console.log(subIPs)
+    var total=[]
+    var longlatarr=[]
+    var baseUrlip= "http://api.ipapi.com/"
+    
+    var countedrunIPs=[]
+
+    for(var i=0;i<runIPs.length;i++)
+    {
+        long=null;
+        lat=null;
+        for(var q=0;q<ipTable.length;q++)
+        {
+            if(runIPs[i]==ipTable[q].IP)
+            {
+                long=ipTable[q].Longitude;
+                lat=ipTable[q].Latitude;
+                break;
+            }
+        }
+        var found=false;
+        for(var j=0;j<countedrunIPs.length;j++)
+        {
+            if(countedrunIPs[j].long==long && countedrunIPs[j].lat==lat)
+            {
+                countedrunIPs[j].count=countedrunIPs[j].count+1;
+                found=true;
+                break;
+            }
+
+            
+        }
+        if(!found && long && lat )
+        {
+            countedrunIPs.push({"long":long, "lat":lat, "count":1})
+        }
+    }
+
+    var denom=1.
+    for(var k=0;k<countedrunIPs.length;k++)
+    { 
+        denom+=countedrunIPs[k].count;
+    }
+    console.log("run: ")
+    console.log(countedrunIPs)
+    
+    for(var i=0;i<countedrunIPs.length;i++)
+    {
+        toRet=[]
+
+        toRet.push(countedrunIPs[i].lat)
+        toRet.push(countedrunIPs[i].long)
+        toRet.push(2*countedrunIPs[i].count/denom)
+       
+        if(toRet.length ==3)
+        {
+        rglobe.addData( toRet, {format: 'magnitude', name: "runDATA"} );
+        rglobe.createPoints();
+        // Begin animation
+        rglobe.animate();
+        }
+    }
+    
+
+}
+
+function startFocusOut(){
+  $(document).on("click",function(){
+  $("#cntnr").hide();        
+  $(document).off("click");
+  });
+}
+function QueryDatabase()
+  {
+    $('#AttemptsTable').empty();
+    $('#JobsTable').empty();
+      
+        if (window.XMLHttpRequest) {
+            // code for IE7+, Firefox, Chrome, Opera, Safari
+            xmlhttp = new XMLHttpRequest();
+        } else {
+            // code for IE6, IE5
+            xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+        }
+        xmlhttp.onreadystatechange = function() {
+            if (this.readyState == 4 && this.status == 200) {
+                var result_to_use;
+                //console.log(this.responseText)
+                if(this.responseText != "")
+                {
+                result=JSON.parse(this.responseText);
+                return_code=result[0]["return_code"];
+                if(return_code=="coh328nm9d9odhu5tgio48i")
+                    foreman=true;
+                result.shift();
+
+                result_to_use=result;
+
+                subIPs=[]
+                for(var i=0;i<result.length;i++)
+                {
+                    if(result[i]["UIp"])
+                    {
+			            subIPs.push(result[i]["UIp"]);
+                        //IPMapper.addIPMarker(result[i]["UIp"]);
+                    }
+                }
+                //console.log("QUERY IPS")
+                //console.log(subIPs)
+                //IPMapper.addIPArray(iplist);
+                //console.log(result)
+                
+                StoreResult(result_to_use,"Project");
+                DecodeGeos();
+                
+
+                }
+                
+            }
+        };
+        
+         
+
+        console.log("dat_mon_sql.php?Table=Project");
+        xmlhttp.open("GET","dat_mon_sql.php?Table=Project",true);
+        xmlhttp.send();
+  }
+  function DecodeGeos()
+  {
+    
+        if (window.XMLHttpRequest) {
+            // code for IE7+, Firefox, Chrome, Opera, Safari
+            xmlhttp = new XMLHttpRequest();
+        } else {
+            // code for IE6, IE5
+            xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+        }
+        xmlhttp.onreadystatechange = function() {
+            if (this.readyState == 4 && this.status == 200) {
+                var result_to_use;
+                //console.log(this.responseText)
+                if(this.responseText != "")
+                {
+                    ipTable=JSON.parse(this.responseText);
+                    console.log(ipTable)
+                    SetSceneGlobe();
+                    
+                }
+                
+            }
+        };
+        
+         
+
+        console.log("decodeGeo.php");
+        xmlhttp.open("GET","decodeGeo.php",true);
+        xmlhttp.send();
+  }
+  function QueryDatabaseRunIP(projID)
+  {
+
+      var qresult=[];
+        if (window.XMLHttpRequest) {
+            // code for IE7+, Firefox, Chrome, Opera, Safari
+            xmlhttp = new XMLHttpRequest();
+        } else {
+            // code for IE6, IE5
+            xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+        }
+        xmlhttp.onreadystatechange = function() {
+            if (this.readyState == 4 && this.status == 200) {
+                var result_to_use;
+                //console.log(this.responseText)
+                if(this.responseText != "")
+                {
+                result=JSON.parse(this.responseText);
+                console.log(result)
+                return_code=result[0]["return_code"];
+                if(return_code=="coh328nm9d9odhu5tgio48i")
+                    foreman=true;
+                result.shift();
+
+                result_to_use=result;
+
+                runIPs=[]
+                for(var i=0;i<result.length;i++)
+                {
+                    if(result[i]["RunIP"])
+                    {
+			            runIPs.push(result[i]["RunIP"]);
+                        //IPMapper.addIPMarker(result[i]["UIp"]);
+                    }
+                }
+                //console.log("QUERY IPS")
+                //console.log(subIPs)
+                //IPMapper.addIPArray(iplist);
+                //console.log(result)
+                
+                //DecodeGeos();
+                SetRunGlobe();
+               
+
+                }
+                
+            }
+        };
+        
+         
+
+        console.log("dat_mon_sql.php?Table=RunMap&projID="+projID);
+        xmlhttp.open("GET","dat_mon_sql.php?Table=RunMap&projID="+projID,true);
+        xmlhttp.send();
+  }
+
+  function StoreResult(result,table)
+  {
+    if (result.length==0)
+        return;
+    //console.log(result);
+    //console.log(foreman);
+    var rows=[];
+    for(var i=0; i< result.length;i++)
+    {
+        rows.push(result[i]);
+    }
+    qresult=rows.reverse();
+
+    if(table=="Project")
+    {
+        MakeProjectTable(qresult);
+    }
+    else if( table == "Jobs")
+    {
+        MakeJobsTable(qresult);
+    }
+  }
+
+  function MakeProjectTable(resultArray)
+  {
+    $('#ProjTable').empty();
+      ProjDataSet=[];
+      ProjColumnDefs=[];
+
+      if(resultArray.length > 0)
+      {
+
+        for (var key in resultArray[0]) {
+            if( key == "Config_Stub" || key=="Submitter" || key =="Comments" || key=="Notified" || key=="UName" || key=="UIp")
+                continue;
+            
+            if( key == "GeantSecondaries" || key == "RunGeneration" || key == "SaveGeneration" || key == "RunGeant" || key == "SaveGeant" || key == "RunSmear" || key == "SaveSmear"|| key == "RunReconstruction" || key == "SaveReconstruction" )
+                continue;
+
+            if( key == "Generator_Config" || key == "Exp"|| key == "FinalDestination" || key == "GenMinE" || key == "GenMaxE" || key == "TotalSizeOut" || key == "ReactionLines" || key=="GeantVersion")
+                continue; 
+
+            ProjColumnDefs.push({title: key});
+            }
+        
+            for (i = 0; i < resultArray.length; i++) {
+                
+                var dataRow=[];
+                for (var key in resultArray[i]) {
+
+                    if( key == "Config_Stub" || key=="Submitter" || key =="Comments" || key=="Notified" || key=="UName" || key=="UIp")
+                        continue;
+
+                    if( key == "GeantSecondaries" || key == "RunGeneration" || key == "SaveGeneration" || key == "RunGeant" || key == "SaveGeant" || key == "RunSmear" || key == "SaveSmear"|| key == "RunReconstruction" || key == "SaveReconstruction" )
+                        continue;
+
+                    if( key == "Generator_Config" || key == "Exp"|| key == "FinalDestination" || key == "GenMinE" || key == "GenMaxE" || key == "TotalSizeOut" || key == "ReactionLines" || key=="GeantVersion")
+                        continue; 
+                    dataRow.push(resultArray[i][key]);
+                }
+                if(resultArray[i]["Notified"]!=1)
+                    ProjDataSet.push(dataRow);
+                }
+        
+               if ( $.fn.dataTable.isDataTable( '#ProjTable' ) ) {
+                ProjTable = $('#ProjTable').DataTable();
+                ProjTable.destroy();
+                $('#ProjTable').empty();
+                }
+                ProjTable=$('#ProjTable').DataTable({data: ProjDataSet , columns: ProjColumnDefs});
+                //$('#ProjTable').addClass('run-slideInLeft');
+                
+
+                $('#ProjTable').dataTable().on('click','td',function (e){DisplayJobs(e,this);DisplayAttempts(e,this)});
+                //ColorCells();
+   
+
+        }
+}
+
+function MakeAttemptsTable(resultArray,projID)
+  {
+    
+      AttemptsDataSet=[];
+      AttemptsColumnDefs=[];
+
+    if(!document.getElementById("AttemptsTable"))
+      {
+          /*<div class="container" id="JobsContainer" >
+        
+        <font size="32" color="white">Jobs</font>*/
+    
+          var attTableCont=document.createElement("DIV")
+          var attTable=document.createElement("table")
+        
+          attTableCont.className="container table";
+          attTableCont.id="AttemptsContainer";
+
+           attTable.id="AttemptsTable";
+           attTable.className="dataTable addtable"
+           var textnode=document.createTextNode("Attempts");
+           textnode.className="table-header"
+           var header=document.createElement("h1");
+           attTableCont.appendChild(document.createElement("hr"))
+           header.append(textnode)
+           attTableCont.appendChild(header);
+           attTableCont.appendChild(document.createElement("br"));
+           
+           attTableCont.appendChild( attTable);
+          document.getElementById("tableBlock").appendChild( attTableCont);
+      }
+
+    else
+     if ( $.fn.dataTable.isDataTable( '#AttemptsTable' ) ) {
+                AttemptsTable = $('#AttemptsTable').DataTable();
+                AttemptsTable.destroy();
+                $('#AttemptsTable').empty();
+                }
+
+      if(resultArray.length > 0)
+      {
+
+        for (var key in resultArray[0]) {
+            if( key == "Size_In" || key=="Size_Out" || key=="ThreadsRequested" || key =="RAMRequested")
+                continue;
+
+            AttemptsColumnDefs.push({title: key});
+            }
+        
+            for (i = 0; i < resultArray.length; i++) {
+                
+                var dataRow=[];
+                for (var key in resultArray[i]) {
+                    if( key == "Size_In" || key=="Size_Out" || key=="ThreadsRequested" || key =="RAMRequested")
+                         continue;
+    
+                    dataRow.push(resultArray[i][key]);
+                }
+                AttemptsDataSet.push(dataRow);
+            }
+        
+               if ( $.fn.dataTable.isDataTable( '#AttemptsTable' ) ) {
+                AttemptsTable = $('#AttemptsTable').DataTable();
+                AttemptsTable.destroy();
+                $('#AttemptsTable').empty();
+                }
+                AttemptsTable=$('#AttemptsTable').DataTable({data: AttemptsDataSet , columns: AttemptsColumnDefs});
+                //$('#JobsTable').dataTable().on('click','td',function (e){DisplayAttempts(e,this)});
+   
+                
+        }
+        QueryDatabaseRunIP(projID);
+    
+}
+
+  function MakeJobsTable(resultArray)
+  {
+      if(!document.getElementById("JobsTable"))
+      {
+          /*<div class="container" id="JobsContainer" >
+        
+        <font size="32" color="white">Jobs</font>*/
+    
+          var jobsTableCont=document.createElement("DIV")
+          var jobsTable=document.createElement("table")
+        
+          jobsTableCont.className="container table";
+          jobsTableCont.id="JobsContainer";
+
+          jobsTable.id="JobsTable";
+          jobsTable.className="dataTable addtable"
+
+            var textnode=document.createTextNode("Jobs");
+           textnode.className="table-header";
+           var header=document.createElement("h1");
+           header.append(textnode)
+           jobsTableCont.appendChild(document.createElement("hr"))
+           jobsTableCont.appendChild(header);
+          jobsTableCont.appendChild(document.createElement("br"));
+          
+          jobsTableCont.appendChild(jobsTable);
+          document.getElementById("tableBlock").appendChild(jobsTableCont);
+      }
+
+    else if ( $.fn.dataTable.isDataTable( '#JobsTable' ) ) {
+                JobsTable = $('#JobsTable').DataTable();
+                JobsTable.destroy();
+                $('#JobsTable').empty();
+                }
+      JobsDataSet=[];
+      JobsColumnDefs=[];
+
+      if(resultArray.length > 0)
+      {
+
+        for (var key in resultArray[0]) {
+
+            JobsColumnDefs.push({title: key});
+            }
+        
+            for (i = 0; i < resultArray.length; i++) {
+                
+                var dataRow=[];
+                for (var key in resultArray[i]) {
+
+    
+                    dataRow.push(resultArray[i][key]);
+                }
+                JobsDataSet.push(dataRow);
+            }
+        
+               if ( $.fn.dataTable.isDataTable( '#JobsTable' ) ) {
+                JobsTable = $('#JobsTable').DataTable();
+                JobsTable.destroy();
+                $('#JobsTable').empty();
+                }
+                JobsTable=$('#JobsTable').DataTable({data: JobsDataSet , columns: JobsColumnDefs});
+                $('#JobsTable').addClass('run-slideInRight');
+                //$('#JobsTable').dataTable().on('click','td',function (e){DisplayAttempts(e,this)});
+   
+
+        }
+}
+
+function DisplayJobs(e,obj)
+{
+    var projID=obj.parentNode.childNodes[0].innerHTML;
+
+    
+        if (window.XMLHttpRequest) {
+            // code for IE7+, Firefox, Chrome, Opera, Safari
+            xmlhttp = new XMLHttpRequest();
+        } else {
+            // code for IE6, IE5
+            xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+        }
+        xmlhttp.onreadystatechange = function() {
+            if (this.readyState == 4 && this.status == 200) {
+                var result_to_use;
+                //console.log(this.responseText)
+                if(this.responseText != "")
+                {
+                result=JSON.parse(this.responseText);
+                result.shift();
+
+                result_to_use=result;
+                MakeJobsTable(result_to_use)
+                //ColorCells();
+                }
+                
+            }
+        };
+        
+        console.log("dat_mon_sql.php?Table=Jobs\&projID="+projID);
+        xmlhttp.open("GET","dat_mon_sql.php?Table=Jobs\&projID="+projID,true);
+        xmlhttp.send();
+
+}
+function DisplayAttempts(e,obj)
+{
+    var projID=obj.parentNode.childNodes[0].innerHTML;
+
+    
+        if (window.XMLHttpRequest) {
+            // code for IE7+, Firefox, Chrome, Opera, Safari
+            xmlhttp = new XMLHttpRequest();
+        } else {
+            // code for IE6, IE5
+            xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+        }
+        xmlhttp.onreadystatechange = function() {
+            if (this.readyState == 4 && this.status == 200) {
+                var result_to_use;
+                //console.log(this.responseText)
+                if(this.responseText != "")
+                {
+                result=JSON.parse(this.responseText);
+                result.shift();
+                console.log(result);
+                result_to_use=result;
+                MakeAttemptsTable(result_to_use,projID)
+                //ColorCells();
+                }
+                
+            }
+        };
+        
+        console.log("dat_mon_sql.php?Table=Attempts\&projID="+projID);
+        xmlhttp.open("GET","dat_mon_sql.php?Table=Attempts\&projID="+projID,true);
+        xmlhttp.send();
+}
+function DoMenu(action)
+{
+    if(foreman)
+    {
+            var obj= mouseOverObject;
+            console.log(obj)
+            if(obj.parentNode.childNodes[0].nodeName == "TD")
+            {
+                var projID=obj.parentNode.childNodes[0].innerHTML;
+                
+                if (window.XMLHttpRequest) {
+            // code for IE7+, Firefox, Chrome, Opera, Safari
+                    xmlhttp = new XMLHttpRequest();
+                 } else {
+            // code for IE6, IE5
+                    xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+                    }
+                    xmlhttp.onreadystatechange = function() {
+                    if (this.readyState == 4 && this.status == 200) {
+                
+                console.log(this.responseText)
+                if(this.responseText != "")
+                {
+                alert(this.responseText);
+                
+                }
+                
+            }
+        };
+        
+        console.log("foreman_util.php?Mode="+action+"\&projID="+projID)
+        xmlhttp.open("GET","foreman_util.php?Mode="+action+"\&projID="+projID,true);
+        xmlhttp.send();
+            }
+    }
+}
+function ColorCells()
+{
+    if(ProjTable)
+    {
+    for(var r=0;r<ProjTable.rows()[0].length;r++)
+        {
+            for(var c=0;c<ProjTable.columns()[0].length;c++)
+            {
+                
+                    var thisCell=ProjTable.cell(r,c);
+                    
+                        $(thisCell).addClass('blackbkg')
+            }
+        }
+    }
+    if(JobsTable)
+    {
+    for(var r=0;r<JobsTable.rows()[0].length;r++)
+        {
+            for(var c=0;c<JobsTable.columns()[0].length;c++)
+            {
+                
+                    var thisCell=JobsTable.cell(r,c);
+                    
+                        $(JobsTable).addClass('blackbkg')
+            }
+        }
+    }
+    if(AttemptsTable)
+    {
+    for(var r=0;r<AttemptsTable.rows()[0].length;r++)
+        {
+            for(var c=0;c<AttemptsTable.columns()[0].length;c++)
+            {
+                
+                    var thisCell=AttemptsTable.cell(r,c);
+                    
+                        $(AttemptsTable).addClass('blackbkg')
+            }
+        }
+    }
+}
+function disposeNode (node)
+{
+    if (node instanceof THREE.Mesh)
+    {
+        if (node.geometry)
+        {
+            node.geometry.dispose ();
+        }
+
+        if (node.material)
+        {
+            if (node.material instanceof THREE.MeshFaceMaterial)
+            {
+                $.each (node.material.materials, function (idx, mtrl)
+                {
+                    if (mtrl.map)           mtrl.map.dispose ();
+                    if (mtrl.lightMap)      mtrl.lightMap.dispose ();
+                    if (mtrl.bumpMap)       mtrl.bumpMap.dispose ();
+                    if (mtrl.normalMap)     mtrl.normalMap.dispose ();
+                    if (mtrl.specularMap)   mtrl.specularMap.dispose ();
+                    if (mtrl.envMap)        mtrl.envMap.dispose ();
+
+                    mtrl.dispose ();    // disposes any programs associated with the material
+                });
+            }
+            else
+            {
+                if (node.material.map)          node.material.map.dispose ();
+                if (node.material.lightMap)     node.material.lightMap.dispose ();
+                if (node.material.bumpMap)      node.material.bumpMap.dispose ();
+                if (node.material.normalMap)    node.material.normalMap.dispose ();
+                if (node.material.specularMap)  node.material.specularMap.dispose ();
+                if (node.material.envMap)       node.material.envMap.dispose ();
+
+                node.material.dispose ();   // disposes any programs associated with the material
+            }
+        }
+    }
+}   // disposeNode
+function sleep (time) {
+  return new Promise((resolve) => setTimeout(resolve, time));
+}
+function disposeHierarchy (node, callback)
+{
+    if(node)
+    {
+        if(node.children)
+        {
+            for (var i = node.children.length - 1; i >= 0; i--)
+            {
+                var child = node.children[i];
+                disposeHierarchy (child, callback);
+                callback (child);
+            }
+        }
+        else{
+            disposeNode(node);
+        }
+    }
+}
+    </script>
+<body style="background-color:black" >
+
+<div class="news-ticker">
+        <div class="ticker" id="tickerTexts">
+                <span class="ticker-holder">
+        <span id="ticker1"><strong></strong> Revamped output is live and will be monitored for a few projects before being let loose.</span>
+                    
+                </span>    
+
+
+</div>
+</div>
+
+<div class="header-info">
+        <div id="globe" width="1250">
+
+            </div>
+            <div id="graphs">
+            
+            <img class="graph" src="https://scicomp.jlab.org/ganglia/graph.php?r=hour&z=xlarge&c=Scicomp+Misc&h=scosg16.jlab.org&jr=&js=&v=102&m=TotalRunningJobs&vl=jobs" id="condor_running"/>
+            
+            <img class="graph" src="https://scicomp.jlab.org/ganglia/graph.php?r=hour&z=xlarge&c=Scicomp+Misc&h=scosg16.jlab.org&jr=&js=&v=0&m=TotalIdleJobs&vl=jobs" id="condor_idle"/>
+            
+            </div>
+
+</div>
+
+<div class="header-menu">
+    <div>
+    <img id="logo" src="./whitelogo.png" class="logo"  alt="logo" width="125" height="160" align="right">
+    </div>
+    <div>
+    <nav role="navigation">
+            <div id="menuToggle">
+              <!--
+              A fake / hidden checkbox is used as click reciever,
+              so you can use the :checked selector on it.
+              -->
+              <input type="checkbox" />
+              
+              <!--
+              Some spans to act as a hamburger.
+              
+              They are acting like a real hamburger,
+              not that McDonalds stuff.
+              -->
+              <span></span>
+              <span></span>
+              <span></span>
+              
+              <!--
+              Too bad the menu has to be inside of the button
+              but hey, it's pure CSS magic.
+              -->
+              <ul id="menu">
+                <a href="https://halldweb.jlab.org/gluex_sim/SubmitSim.html"><li>Submit Form</li></a>
+                <a href="https://halldweb.jlab.org/gluex_sim/Records.html"><li>Records</li></a>
+                <a href="https://github.com/JeffersonLab/gluex_MCwrapper"><li>Github Repo</li></a>
+                <a href="mailto: tbritton@jlab.org"><li>Contact Me</li></a>
+              </ul>
+            </div>
+          </nav>
+        </div>
+</div>
+<div class="table-block" id="tableBlock">
+
+    <div class="container table" id="ProjContainer" >
+           <font size="32" color="white"> Projects  </font> <input type="button" onClick="QueryDatabase()" value="Refresh tables">  
+           <table cellpadding="0" cellspacing="0" border="1" class="dataTable table" id="ProjTable">
+       
+           </table>
+    </div>
+
+</div>
+<div id='cntnr'>
+    <ul id='items'>
+      <li onclick="DoMenu('NotifyComplete')"><font color="black">Notify Complete</font></li>
+      <li onclick="DoMenu('ReTest')"><font color="black">Retest Project</font></li>
+    </ul>
+    <hr/>
+    <ul id='items'>
+        <li onclick="DoMenu('FullReset')"><font color="black">Full Project Reset</font></li>
+    </ul>
+    
+    
+
+</div>
+</body>
+</html>
