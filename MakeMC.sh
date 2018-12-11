@@ -580,7 +580,7 @@ if [[ "$GENR" != "0" ]]; then
 		if [[ "$POL_TO_GEN" == "ccdb" ]]; then
 			echo "ROOTPolFile $POL_TO_GEN" >> beam.config
 		elif [[ "$POL_HIST" == "unset" ]]; then
-			echo "PolarizationMagnitude $POL_TO_GEN" >>! beam.config
+			echo "PolarizationMagnitude $POL_TO_GEN" >> beam.config
 		else
 			echo "ROOTPolFile $POL_TO_GEN" >> beam.config
 			echo "ROOTPolName $POL_HIST" >> beam.config
