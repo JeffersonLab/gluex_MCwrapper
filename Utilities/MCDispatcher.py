@@ -33,7 +33,9 @@ class bcolors:
 
 def AutoLaunch():
     #print "in autolaunch"
-    query = "SELECT ID,Email,VersionSet FROM Project WHERE Tested != -1 && Dispatched_Time is NULL;"
+    RetryAllJobs()
+
+    query = "SELECT ID,Email,VersionSet,Tested FROM Project WHERE Tested != -1 && Dispatched_Time is NULL;"
     #print query
     curs.execute(query) 
     rows=curs.fetchall()
@@ -47,8 +49,16 @@ def AutoLaunch():
         commands_to_call+="source /group/halld/Software/build_scripts/gluex_env_jlab.sh /group/halld/www/halldweb/html/dist/"+str(row["VersionSet"])+";"
         commands_to_call+="export MCWRAPPER_CENTRAL=/osgpool/halld/tbritton/gluex_MCwrapper/;"
         commands_to_call+="export PATH=/apps/bin:${PATH};"
-        subprocess.call(commands_to_call,shell=True) 
-        status=TestProject(row['ID'])
+        subprocess.call(commands_to_call,shell=True)
+
+        status=[]
+        status.append(-1)
+        status.append(-1)
+        if(row['Tested'] !=1):
+            status=TestProject(row['ID'])
+        else:
+            status[0]=0
+            status[1]=0
 
         #print "STATUS IS"
         #print status[0]
@@ -87,15 +97,23 @@ def DispatchProject(ID,SYSTEM,PERCENT):
     else:
         print("Error: Cannot find Project with ID="+ID)
     
+def RetryAllJobs():
+    query= "SELECT ID FROM Project where Completed_Time is NULL && Is_Dispatched=1.0;"
+    curs.execute(query) 
+    rows=curs.fetchall()
+    for row in rows:
+        print "Retrying Project "+str(row["ID"])
+        RetryJobsFromProject(row["ID"],True)
 
-def RetryJobsFromProject(ID):
+def RetryJobsFromProject(ID, countLim):
     query= "SELECT * FROM Attempts WHERE ID IN (SELECT Max(ID) FROM Attempts GROUP BY Job_ID) && Job_ID IN (SELECT ID FROM Jobs WHERE IsActive=1 && Project_ID="+str(ID)+");"
     curs.execute(query) 
     rows=curs.fetchall()
    
     i=0
+    j=0
     for row in rows:
-        
+
         if (row["BatchSystem"]=="SWIF"):
             if((row["Status"] == "succeeded" and row["ExitCode"] != 0) or row["Status"]=="problems"):
                 RetryJob(row["Job_ID"])
@@ -106,10 +124,18 @@ def RetryJobsFromProject(ID):
             #print row["Status"]
             #print row["ExitCode"]
             #print "=========================="
-            if(row["Status"] == "4" and row["ExitCode"] != 0) or row["Status"] == "5":
+            if(row["Status"] == "4" and row["ExitCode"] != 0) or row["Status"] == "3" or row["Status"]=="5":
+                if ( countLim ):
+                    countq="SELECT Count(Job_ID) from Attempts where Job_ID="+row["Job_ID"]
+                    curs.execute(countq)
+                    count=curs.fetchall()
+                    if int(count[0]["Count(Job_ID)"]) > 3 :
+                        j=j+1
+                        continue
                 RetryJob(row["Job_ID"])
                 i=i+1
     print "retried "+str(i)+" Jobs"
+    print str(j)+" jobs over restart limit of 3"
 
 #def DoMissingJobs(ID,SYS):
 #    query="SELECT ID FROM Jobs where ID NOT IN (SELECT Job_ID FROM Attempts) && IsActive=1 && Project_ID="+str(ID)+";"
@@ -163,7 +189,7 @@ def RetryJob(ID):
         status = subprocess.call("cp $MCWRAPPER_CENTRAL/examples/OSGShell.config ./MCDispatched.config", shell=True)
         WritePayloadConfig(proj[0],"True")
         command="$MCWRAPPER_CENTRAL/gluex_MC.py MCDispatched.config "+str(job[0]["RunNumber"])+" "+str(job[0]["NumEvts"])+" per_file=50000 base_file_number="+str(job[0]["FileNumber"])+" generate="+str(proj[0]["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(proj[0]["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(proj[0]["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(proj[0]["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid=-"+str(ID)+" batch=1"
-        #print(command)
+        print(command)
         status = subprocess.call(command, shell=True)
 
 def CancelJob(ID):
@@ -431,23 +457,40 @@ def WritePayloadConfig(order,foundConfig):
         MaxE = MaxE[:-cutnum]
     MCconfig_file.write("GEN_MIN_ENERGY="+MinE+"\n")
     MCconfig_file.write("GEN_MAX_ENERGY="+MaxE+"\n")
-    MCconfig_file.write("GENERATOR="+str(order["Generator"])+"\n")
+
+    if str(order["Generator"]) == "file:":
+        if foundConfig == "True":
+            MCconfig_file.write("GENERATOR="+str(order["Generator"])+"/"+str(order["Generator_Config"])+"\n")
+        else:
+            MCconfig_file.write("GENERATOR="+str(order["Generator"])+"/"+foundConfig+"\n")
+    else:
+        MCconfig_file.write("GENERATOR="+str(order["Generator"])+"\n")
+        if foundConfig=="True":
+            MCconfig_file.write("GENERATOR_CONFIG="+str(order["Generator_Config"])+"\n")
+        else:
+            MCconfig_file.write("GENERATOR_CONFIG="+foundConfig+"\n")
+
     MCconfig_file.write("GEANT_VERSION="+str(order["GeantVersion"])+"\n")
     MCconfig_file.write("NOSECONDARIES="+str(abs(order["GeantSecondaries"]-1))+"\n")
     MCconfig_file.write("BKG="+str(order["BKG"])+"\n")
-    MCconfig_file.write("DATA_OUTPUT_BASE_DIR="+str(order["OutputLocation"])+"\n")
+    MCconfig_file.write("DATA_OUTPUT_BASE_DIR=/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/"+str(order["OutputLocation"]).split("/")[7]+"\n")
     #print "FOUND CONFIG="+foundConfig
+
+    if(order["RCDBQuery"] != ""):
+        MCconfig_file.write("RCDB_QUERY="+order["RCDBQuery"]+"\n")
 
     if(order["ReactionLines"] != ""):
         jana_config_file=open("/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config","w")
-        jana_config_file.write("PLUGINS danarest,monitoring_hists,ReactionFilter\n"+order["ReactionLines"])
+        janaplugins="PLUGINS danarest,monitoring_hists,mcthrown_tree"
+        if(order["ReactionLines"]):
+            janaplugins+=",ReactionFilter\n"+order["ReactionLines"]
+        else:
+            janaplugins+="\n"
+        jana_config_file.write(janaplugins)
         jana_config_file.close()
         MCconfig_file.write("CUSTOM_PLUGINS=file:/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config\n")
 
-    if foundConfig=="True":
-        MCconfig_file.write("GENERATOR_CONFIG="+str(order["Generator_Config"])+"\n")
-    else:
-        MCconfig_file.write("GENERATOR_CONFIG="+foundConfig+"\n")
+    
     MCconfig_file.write("ENVIRONMENT_FILE=/group/halld/www/halldweb/html/dist/"+str(order["VersionSet"])+"\n")
     MCconfig_file.close()
 
@@ -476,45 +519,24 @@ def DispatchToOSG(ID,order,PERCENT):
     if order["SaveReconstruction"]==1:
         cleanrecon=0
 
-    # CHECK THE OUTSTANDING JOBS VERSUS ORDER
-    TotalOutstanding_Events_check = "SELECT SUM(NumEvts), MAX(FileNumber) FROM Jobs WHERE IsActive=1 && Project_ID="+str(ID)+" && ID IN (SELECT Job_ID FROM Attempts WHERE ExitCode=0);"
-    curs.execute(TotalOutstanding_Events_check)
-    TOTALOUTSTANDINGEVENTS = curs.fetchall()
 
-    RequestedEvents_query = "SELECT NumEvents, Is_Dispatched FROM Project WHERE ID="+str(ID)+";"
-    curs.execute(RequestedEvents_query)
-    TotalRequestedEventsret = curs.fetchall()
-    TotalRequestedEvents= TotalRequestedEventsret[0]["NumEvents"]
-
-    OutstandingEvents=0
-    if(TOTALOUTSTANDINGEVENTS[0]["SUM(NumEvts)"]):
-        OutstandingEvents=TOTALOUTSTANDINGEVENTS[0]["SUM(NumEvts)"]
+    updatequery="UPDATE Project SET Is_Dispatched='"+str(1.0) +"', Dispatched_Time="+"NOW() "+"WHERE ID="+str(ID)+";"
+    #print updatequery
+    curs.execute(updatequery)
+    conn.commit()
+    command="$MCWRAPPER_CENTRAL/gluex_MC.py MCDispatched.config "+str(RunNumber)+" "+str(order["NumEvents"])+" per_file=20000 base_file_number="+str(0)+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" logdir=/osgpool/halld/tbritton/REQUESTEDMC_LOGS/"+order["OutputLocation"].split("/")[7]+" batch=1"
+    print(command)
+    status = subprocess.call(command, shell=True)
     
-    FileNumber_NewJob=int(-1)
-    if(TOTALOUTSTANDINGEVENTS[0]["MAX(FileNumber)"]):
-        FileNumber_NewJob=TOTALOUTSTANDINGEVENTS[0]["MAX(FileNumber)"]
-
-    FileNumber_NewJob+=1
-
-    NumEventsToProduce=min(int(float(TotalRequestedEvents)*float(PERCENT)),TotalRequestedEvents-OutstandingEvents)
-    
-    percentDisp=float(NumEventsToProduce+OutstandingEvents)/float(TotalRequestedEvents)
-
-    if NumEventsToProduce > 0:
-        updatequery="UPDATE Project SET Is_Dispatched='"+str(percentDisp) +"', Dispatched_Time="+"NOW() "+"WHERE ID="+str(ID)+";"
-        #print updatequery
-        curs.execute(updatequery)
-        conn.commit()
-        command="$MCWRAPPER_CENTRAL/gluex_MC.py MCDispatched.config "+str(RunNumber)+" "+str(NumEventsToProduce)+" per_file=20000 base_file_number="+str(FileNumber_NewJob)+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=1"
-        print(command)
-        status = subprocess.call(command, shell=True)
-    else:
-        print "All jobs submitted for this order"
 
 def main(argv):
     #print(argv)
 
-    numprocesses_running=subprocess.check_output(["echo `ps all -u tbritton | grep MCDispatcher.py | wc -l`"], shell=True)
+    if(os.path.isfile("/osgpool/halld/tbritton/.ALLSTOP")==True):
+        print "ALL STOP DETECTED"
+        exit(1)
+
+    numprocesses_running=subprocess.check_output(["echo `ps all -u tbritton | grep MCDispatcher.py | grep -v grep | wc -l`"], shell=True)
     #print(args)
 
     ID=-1
@@ -546,7 +568,7 @@ def main(argv):
             if argu == "-rlim":
                 RUNNING_LIMIT_OVERRIDE=True
 
-    if(int(numprocesses_running) < 5 or RUNNING_LIMIT_OVERRIDE ):
+    if(int(numprocesses_running) <2 or RUNNING_LIMIT_OVERRIDE ):
        
 
         #print MODE
@@ -570,7 +592,9 @@ def main(argv):
         elif MODE == "RETRYJOB":
             RetryJob(ID)
         elif MODE == "RETRYJOBS":
-            RetryJobsFromProject(ID)
+            RetryJobsFromProject(ID, False)
+        elif MODE == "RETRYALLJOBS":
+            RetryAllJobs()
         elif MODE == "CANCELJOB":
             CancelJob(ID)
         elif MODE == "AUTOLAUNCH":

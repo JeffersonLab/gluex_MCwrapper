@@ -28,8 +28,10 @@
 %
 % Feb. 13, 2008  David Lawrence
 %%%%%%%%%%%%%%%%% Start Input Values %%%%%%%%%%%%%%%%%%%%
-% beamp.x beamp.y beamp.z beamMass  
-0 0 TEMPCOHERENT 0
+% beamp.x beamp.y beamp.z beamMass (old style mono-energetic)
+% 0 0 TEMPCOHERENT 0
+% beam configuration file
+TEMPBEAMCONFIG
 % targetp.x targetp.y targetp.z targetMass
 0 0 0 0.938272
 % t-channelSlope

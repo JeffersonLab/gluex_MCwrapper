@@ -107,6 +107,8 @@ shift
 export POL_TO_GEN=$1
 shift
 export POL_HIST=$1
+shift
+export eBEAM_CURRENT=$1
 
 export USER_BC=`which bc`
 export USER_PYTHON=`which python`
@@ -287,10 +289,15 @@ fi
 
 beam_on_current=`echo "$beam_on_current / 1000." | $USER_BC -l`
 
+if [[ "$eBEAM_CURRENT" != "rcdb" ]]; then
+beam_on_current=$eBEAM_CURRENT
+fi
+
 colsize=`rcnd $RUN_NUMBER collimator_diameter | awk '{print $1}' | sed -r 's/.{2}$//' | sed -e 's/\.//g'`
 if [[ "$colsize" == "B" || "$colsize" == "R" || "$JANA_CALIB_CONTEXT" != "variation=mc" ]]; then
     colsize="50"
 fi
+
 
 BGRATE_toUse=$BGRATE
 
@@ -515,9 +522,9 @@ gen_pre=""
 if [[ "$GENR" != "0" ]]; then
 
 	gen_pre=`echo $GENERATOR | cut -c1-4`
-    if [[ "$gen_pre" != "file" && "$GENERATOR" != "genr8" && "$GENERATOR" != "bggen" && "$GENERATOR" != "genEtaRegge" && "$GENERATOR" != "gen_2pi_amp" && "$GENERATOR" != "gen_pi0" && "$GENERATOR" != "gen_2pi_primakoff" && "$GENERATOR" != "gen_omega_3pi" && "$GENERATOR" != "gen_2k" && "$GENERATOR" != "bggen_jpsi" && "$GENERATOR" != "gen_ee" && "$GENERATOR" != "gen_ee_hb" && "$GENERATOR" != "particle_gun" && "$GENERATOR" != "bggen_phi_ee" && "$GENERATOR" != "genBH" && "$GENERATOR" != "gen_omega_radiative" && "$GENERATOR" != "gen_amp" && "$GENERATOR" != "genr8_new" ]]; then
+    if [[ "$gen_pre" != "file" && "$GENERATOR" != "genr8" && "$GENERATOR" != "bggen" && "$GENERATOR" != "genEtaRegge" && "$GENERATOR" != "gen_2pi_amp" && "$GENERATOR" != "gen_pi0" && "$GENERATOR" != "gen_2pi_primakoff" && "$GENERATOR" != "gen_omega_3pi" && "$GENERATOR" != "gen_2k" && "$GENERATOR" != "bggen_jpsi" && "$GENERATOR" != "gen_ee" && "$GENERATOR" != "gen_ee_hb" && "$GENERATOR" != "particle_gun" && "$GENERATOR" != "bggen_phi_ee" && "$GENERATOR" != "genBH" && "$GENERATOR" != "gen_omega_radiative" && "$GENERATOR" != "gen_amp" && "$GENERATOR" != "genr8_new" && "$GENERATOR" != "gen_compton" && "$GENERATOR" != "gen_npi" ]]; then
 		echo "NO VALID GENERATOR GIVEN"
-		echo "only [genr8, bggen, genEtaRegge, gen_2pi_amp, gen_pi0, gen_omega_3pi, gen_2k, bggen_jpsi, gen_ee, gen_ee_hb,  bggen_phi_ee, particle_gun, genBH, gen_omega_radiative, gen_amp] are supported"
+		echo "only [genr8, bggen, genEtaRegge, gen_2pi_amp, gen_pi0, gen_omega_3pi, gen_2k, bggen_jpsi, gen_ee, gen_ee_hb,  bggen_phi_ee, particle_gun, genBH, gen_omega_radiative, gen_amp, gen_compton, gen_npi] are supported"
 		exit 1
     fi
 
@@ -564,46 +571,47 @@ if [[ "$GENR" != "0" ]]; then
 
 
 	echo "PolarizationAngle $polarization_angle" > beam.config
-	echo "PhotonBeamLowEnergy $GEN_MIN_ENERGY" >>! beam.config
-    echo "PhotonBeamHighEnergy $GEN_MAX_ENERGY" >>! beam.config
+	echo "PhotonBeamLowEnergy $GEN_MIN_ENERGY" >> beam.config
+    echo "PhotonBeamHighEnergy $GEN_MAX_ENERGY" >> beam.config
 
 	if [[ "$FLUX_TO_GEN" == "ccdb" ]]; then
-		echo "ROOTFluxFile $FLUX_TO_GEN" >>! beam.config
+		echo "CCDBRunNumber $RUN_NUMBER" >> beam.config
+		echo "ROOTFluxFile $FLUX_TO_GEN" >> beam.config
 		if [[ "$POL_TO_GEN" == "ccdb" ]]; then
-			echo "ROOTPolFile $POL_TO_GEN" >>! beam.config
+			echo "ROOTPolFile $POL_TO_GEN" >> beam.config
 		elif [[ "$POL_HIST" == "unset" ]]; then
-			echo "PolarizationMagnitude $POL_TO_GEN" >>! beam.config
+			echo "PolarizationMagnitude $POL_TO_GEN" >> beam.config
 		else
-			echo "ROOTPolFile $POL_TO_GEN" >>! beam.config
-			echo "ROOTPolName $POL_HIST" >>! beam.config
+			echo "ROOTPolFile $POL_TO_GEN" >> beam.config
+			echo "ROOTPolName $POL_HIST" >> beam.config
 		fi
 	elif [[ "$FLUX_TO_GEN" == "cobrems" ]]; then
-    	echo "ElectronBeamEnergy $eBEAM_ENERGY" >>! beam.config
-    	echo "CoherentPeakEnergy $COHERENT_PEAK" >>! beam.config
-    	echo "Emittance  2.5.e-9" >>! beam.config
-    	echo "RadiatorThickness $radthick" >>! beam.config
-    	echo "CollimatorDiameter 0.00$colsize" >>! beam.config
-    	echo "CollimatorDistance  76.0" >>! beam.config
+    	echo "ElectronBeamEnergy $eBEAM_ENERGY" >> beam.config
+    	echo "CoherentPeakEnergy $COHERENT_PEAK" >> beam.config
+    	echo "Emittance  2.5.e-9" >> beam.config
+    	echo "RadiatorThickness $radthick" >> beam.config
+    	echo "CollimatorDiameter 0.00$colsize" >> beam.config
+    	echo "CollimatorDistance  76.0" >> beam.config
 
 		if [[ "$POL_TO_GEN" == "ccdb" ]]; then
 			echo "Ignoring TPOL from ccdb in favor of cobrems generated values"
-		elif [[ "$POL_HIST" == "unset" ]]; then
-			echo "PolarizationMagnitude $POL_TO_GEN" >>! beam.config
-		else
+		elif [[ "$POL_HIST" == "cobrems" ]]; then
+			echo "PolarizationMagnitude $POL_TO_GEN" >> beam.config
+		elif [[ "$POL_HIST" != "unset" ]]; then
 			echo "Ignoring TPOL from $POL_TO_GEN in favor of cobrems generated values"
 		fi
 
     else
-		echo "ROOTFluxFile $FLUX_TO_GEN" >>! beam.config
-		echo "ROOTFluxName $FLUX_HIST" >>! beam.config
+		echo "ROOTFluxFile $FLUX_TO_GEN" >> beam.config
+		echo "ROOTFluxName $FLUX_HIST" >> beam.config
 		if [[ "$POL_TO_GEN" == "ccdb" ]]; then
 			echo "Can't use a flux file and Polarization from ccdb"
 			exit 1
 		elif [[ "$POL_HIST" == "unset" ]]; then
-			echo "PolarizationMagnitude $POL_TO_GEN" >>! beam.config
+			echo "PolarizationMagnitude $POL_TO_GEN" >> beam.config
 		else
-			echo "ROOTPolFile $POL_TO_GEN" >>! beam.config
-			echo "ROOTPolName $POL_HIST" >>! beam.config
+			echo "ROOTPolFile $POL_TO_GEN" >> beam.config
+			echo "ROOTPolName $POL_HIST" >> beam.config
 		fi
 	fi
 
@@ -669,9 +677,17 @@ if [[ "$GENR" != "0" ]]; then
 		echo "configuring gen_2pi_primakoff"
 		STANDARD_NAME="gen_2pi_primakoff_"$STANDARD_NAME
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
-    elif [[ "$GENERATOR" == "gen_pi0" ]]; then
+        elif [[ "$GENERATOR" == "gen_pi0" ]]; then
 		echo "configuring gen_pi0"
 		STANDARD_NAME="gen_pi0_"$STANDARD_NAME
+		cp $CONFIG_FILE ./$STANDARD_NAME.conf
+	elif [[ "$GENERATOR" == "gen_compton" ]]; then
+		echo "configuring gen_compton"
+		STANDARD_NAME="gen_compton_"$STANDARD_NAME
+		cp $CONFIG_FILE ./$STANDARD_NAME.conf
+	elif [[ "$GENERATOR" == "gen_npi" ]]; then
+		echo "configuring gen_npi"
+		STANDARD_NAME="gen_npi_"$STANDARD_NAME
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
 	elif [[ "$GENERATOR" == "gen_2k" ]]; then
 		echo "configuring gen_2k"
@@ -725,6 +741,7 @@ if [[ "$GENR" != "0" ]]; then
     if [[ "$GENERATOR" == "genr8" ]]; then
 	echo "RUNNING GENR8"
 	RUNNUM=$formatted_runNumber+$formatted_fileNumber
+	sed -i 's/TEMPCOHERENT/'$COHERENT_PEAK'/' $STANDARD_NAME.conf
 	sed -i 's/TEMPMAXE/'$GEN_MAX_ENERGY'/' $STANDARD_NAME.conf
 	sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
 	# RUN genr8 and convert
@@ -839,15 +856,29 @@ if [[ "$GENR" != "0" ]]; then
     optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
 	sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
 	echo $optionals_line
-	echo gen_2pi_primakoff -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -c $STANDARD_NAME.conf -o  $STANDARD_NAME.hddm -hd  $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
-	gen_2pi_primakoff -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -c $STANDARD_NAME.conf -hd  $STANDARD_NAME.hddm -o  $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
+	echo gen_2pi_primakoff -c $STANDARD_NAME.conf -o  $STANDARD_NAME.hddm -hd  $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
+	gen_2pi_primakoff -c $STANDARD_NAME.conf -hd  $STANDARD_NAME.hddm -o  $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
     generator_return_code=$?
 	elif [[ "$GENERATOR" == "gen_pi0" ]]; then
 	echo "RUNNING GEN_PI0" 
-    optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
+	optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
 	echo $optionals_line
 	sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
 	gen_pi0 -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK  -s $formatted_fileNumber -m $eBEAM_ENERGY $optionals_line
+    generator_return_code=$?
+        elif [[ "$GENERATOR" == "gen_compton" ]]; then
+	echo "RUNNING GEN_COMPTON" 
+	optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
+	echo $optionals_line
+	sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
+	gen_compton -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK  -s $formatted_fileNumber -m $eBEAM_ENERGY $optionals_line
+    generator_return_code=$?
+        elif [[ "$GENERATOR" == "gen_npi" ]]; then
+	echo "RUNNING GEN_NPI" 
+	optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
+	echo $optionals_line
+	sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
+	gen_npi -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK  -s $formatted_fileNumber -m $eBEAM_ENERGY $optionals_line
     generator_return_code=$?
 	elif [[ "$GENERATOR" == "gen_2k" ]]; then
 	echo "RUNNING GEN_2K" 
@@ -1095,6 +1126,9 @@ if [[ "$GENR" != "0" ]]; then
 		if [[ "$GENERATOR" != "particle_gun" && "$gen_pre" != "file" ]]; then
 			rm $STANDARD_NAME.hddm
 		fi
+		if [[ "$gen_pre" == "file" ]]; then
+			rm $STANDARD_NAME.hddm
+		fi
 	    fi
 	    
 		if [[ ! -f ./$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' ]]; then
@@ -1117,7 +1151,7 @@ if [[ "$GENR" != "0" ]]; then
 			rm jana_config.cfg
 		else
 		
-			declare -a pluginlist=("danarest" "monitoring_hists")
+			declare -a pluginlist=("danarest" "monitoring_hists" "mcthrown_tree")
 			
             if [[ "$CUSTOM_PLUGINS" != "None" ]]; then
 				pluginlist=("${pluginlist[@]}" $CUSTOM_PLUGINS)

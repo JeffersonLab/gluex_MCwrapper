@@ -59,18 +59,19 @@ def checkProjectsForCompletion():
 
     for proj in OutstandingProjects:
         #print proj['ID']
-        TOTCompletedQuery ="SELECT DISTINCT ID From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1 && ID in (SELECT DISTINCT Job_ID FROM Attempts WHERE ( (ExitCode = 0) ) && ExitCode IS NOT NULL);" #"SELECT DISTINCT ID From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1 && ID in (SELECT Job_ID FROM Attempts WHERE ( (ExitCode != 0 && ExitCode != 127 && ExitCode != 126 && ExitCode != 134) || ExitCode IS NULL));"        dbcursor.execute(TOTCompletedQuery)
+        TOTCompletedQuery ="SELECT DISTINCT ID From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1 && ID in (SELECT DISTINCT Job_ID FROM Attempts WHERE ExitCode = 0 && (Status ='4' || Status='success')  && ExitCode IS NOT NULL);" 
         dbcursor.execute(TOTCompletedQuery)
         fulfilledJobs=dbcursor.fetchall()
 
         TOTJobs="SELECT ID From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1;"
         dbcursor.execute(TOTJobs)
         AllActiveJobs=dbcursor.fetchall()
-        #print "====================="
-        #print proj['ID']
-        #print len(fulfilledJobs)
-        #print len(AllActiveJobs)
-        if(len(fulfilledJobs)==len(AllActiveJobs)):
+        print "====================="
+        print proj['ID']
+        print len(fulfilledJobs)
+        print len(AllActiveJobs)
+        
+        if(len(fulfilledJobs)==len(AllActiveJobs) and len(AllActiveJobs) != 0):
             #print("DONE")
             getFinalCompleteTime="SELECT MAX(Completed_Time) FROM Attempts WHERE Job_ID IN (SELECT ID FROM Jobs WHERE Project_ID="+str(proj['ID'])+");"
             #print getFinalCompleteTime
@@ -92,7 +93,7 @@ def checkProjectsForCompletion():
 def checkSWIF():
         #print "CHECKING SWIF JOBS"
         #queryswifjobs="SELECT OutputLocation,ID,NumEvents,Completed_Time FROM Project WHERE ID IN (SELECT Project_ID FROM Jobs WHERE IsActive=1 && ID IN (SELECT Job_ID FROM Attempts WHERE BatchSystem= 'SWIF') )"
-        queryswifjobs="SELECT * FROM Project WHERE ID IN (SELECT Project_ID FROM Jobs WHERE IsActive=1 && ID IN (SELECT DISTINCT Job_ID FROM Attempts WHERE BatchSystem= 'SWIF'))"# && Status!='succeeded') )"
+        queryswifjobs="SELECT * FROM Project WHERE ID IN (SELECT Project_ID FROM Jobs WHERE IsActive=1 && ID IN (SELECT DISTINCT Job_ID FROM Attempts WHERE BatchSystem= 'SWIF' && Status!='succeeded') )"
         dbcursor.execute(queryswifjobs)
         AllWkFlows = dbcursor.fetchall()
        
@@ -256,26 +257,19 @@ def UpdateOutputSize():
         
 
 def checkOSG():
-        #print "CHECKING OSG JOBS"
-        queryswifjobs="SELECT * FROM Project WHERE ID IN (SELECT Project_ID FROM Jobs WHERE IsActive=1 && ID IN (SELECT DISTINCT Job_ID FROM Attempts WHERE BatchSystem= 'OSG' && Status != '4' && Status != '5') )"
-        dbcursor.execute(queryswifjobs)
-        AllWkFlows = dbcursor.fetchall()
-        #for wk in AllWkFlows:
-        #    print wk["ID"]
-        #    UpdateOutputSize(wk["ID"])
 
-
-        queryosgjobs="SELECT * from Attempts WHERE BatchSystem='OSG' && Status !='4' && Status !='5';"
+        queryosgjobs="SELECT * from Attempts WHERE BatchSystem='OSG' && Status !='4' && Status !='3' && Status!= '6';"
         #print queryosgjobs
         dbcursor.execute(queryosgjobs)
         Alljobs = dbcursor.fetchall()
-
-
-        
+        count=0
+        print "UPDATING "+str(len(Alljobs))
         for job in Alljobs:
             #print job
+            count+=1
+            print count
             statuscommand="condor_q "+str(job["BatchJobID"])+" -json"
-            #print statuscommand
+            print statuscommand
             jsonOutputstr=subprocess.check_output(statuscommand.split(" "))
             #print "================"
             #print jsonOutputstr
@@ -283,6 +277,8 @@ def checkOSG():
             if( jsonOutputstr != ""):
                 JSON_jobar=json.loads(jsonOutputstr)
                 #print JSON_jobar[0]
+                if JSON_jobar == []:
+                    continue
                 JSON_job=JSON_jobar[0]
                 #print JSON_job
                 ExitCode="NULL"
@@ -308,17 +304,38 @@ def checkOSG():
                 REMOTE_HOST="NA"
                 if "RemoteHost" in JSON_job :
                     REMOTE_HOST=str(JSON_job["RemoteHost"])
+
+                JOB_STATUS=JSON_job["JobStatus"]
+                HELDREASON=0
+
+                if "HoldReasonCode" in JSON_job:
+                    HELDREASON=JSON_job["HoldReasonCode"]
+
+                if JOB_STATUS == 5:
+                    missingF=False
+                    for f in JSON_job["TransferInput"].split(","):
+                        if ".hddm" in f:
+                            #print f
+                            missingF=os.path.isfile(f)
+                            #print missingF
+                    if missingF == False:
+                        #print "set to 6"
+                        JOB_STATUS=6
+                        deactivate_Job="UPDATE Jobs set IsActive=0 where ID="+str(job["Job_ID"])+";"
+                        dbcursor.execute(deactivate_Job)
+                        dbcnx.commit()
+
                 
                 RunIP="NULL"
-                    if "LastPublicClaimId" in JSON_job:
-                        ipstr=str(JSON_job["LastPublicClaimId"])
-                        ipstr=ipstr.split("#")[0]
-                        ipstr=ipstr[1:-1].split(":")[0]
-                        RunIP=ipstr
+                if "LastPublicClaimId" in JSON_job:
+                    ipstr=str(JSON_job["LastPublicClaimId"])
+                    ipstr=ipstr.split("#")[0]
+                    ipstr=ipstr[1:-1].split(":")[0]
+                    RunIP=ipstr
 
-                updatejobstatus="UPDATE Attempts SET Status=\""+str(JSON_job["JobStatus"])+"\", ExitCode="+ExitCode+", Start_Time="+"'"+str(datetime.fromtimestamp(float(Start_Time)))+"'"+", RunningLocation="+"'"+str(REMOTE_HOST)+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+", RunIP="+str(RunIP)+" WHERE BatchJobID="+str(job["BatchJobID"])+";"
+                updatejobstatus="UPDATE Attempts SET Status=\""+str(JOB_STATUS)+"\", ExitCode="+ExitCode+", Start_Time="+"'"+str(datetime.fromtimestamp(float(Start_Time)))+"'"+", RunningLocation="+"'"+str(REMOTE_HOST)+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+", RunIP='"+str(RunIP)+"' WHERE BatchJobID='"+str(job["BatchJobID"])+"';"
                 if Completed_Time != 'NULL':
-                        updatejobstatus="UPDATE Attempts SET Status=\""+str(JSON_job["JobStatus"])+"\", ExitCode="+ExitCode+", Completed_Time='"+str(datetime.fromtimestamp(float(Completed_Time)))+"'"+", Start_Time="+"'"+str(datetime.fromtimestamp(float(Start_Time)))+"'"+", RunningLocation="+"'"+str(REMOTE_HOST)+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+", RunIP="+str(RunIP)+" WHERE BatchJobID="+str(job["BatchJobID"])+";"
+                    updatejobstatus="UPDATE Attempts SET Status=\""+str(JOB_STATUS)+"\", ExitCode="+ExitCode+", Completed_Time='"+str(datetime.fromtimestamp(float(Completed_Time)))+"'"+", Start_Time="+"'"+str(datetime.fromtimestamp(float(Start_Time)))+"'"+", RunningLocation="+"'"+str(REMOTE_HOST)+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+", RunIP='"+str(RunIP)+"' WHERE BatchJobID='"+str(job["BatchJobID"])+"';"
 
 
                 #print updatejobstatus
@@ -327,7 +344,7 @@ def checkOSG():
             else:
                 #print "looking up history"
                 historystatuscommand="condor_history -limit 1 "+str(job["BatchJobID"])+" -json"
-                #print historystatuscommand
+                print historystatuscommand
                 jsonOutputstr=subprocess.check_output(historystatuscommand.split(" "))
                 #print "================"
                 #print jsonOutputstr
@@ -335,6 +352,8 @@ def checkOSG():
                 if( jsonOutputstr != ""):
                     JSON_jobar=json.loads(jsonOutputstr)
                     #print JSON_jobar[0]
+                    if JSON_jobar == []:
+                        continue
                     JSON_job=JSON_jobar[0]
                     
                     ExitCode="NULL"
@@ -355,6 +374,21 @@ def checkOSG():
                     RAMUSED=str(float(JSON_job["ImageSize_RAW"])/ float(1024))
                     TransINSize=JSON_job["TransferInputSizeMB"]
 
+
+                    JOB_STATUS=JSON_job["JobStatus"]
+                    HELDREASON=0
+
+                    if "HoldReasonCode" in JSON_job:
+                        HELDREASON=JSON_job["HoldReasonCode"]
+
+                    if JOB_STATUS == 5:
+                        missingF=False
+                        for f in JSON_job["TransferInput"].split(","):
+                            if ".hddm" in f:
+                                missingF=os.path.isfile(f)
+                        if missingF == False:
+                            JOB_STATUS=6
+
                     RunIP="NULL"
                     if "LastPublicClaimId" in JSON_job:
                         ipstr=str(JSON_job["LastPublicClaimId"])
@@ -362,10 +396,10 @@ def checkOSG():
                         ipstr=ipstr[1:-1].split(":")[0]
                         RunIP=ipstr
 
-                    updatejobstatus="UPDATE Attempts SET Status=\""+str(JSON_job["JobStatus"])+"\", ExitCode="+ExitCode+", Start_Time="+"'"+str(datetime.fromtimestamp(float(Start_Time)))+"'"+", RunningLocation="+"'"+str(JSON_job["LastRemoteHost"])+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+", RunIP="+str(RunIP)+" WHERE BatchJobID="+str(job["BatchJobID"])+";"
+                    updatejobstatus="UPDATE Attempts SET Status=\""+str(JOB_STATUS)+"\", ExitCode="+ExitCode+", Start_Time="+"'"+str(datetime.fromtimestamp(float(Start_Time)))+"'"+", RunningLocation="+"'"+str(JSON_job["LastRemoteHost"])+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+", RunIP='"+str(RunIP)+"' WHERE BatchJobID='"+str(job["BatchJobID"])+"';"
                    
                     if Completed_Time != 'NULL':
-                        updatejobstatus="UPDATE Attempts SET Status=\""+str(JSON_job["JobStatus"])+"\", ExitCode="+ExitCode+", Start_Time="+"'"+str(datetime.fromtimestamp(float(Start_Time)))+"'"+", Completed_Time='"+str(datetime.fromtimestamp(float(Completed_Time)))+"'"+", RunningLocation="+"'"+str(JSON_job["LastRemoteHost"])+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+", RunIP="+str(RunIP)+" WHERE BatchJobID="+str(job["BatchJobID"])+";"                    
+                        updatejobstatus="UPDATE Attempts SET Status=\""+str(JOB_STATUS)+"\", ExitCode="+ExitCode+", Start_Time="+"'"+str(datetime.fromtimestamp(float(Start_Time)))+"'"+", Completed_Time='"+str(datetime.fromtimestamp(float(Completed_Time)))+"'"+", RunningLocation="+"'"+str(JSON_job["LastRemoteHost"])+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+", RunIP='"+str(RunIP)+"' WHERE BatchJobID='"+str(job["BatchJobID"])+"';"                    
 
                     #print updatejobstatus
                     dbcursor.execute(updatejobstatus)
@@ -375,11 +409,15 @@ def checkOSG():
         
 def main(argv):
 
+        numOverRide=False
 
-        numprocesses_running=subprocess.check_output(["echo `ps all -u tbritton | grep MCOverlord.py | wc -l`"], shell=True)
+        if(len(argv) !=0):
+		    numOverRide=True
+        
+        numprocesses_running=subprocess.check_output(["echo `ps all -u tbritton | grep MCOverlord.py | grep -v grep | wc -l`"], shell=True)
 
-        #print int(numprocesses_running)
-        if(int(numprocesses_running) <5):
+        print int(numprocesses_running)
+        if(int(numprocesses_running) <3 or numOverRide):
             dbcursor.execute("INSERT INTO MCOverlord (Host,StartTime) VALUES ('"+str(socket.gethostname())+"', NOW() )")
             dbcnx.commit()
             queryoverlords="SELECT MAX(ID) FROM MCOverlord;"

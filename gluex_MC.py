@@ -42,8 +42,8 @@ try:
 except:
         pass
 
-MCWRAPPER_VERSION="2.0.3"
-MCWRAPPER_DATE="11/12/18"
+MCWRAPPER_VERSION="2.0.4"
+MCWRAPPER_DATE="12/07/18"
 
 def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID):
 
@@ -217,11 +217,18 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DAT
                 gen_config_to_use=gen_config_parts[len(gen_config_parts)-1]
                 additional_passins+=COMMAND_parts[2][5:]+", "
                 COMMAND_parts[2]="file:/srv/"+gen_config_to_use
-        else:
+        elif COMMAND_parts[2] != "NA":
                 gen_config_parts=COMMAND_parts[2].split("/")
                 gen_config_to_use=gen_config_parts[len(gen_config_parts)-1]
                 additional_passins+=COMMAND_parts[2]+", "
                 COMMAND_parts[2]="/srv/"+gen_config_to_use
+
+        if COMMAND_parts[19][:5] == "file:":
+                filegen_parts=COMMAND_parts[19][5:].split("/")
+                #print filegen_parts
+                additional_passins+=COMMAND_parts[19][5:]+", "
+                COMMAND_parts[19]="file:/srv/"+filegen_parts[len(filegen_parts)-1]
+        
 
         if COMMAND_parts[21] == "Random" or COMMAND_parts[21][:4] == "loc:":
                 formattedRUNNUM=""
@@ -318,8 +325,10 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DAT
 
 
         
-
+        mkdircom2="mkdir -p "+LOG_DIR+"/log/"
+        status2 = subprocess.call(mkdircom2, shell=True)
         status = subprocess.call(mkdircom, shell=True)
+        
         jobSubout=subprocess.check_output(add_command.split(" "))
         print jobSubout
         idnumline=jobSubout.split("\n")[1].split(".")[0].split(" ")
@@ -327,6 +336,18 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DAT
         if(len(idnumline) == 6 ):
                 SWIF_ID_NUM=str(idnumline[5])+".0"
         #1 job(s) submitted to cluster 425013.
+
+        if int(PROJECT_ID) !=0:
+                findmyjob="SELECT * FROM Attempts where BatchJobID='"+str(SWIF_ID_NUM)+"';"
+                dbcursor.execute(findmyjob)
+                MYJOB = dbcursor.fetchall()
+
+                if len(MYJOB) != 0:
+                        #SELECT DISTINCT Project_ID FROM Jobs where ID in (select Job_ID from Attempts WHERE BatchSystem='OSG' GROUP BY BatchJobID HAVING COUNT(Job_ID)>1 ORDER BY BatchJobID DESC);
+                        print "THE TIMELINE HAS BEEN FRACTURED. TERMINATING SUBMITS AND SHUTTING THE ROBOT DOWN!!!"
+                        f=open("/osgpool/halld/tbritton/.ALLSTOP","x")
+                        exit(1)
+
         status = subprocess.call("rm MCOSG.submit", shell=True)
         
         #print "DECIDING IF FIRST JOB"
@@ -339,7 +360,27 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DAT
         elif int(PROJECT_ID) < 0:
                 #print "A NEW ATTEMPT"
                 recordAttempt(abs(int(PROJECT_ID)),RUNNUM,FILENUM,"OSG",SWIF_ID_NUM,COMMAND.split(" ")[6],NCORES,"Unset")
+
+def JSUB_add_job(VERBOSE, WORKFLOW, PROJECT,TRACK, RUNNUM, FILENUM, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID):
+        STUBNAME = str(RUNNUM) + "_" + str(FILENUM)
+        JOBNAME = WORKFLOW + "_" + STUBNAME
+
+        #mkdircom="mkdir -p "+DATA_OUTPUT_BASE_DIR+"/log/"
+
+        f=open('MCJSLURM.submit','w')
+        f.write("<Request>"+"\n")
         
+        f.write("<Project name=\""+PROJECT+"\"/>"+"\n")
+        f.write("<Track name=\""+TRACK+"\"/>"+"\n")
+        f.write("<Name name=\""+JOBNAME+"\"/>"+"\n")
+        f.write("<Command><![CDATA[ "+indir+" "+COMMAND+" ]]></Command>"+"\n")
+        f.write("<Job> </Job>"+"\n")
+        f.write("</Request>"+"\n")
+
+        f.close()
+        
+        exit(1)
+
 def  SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID ):
         STUBNAME = str(RUNNUM) + "_" + str(FILENUM)
         JOBNAME = WORKFLOW + "_" + STUBNAME
@@ -357,6 +398,7 @@ def  SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, D
         f.write("#SBATCH --qos=regular"+"\n")
         f.write("#SBATCH -C haswell"+"\n")
         f.write("#SBATCH -L project"+"\n")
+        #f.write("srun "+indir+" "+COMMAND+"\n")
         f.write("shifter $MCWRAPPER_CENTRAL/MakeMC.sh"+COMMAND+"\n")
 
         f.close()
@@ -482,6 +524,7 @@ def main(argv):
         GENCONFIG = "NA"
 
         eBEAM_ENERGY="rcdb"
+        eBEAM_CURRENT="rcdb"
         COHERENT_PEAK="rcdb"
         FLUX_TO_GEN="ccdb"
         FLUX_HIST="unset"
@@ -643,6 +686,8 @@ def main(argv):
 
                 elif str(parts[0]).upper()=="EBEAM_ENERGY" :
                         eBEAM_ENERGY=rm_comments[0].strip()
+                elif str(parts[0]).upper()=="EBEAM_CURRENT" :
+                        eBEAM_CURRENT=rm_comments[0].strip()
                 elif str(parts[0]).upper()=="COHERENT_PEAK" :
                         COHERENT_PEAK=rm_comments[0].strip()
                 elif str(parts[0]).upper()=="RADIATOR_THICKNESS" :
@@ -677,8 +722,8 @@ def main(argv):
                 elif str(parts[0]).upper()=="RCDBSQLITEPATH" :
                         rcdbSQLITEPATH=rm_comments[0].strip()
                 elif str(parts[0]).upper()=="RCDB_QUERY" :
-                        print line.split("#")[0].find('=')
-                        query=line.split("#")[0][10:]
+                        #print line.split("#")[0].find('=')
+                        query=line.split("#")[0][line.split("#")[0].find('=')+1:]
                         RCDB_QUERY=query
                 elif str(parts[0]).upper()=="NOSECONDARIES" :
                         NOSECONDARIES=rm_comments[0].strip()
@@ -686,11 +731,12 @@ def main(argv):
                         NOSIPMSATURATION=rm_comments[0].strip()
                 elif str(parts[0]).upper()=="FLUX_TO_GEN":
                         fluxbits=rm_comments[0].strip().split(":")
-                        if( len(fluxbits) ==2 ):
+                        if( len(fluxbits) == 2 ): # use flux histogram file
                                 FLUX_TO_GEN=fluxbits[0]
                                 FLUX_HIST=fluxbits[1]
-                        elif (len(fluxbits)==1):
-                                FLUX_TO_GEN="cobrems"
+                        elif ( len(fluxbits) == 1):
+                                if( str(fluxbits[0]).upper()=="COBREMS"): # COBREM calculation
+					FLUX_TO_GEN="cobrems"
                 elif str(parts[0]).upper()=="POL_TO_GEN":
                         polbits=rm_comments[0].strip().split(":")
                         if( len(polbits) == 2 ):
@@ -698,6 +744,8 @@ def main(argv):
                                 POL_HIST=polbits[1]
                         elif (len(polbits)==1):
                                 POL_TO_GEN=polbits[0]
+				if (FLUX_TO_GEN == "cobrems"):
+					POL_HIST="cobrems"
 
                 else:
                         print( "unknown config parameter!! "+str(parts[0]))
@@ -924,7 +972,7 @@ def main(argv):
                                 if num_this_file == 0:
                                         continue
 
-                                COMMAND=str(BATCHRUN)+" "+ENVFILE+" "+GENCONFIG+" "+str(outdir)+" "+str(runs[0])+" "+str(BASEFILENUM+FILENUM_this_run+-1)+" "+str(num_this_file)+" "+str(VERSION)+" "+str(CALIBTIME)+" "+str(GENR)+" "+str(GEANT)+" "+str(SMEAR)+" "+str(RECON)+" "+str(CLEANGENR)+" "+str(CLEANGEANT)+" "+str(CLEANSMEAR)+" "+str(CLEANRECON)+" "+str(BATCHSYS)+" "+str(NCORES).split(':')[-1]+" "+str(GENERATOR)+" "+str(GEANTVER)+" "+str(BGFOLD)+" "+str(CUSTOM_GCONTROL)+" "+str(eBEAM_ENERGY)+" "+str(COHERENT_PEAK)+" "+str(MIN_GEN_ENERGY)+" "+str(MAX_GEN_ENERGY)+" "+str(TAGSTR)+" "+str(CUSTOM_PLUGINS)+" "+str(PERFILE)+" "+str(RUNNING_DIR)+" "+str(ccdbSQLITEPATH)+" "+str(rcdbSQLITEPATH)+" "+str(BGTAGONLY)+" "+str(RADIATOR_THICKNESS)+" "+str(BGRATE)+" "+str(RANDBGTAG)+" "+str(RECON_CALIBTIME)+" "+str(NOSECONDARIES)+" "+str(MCWRAPPER_VERSION)+" "+str(NOSIPMSATURATION)+" "+str(FLUX_TO_GEN)+" "+str(FLUX_HIST)+" "+str(POL_TO_GEN)+" "+str(POL_HIST)
+                                COMMAND=str(BATCHRUN)+" "+ENVFILE+" "+GENCONFIG+" "+str(outdir)+" "+str(runs[0])+" "+str(BASEFILENUM+FILENUM_this_run+-1)+" "+str(num_this_file)+" "+str(VERSION)+" "+str(CALIBTIME)+" "+str(GENR)+" "+str(GEANT)+" "+str(SMEAR)+" "+str(RECON)+" "+str(CLEANGENR)+" "+str(CLEANGEANT)+" "+str(CLEANSMEAR)+" "+str(CLEANRECON)+" "+str(BATCHSYS)+" "+str(NCORES).split(':')[-1]+" "+str(GENERATOR)+" "+str(GEANTVER)+" "+str(BGFOLD)+" "+str(CUSTOM_GCONTROL)+" "+str(eBEAM_ENERGY)+" "+str(COHERENT_PEAK)+" "+str(MIN_GEN_ENERGY)+" "+str(MAX_GEN_ENERGY)+" "+str(TAGSTR)+" "+str(CUSTOM_PLUGINS)+" "+str(PERFILE)+" "+str(RUNNING_DIR)+" "+str(ccdbSQLITEPATH)+" "+str(rcdbSQLITEPATH)+" "+str(BGTAGONLY)+" "+str(RADIATOR_THICKNESS)+" "+str(BGRATE)+" "+str(RANDBGTAG)+" "+str(RECON_CALIBTIME)+" "+str(NOSECONDARIES)+" "+str(MCWRAPPER_VERSION)+" "+str(NOSIPMSATURATION)+" "+str(FLUX_TO_GEN)+" "+str(FLUX_HIST)+" "+str(POL_TO_GEN)+" "+str(POL_HIST)+" "+str(eBEAM_CURRENT)
                                 if BATCHRUN == 0 or BATCHSYS=="NULL":
                                         #print str(runs[0])+" "+str(BASEFILENUM+FILENUM_this_run+-1)+" "+str(num_this_file)
                                         os.system(str(indir)+" "+COMMAND)
@@ -946,7 +994,8 @@ def main(argv):
                                                         OSG_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID)
                                                 elif BATCHSYS.upper()=="SLURM":
                                                         SLURM_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
-                        #print "----------------"
+                                                elif BATCHSYS.upper()=="JSLURM":
+                                                        JSUB_add_job(VERBOSE, WORKFLOW, PROJECT, TRACK, runs[0], BASEFILENUM+FILENUM_this_run+-1, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
                 
         else:
                 if FILES_TO_GEN >= 500 and ( ccdbSQLITEPATH == "no_sqlite" or rcdbSQLITEPATH == "no_sqlite"):
@@ -961,7 +1010,7 @@ def main(argv):
                         if num == 0:
                                 continue
                 
-                        COMMAND=str(BATCHRUN)+" "+ENVFILE+" "+GENCONFIG+" "+str(outdir)+" "+str(RUNNUM)+" "+str(BASEFILENUM+FILENUM+-1)+" "+str(num)+" "+str(VERSION)+" "+str(CALIBTIME)+" "+str(GENR)+" "+str(GEANT)+" "+str(SMEAR)+" "+str(RECON)+" "+str(CLEANGENR)+" "+str(CLEANGEANT)+" "+str(CLEANSMEAR)+" "+str(CLEANRECON)+" "+str(BATCHSYS).upper()+" "+str(NCORES).split(':')[-1]+" "+str(GENERATOR)+" "+str(GEANTVER)+" "+str(BGFOLD)+" "+str(CUSTOM_GCONTROL)+" "+str(eBEAM_ENERGY)+" "+str(COHERENT_PEAK)+" "+str(MIN_GEN_ENERGY)+" "+str(MAX_GEN_ENERGY)+" "+str(TAGSTR)+" "+str(CUSTOM_PLUGINS)+" "+str(PERFILE)+" "+str(RUNNING_DIR)+" "+str(ccdbSQLITEPATH)+" "+str(rcdbSQLITEPATH)+" "+str(BGTAGONLY)+" "+str(RADIATOR_THICKNESS)+" "+str(BGRATE)+" "+str(RANDBGTAG)+" "+str(RECON_CALIBTIME)+" "+str(NOSECONDARIES)+" "+str(MCWRAPPER_VERSION)+" "+str(NOSIPMSATURATION)+" "+str(FLUX_TO_GEN)+" "+str(FLUX_HIST)+" "+str(POL_TO_GEN)+" "+str(POL_HIST)
+                        COMMAND=str(BATCHRUN)+" "+ENVFILE+" "+GENCONFIG+" "+str(outdir)+" "+str(RUNNUM)+" "+str(BASEFILENUM+FILENUM+-1)+" "+str(num)+" "+str(VERSION)+" "+str(CALIBTIME)+" "+str(GENR)+" "+str(GEANT)+" "+str(SMEAR)+" "+str(RECON)+" "+str(CLEANGENR)+" "+str(CLEANGEANT)+" "+str(CLEANSMEAR)+" "+str(CLEANRECON)+" "+str(BATCHSYS).upper()+" "+str(NCORES).split(':')[-1]+" "+str(GENERATOR)+" "+str(GEANTVER)+" "+str(BGFOLD)+" "+str(CUSTOM_GCONTROL)+" "+str(eBEAM_ENERGY)+" "+str(COHERENT_PEAK)+" "+str(MIN_GEN_ENERGY)+" "+str(MAX_GEN_ENERGY)+" "+str(TAGSTR)+" "+str(CUSTOM_PLUGINS)+" "+str(PERFILE)+" "+str(RUNNING_DIR)+" "+str(ccdbSQLITEPATH)+" "+str(rcdbSQLITEPATH)+" "+str(BGTAGONLY)+" "+str(RADIATOR_THICKNESS)+" "+str(BGRATE)+" "+str(RANDBGTAG)+" "+str(RECON_CALIBTIME)+" "+str(NOSECONDARIES)+" "+str(MCWRAPPER_VERSION)+" "+str(NOSIPMSATURATION)+" "+str(FLUX_TO_GEN)+" "+str(FLUX_HIST)+" "+str(POL_TO_GEN)+" "+str(POL_HIST)+" "+str(eBEAM_CURRENT)
                
                         #either call MakeMC.csh or add a job depending on swif flag
                         if BATCHRUN == 0 or BATCHSYS=="NULL":
@@ -984,6 +1033,8 @@ def main(argv):
                                                 OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
                                         elif BATCHSYS.upper()=="SLURM":
                                                 SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
+                                        elif BATCHSYS.upper()=="JSLURM":
+                                                JSUB_add_job(VERBOSE, WORKFLOW, PROJECT, TRACK, RUNNUM, BASEFILENUM+FILENUM+-1, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
 
                                         
         if BATCHRUN == 1 and BATCHSYS.upper() == "SWIF":
