@@ -124,9 +124,9 @@ def RetryJobsFromProject(ID, countLim):
             #print row["Status"]
             #print row["ExitCode"]
             #print "=========================="
-            if(row["Status"] == "4" and row["ExitCode"] != 0) or row["Status"] == "3" or row["Status"]=="5":
+            if (row["Status"] == "4" and row["ExitCode"] != 0) or row["Status"] == "3" or row["Status"]=="5":
                 if ( countLim ):
-                    countq="SELECT Count(Job_ID) from Attempts where Job_ID="+row["Job_ID"]
+                    countq="SELECT Count(Job_ID) from Attempts where Job_ID="+str(row["Job_ID"])
                     curs.execute(countq)
                     count=curs.fetchall()
                     if int(count[0]["Count(Job_ID)"]) > 3 :

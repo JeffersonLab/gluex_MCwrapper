@@ -8,9 +8,22 @@ fi
 
 if [[ `ps all -u tbritton | grep MCMover.csh | grep -v grep | wc -l` == 2 ]]; then
     echo "moving"
-    rsync -ruvt --remove-source-files /osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/ /lustre/expphy/cache/halld/halld-scratch/REQUESTED_MC/
- #   echo "cleaning"
- #   find /osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/* -type d -empty -print -delete
+    input_dir=/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT
+    output_dir=/cache/halld/halld-scratch/REQUESTED_MC/
+    rsync_command="rsync -ruvt $input_dir/ $output_dir/"
+    echo rsync_command = $rsync_command
+    status="255"
+    while [ "$status" -eq "255" ]
+    do
+        $rsync_command
+        status="$?"
+        echo status = $status
+        sleep 1
+    done
+    cd $input_dir
+    find . -type f -mmin +120 | sort > /tmp/input_files_list.txt
+    find $output_dir -type f | sort > /tmp/output_files_list.txt
+    #comm -12 /tmp/input_files_list.txt /tmp/output_files_list.txt | xargs rm -v
     
 else
     echo "too many running"
