@@ -243,7 +243,7 @@ def UpdateOutputSize():
             location=Project[0]["FinalDestination"]
 
         try:
-            statuscommand="du -sh --total "+location
+            statuscommand="du -sh --exclude \".*\" --total "+location
             #print statuscommand
             totalSizeStr=subprocess.check_output([statuscommand], shell=True)
             #print "==============="
