@@ -53,9 +53,7 @@ except:
         pass
 
 def DroneDo():
-    sys.path.append("/apps/bin")
-    python_source="source /osgpool/halld/tbritton/local_setup.sh"
-    retcode=subprocess.call(python_source.split(" "))
+
     drone_directive=os.environ["MCWRAPPER_CENTRAL"]+"/Utilities/MCDispatcher.py autolaunch"
     retcode=subprocess.call(drone_directive.split(" "))
 
