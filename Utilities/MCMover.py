@@ -53,9 +53,8 @@ except:
         pass
 
 def DroneDo():
+    retcode=subprocess.check_output(["/osgpool/halld/tbritton/gluex_MCwrapper/Utilities/MCMover.csh"],shell=True)
 
-    drone_directive="/w/halld-scifs17exp/halld2/home/tbritton/GlueX_Software/gluex_MCwrapper/Utilities/MCDrone.csh"
-    retcode=subprocess.call(drone_directive.split(" "))
 
 
 def main(argv):
