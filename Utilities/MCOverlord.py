@@ -417,7 +417,7 @@ def main(argv):
         numprocesses_running=subprocess.check_output(["echo `ps all -u tbritton | grep MCOverlord.py | grep -v grep | wc -l`"], shell=True)
 
         print int(numprocesses_running)
-        if(int(numprocesses_running) <3 or numOverRide):
+        if(int(numprocesses_running) <2 or numOverRide):
             dbcursor.execute("INSERT INTO MCOverlord (Host,StartTime,Status) VALUES ('"+str(socket.gethostname())+"', NOW(), 'Running' )")
             dbcnx.commit()
             queryoverlords="SELECT MAX(ID) FROM MCOverlord;"
@@ -429,10 +429,10 @@ def main(argv):
                 checkOSG()
                 UpdateOutputSize()
                 checkProjectsForCompletion()
-                dbcursor.execute("UPDATE MCOverlord SET EndTime=NOW(), Status='Success' where ID="+str(lastid[0]["MAX(ID)"]))
+                dbcursor.execute("UPDATE MCOverlord SET EndTime=NOW(), Status=\"Success\" where ID="+str(lastid[0]["MAX(ID)"]))
                 dbcnx.commit()
             except:
-                dbcursor.execute("UPDATE MCOverlord SET Status='Fail' where ID="+str(lastid[0]["MAX(ID)"]))
+                dbcursor.execute("UPDATE MCOverlord SET Status=\"Fail\" where ID="+str(lastid[0]["MAX(ID)"]))
                 dbcnx.commit()
                 pass
 
