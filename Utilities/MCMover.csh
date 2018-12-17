@@ -24,7 +24,9 @@ if [[ `ps all -u tbritton | grep MCMover.csh | grep -v grep | wc -l` == 2 ]]; th
     find . -type f | sort > /tmp/output_files_list.txt
     cd $input_dir
     find . -type f -mmin +120 | sort > /tmp/input_files_list.txt
-    comm -12 /tmp/input_files_list.txt /tmp/output_files_list.txt | xargs rm -v
+    if [[ `comm -12 /tmp/input_files_list.txt /tmp/output_files_list.txt | wc -l` != 0 ]]; then
+        comm -12 /tmp/input_files_list.txt /tmp/output_files_list.txt | xargs rm -v
+    fi
     
 else
     echo "too many running"
