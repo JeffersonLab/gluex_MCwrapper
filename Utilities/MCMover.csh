@@ -6,7 +6,7 @@ if [[ -f /osgpool/halld/tbritton/.ALLSTOP ]]; then
     echo "ALL STOP DETECTED"
 fi
 
-if [[ `ps all -u tbritton | grep MCMover.csh | grep -v grep | wc -l` == 2 ]]; then
+if [[ `ps all -u tbritton | grep MCMover.csh | grep -v grep | wc -l` ==2 ]]; then
     echo "moving"
     input_dir=/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT
     output_dir=/cache/halld/halld-scratch/REQUESTED_MC/
@@ -20,10 +20,10 @@ if [[ `ps all -u tbritton | grep MCMover.csh | grep -v grep | wc -l` == 2 ]]; th
         echo status = $status
         sleep 1
     done
-    cd $input_dir
-    find . -type f -mmin +120 | sort > /tmp/input_files_list.txt
     cd $output_dir
     find . -type f | sort > /tmp/output_files_list.txt
+    cd $input_dir
+    find . -type f -mmin +120 | sort > /tmp/input_files_list.txt
     comm -12 /tmp/input_files_list.txt /tmp/output_files_list.txt | xargs rm -v
     
 else
