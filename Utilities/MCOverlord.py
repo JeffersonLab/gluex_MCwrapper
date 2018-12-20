@@ -53,12 +53,22 @@ except:
         pass
 
 def checkProjectsForCompletion():
-    OutstandingProjectsQuery="SELECT ID FROM Project WHERE Completed_Time IS NULL && Is_Dispatched != '0' && Notified is NULL"
+    OutstandingProjectsQuery="SELECT ID,OutputLocation FROM Project WHERE Completed_Time IS NULL && Is_Dispatched != '0' && Notified is NULL"
     dbcursor.execute(OutstandingProjectsQuery)
     OutstandingProjects=dbcursor.fetchall()
 
+    outdir_root="/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/"
+
     for proj in OutstandingProjects:
         #print proj['ID']
+        locparts=proj['OutputLocation'].split("/")
+
+        #print("~~~~~~~~~~~~~~~~~~")
+        #print locparts[len(locparts)-2]
+        filesToMove = sum([len(files) for r, d, files in os.walk(outdir_root+locparts[len(locparts)-2])])
+        #print cpt
+
+        
         TOTCompletedQuery ="SELECT DISTINCT ID From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1 && ID in (SELECT DISTINCT Job_ID FROM Attempts WHERE ExitCode = 0 && (Status ='4' || Status='success')  && ExitCode IS NOT NULL);" 
         dbcursor.execute(TOTCompletedQuery)
         fulfilledJobs=dbcursor.fetchall()
@@ -71,8 +81,9 @@ def checkProjectsForCompletion():
         print len(fulfilledJobs)
         print len(AllActiveJobs)
         
-        if(len(fulfilledJobs)==len(AllActiveJobs) and len(AllActiveJobs) != 0):
+        if(len(fulfilledJobs)==len(AllActiveJobs) and len(AllActiveJobs) != 0 and filesToMove ==0):
             #print("DONE")
+
             getFinalCompleteTime="SELECT MAX(Completed_Time) FROM Attempts WHERE Job_ID IN (SELECT ID FROM Jobs WHERE Project_ID="+str(proj['ID'])+");"
             #print getFinalCompleteTime
             dbcursor.execute(getFinalCompleteTime)
