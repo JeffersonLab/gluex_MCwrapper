@@ -625,7 +625,7 @@ if [[ "$GENR" != "0" ]]; then
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
 
 		replacementNum=`grep TEMPCOHERENT ./$STANDARD_NAME.conf | wc -l`
-		if [[ "$polarization_angle" == "-1.0" && "$COHERENT_PEAK" == "0." && $replacementNum != 0 ]]; then
+		if [[ "$polarization_angle" == "-1.0" && "$COHERENT_PEAK" == "0." && $replacementNum != 0 && "1"=="0" ]]; then
 			echo "Running genr8 with an AMO run number without supplying the energy desired to COHERENT_PEAK causes an inifinite loop."
 			echo "Please specify the desired energy via the COHERENT_PEAK parameter and retry."
 			exit 1

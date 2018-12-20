@@ -236,7 +236,7 @@ def CheckGenConfig(order):
     #print fileSTR
     if(os.path.isfile(fileSTR)==False and socket.gethostname() == "scosg16.jlab.org" ):
         copyTo="/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"
-        subprocess.call("scp tbritton@ifarm1402:"+fileSTR+" "+copyTo+str(ID)+"_"+name,shell=True)
+        subprocess.call("scp tbritton@ifarm:"+fileSTR+" "+copyTo+str(ID)+"_"+name,shell=True)
         #subprocess.call("rsync -ruvt ifarm1402:"+fileSTR+" "+copyTo,shell=True)
         order["Generator_Config"]=copyTo+name
         return copyTo+str(ID)+"_"+name
