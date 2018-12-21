@@ -35,7 +35,7 @@ def AutoLaunch():
     #print "in autolaunch"
     RetryAllJobs()
 
-    query = "SELECT ID,Email,VersionSet,Tested FROM Project WHERE Tested != -1 && Dispatched_Time is NULL;"
+    query = "SELECT ID,Email,VersionSet,Tested,UName FROM Project WHERE Tested != -1 && Dispatched_Time is NULL ORDER BY (SELECT Priority from Users where name=UName) DESC;"
     #print query
     curs.execute(query) 
     rows=curs.fetchall()
