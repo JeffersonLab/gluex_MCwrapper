@@ -96,7 +96,7 @@ def checkProjectsForCompletion():
             dbcursor.execute(updateProjectstatus)
             dbcnx.commit()
 
-            subprocess.call("echo 'Your Project ID "+str(proj['ID'])+" has been completed.  Output may be found: \n\n"+proj['OutputLocation']+"' | mail -s 'GlueX MC Request #"+str(row['ID'])+" Completed' "+str(row['Email']),shell=True)
+            subprocess.call("echo 'Your Project ID "+str(proj['ID'])+" has been completed.  Output may be found: \n\n"+proj['OutputLocation']+"' | mail -s 'GlueX MC Request #"+str(proj['ID'])+" Completed' "+str(proj['Email']),shell=True)
             sql_notified = "UPDATE Project Set Notified=1 WHERE ID="+str(proj['ID'])
             dbcursor.execute(sql_notified)
             dbcnx.commit()
