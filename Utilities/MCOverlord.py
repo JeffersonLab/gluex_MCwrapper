@@ -53,7 +53,7 @@ except:
         pass
 
 def checkProjectsForCompletion():
-    OutstandingProjectsQuery="SELECT ID,OutputLocation FROM Project WHERE Completed_Time IS NULL && Is_Dispatched != '0' && Notified is NULL"
+    OutstandingProjectsQuery="SELECT ID,OutputLocation,Email FROM Project WHERE Is_Dispatched != '0' && Notified is NULL"
     dbcursor.execute(OutstandingProjectsQuery)
     OutstandingProjects=dbcursor.fetchall()
 
@@ -82,7 +82,7 @@ def checkProjectsForCompletion():
         print len(AllActiveJobs)
         
         if(len(fulfilledJobs)==len(AllActiveJobs) and len(AllActiveJobs) != 0 and filesToMove ==0):
-            #print("DONE")
+            print("DONE")
 
             getFinalCompleteTime="SELECT MAX(Completed_Time) FROM Attempts WHERE Job_ID IN (SELECT ID FROM Jobs WHERE Project_ID="+str(proj['ID'])+");"
             #print getFinalCompleteTime
@@ -91,12 +91,13 @@ def checkProjectsForCompletion():
             #print "============"
             #print finalTimeRes[0]["MAX(Completed_Time)"]
             updateProjectstatus="UPDATE Project SET Completed_Time="+"'"+str(finalTimeRes[0]["MAX(Completed_Time)"])+"'"+ " WHERE ID="+str(proj['ID'])+";"
-            #print updateProjectstatus
+            print updateProjectstatus
             #print "============"
             dbcursor.execute(updateProjectstatus)
             dbcnx.commit()
 
-            subprocess.call("echo 'Your Project ID "+str(proj['ID'])+" has been completed.  Output may be found:\n"+proj['OutputLocation']+"' | mail -s 'GlueX MC Request #"+str(proj['ID'])+" Completed' "+str(proj['Email']),shell=True)
+            #print "echo 'Your Project ID "+str(proj['ID'])+" has been completed.  Output may be found:\n"+proj['OutputLocation']+"' | mail -s 'GlueX MC Request #"+str(proj['ID'])+" Completed' "+str(proj['Email'])
+            subprocess.call("echo 'Your Project ID "+str(proj['ID'])+" has been completed.  Output may be found here:\n"+proj['OutputLocation']+"' | mail -s 'GlueX MC Request #"+str(proj['ID'])+" Completed' "+str(proj['Email']),shell=True)
             sql_notified = "UPDATE Project Set Notified=1 WHERE ID="+str(proj['ID'])
             dbcursor.execute(sql_notified)
             dbcnx.commit()
