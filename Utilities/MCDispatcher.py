@@ -445,6 +445,7 @@ def DispatchToSWIF(ID,order,PERCENT):
 def WritePayloadConfig(order,foundConfig):
     
     MCconfig_file= open("MCDispatched.config","a")
+    MCconfig_file.write("PROJECT="+str(order["Exp"]))+"\n")
     splitlist=order["OutputLocation"].split("/")
     MCconfig_file.write("WORKFLOW_NAME="+splitlist[len(splitlist)-2]+"\n")
     MCconfig_file.write(order["Config_Stub"]+"\n")

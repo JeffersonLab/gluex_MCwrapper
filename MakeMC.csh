@@ -110,6 +110,8 @@ shift
 setenv POL_HIST $1
 shift
 setenv eBEAM_CURRENT $1
+shift
+setenv EXPERIMENT $1
 
 setenv USER_BC `which bc`
 setenv USER_PYTHON `which python`
@@ -317,6 +319,7 @@ endif
 
 # PRINT INPUTS
 echo "Job started: " `date`
+echo "Simulating the Experiment: " $EXPERIMENT
 echo "ccdb sqlite path: " $ccdbSQLITEPATH $CCDB_CONNECTION
 echo "rcdb sqlite path: " $rcdbSQLITEPATH $RCDB_CONNECTION
 echo "Producing file number: "$FILE_NUMBER

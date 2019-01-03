@@ -109,6 +109,8 @@ shift
 export POL_HIST=$1
 shift
 export eBEAM_CURRENT=$1
+shift
+export EXPERIMENT=$1
 
 export USER_BC=`which bc`
 export USER_PYTHON=`which python`
@@ -322,6 +324,7 @@ fi
 
 # PRINT INPUTS
 echo "Job started: " `date`
+echo "Simulating the Experiment: " $EXPERIMENT
 echo "ccdbsqlite path: " $ccdbSQLITEPATH $CCDB_CONNECTION
 echo "rcdbsqlite path: " $rcdbSQLITEPATH $RCDB_CONNECTION
 echo "Producing file number: "$FILE_NUMBER
