@@ -267,14 +267,14 @@ setenv COHERENT_PEAK $copeak
 #echo $copeak
 #set copeak=`rcnd $RUN_NUMBER coherent_peak | awk '{print $1}' | sed 's/\.//g' #| awk -vFS="" -vOFS="" '{$1=$1"."}1' `
 
-if ( ( "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" ) && "$COHERENT_PEAK" == "rcdb" ) then
+if ( ( "$VERSION" != "mc" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_workfest2018" ) && "$COHERENT_PEAK" == "rcdb" ) then
 	echo "error in requesting rcdb for the coherent peak and not using variation=mc"
 	exit 1
 endif
 
 setenv eBEAM_ENERGY $elecE
 
-if ( ( "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" ) && "$eBEAM_ENERGY" == "rcdb" ) then
+if ( ( "$VERSION" != "mc" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_workfest2018" ) && "$eBEAM_ENERGY" == "rcdb" ) then
 	echo "error in requesting rcdb for the electron beam energy and not using variation=mc"
 	exit 1
 endif
