@@ -446,6 +446,10 @@ def WritePayloadConfig(order,foundConfig):
     
     MCconfig_file= open("MCDispatched.config","a")
     MCconfig_file.write("PROJECT="+str(order["Exp"])+"\n")
+
+    if str(order["Exp"]) == "CPP":
+        MCconfig_file.write("VARIATION=mc_cpp"+"\n")
+
     splitlist=order["OutputLocation"].split("/")
     MCconfig_file.write("WORKFLOW_NAME="+splitlist[len(splitlist)-2]+"\n")
     MCconfig_file.write(order["Config_Stub"]+"\n")

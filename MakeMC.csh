@@ -383,8 +383,16 @@ exit 1
 endif
 
 if ( "$CUSTOM_GCONTROL" == "0" ) then
-	echo $MCWRAPPER_CENTRAL
-    cp $MCWRAPPER_CENTRAL/Gcontrol.in ./temp_Gcontrol.in
+	#echo $MCWRAPPER_CENTRAL
+
+	if ( "$EXPERIMENT" == "GlueX" ) then
+		cp $MCWRAPPER_CENTRAL/Gcontrol.in ./temp_Gcontrol.in
+	else if ( "$EXPERIMENT" == "CPP" ) then
+		cp $MCWRAPPER_CENTRAL/Gcontrol_cpp.in ./temp_Gcontrol.in
+	else
+		cp $MCWRAPPER_CENTRAL/Gcontrol.in ./temp_Gcontrol.in
+	endif
+	
     chmod 777 ./temp_Gcontrol.in
 else
     cp $CUSTOM_GCONTROL ./temp_Gcontrol.in
