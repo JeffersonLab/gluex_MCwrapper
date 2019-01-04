@@ -183,7 +183,7 @@ current_files=`find . -maxdepth 1 -type f`
 
 radthick="50.e-6"
 
-if [[ "$RADIATOR_THICKNESS" != "rcdb" || "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" ]]; then
+if [[ "$RADIATOR_THICKNESS" != "rcdb" || "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" ]]; then
 	radthick=$RADIATOR_THICKNESS
 else
 	words=`rcnd $RUN_NUMBER radiator_type | sed 's/ / /g' `
@@ -232,7 +232,7 @@ ccdbelece="`ccdb dump PHOTON_BEAM/endpoint_energy:${RUN_NUMBER}:${variation} | g
 elecE_text="$ccdbelece" #`echo ${ccdblist[$(($ccdblist_length-1))]}`
 #elecE_text=`rcnd $RUN_NUMBER beam_energy | awk '{print $1}'`
 
-if [[ "$eBEAM_ENERGY" != "rcdb" || "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" ]]; then
+if [[ "$eBEAM_ENERGY" != "rcdb" || "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" ]]; then
     elecE=$eBEAM_ENERGY
 elif [[ $elecE_text == "Run" ]]; then
 	elecE=12
@@ -249,7 +249,7 @@ copeak_text=`rcnd $RUN_NUMBER coherent_peak | awk '{print $1}'`
 if [[ "$COHERENT_PEAK" != "rcdb" && "$polarization_angle" == "-1.0" ]]; then
 copeak=$COHERENT_PEAK
 else
-	if [[ "$COHERENT_PEAK" != "rcdb" || "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" ]]; then
+	if [[ "$COHERENT_PEAK" != "rcdb" || "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" ]]; then
     	copeak=$COHERENT_PEAK
 	elif [[ $copeak_text == "Run" ]]; then
 		copeak=9
@@ -303,7 +303,7 @@ fi
 
 BGRATE_toUse=$BGRATE
 
-if [[ "$BGRATE" != "rcdb" || "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" ]]; then
+if [[ "$BGRATE" != "rcdb" || "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" ]]; then
     BGRATE_toUse=$BGRATE
 else
 	if [[ $BGTAGONLY_OPTION == "1" || $BKGFOLDSTR == "BeamPhotons" ]]; then
