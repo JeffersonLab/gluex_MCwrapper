@@ -10,7 +10,7 @@ if [[ `ps all -u tbritton | grep MCMover.csh | grep -v grep | wc -l` == 2 ]]; th
     echo "moving"
     input_dir=/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT
     output_dir=/cache/halld/halld-scratch/REQUESTED_MC/
-    rsync_command="rsync -ruvt $input_dir/ $output_dir/"
+    rsync_command="rsync -pruvt $input_dir/ $output_dir/"
     echo rsync_command = $rsync_command
     status="255"
     while [ "$status" -eq "255" ]
