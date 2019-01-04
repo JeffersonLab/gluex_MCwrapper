@@ -392,7 +392,7 @@ if ( "$CUSTOM_GCONTROL" == "0" ) then
 	else
 		cp $MCWRAPPER_CENTRAL/Gcontrol.in ./temp_Gcontrol.in
 	endif
-	
+
     chmod 777 ./temp_Gcontrol.in
 else
     cp $CUSTOM_GCONTROL ./temp_Gcontrol.in
@@ -1136,6 +1136,10 @@ if ( "$GENR" != "0" ) then
     
 	    if ( "$RECON" != "0" ) then
 			echo "RUNNING RECONSTRUCTION"
+			set additional_hdroot=""
+			if ( "$EXPERIMENT" == "CPP" ) then
+				set additional_hdroot="-PKALMAN:ADD_VERTEXT_POINT=1"
+			endif
 
 			if ( "$RECON_CALIBTIME" != "notime" ) then
 				set reconwholecontext = "variation=$VERSION calibtime=$RECON_CALIBTIME"
@@ -1144,7 +1148,7 @@ if ( "$GENR" != "0" ) then
 			if ( "$recon_pre" == "file" ) then
 		   		echo "using config file: "$jana_config_file
 				
-		   		hd_root ./$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' --config=jana_config.cfg -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500
+		   		hd_root ./$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' --config=jana_config.cfg -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 $additional_hdroot
 				set hd_root_return_code=$status
 				#echo "STATUS: " $hd_root_return_code
 				rm jana_config.cfg
@@ -1164,7 +1168,7 @@ if ( "$GENR" != "0" ) then
 		   		set PluginStr=`echo $PluginStr | sed -r 's/.{1}$//'`
 		   		echo "Running hd_root with:""$PluginStr"
 		   		echo "hd_root ""$STANDARD_NAME"'_geant'"$GEANTVER"'_smeared.hddm'" -PPLUGINS=""$PluginStr ""-PNTHREADS=""$NUMTHREADS"
-		   		hd_root ./$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' -PPLUGINS=$PluginStr -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500
+		   		hd_root ./$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' -PPLUGINS=$PluginStr -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 $additional_hdroot
 		    	set hd_root_return_code=$status
 				
 			endif
