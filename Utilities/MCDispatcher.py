@@ -464,6 +464,9 @@ def WritePayloadConfig(order,foundConfig):
     MCconfig_file.write("GEN_MIN_ENERGY="+MinE+"\n")
     MCconfig_file.write("GEN_MAX_ENERGY="+MaxE+"\n")
 
+    if order["ChoherentPeak"] is not None :
+        MCconfig_file.write("COHERENT_PEAK="+str(order["ChoherentPeak"])+"\n")
+
     if str(order["Generator"]) == "file:":
         if foundConfig == "True":
             MCconfig_file.write("GENERATOR="+str(order["Generator"])+"/"+str(order["Generator_Config"])+"\n")
