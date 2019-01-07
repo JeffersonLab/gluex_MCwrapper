@@ -1151,7 +1151,7 @@ if [[ "$GENR" != "0" ]]; then
 
 		additional_hdroot=""
 		if [[ "$EXPERIMENT" == "CPP" ]]; then
-			additional_hdroot="-PKALMAN:ADD_VERTEXT_POINT=1"
+			additional_hdroot="-PKALMAN:ADD_VERTEX_POINT=1"
 		fi
 		if [[ "$RECON_CALIBTIME" != "notime" ]]; then
 				reconwholecontext="variation=$VERSION calibtime=$RECON_CALIBTIME"

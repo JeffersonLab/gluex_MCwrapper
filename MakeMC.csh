@@ -1138,7 +1138,7 @@ if ( "$GENR" != "0" ) then
 			echo "RUNNING RECONSTRUCTION"
 			set additional_hdroot=""
 			if ( "$EXPERIMENT" == "CPP" ) then
-				set additional_hdroot="-PKALMAN:ADD_VERTEXT_POINT=1"
+				set additional_hdroot="-PKALMAN:ADD_VERTEX_POINT=1"
 			endif
 
 			if ( "$RECON_CALIBTIME" != "notime" ) then
