@@ -70,7 +70,7 @@ def AutoLaunch():
         else:
             #EMAIL FAIL AND LOG
             print "echo 'Your Project ID "+str(row['ID'])+" failed the to properly test.  The log information is reproduced below:\n\n\n"+status[0]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+str(row['Email'])
-            subprocess.call("echo 'Your Project ID "+str(row['ID'])+" failed the test.  Please correct this issue: "+"https://halldweb.jlab.org/gluex_sim/SubmitSim_DEV_new.html?prefill="+str(row['ID'])+"&mod=1" +" .Do NOT resubmit this request.  Write tbritton@jlab.org for additional assistance\n\n The log information is reproduced below:\n\n\n"+status[0]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+str(row['Email']),shell=True)
+            subprocess.call("echo 'Your Project ID "+str(row['ID'])+" failed the test.  Please correct this issue by following the link: "+"https://halldweb.jlab.org/gluex_sim/SubmitSim_DEV_new.html?prefill="+str(row['ID'])+"&mod=1" +" .  Do NOT resubmit this request.  Write tbritton@jlab.org for additional assistance\n\n The log information is reproduced below:\n\n\n"+status[0]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+str(row['Email']),shell=True)
             #subprocess.call("echo 'Your Project ID "+str(row['ID'])+" failed the test.  Please correct this issue and do NOT resubmit this request.  Write tbritton@jlab.org for assistance or if you are ready for a retest.\n\n The log information is reproduced below:\n\n\n"+status[0]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+"tbritton@jlab.org",shell=True)
             #print status[0]
             
@@ -105,6 +105,16 @@ def RetryAllJobs():
     for row in rows:
         print "Retrying Project "+str(row["ID"])
         RetryJobsFromProject(row["ID"],True)
+
+def RemoveAllJobs():
+    query= "SELECT * FROM Attempts WHERE ID IN (SELECT Max(ID) FROM Attempts GROUP BY Job_ID) && Job_ID IN (SELECT ID FROM Jobs WHERE IsActive=1 && Project_ID="+str(ID)+");"
+    curs.execute(query) 
+    rows=curs.fetchall()
+    i=0
+    for row in rows:
+        if(row["BatchSystem"]=="OSG"):
+            print row["BatchJobID"]
+
 
 def RetryJobsFromProject(ID, countLim):
     query= "SELECT * FROM Attempts WHERE ID IN (SELECT Max(ID) FROM Attempts GROUP BY Job_ID) && Job_ID IN (SELECT ID FROM Jobs WHERE IsActive=1 && Project_ID="+str(ID)+");"
@@ -609,6 +619,8 @@ def main(argv):
         elif MODE == "AUTOLAUNCH":
             #print "AUTOLAUNCHING NOW"
             AutoLaunch()
+        elif MODE == "REMOVEJOBS"
+            RemoveAllJobs()
         else:
             print "MODE NOT FOUND"
 
