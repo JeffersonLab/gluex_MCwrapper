@@ -620,7 +620,7 @@ def main(argv):
         elif MODE == "AUTOLAUNCH":
             #print "AUTOLAUNCHING NOW"
             AutoLaunch()
-        elif MODE == "REMOVEJOBS"
+        elif MODE == "REMOVEJOBS":
             RemoveAllJobs()
         else:
             print "MODE NOT FOUND"
