@@ -56,6 +56,11 @@ def DroneDo():
 
     drone_directive=os.environ["MCWRAPPER_CENTRAL"]+"/Utilities/MCDispatcher.py autolaunch"
     retcode=subprocess.call(drone_directive.split(" "))
+    except subprocess.CalledProcessError as exc:
+            exit(1)
+    else:
+            pass
+
 
 
 def main(argv):
