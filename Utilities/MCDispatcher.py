@@ -459,6 +459,7 @@ def WritePayloadConfig(order,foundConfig):
 
     if str(order["Exp"]) == "CPP":
         MCconfig_file.write("VARIATION=mc_cpp"+"\n")
+        MCconfig_file.write("FLUX_TO_GEN=cobrems"+"\n")
 
     splitlist=order["OutputLocation"].split("/")
     MCconfig_file.write("WORKFLOW_NAME="+splitlist[len(splitlist)-2]+"\n")
