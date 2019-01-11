@@ -140,13 +140,13 @@ def RetryJobsFromProject(ID, countLim):
                     countq="SELECT Count(Job_ID) from Attempts where Job_ID="+str(row["Job_ID"])
                     curs.execute(countq)
                     count=curs.fetchall()
-                    if int(count[0]["Count(Job_ID)"]) > 3 :
+                    if int(count[0]["Count(Job_ID)"]) > 5 :
                         j=j+1
                         continue
                 RetryJob(row["Job_ID"])
                 i=i+1
     print "retried "+str(i)+" Jobs"
-    print str(j)+" jobs over restart limit of 3"
+    print str(j)+" jobs over restart limit of 5"
 
 #def DoMissingJobs(ID,SYS):
 #    query="SELECT ID FROM Jobs where ID NOT IN (SELECT Job_ID FROM Attempts) && IsActive=1 && Project_ID="+str(ID)+";"
