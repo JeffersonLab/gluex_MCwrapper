@@ -52,11 +52,13 @@ except:
         print "WARNING: CANNOT CONNECT TO DATABASE.  JOBS WILL NOT BE CONTROLLED OR MONITORED"
         pass
 
-def DroneDo():
+def DroneDo(id):
 
     drone_directive=os.environ["MCWRAPPER_CENTRAL"]+"/Utilities/MCDispatcher.py autolaunch"
     retcode=subprocess.call(drone_directive.split(" "))
     except subprocess.CalledProcessError as exc:
+            dbcursor.execute("UPDATE MCDrone SET Status='Fail' where ID="+str(id))
+            dbcnx.commit()
             exit(1)
     else:
             pass
@@ -86,7 +88,7 @@ def main(argv):
             lastid = dbcursor.fetchall()
             
             try:
-                DroneDo()
+                DroneDo(lastid[0]["MAX(ID)"])
                 dbcursor.execute("UPDATE MCDrone SET EndTime=NOW(), Status='Success' where ID="+str(lastid[0]["MAX(ID)"]))
                 dbcnx.commit()
             except:
