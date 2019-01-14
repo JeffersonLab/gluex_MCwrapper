@@ -69,11 +69,11 @@ def getTotalSizeOut():
     print("T")
 
 def getUserProjectPercent():
-    query= "SELECT Email From Project;"
+    query= "SELECT UName From Project;"
     curs.execute(query) 
     rows=curs.fetchall()
     userlist=[]
-
+    #print rows
     sum=0
     for proj in rows:
         #print proj['Email']
@@ -81,7 +81,7 @@ def getUserProjectPercent():
         found=False
         for user in userlist:
             #print user.split("_")[0]+" vs "+proj['Email']
-            if user.split("_")[0]==proj['Email']:
+            if user.split("_")[0]==proj['UName']:
                 #print "FOUND"
                 index=userlist.index(user)
                 found=True
@@ -89,7 +89,7 @@ def getUserProjectPercent():
                 break
 
         if not found:
-            userlist.append(proj['Email']+"_1")
+            userlist.append(proj['UName']+"_1")
 
     print(userlist)
 
