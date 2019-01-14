@@ -115,14 +115,15 @@ DAT.Globe = function(container, opts) {
     var n = d.getHours();
     console.log("n: ");
     console.log(n)
-    if(n<19)
+    uniforms['texture'].value = THREE.ImageUtils.loadTexture(imgDir+'world_color.jpg');
+    /*if(n<19)
     {
     uniforms['texture'].value = THREE.ImageUtils.loadTexture(imgDir+'day_night.png');
     }
     else
     {
       uniforms['texture'].value = THREE.ImageUtils.loadTexture(imgDir+'night_day.png');
-    }
+    }*/
     material = new THREE.ShaderMaterial({
 
           uniforms: uniforms,
@@ -321,7 +322,7 @@ DAT.Globe = function(container, opts) {
   }
 
   function onMouseUp(event) {
-    doAniRot=true;
+    doAniRot=false;
   
     container.removeEventListener('mousemove', onMouseMove, false);
     container.removeEventListener('mouseup', onMouseUp, false);
@@ -333,6 +334,7 @@ DAT.Globe = function(container, opts) {
     container.removeEventListener('mousemove', onMouseMove, false);
     container.removeEventListener('mouseup', onMouseUp, false);
     container.removeEventListener('mouseout', onMouseOut, false);
+  
   }
 
   function onMouseWheel(event) {

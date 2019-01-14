@@ -3,17 +3,18 @@
     <title>Active MC Dashboard by Thomas Britton</title>
 </head>
 
-<link rel="stylesheet" type="text/css" href="./animations.css"/>
-<link rel="stylesheet" type="text/css" href="./Dashboard2.css"/>
+<link rel="stylesheet" type="text/css" href="./css/animations.css"/>
+<link rel="stylesheet" type="text/css" href="./css/Dashboard.css"/>
 <link href="https://code.jquery.com/ui/1.10.4/themes/ui-lightness/jquery-ui.css" rel="stylesheet">
 <script src="../data_monitoring/js_utilities/jquery-3.3.1.min.js" type="text/javascript"></script>
 <script src="../data_monitoring/js_utilities/jquery-ui.js"></script>
 
 <script src="../data_monitoring/js_utilities/plotly-latest.min.js"></script>
 <!--<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>-->
-<link rel="stylesheet" type="text/css" href="./datatables.css"/>
-<link rel="stylesheet" type="text/css" href="./animations.css"/>
+<link rel="stylesheet" type="text/css" href="./css/datatables.css"/>
 <script type="text/javascript" src="../data_monitoring/js_utilities/datatables.min.js"></script>
+<script type="text/javascript" src="./js/fnFindCellRowIndexes.js"></script>
+
 <script src="js/three.min.js"></script>
 <script src="js/globe/globe.js"></script>
 
@@ -32,7 +33,8 @@ var result=[];
         var JobsDataSet=[];
         var JobsColumnDefs=[];
         var globe;
-    
+        var selected_Project=-1;
+
         var Attemptsresult= [];
         var AttemptsTable;
         var AttemptsDataSet=[];
@@ -50,7 +52,11 @@ var result=[];
             document.getElementById('condor_idle').src=newsource_idle
         },5000)
         
-        $(document).ready(QueryDatabase()); 
+        setInterval(function (){
+            GetHeartbeats();
+        },1000)
+        
+        $(document).ready(function(){checkForeman();QueryDatabase();GetHeartbeats();}); 
 
     $(document).ready(function() {
     try {
@@ -164,7 +170,7 @@ var result=[];
         
         toRet.push(countedsubIPs[i].lat)
         toRet.push(countedsubIPs[i].long)
-        toRet.push(3*countedsubIPs[i].count/denom)
+        toRet.push(2*countedsubIPs[i].count/denom)
         
         
 
@@ -179,6 +185,7 @@ function SetRunGlobe()
    { 
     
     var rglobe3d = document.getElementById("globe");
+    
     globe.renderer.dispose()
     disposeHierarchy (globe.points, disposeNode);
     disposeHierarchy (globe, disposeNode);
@@ -261,11 +268,145 @@ function startFocusOut(){
   $(document).off("click");
   });
 }
+
+function getTimestampFromDate(date_str)
+{
+    var s = date_str;
+    var a = s.split(/[^0-9]/);
+    
+    var d=new Date (a[0],a[1]-1,a[2],a[3],a[4],a[5] );
+    return d.getTime()
+}
+
+function GetHeartbeats()
+  {
+    
+        if (window.XMLHttpRequest) {
+            // code for IE7+, Firefox, Chrome, Opera, Safari
+            xmlhttp = new XMLHttpRequest();
+        } else {
+            // code for IE6, IE5
+            xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+        }
+        xmlhttp.onreadystatechange = function() {
+            if (this.readyState == 4 && this.status == 200) {
+                //console.log(this.responseText)
+                if(this.responseText != "")
+                {
+                    hist_table=JSON.parse(this.responseText);
+                    //console.log("HB TABLE");
+                    //console.log(hist_table)
+
+                    StatusLight("MCOverlord-hb",hist_table.MCOverlord,2);
+
+                    //Do DRONE
+                    StatusLight("MCDrone-hb",hist_table.MCDrone,1);
+                    
+                    //DO MOVER
+                    StatusLight("MCMover-hb",hist_table.MCMover,2);
+                    
+
+                }
+                
+            }
+        };
+        
+         
+        //console.log("mchb.php");
+        xmlhttp.open("GET","mchb.php",true);
+        xmlhttp.send();
+  }
+
+function StatusLight(light_name,poll_table,cron_freq)
+{
+    var LED=document.getElementById(light_name);
+    if(!LED || poll_table.length==0)
+    {
+        return;
+    }
+    //DO MOVER
+    Running=0;
+    Now=Date.now();
+    Recent=false;
+    for(var i=0;i<poll_table.length;i++)
+    {
+
+        //console.log(hist_table.MCOverlord[i].StartTime)
+        //console.log(Date.parse(hist_table.MCOverlord[i].StartTime))
+        if(poll_table[i].Status=="Success" || poll_table[i].Status=="Running" )
+        {
+            Running+=1;
+        }
+
+                        
+    }
+    if(Now-getTimestampFromDate(poll_table[0].StartTime)<1.3*cron_freq*60*1000 || poll_table[0].Status=="Running")
+        Recent=true;
+
+
+    if(poll_table[0].Status=="Running")
+    {
+        if(LED.className != "led-blink-green" )
+            { LED.className="led-blink-green"}
+        else
+            {LED.className="led-green" }
+    }
+    else if(Recent && Running == 5)
+    {
+        LED.className="led-green";
+    }
+    else if(Recent==false)
+    {
+        LED.className="led-red"
+    }
+    else{
+        if(poll_table[0].Status=="Running" && LED.className != "led-blink-green")
+        {
+            LED.className="led-blink-green"
+        }
+        else if(hist_table.MCMover[0].Status!="Running")
+        {
+            LED.className="led-red-blinking"
+        }
+    }
+}
+
+
+function checkForeman()
+{
+    if (window.XMLHttpRequest) {
+            // code for IE7+, Firefox, Chrome, Opera, Safari
+            xmlhttp = new XMLHttpRequest();
+        } else {
+            // code for IE6, IE5
+            xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+        }
+        xmlhttp.onreadystatechange = function() {
+            if (this.readyState == 4 && this.status == 200) {
+                //console.log(this.responseText)
+                if(this.responseText != "")
+                {
+                
+                foreman=parseInt(this.responseText);
+
+                }
+                
+            }
+        };
+        
+         
+
+        console.log("foreman.php");
+        xmlhttp.open("GET","foreman.php",true);
+        xmlhttp.send();
+}
+
 function QueryDatabase()
   {
-    $('#AttemptsTable').empty();
-    $('#JobsTable').empty();
       
+        $('#AttemptsTable').empty();
+        $('#JobsTable').empty();
+
         if (window.XMLHttpRequest) {
             // code for IE7+, Firefox, Chrome, Opera, Safari
             xmlhttp = new XMLHttpRequest();
@@ -280,10 +421,6 @@ function QueryDatabase()
                 if(this.responseText != "")
                 {
                 result=JSON.parse(this.responseText);
-                return_code=result[0]["return_code"];
-                if(return_code=="coh328nm9d9odhu5tgio48i")
-                    foreman=true;
-                result.shift();
 
                 result_to_use=result;
 
@@ -312,8 +449,8 @@ function QueryDatabase()
         
          
 
-        console.log("dat_mon_sql.php?Table=Project");
-        xmlhttp.open("GET","dat_mon_sql.php?Table=Project",true);
+        //console.log("dat_mon_sql.php?Table=ProjectF");
+        xmlhttp.open("GET","dat_mon_sql.php?Table=ProjectF",true);
         xmlhttp.send();
   }
   function DecodeGeos()
@@ -366,11 +503,6 @@ function QueryDatabase()
                 {
                 result=JSON.parse(this.responseText);
                 console.log(result)
-                return_code=result[0]["return_code"];
-                if(return_code=="coh328nm9d9odhu5tgio48i")
-                    foreman=true;
-                result.shift();
-
                 result_to_use=result;
 
                 runIPs=[]
@@ -398,7 +530,7 @@ function QueryDatabase()
         
          
 
-        console.log("dat_mon_sql.php?Table=RunMap&projID="+projID);
+        //console.log("dat_mon_sql.php?Table=RunMap&projID="+projID);
         xmlhttp.open("GET","dat_mon_sql.php?Table=RunMap&projID="+projID,true);
         xmlhttp.send();
   }
@@ -418,7 +550,7 @@ function QueryDatabase()
 
     if(table=="Project")
     {
-        MakeProjectTable(qresult);
+        MakeProjectTable();
     }
     else if( table == "Jobs")
     {
@@ -426,64 +558,156 @@ function QueryDatabase()
     }
   }
 
-  function MakeProjectTable(resultArray)
-  {
-    $('#ProjTable').empty();
-      ProjDataSet=[];
-      ProjColumnDefs=[];
 
-      if(resultArray.length > 0)
-      {
+function MakeProjectTable()
+{
 
-        for (var key in resultArray[0]) {
-            if( key == "Config_Stub" || key=="Submitter" || key =="Comments" || key=="Notified" || key=="UName" || key=="UIp")
-                continue;
-            
-            if( key == "GeantSecondaries" || key == "RunGeneration" || key == "SaveGeneration" || key == "RunGeant" || key == "SaveGeant" || key == "RunSmear" || key == "SaveSmear"|| key == "RunReconstruction" || key == "SaveReconstruction" )
-                continue;
-
-            if( key == "Generator_Config" || key == "Exp"|| key == "FinalDestination" || key == "GenMinE" || key == "GenMaxE" || key == "TotalSizeOut" || key == "ReactionLines" || key=="GeantVersion")
-                continue; 
-
-            ProjColumnDefs.push({title: key});
-            }
-        
-            for (i = 0; i < resultArray.length; i++) {
-                
-                var dataRow=[];
-                for (var key in resultArray[i]) {
-
-                    if( key == "Config_Stub" || key=="Submitter" || key =="Comments" || key=="Notified" || key=="UName" || key=="UIp")
-                        continue;
-
-                    if( key == "GeantSecondaries" || key == "RunGeneration" || key == "SaveGeneration" || key == "RunGeant" || key == "SaveGeant" || key == "RunSmear" || key == "SaveSmear"|| key == "RunReconstruction" || key == "SaveReconstruction" )
-                        continue;
-
-                    if( key == "Generator_Config" || key == "Exp"|| key == "FinalDestination" || key == "GenMinE" || key == "GenMaxE" || key == "TotalSizeOut" || key == "ReactionLines" || key=="GeantVersion")
-                        continue; 
-                    dataRow.push(resultArray[i][key]);
-                }
-                if(resultArray[i]["Notified"]!=1)
-                    ProjDataSet.push(dataRow);
-                }
-        
-               if ( $.fn.dataTable.isDataTable( '#ProjTable' ) ) {
-                ProjTable = $('#ProjTable').DataTable();
-                ProjTable.destroy();
-                $('#ProjTable').empty();
-                }
-                ProjTable=$('#ProjTable').DataTable({data: ProjDataSet , columns: ProjColumnDefs});
-                //$('#ProjTable').addClass('run-slideInLeft');
-                
-
-                $('#ProjTable').dataTable().on('click','td',function (e){DisplayJobs(e,this);DisplayAttempts(e,this)});
-                //ColorCells();
-   
-
-        }
+    ProjTable = $('#ProjTable').DataTable( {
+      ajax: "./dat_mon_sql2.php?Table=ProjectF",
+      columns: [
+        { title: "ID" , data: "ID" },
+        { title: "Email" , data: "Email" },
+        { title: "Submit_Time" , data: "Submit_Time" },
+        { title: "Tested" , data: "Tested" },
+        { title: "Is_Dispatched" , data: "Is_Dispatched" },
+        { title: "Dispatched_Time" , data: "Dispatched_Time" },
+        { title: "Completed_Time" , data: "Completed_Time" },
+        { title: "RunNumLow" , data: "RunNumLow" },
+        { title: "RunNumHigh" , data: "RunNumHigh" },
+        { title: "NumEvents" , data: "NumEvents" },
+        { title: "Generator" , data: "Generator" },
+        { title: "BKG" , data: "BKG" },
+        { title: "OutputLocation" , data: "OutputLocation" },
+        { title: "RCDBQuery" , data: "RCDBQuery" },
+        { title: "VersionSet" , data: "VersionSet" }
+      ]
+  } );
+  $('#ProjTable').dataTable().on('click','td',function (e){DisplayJobs(e,this);DisplayAttempts(e,this)});
+  Ani=true;
+   if(Ani)
+       $('#ProjTable').addClass("do-SlideInLeft");
+   else
+       $('#ProjTable').removeClass("do-SlideInLeft");
+  setInterval( function () {
+    ProjTable.ajax.reload(null, false);  // The second param, false, ensures that if the user is on a page, it doesn't go back to page 1 upon reload
+  }, 1000 );
+    
 }
 
-function MakeAttemptsTable(resultArray,projID)
+
+
+function MakeJobsTablenew(projID)
+  {
+      thetable=document.getElementById("JobsTable")
+    if(!thetable)
+      {
+          /*<div class="container" id="JobsContainer" >
+        
+        <font size="32" color="white">Jobs</font>*/
+    
+          var jobsTableCont=document.createElement("DIV")
+          var jobsTable=document.createElement("table")
+        
+          jobsTableCont.className="container table";
+          jobsTableCont.id="JobsContainer";
+
+           jobsTable.id="JobsTable";
+           jobsTable.className="dataTable addtable table"
+           var textnode=document.createTextNode("Jobs");
+           textnode.className="table-header"
+           var header=document.createElement("h1");
+           jobsTableCont.appendChild(document.createElement("hr"))
+           header.append(textnode)
+           jobsTableCont.appendChild(header);
+           jobsTableCont.appendChild(document.createElement("br"));
+           
+           jobsTableCont.appendChild( jobsTable);
+          document.getElementById("tableBlock").appendChild( jobsTableCont);
+      }
+      else
+      {
+        if ($.fn.dataTable.isDataTable( '#JobsTable' )) {
+          $('#JobsTable').DataTable().destroy();
+        }
+      }
+
+  jobsTable = $('#JobsTable').DataTable( {
+      ajax: "./dat_mon_sql2.php?Table=Jobs&projID=" + projID,
+      columns: [
+        { title: "ID" , data: "ID" },
+        { title: "Project_ID" , data: "Project_ID" },
+        { title: "Creation_Time" , data: "Creation_Time" },
+        { title: "RunNumber" , data: "RunNumber" },
+        { title: "NumEvts" , data: "NumEvts" },
+        { title: "FileNumber" , data: "FileNumber" },
+        { title: "IsActive" , data: "IsActive" }
+      ]
+  } );
+  setInterval( function () {
+    jobsTable.ajax.reload(null, false);  // The second param, false, ensures that if the user is on a page, it doesn't go back to page 1 upon reload
+  }, 2000 );
+}
+function MakeAttemptsTable(projID)
+  {
+      thetable=document.getElementById("AttemptsTable");
+    if(!thetable)
+      {
+          /*<div class="container" id="JobsContainer" >
+        
+        <font size="32" color="white">Jobs</font>*/
+    
+          var attTableCont=document.createElement("DIV")
+          var attTable=document.createElement("table")
+        
+          attTableCont.className="container table";
+          attTableCont.id="AttemptsContainer";
+
+           attTable.id="AttemptsTable";
+           attTable.className="dataTable addtable table"
+           var textnode=document.createTextNode("Attempts");
+           textnode.className="table-header"
+           var header=document.createElement("h1");
+           attTableCont.appendChild(document.createElement("hr"))
+           header.append(textnode)
+           attTableCont.appendChild(header);
+           attTableCont.appendChild(document.createElement("br"));
+           
+           attTableCont.appendChild( attTable);
+          document.getElementById("tableBlock").appendChild( attTableCont);
+      }
+      else
+      {
+        if ($.fn.dataTable.isDataTable( '#AttemptsTable' )) {
+          $('#AttemptsTable').DataTable().destroy();
+        }
+      }
+
+  attemptsTable = $('#AttemptsTable').DataTable( {
+      ajax: "./dat_mon_sql2.php?Table=Attempts&projID=" + projID,
+      columns: [
+        { title: "ID" , data: "ID" },
+        { title: "Job_ID" , data: "Job_ID" },
+        { title: "Creation_Time" , data: "Creation_Time" },
+        { title: "Start_Time" , data: "Start_Time" },
+        { title: "Completed_Time" , data: "Completed_Time" },
+        { title: "BatchSystem" , data: "BatchSystem" },
+        { title: "BatchJobID" , data: "BatchJobID" },
+        { title: "Status" , data: "Status" },
+        { title: "ExitCode" , data: "ExitCode" },
+        { title: "WallTime" , data: "WallTime" },
+        { title: "CPUTime" , data: "CPUTime" },
+        { title: "RAMUsed" , data: "RAMUsed" },
+        { title: "RunningLocation" , data: "RunningLocation" },
+        { title: "RunIP" , data: "RunIP" }
+      ]
+  } );
+  setInterval( function () {
+    attemptsTable.ajax.reload(null, false);  // The second param, false, ensures that if the user is on a page, it doesn't go back to page 1 upon reload
+  }, 1000 );
+  QueryDatabaseRunIP(projID);
+}
+
+function MakeAttemptsTableold(resultArray,projID)
   {
     
       AttemptsDataSet=[];
@@ -630,7 +854,7 @@ function MakeAttemptsTable(resultArray,projID)
 function DisplayJobs(e,obj)
 {
     var projID=obj.parentNode.childNodes[0].innerHTML;
-
+    selected_Project=parseInt(projID);
     
         if (window.XMLHttpRequest) {
             // code for IE7+, Firefox, Chrome, Opera, Safari
@@ -646,17 +870,17 @@ function DisplayJobs(e,obj)
                 if(this.responseText != "")
                 {
                 result=JSON.parse(this.responseText);
-                result.shift();
 
                 result_to_use=result;
-                MakeJobsTable(result_to_use)
+                //MakeJobsTable(result_to_use)
+                MakeJobsTablenew(projID)
                 //ColorCells();
                 }
                 
             }
         };
         
-        console.log("dat_mon_sql.php?Table=Jobs\&projID="+projID);
+       // console.log("dat_mon_sql.php?Table=Jobs\&projID="+projID);
         xmlhttp.open("GET","dat_mon_sql.php?Table=Jobs\&projID="+projID,true);
         xmlhttp.send();
 
@@ -680,17 +904,16 @@ function DisplayAttempts(e,obj)
                 if(this.responseText != "")
                 {
                 result=JSON.parse(this.responseText);
-                result.shift();
                 console.log(result);
                 result_to_use=result;
-                MakeAttemptsTable(result_to_use,projID)
+                MakeAttemptsTable(projID)
                 //ColorCells();
                 }
                 
             }
         };
         
-        console.log("dat_mon_sql.php?Table=Attempts\&projID="+projID);
+        //console.log("dat_mon_sql.php?Table=Attempts\&projID="+projID);
         xmlhttp.open("GET","dat_mon_sql.php?Table=Attempts\&projID="+projID,true);
         xmlhttp.send();
 }
@@ -728,48 +951,6 @@ function DoMenu(action)
         xmlhttp.open("GET","foreman_util.php?Mode="+action+"\&projID="+projID,true);
         xmlhttp.send();
             }
-    }
-}
-function ColorCells()
-{
-    if(ProjTable)
-    {
-    for(var r=0;r<ProjTable.rows()[0].length;r++)
-        {
-            for(var c=0;c<ProjTable.columns()[0].length;c++)
-            {
-                
-                    var thisCell=ProjTable.cell(r,c);
-                    
-                        $(thisCell).addClass('blackbkg')
-            }
-        }
-    }
-    if(JobsTable)
-    {
-    for(var r=0;r<JobsTable.rows()[0].length;r++)
-        {
-            for(var c=0;c<JobsTable.columns()[0].length;c++)
-            {
-                
-                    var thisCell=JobsTable.cell(r,c);
-                    
-                        $(JobsTable).addClass('blackbkg')
-            }
-        }
-    }
-    if(AttemptsTable)
-    {
-    for(var r=0;r<AttemptsTable.rows()[0].length;r++)
-        {
-            for(var c=0;c<AttemptsTable.columns()[0].length;c++)
-            {
-                
-                    var thisCell=AttemptsTable.cell(r,c);
-                    
-                        $(AttemptsTable).addClass('blackbkg')
-            }
-        }
     }
 }
 function disposeNode (node)
@@ -811,9 +992,7 @@ function disposeNode (node)
         }
     }
 }   // disposeNode
-function sleep (time) {
-  return new Promise((resolve) => setTimeout(resolve, time));
-}
+
 function disposeHierarchy (node, callback)
 {
     if(node)
@@ -835,17 +1014,49 @@ function disposeHierarchy (node, callback)
     </script>
 <body style="background-color:black" >
 
-<div class="news-ticker">
+<!--<div class="news-ticker" >
         <div class="ticker" id="tickerTexts">
                 <span class="ticker-holder">
-        <span id="ticker1"><strong></strong> Revamped output is live and will be monitored for a few projects before being let loose.</span>
+                    <span id="ticker1"><strong></strong> Possible edge cases have cause me to stop the automated mover for the time being.  Rest assured that system is operational, there may just be some delay in initial file moving.</span>
                     
                 </span>    
 
 
 </div>
+</div>-->
+<div class="header-block">
+<div class="header-menu">
+        <nav role="navigation">
+                <div id="menuToggle">
+                  <!--
+                  A fake / hidden checkbox is used as click reciever,
+                  so you can use the :checked selector on it.
+                  -->
+                  <input type="checkbox" />
+                  
+                  <!--
+                  Some spans to act as a hamburger.
+                  
+                  They are acting like a real hamburger,
+                  not that McDonalds stuff.
+                  -->
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                  
+                  <!--
+                  Too bad the menu has to be inside of the button
+                  but hey, it's pure CSS magic.
+                  -->
+                  <ul id="menu">
+                    <a href="https://halldweb.jlab.org/gluex_sim/SubmitSim.html"><li>Submit Form</li></a>
+                    <a href="https://halldweb.jlab.org/gluex_sim/Records.html"><li>Records</li></a>
+                    <a href="https://github.com/JeffersonLab/gluex_MCwrapper"><li>Github Repository</li></a>
+                    <a href="mailto: tbritton@jlab.org"><li>Contact Me</li></a>
+                  </ul>
+                </div>
+              </nav>
 </div>
-
 <div class="header-info">
         <div id="globe" width="1250">
 
@@ -860,47 +1071,47 @@ function disposeHierarchy (node, callback)
 
 </div>
 
-<div class="header-menu">
+<div class="header-hb">
     <div>
-    <img id="logo" src="./whitelogo.png" class="logo"  alt="logo" width="125" height="160" align="right">
-    </div>
-    <div>
-    <nav role="navigation">
-            <div id="menuToggle">
-              <!--
-              A fake / hidden checkbox is used as click reciever,
-              so you can use the :checked selector on it.
-              -->
-              <input type="checkbox" />
-              
-              <!--
-              Some spans to act as a hamburger.
-              
-              They are acting like a real hamburger,
-              not that McDonalds stuff.
-              -->
-              <span></span>
-              <span></span>
-              <span></span>
-              
-              <!--
-              Too bad the menu has to be inside of the button
-              but hey, it's pure CSS magic.
-              -->
-              <ul id="menu">
-                <a href="https://halldweb.jlab.org/gluex_sim/SubmitSim.html"><li>Submit Form</li></a>
-                <a href="https://halldweb.jlab.org/gluex_sim/Records.html"><li>Records</li></a>
-                <a href="https://github.com/JeffersonLab/gluex_MCwrapper"><li>Github Repo</li></a>
-                <a href="mailto: tbritton@jlab.org"><li>Contact Me</li></a>
-              </ul>
+    <img id="logo" src="./whitelogo.png" class="logo"  alt="logo" width="125" height="160" >
+        <br>
+        <br>
+
+        <div class="container">
+                <div class="led-box">
+                    <div class="led-green" id="MCDrone-hb">
+                            
+                    </div>
+                    <p>Dispatcher</p>
+                </div>
             </div>
-          </nav>
-        </div>
+            <br>
+            <hr>
+            <div class="container">
+                    <div class="led-box">
+                        <div class="led-green" id="MCOverlord-hb">
+                                
+                        </div>
+                        <p>Monitoring</p>
+                    </div>
+                </div>
+                <br>
+                <hr>
+            <div class="container">
+                    <div class="led-box">
+                        <div class="led-green" id="MCMover-hb">
+                                
+                        </div>
+                        <p>Data Mover</p>
+                    </div>
+                </div>
+</div>
+</div>
 </div>
 <div class="table-block" id="tableBlock">
 
     <div class="container table" id="ProjContainer" >
-           <font size="32" color="white"> Projects  </font> <input type="button" onClick="QueryDatabase()" value="Refresh tables">  
+           <font size="32" color="white"> Projects  </font> 
            <table cellpadding="0" cellspacing="0" border="1" class="dataTable table" id="ProjTable">
        
            </table>

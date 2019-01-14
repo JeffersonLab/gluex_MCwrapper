@@ -64,6 +64,7 @@ Initial Particles -----> Final State Particles <input type="button" id="addDecay
     var PartArray=[];
     PartArray.push({Particle:'γ', geantID: 1, pdgID: 22, sortID: 1 });
     PartArray.push({Particle:'p', geantID: 14, pdgID: 2212, sortID: 1014 });
+    PartArray.push({Particle:'Pb(208)', geantID: 111 , pdgID: 1000822080, sortID: 1111});
     PartArray.push({Particle:'X', geantID: 0, pdgID: 0, sortID: 1000000 });
 
     PartArray.push({Particle:'e\u207A', geantID: 2, pdgID: -11, sortID: 2});//e+
@@ -109,7 +110,7 @@ Initial Particles -----> Final State Particles <input type="button" id="addDecay
     // PartArray.push({Particle:'T', geantID: 46 , pdgID: 46, sortID: 1046}); -->
     // PartArray.push({Particle:'He', geantID: 47 , pdgID: 47, sortID: 1047}); -->
     // PartArray.push({Particle:'He3', geantID: 49 , pdgID: 49, sortID: 1049}); -->
-    // PartArray.push({Particle:'Pb208', geantID: 111 , pdgID: 1000822080, sortID: 1111}); -->
+
 
     PartArray.push({Particle:'J/Ψ', geantID: 83, pdgID: 443, sortID: 83});
     // PartArray.push({Particle:'eta_c', geantID: 84, pdgID: 441, sortID: 84}); -->
@@ -154,7 +155,7 @@ Initial Particles -----> Final State Particles <input type="button" id="addDecay
             
             for(var i=0;i<PartArray.length;i++ )
             {
-                if(trunc && i>1)
+                if(trunc && i>2)
                 {
                     continue;
                 }

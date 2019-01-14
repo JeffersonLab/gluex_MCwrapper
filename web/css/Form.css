@@ -1,0 +1,474 @@
+
+body
+{
+    background-color: black;
+}
+.switch-field {
+    font-family: "Lucida Grande", Tahoma, Verdana, sans-serif;
+    padding: 0px;
+      overflow: hidden;
+    margin-left:40%
+  }
+  
+  .switch-title {
+    margin-bottom: 6px;
+    margin-left:2%;
+  }
+  
+  .switch-field input {
+      position: absolute !important;
+      clip: rect(0, 0, 0, 0);
+      height: 1px;
+      width: 1px;
+      border: 0;
+      overflow: hidden;
+  }
+  
+  .switch-field label {
+    float: left;
+  }
+  
+  .switch-field label {
+    display: inline-block;
+    width: 60px;
+    background-color: #e4e4e4;
+    color: rgba(0, 0, 0, 0.6);
+    font-size: 14px;
+    font-weight: normal;
+    text-align: center;
+    text-shadow: none;
+    padding: 6px 14px;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    -webkit-box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px rgba(255, 255, 255, 0.1);
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px rgba(255, 255, 255, 0.1);
+    -webkit-transition: all 0.1s ease-in-out;
+    -moz-transition:    all 0.1s ease-in-out;
+    -ms-transition:     all 0.1s ease-in-out;
+    -o-transition:      all 0.1s ease-in-out;
+    transition:         all 0.1s ease-in-out;
+  }
+  
+  .hidden{
+    visibility: hidden;
+
+}
+
+.fadeInLeft-vis
+{
+    visibility: visible;
+    animation-name: fadeInLeft;
+    animation-duration: 1s;
+    animation-iteration-count: 1;
+    animation-fill-mode:both;
+}
+
+  .switch-field label:hover {
+      cursor: pointer;
+  }
+  
+  .switch-field input:checked + label {
+    background-color: #A5DC86;
+    -webkit-box-shadow: none;
+    box-shadow: none;
+  }
+  
+  .switch-field label:first-of-type {
+    border-radius: 4px 0 0 4px;
+  }
+  
+  .switch-field label:last-of-type {
+    border-radius: 0 4px 4px 0;
+  }
+
+html, body{
+    height:100%;
+    margin:0;
+    padding:0;
+}
+select
+{
+    font-size:20px;
+    margin-left:2%;
+}
+input
+{
+    font-size:20px;
+}
+#Form-pane
+{
+    background-color: #f2f2f2;
+    width:65%;
+    height:100%;
+    float:left;
+    position:relative;
+    animation-name: slideInLeft;
+    animation-duration: 1s;
+    animation-iteration-count: 1;
+    animation-fill-mode:both;
+    padding-bottom:20px;
+    overflow: scroll;
+    border-right: 12px;
+    border-color:black;
+    border-style: solid;
+    border-top-color: #f2f2f2;
+    top:0px;
+    border-top:0px;
+    
+}
+
+#Info-pane
+{
+    background-color:#f2f2f2;
+    width:34%;
+    height:75%;
+    float:right;
+    right:0;
+    visibility: visible;
+    position:fixed;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+    border-color:black;
+    border-left:12px;
+    margin-right:6px;
+    
+}
+.Confirm{
+                    
+    width: 50%;
+    background-color: rgb(80, 0, 0);
+    color: white;
+    padding: 14px 20px;
+    margin: 8px 0;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-left:20%
+
+}
+.Confirm:hover{
+    
+    
+    background-color: rgb(173, 0, 0);
+
+}
+.Update{
+                    
+    width: 50%;
+    background-color: rgb(0, 12, 80);
+    color: white;
+    padding: 14px 20px;
+    margin: 8px 0;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-left:20%
+
+}
+.Update:hover{
+    
+    
+    background-color: rgb(0, 12, 173);
+
+}
+.Submit {
+    width: 50%;
+    background-color: #4CAF50;
+    color: white;
+    padding: 14px 20px;
+    margin: 8px 0;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-left:20%
+}
+
+.Submit:hover {
+    background-color: #45a049;
+    animation-name: flash;
+    animation-duration: 1s;
+    animation-iteration-count: infitinite;
+}
+.Submit:active {
+    background-color: #45a049;
+    
+}
+#Form-header
+{
+    width:100%;
+    height:35%;
+    background-color:#f2f2f2;
+    visibility: visible;
+    float: left;
+    position:relative;
+
+    display:block;
+
+
+}
+input
+{
+    margin-left:2%;
+}
+#Form
+{
+    background:#f2f2f2;
+    height:100%;
+    float:left;
+    width:auto;
+    position:relative;
+    clear:both;
+    display:block;
+    padding-bottom:20px;
+    margin-bottom:20px;
+
+    
+}
+#maxRunNum
+{
+    margin-left:0;
+}
+#explogoh
+{
+    float:right;
+    width:66%;
+    position:relative;
+    
+}
+.logo
+{
+    width: auto;
+    height: 100%;
+    
+}
+.explogo
+{
+    width:auto;
+    height:50%;
+    
+
+
+}
+#form
+{
+    background:#f2f2f2;
+    height:65%;
+    float:left;
+    width:auto;
+    position:relative;
+    clear:both;
+   
+}
+#expSelector
+{
+    background:#f2f2f2;
+    width:auto;
+    height:20%;
+    visibility:visible;
+    position:relative;
+    display:block;
+    align-content:center;
+    
+}
+#logoh
+{
+    width:auto;
+    position: relative;
+}
+#logo {
+    margin-left: 0px;
+    margin-right: auto;
+    animation-name: rollIn;
+    animation-duration: 1s;
+    animation-iteration-count: 1;
+    animation-delay:1.2s;
+    animation-fill-mode:both;
+
+}
+.run-bounceInDown
+{
+    animation-name: bounceInDown;
+    animation-duration: 1s;
+    animation-iteration-count: 1;
+    animation-fill-mode:both;
+}
+label{
+    font-size: 18pt;
+}
+.run-fadeIn
+{
+    animation-name: fadeIn;
+    animation-duration: 1s;
+    animation-iteration-count: 1;
+    animation-fill-mode:both;
+
+}
+
+#explogo
+{
+    top: 0px;
+    right:0px;
+    position: absolute;
+
+    animation-name: fadeIn;
+    animation-duration: 1s;
+    animation-iteration-count: 1;
+    animation-delay:2s;
+    animation-fill-mode:both;
+}
+
+#menuToggle
+{
+  display: block;
+  position: relative;
+  float: left;
+  margin-left:12px;
+  margin-top:5px;
+  width:50px;
+  z-index: 2;
+  
+  -webkit-user-select: none;
+  user-select: none;
+  animation-name: fadeInLeft;
+    animation-duration: 1s;
+    animation-iteration-count: 1;
+    animation-fill-mode:both;
+}
+
+#menuToggle input
+{
+  display: block;
+  width: 40px;
+  height: 32px;
+  position: absolute;
+  top: -7px;
+  left: -5px;
+  
+  cursor: pointer;
+  
+  opacity: 0; /* hide this */
+  z-index: 2; /* and place it over the hamburger */
+  
+  -webkit-touch-callout: none;
+}
+
+/*
+ * Just a quick hamburger
+ */
+#menuToggle span
+{
+    
+  display: block;
+  width: 33px;
+  height: 4px;
+  margin-bottom: 5px;
+  margin-top:5px;
+  position: relative;
+  
+  background: black;
+  border-radius: 3px;
+  
+  z-index: 1;
+  
+  transform-origin: 4px 0px;
+  
+  transition: transform 0.5s cubic-bezier(0.77,0.2,0.05,1.0),
+              background 0.5s cubic-bezier(0.77,0.2,0.05,1.0),
+              opacity 0.55s ease;
+}
+
+#menuToggle span:first-child
+{
+  transform-origin: 0% 0%;
+}
+
+#menuToggle span:nth-last-child(2)
+{
+  transform-origin: 0% 100%;
+}
+
+/* 
+ * Transform all the slices of hamburger
+ * into a crossmark.
+ */
+#menuToggle input:checked ~ span
+{
+  opacity: 1;
+  transform: rotate(45deg) translate(-2px, -1px);
+  background: black;
+}
+
+/*
+ * But let's hide the middle one.
+ */
+#menuToggle input:checked ~ span:nth-last-child(3)
+{
+  opacity: 0;
+  transform: rotate(0deg) scale(0.2, 0.2);
+}
+
+/*
+ * Ohyeah and the last one should go the other direction
+ */
+#menuToggle input:checked ~ span:nth-last-child(2)
+{
+  transform: rotate(-45deg) translate(0, -1px);
+}
+
+/*
+ * Make this absolute positioned
+ * at the top left of the screen
+ */
+ #menu
+ {
+   position: relative;
+   width: 270px;
+   height:225px;
+   margin: -100px 0 0 -50px;
+   padding: 50px;
+   padding-top: 125px;
+   
+   background: #f2f2f2;
+   color:black;
+   list-style-type: none;
+   -webkit-font-smoothing: antialiased;
+   /* to stop flickering of text in safari */
+   
+   transform-origin: 0% 0%;
+   transform: translate(-100%, 0);
+   
+   transition: transform 0.5s cubic-bezier(0.77,0.2,0.05,1.0);
+ }
+
+#menu li
+{
+    padding: 10px 0;
+  font-size: 18px;
+  color: black;
+}
+
+a:link
+{ 
+    color:black;
+    text-decoration:none;
+} 
+a:visited
+{
+    text-decoration:none;
+}
+a:hover
+{
+    text-decoration-color: #0000FF;
+    color:#0000FF;
+}
+a:active
+{
+    color:rgb(54, 54, 54);
+}
+
+/*
+ * And let's slide it in from the left
+ */
+#menuToggle input:checked ~ ul
+{
+  transform: none;
+}

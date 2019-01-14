@@ -3,16 +3,15 @@
     <title>MCwrapper Records by Thomas Britton</title>
 </head>
 
-<link rel="stylesheet" type="text/css" href="./animations.css"/>
-<link rel="stylesheet" type="text/css" href="./Dashboard2.css"/>
+<link rel="stylesheet" type="text/css" href="./css/animations.css"/>
+<link rel="stylesheet" type="text/css" href="./css/Dashboard.css"/>
 <link href="https://code.jquery.com/ui/1.10.4/themes/ui-lightness/jquery-ui.css" rel="stylesheet">
 <script src="../data_monitoring/js_utilities/jquery-3.3.1.min.js" type="text/javascript"></script>
 <script src="../data_monitoring/js_utilities/jquery-ui.js"></script>
 
 <script src="../data_monitoring/js_utilities/plotly-latest.min.js"></script>
 <!--<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>-->
-<link rel="stylesheet" type="text/css" href="./datatables.css"/>
-<link rel="stylesheet" type="text/css" href="./animations.css"/>
+<link rel="stylesheet" type="text/css" href="./css/datatables.css"/>
 <script type="text/javascript" src="../data_monitoring/js_utilities/datatables.min.js"></script>
 <script src="js/three.min.js"></script>
 <script src="js/globe/globe.js"></script>
@@ -436,7 +435,7 @@ function QueryDatabase()
       {
 
         for (var key in resultArray[0]) {
-            if( key == "Config_Stub" || key=="Submitter" || key =="Comments" || key=="Notified" || key=="UName" || key=="UIp")
+            if( key == "Config_Stub" || key=="Submitter" || key =="Comments" || key=="Notified" || key=="UName" || key=="UIp" || key=="wc")
                 continue;
 
 
@@ -470,7 +469,7 @@ function QueryDatabase()
                 ProjTable.destroy();
                 $('#ProjTable').empty();
                 }
-                ProjTable=$('#ProjTable').DataTable({data: ProjDataSet , columns: ProjColumnDefs});
+                ProjTable=$('#ProjTable').DataTable({data: ProjDataSet , columns: ProjColumnDefs, "order":[[0,"desc"]]});
                 //$('#ProjTable').addClass('run-slideInLeft');
                 
 
@@ -479,6 +478,58 @@ function QueryDatabase()
    
 
         }
+}
+
+function MakeJobsTablenew(projID)
+  {
+      thetable=document.getElementById("JobsTable")
+    if(!thetable)
+      {
+          /*<div class="container" id="JobsContainer" >
+        
+        <font size="32" color="white">Jobs</font>*/
+    
+          var jobsTableCont=document.createElement("DIV")
+          var jobsTable=document.createElement("table")
+        
+          jobsTableCont.className="container table";
+          jobsTableCont.id="JobsContainer";
+
+           jobsTable.id="JobsTable";
+           jobsTable.className="dataTable addtable table"
+           var textnode=document.createTextNode("Jobs");
+           textnode.className="table-header"
+           var header=document.createElement("h1");
+           jobsTableCont.appendChild(document.createElement("hr"))
+           header.append(textnode)
+           jobsTableCont.appendChild(header);
+           jobsTableCont.appendChild(document.createElement("br"));
+           
+           jobsTableCont.appendChild( jobsTable);
+          document.getElementById("tableBlock").appendChild( jobsTableCont);
+      }
+      else
+      {
+        if ($.fn.dataTable.isDataTable( '#JobsTable' )) {
+          $('#JobsTable').DataTable().destroy();
+        }
+      }
+
+  jobsTable = $('#JobsTable').DataTable( {
+      ajax: "./dat_mon_sql2.php?Table=Jobs&projID=" + projID,
+      columns: [
+        { title: "ID" , data: "ID" },
+        { title: "Project_ID" , data: "Project_ID" },
+        { title: "Creation_Time" , data: "Creation_Time" },
+        { title: "RunNumber" , data: "RunNumber" },
+        { title: "NumEvts" , data: "NumEvts" },
+        { title: "FileNumber" , data: "FileNumber" },
+        { title: "IsActive" , data: "IsActive" }
+      ]
+  } );
+  setInterval( function () {
+    jobsTable.ajax.reload(null, false);  // The second param, false, ensures that if the user is on a page, it doesn't go back to page 1 upon reload
+  }, 2000 );
 }
 
 function MakeAttemptsTable(resultArray,projID)
@@ -647,7 +698,7 @@ function DisplayJobs(e,obj)
                 result.shift();
 
                 result_to_use=result;
-                MakeJobsTable(result_to_use)
+                MakeJobsTablenew(projID)
                 //ColorCells();
                 }
                 
@@ -833,90 +884,84 @@ function disposeHierarchy (node, callback)
     </script>
 <body style="background-color:black" >
 
-<div class="news-ticker">
-        <div class="ticker" id="tickerTexts">
-                <span class="ticker-holder">
-        <span id="ticker1"><strong></strong> Revamped output is live and will be monitored for a few projects before being let loose.</span>
-                    
-                </span>    
-
-
-</div>
-</div>
-
-<div class="header-info">
-        <div id="globe" width="1250">
-
-            </div>
-            <div id="graphs">
-            
-            <img class="graph" src="https://scicomp.jlab.org/ganglia/graph.php?r=hour&z=xlarge&c=Scicomp+Misc&h=scosg16.jlab.org&jr=&js=&v=102&m=TotalRunningJobs&vl=jobs" id="condor_running"/>
-            
-            <img class="graph" src="https://scicomp.jlab.org/ganglia/graph.php?r=hour&z=xlarge&c=Scicomp+Misc&h=scosg16.jlab.org&jr=&js=&v=0&m=TotalIdleJobs&vl=jobs" id="condor_idle"/>
-            
-            </div>
-
-</div>
-
-<div class="header-menu">
-    <div>
-    <img id="logo" src="./whitelogo.png" class="logo"  alt="logo" width="125" height="160" align="right">
-    </div>
-    <div>
-    <nav role="navigation">
-            <div id="menuToggle">
-              <!--
-              A fake / hidden checkbox is used as click reciever,
-              so you can use the :checked selector on it.
-              -->
-              <input type="checkbox" />
-              
-              <!--
-              Some spans to act as a hamburger.
-              
-              They are acting like a real hamburger,
-              not that McDonalds stuff.
-              -->
-              <span></span>
-              <span></span>
-              <span></span>
-              
-              <!--
-              Too bad the menu has to be inside of the button
-              but hey, it's pure CSS magic.
-              -->
-              <ul id="menu">
-                <a href="https://halldweb.jlab.org/gluex_sim/SubmitSim.html"><li>Submit Form</li></a>
-                <a href="https://halldweb.jlab.org/gluex_sim/Dashboard.html"><li>Dashboard</li></a>
-                <a href="https://github.com/JeffersonLab/gluex_MCwrapper"><li>Github Repo</li></a>
-                <a href="mailto: tbritton@jlab.org"><li>Contact Me</li></a>
-              </ul>
-            </div>
-          </nav>
+        <div class="header-block">
+        <div class="header-menu">
+                <nav role="navigation">
+                        <div id="menuToggle">
+                          <!--
+                          A fake / hidden checkbox is used as click reciever,
+                          so you can use the :checked selector on it.
+                          -->
+                          <input type="checkbox" />
+                          
+                          <!--
+                          Some spans to act as a hamburger.
+                          
+                          They are acting like a real hamburger,
+                          not that McDonalds stuff.
+                          -->
+                          <span></span>
+                          <span></span>
+                          <span></span>
+                          
+                          <!--
+                          Too bad the menu has to be inside of the button
+                          but hey, it's pure CSS magic.
+                          -->
+                          <ul id="menu">
+                            <a href="https://halldweb.jlab.org/gluex_sim/SubmitSim.html"><li>Submit Form</li></a>
+                            <a href="https://halldweb.jlab.org/gluex_sim/Dashboard.html"><li>Dashboard</li></a>
+                            <a href="https://github.com/JeffersonLab/gluex_MCwrapper"><li>Github Repository</li></a>
+                            <a href="mailto: tbritton@jlab.org"><li>Contact Me</li></a>
+                          </ul>
+                        </div>
+                      </nav>
         </div>
-</div>
-<div class="table-block" id="tableBlock">
-
-    <div class="container table" id="ProjContainer" >
-           <font size="32" color="white"> Projects  </font> <input type="button" onClick="QueryDatabase()" value="Refresh tables">  
-           <table cellpadding="0" cellspacing="0" border="1" class="dataTable table" id="ProjTable">
-       
-           </table>
-    </div>
-
-</div>
-<div id='cntnr'>
-    <ul id='items'>
-      <li onclick="DoMenu('NotifyComplete')"><font color="black">Notify Complete</font></li>
-      <li onclick="DoMenu('ReTest')"><font color="black">Retest Project</font></li>
-    </ul>
-    <hr/>
-    <ul id='items'>
-        <li onclick="DoMenu('FullReset')"><font color="black">Full Project Reset</font></li>
-    </ul>
-    
-    
-
-</div>
-</body>
-</html>
+        <div class="header-info">
+                <div id="globe" width="1250">
+        
+                    </div>
+                    <div id="graphs">
+                    
+                    <img class="graph" src="https://scicomp.jlab.org/ganglia/graph.php?r=hour&z=xlarge&c=Scicomp+Misc&h=scosg16.jlab.org&jr=&js=&v=102&m=TotalRunningJobs&vl=jobs" id="condor_running"/>
+                    
+                    <img class="graph" src="https://scicomp.jlab.org/ganglia/graph.php?r=hour&z=xlarge&c=Scicomp+Misc&h=scosg16.jlab.org&jr=&js=&v=0&m=TotalIdleJobs&vl=jobs" id="condor_idle"/>
+                    
+                    </div>
+        
+        </div>
+        
+        <div class="header-hb">
+            <div>
+            <img id="logo" src="./whitelogo.png" class="logo"  alt="logo" width="125" height="160" align="right">
+            </div>
+            <div>
+            
+                </div>
+        </div>
+        </div>
+        <div class="table-block" id="tableBlock">
+        
+            <div class="container table" id="ProjContainer" >
+                   <font size="32" color="white"> Projects  </font> <input type="button" onClick="QueryDatabase()" value="Refresh tables">  
+                   <table cellpadding="0" cellspacing="0" border="1" class="dataTable table" id="ProjTable">
+               
+                   </table>
+            </div>
+        
+        </div>
+        <div id='cntnr'>
+            <ul id='items'>
+              <li onclick="DoMenu('NotifyComplete')"><font color="black">Notify Complete</font></li>
+              <li onclick="DoMenu('ReTest')"><font color="black">Retest Project</font></li>
+            </ul>
+            <hr/>
+            <ul id='items'>
+                <li onclick="DoMenu('FullReset')"><font color="black">Full Project Reset</font></li>
+            </ul>
+            
+            
+        
+        </div>
+        </body>
+        </html>
