@@ -346,7 +346,7 @@ echo "----------------------------------------------"
 echo "Run generation step? "$GENR"  Will be cleaned?" $CLEANGENR
 echo "Flux Hist to use: " "$FLUX_TO_GEN" " : " "$FLUX_HIST"
 echo "Polarization to use: " "$POL_TO_GEN" " : " "$POL_HIST"
-echo "Using "$GENERATOR"  with config: "$CONFIG_FILE
+echo "Using "$GENERATOR" with config: "$CONFIG_FILE
 echo "----------------------------------------------"
 echo "Run geant step? "$GEANT"  Will be cleaned?" $CLEANGEANT
 echo "Using geant"$GEANTVER
@@ -388,7 +388,7 @@ echo "Error: Requested Max photon energy $GEN_MAX_ENERGY is above the electron b
 exit 1
 fi
 
-if [[ "$CUSTOM_GCONTROL" == "0" ]]; then
+if [[ "$CUSTOM_GCONTROL" == "0" && "$GEANT" == "1" ]]; then
 	if [[ "$EXPERIMENT" == "GlueX" ]]; then
 		 cp $MCWRAPPER_CENTRAL/Gcontrol.in ./temp_Gcontrol.in
 	elif [[ "$EXPERIMENT" == "CPP" ]]; then
@@ -1145,25 +1145,31 @@ if [[ "$GENR" != "0" ]]; then
 			echo "An hddm file was not created by mcsmear.  Terminating MC production.  Please consult logs to diagnose"
 			exit 13
 		fi
-
+	fi
+fi
 	    if [[ "$RECON" != "0" ]]; then
 		echo "RUNNING RECONSTRUCTION"
+		file_to_recon=$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm'
 
-		additional_hdroot=""
-		if [[ "$EXPERIMENT" == "CPP" ]]; then
-			additional_hdroot="-PKALMAN:ADD_VERTEX_POINT=1"
-		fi
-		if [[ "$RECON_CALIBTIME" != "notime" ]]; then
-				reconwholecontext="variation=$VERSION calibtime=$RECON_CALIBTIME"
-				export JANA_CALIB_CONTEXT="$reconwholecontext"
-		fi
+			if [[ "$GENR" == "0" && "$GEANT" == "0" && "$SMEAR" == "0" ]]; then
+				file_to_recon="$CONFIG_FILE"
+			fi
+		
+			additional_hdroot=""
+			if [[ "$EXPERIMENT" == "CPP" ]]; then
+				additional_hdroot="-PKALMAN:ADD_VERTEX_POINT=1"
+			fi
+			if [[ "$RECON_CALIBTIME" != "notime" ]]; then
+					reconwholecontext="variation=$VERSION calibtime=$RECON_CALIBTIME"
+					export JANA_CALIB_CONTEXT="$reconwholecontext"
+			fi
 
-		if [[ "$recon_pre" == "file" ]]; then
-			echo "using config file: "$jana_config_file
-			hd_root ./$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' --config=jana_config.cfg -PNTHREADS=$NUMTHREADS $additional_hdroot
-			hd_root_return_code=$?
-			rm jana_config.cfg
-		else
+			if [[ "$recon_pre" == "file" ]]; then
+				echo "using config file: "$jana_config_file
+				hd_root $file_to_recon --config=jana_config.cfg -PNTHREADS=$NUMTHREADS $additional_hdroot
+				hd_root_return_code=$?
+				rm jana_config.cfg
+			else
 		
 			declare -a pluginlist=("danarest" "monitoring_hists" "mcthrown_tree")
 			
@@ -1181,7 +1187,7 @@ if [[ "$GENR" != "0" ]]; then
 			PluginStr=`echo $PluginStr | sed -r 's/.{1}$//'`
             echo "Running hd_root with: ""$PluginStr"
 			echo "hd_root ""$STANDARD_NAME"'_geant'"$GEANTVER"'_smeared.hddm'" -PPLUGINS=""$PluginStr ""-PNTHREADS=""$NUMTHREADS"
-			hd_root ./$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' -PPLUGINS=$PluginStr -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 $additional_hdroot
+			hd_root $file_to_recon -PPLUGINS=$PluginStr -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 $additional_hdroot
 			hd_root_return_code=$?
 		fi
 		
@@ -1198,7 +1204,7 @@ if [[ "$GENR" != "0" ]]; then
         fi
 
 
-		if [[ "$CLEANGEANT" == "1" ]]; then
+		if [[ "$CLEANGEANT" == "1" && "$GEANT" == "1" ]]; then
 		    rm $STANDARD_NAME'_geant'$GEANTVER'.hddm'
 		    rm control.in
 		    rm -f geant.hbook
@@ -1209,7 +1215,7 @@ if [[ "$GENR" != "0" ]]; then
 		    
 		fi
 		
-		if [[ "$CLEANSMEAR" == "1" ]]; then
+		if [[ "$CLEANSMEAR" == "1" && "$SMEAR" == "1" ]]; then
 		    rm $STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm'
 		    rm -rf smear.root
 		fi
@@ -1230,14 +1236,13 @@ if [[ "$GENR" != "0" ]]; then
 			    mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/
 			fi
 		done
-	    fi
 	fi
-fi
+
 
 rm -rf ccdb.sqlite
 rm -rf rcdb.sqlite
 
-if [[ "$gen_pre" != "file" && "$GENERATOR" != "gen_ee_hb" && "$GENERATOR" != "gen_ee" ]]; then
+if [[ "$gen_pre" != "file" && "$GENERATOR" != "gen_ee_hb" && "$GENERATOR" != "gen_ee" && "$GENR" == "1" ]]; then
 	mv $PWD/*.conf $OUTDIR/configurations/generation/
 fi
 hddmfiles=$(ls | grep .hddm)

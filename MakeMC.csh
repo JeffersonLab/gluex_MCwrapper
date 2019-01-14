@@ -382,7 +382,7 @@ echo "Error: Requested Max photon energy $GEN_MAX_ENERGY is above the electron b
 exit 1
 endif
 
-if ( "$CUSTOM_GCONTROL" == "0" ) then
+if ( "$CUSTOM_GCONTROL" == "0" && "$GEANT" == "1" ) then
 	#echo $MCWRAPPER_CENTRAL
 
 	if ( "$EXPERIMENT" == "GlueX" ) then
@@ -556,7 +556,7 @@ if ( "$GENR" != "0" ) then
 			endif
 		endif
 		set generator_return_code=0
-    else 
+	else 
 		if ( -f $CONFIG_FILE ) then
 		    echo "input file found"
 		else if( "$GENERATOR" == "gen_ee" || "$GENERATOR" == "gen_ee_hb" || "$GENERATOR" == "genBH" ) then
@@ -565,7 +565,7 @@ if ( "$GENR" != "0" ) then
 	    	echo $CONFIG_FILE" does not exist"
 	    	exit 1
     	endif
-    endif
+	endif
 	echo $GENERATOR
 
 
@@ -953,6 +953,7 @@ if ( "$GENR" != "0" ) then
 	endif
 #GEANT/smearing
 
+
     if ( "$GEANT" != "0" ) then
 		echo "RUNNING GEANT"$GEANTVER
 
@@ -1133,9 +1134,16 @@ if ( "$GENR" != "0" ) then
 			echo "An hddm file was not created by mcsmear.  Terminating MC production.  Please consult logs to diagnose"
 			exit 13
 		endif
-    
+    endif
+endif
 	    if ( "$RECON" != "0" ) then
 			echo "RUNNING RECONSTRUCTION"
+			set file_to_recon=$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm'
+
+			if ("$GENR" == "0" && "$GEANT" == "0" && "$SMEAR" == "0" ) then
+				set file_to_recon="$CONFIG_FILE"
+			endif
+
 			set additional_hdroot=""
 			if ( "$EXPERIMENT" == "CPP" ) then
 				set additional_hdroot="-PKALMAN:ADD_VERTEX_POINT=1"
@@ -1148,7 +1156,7 @@ if ( "$GENR" != "0" ) then
 			if ( "$recon_pre" == "file" ) then
 		   		echo "using config file: "$jana_config_file
 				
-		   		hd_root ./$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' --config=jana_config.cfg -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 $additional_hdroot
+		   		hd_root $file_to_recon --config=jana_config.cfg -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 $additional_hdroot
 				set hd_root_return_code=$status
 				#echo "STATUS: " $hd_root_return_code
 				rm jana_config.cfg
@@ -1168,7 +1176,7 @@ if ( "$GENR" != "0" ) then
 		   		set PluginStr=`echo $PluginStr | sed -r 's/.{1}$//'`
 		   		echo "Running hd_root with:""$PluginStr"
 		   		echo "hd_root ""$STANDARD_NAME"'_geant'"$GEANTVER"'_smeared.hddm'" -PPLUGINS=""$PluginStr ""-PNTHREADS=""$NUMTHREADS"
-		   		hd_root ./$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' -PPLUGINS=$PluginStr -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 $additional_hdroot
+		   		hd_root $file_to_recon -PPLUGINS=$PluginStr -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 $additional_hdroot
 		    	set hd_root_return_code=$status
 				
 			endif
@@ -1185,7 +1193,7 @@ if ( "$GENR" != "0" ) then
 				mv dana_rest.hddm dana_rest_$STANDARD_NAME.hddm
 			endif
 
-			if ( "$CLEANGEANT" == "1" ) then
+			if ( "$CLEANGEANT" == "1" && "$GEANT" == "1" ) then
 		   		rm $STANDARD_NAME'_geant'$GEANTVER'.hddm'
 		   		rm control.in
 		   		rm -f geant.hbook
@@ -1195,7 +1203,7 @@ if ( "$GENR" != "0" ) then
 		   		endif
 			endif
 		
-			if ( "$CLEANSMEAR" == "1" ) then
+			if ( "$CLEANSMEAR" == "1" && "$SMEAR" == "1" ) then
 		   		rm $STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm'
 		   		rm -rf smear.root
 			endif
@@ -1219,13 +1227,13 @@ if ( "$GENR" != "0" ) then
 				endif
 			end
 	    endif
-	endif
-endif
+	
+
 
 rm -rf ccdb.sqlite
 rm -rf rcdb.sqlite
 
-if ( "$gen_pre" != "file" && "$GENERATOR" != "gen_ee_hb" && "$GENERATOR" != "gen_ee" ) then
+if ( "$gen_pre" != "file" && "$GENERATOR" != "gen_ee_hb" && "$GENERATOR" != "gen_ee" && "$GENR" == "1" ) then
     mv $PWD/*.conf $OUTDIR/configurations/generation/
 endif
 
