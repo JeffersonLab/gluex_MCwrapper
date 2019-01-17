@@ -541,6 +541,7 @@ if [[ "$GENR" != "0" ]]; then
 	if [[ "$gen_pre" == "file" ]]; then
 		gen_in_file=`echo $GENERATOR | sed -r 's/^.{5}//'`
 		echo "bypassing generation"
+		echo "using "$gen_in_file
 		
 		if [[ -f $gen_in_file ]]; then
 			echo "using pre-generated file: "$gen_in_file

@@ -532,6 +532,8 @@ if ( "$GENR" != "0" ) then
     if ( "$gen_pre" == "file" ) then
 		set gen_in_file=`echo $GENERATOR | sed -r 's/^.{5}//'`
 		echo "bypassing generation"
+		echo "using "$gen_in_file
+
 		set generator_return_code=0
 		if ( -f $gen_in_file ) then
 	    	echo "using pre-generated file: "$gen_in_file
@@ -719,7 +721,7 @@ if ( "$GENR" != "0" ) then
 
     if ( "$gen_pre" != "file" ) then
 		set config_file_name=`basename "$CONFIG_FILE"`
-		echo $config_file_name
+		echo config file name: $config_file_name
     endif
     
     if ( "$GENERATOR" == "genr8" ) then
