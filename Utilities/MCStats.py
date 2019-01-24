@@ -11,6 +11,7 @@ import socket
 import pprint
 import math
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 
@@ -141,10 +142,29 @@ def getAttemptsTimes():
     ax.hist(wallTimes, bins=50, color='lightblue')
     plt.show()
 
+def getStartAndLength():
+    query= "SELECT UNIX_TIMESTAMP(Start_Time),CPUTime From Attempts where CPUTime != 0;"
+    curs.execute(query) 
+    rows=curs.fetchall()
+    totaltime=datetime.timedelta(0)
+    Starttimes=[]
+    for time in rows:
+        Starttimes.append(time["UNIX_TIMESTAMP(Start_Time)"])
+        totaltime=totaltime+time["CPUTime"]
+        print str(time["UNIX_TIMESTAMP(Start_Time)"])+" , "+str(time["CPUTime"])
+
+
+    print totaltime
+    fig, ax = plt.subplots(1,1)
+    
+    ax.hist(Starttimes, bins=6, color='lightblue')
+    plt.show()
+
 def main(argv):
     getTotalSizeOut()
     getUserProjectPercent()
     getAttemptsTimes()
+    getStartAndLength()
         
         
     conn.close()

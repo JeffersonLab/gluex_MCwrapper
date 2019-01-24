@@ -212,9 +212,9 @@ if [[ "$polarization_angle" == "" ]]; then
 	if [[ "$poldir" == "PARA" ]]; then
 		polarization_angle="0.0"
 	elif [[ "$poldir" == "PERP" ]]; then
-		set polarization_angle="90.0"
+		polarization_angle="90.0"
 	else
-		set polarization_angle="-1.0"
+		polarization_angle="-1.0"
 	fi
 fi
 
@@ -688,7 +688,7 @@ if [[ "$GENR" != "0" ]]; then
 		echo "configuring gen_2pi_primakoff"
 		STANDARD_NAME="gen_2pi_primakoff_"$STANDARD_NAME
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
-        elif [[ "$GENERATOR" == "gen_pi0" ]]; then
+    elif [[ "$GENERATOR" == "gen_pi0" ]]; then
 		echo "configuring gen_pi0"
 		STANDARD_NAME="gen_pi0_"$STANDARD_NAME
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
@@ -702,40 +702,40 @@ if [[ "$GENR" != "0" ]]; then
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
 	elif [[ "$GENERATOR" == "gen_2k" ]]; then
 		echo "configuring gen_2k"
-		set STANDARD_NAME="gen_2k_"$STANDARD_NAME
+		STANDARD_NAME="gen_2k_"$STANDARD_NAME
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
 	elif [[ "$GENERATOR" == "bggen_jpsi" ]]; then
 		echo "configuring bggen_jpsi"
-		set STANDARD_NAME="bggen_jpsi_"$STANDARD_NAME
+		STANDARD_NAME="bggen_jpsi_"$STANDARD_NAME
 		cp $MCWRAPPER_CENTRAL/Generators/bggen_jpsi/particle.dat ./
 		cp $MCWRAPPER_CENTRAL/Generators/bggen_jpsi/pythia.dat ./
 		cp $MCWRAPPER_CENTRAL/Generators/bggen_jpsi/pythia-geant.map ./
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
 	elif [[ "$GENERATOR" == "bggen_phi_ee" ]]; then
 		echo "configuring bggen_phi_ee"
-		set STANDARD_NAME="bggen_phi_ee_"$STANDARD_NAME
+		STANDARD_NAME="bggen_phi_ee_"$STANDARD_NAME
 		cp $MCWRAPPER_CENTRAL/Generators/bggen_phi_ee/particle.dat ./
 		cp $MCWRAPPER_CENTRAL/Generators/bggen_phi_ee/pythia.dat ./
 		cp $MCWRAPPER_CENTRAL/Generators/bggen_phi_ee/pythia-geant.map ./
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
 	elif [[ "$GENERATOR" == "gen_ee" ]]; then
 		echo "configuring gen_ee"
-		set STANDARD_NAME="gen_ee_"$STANDARD_NAME
+		STANDARD_NAME="gen_ee_"$STANDARD_NAME
 		echo "note: this generator is run completely from command line, thus no config file will be made and/or modified"
 		cp $CONFIG_FILE ./cobrems.root
 	elif [[ "$GENERATOR" == "gen_ee_hb" ]]; then
 		echo "configuring gen_ee_hb"
-		set STANDARD_NAME="gen_ee_hb_"$STANDARD_NAME
+		STANDARD_NAME="gen_ee_hb_"$STANDARD_NAME
 		echo "note: this generator is run completely from command line, thus no config file will be made and/or modified"
 		cp $CONFIG_FILE ./cobrems.root
 		cp $MCWRAPPER_CENTRAL/Generators/gen_ee_hb/CFFs_DD_Feb2012.dat ./
 	elif [[ "$GENERATOR" == "particle_gun" ]]; then
 		echo "configuring the particle gun"
-		set STANDARD_NAME="particle_gun_"$STANDARD_NAME
+		STANDARD_NAME="particle_gun_"$STANDARD_NAME
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
 	elif [[ "$GENERATOR" == "genBH" ]]; then
 		echo "configuring genBH"
-		set STANDARD_NAME="genBH_"$STANDARD_NAME
+		STANDARD_NAME="genBH_"$STANDARD_NAME
 		echo "note: this generator is run completely from command line, thus no config file will be made and/or modified"
 
 		cp $CONFIG_FILE ./cobrems.root
@@ -893,7 +893,7 @@ if [[ "$GENR" != "0" ]]; then
     generator_return_code=$?
 	elif [[ "$GENERATOR" == "gen_2k" ]]; then
 	echo "RUNNING GEN_2K" 
-    set optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
+    optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
 	#set RANDOMnum=`bash -c 'echo $RANDOM'`
 	echo $optionals_line
 	sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
