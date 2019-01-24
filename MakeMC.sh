@@ -626,10 +626,6 @@ if [[ "$GENR" != "0" ]]; then
 		fi
 	fi
 
-	
-
-	cp beam.config $GENERATOR\_$STANDARD_NAME\_beam.conf
-
     if [[ "$GENERATOR" == "genr8" ]]; then
 		echo "configuring genr8"
 		STANDARD_NAME="genr8_"$STANDARD_NAME
@@ -748,6 +744,7 @@ if [[ "$GENR" != "0" ]]; then
     fi
 
 	#RANDOMnum_forGeneration=`bash -c 'echo $RANDOM'`
+	cp beam.config $STANDARD_NAME\_beam.conf
 
     if [[ "$GENERATOR" == "genr8" ]]; then
 	echo "RUNNING GENR8"

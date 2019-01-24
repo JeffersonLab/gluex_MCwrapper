@@ -616,7 +616,7 @@ if ( "$GENR" != "0" ) then
 		endif
 	endif
 
-    cp beam.config $GENERATOR\_$STANDARD_NAME\_beam.conf
+    
 
     if ( "$GENERATOR" == "genr8" ) then
 		echo "configuring genr8"
@@ -724,6 +724,8 @@ if ( "$GENR" != "0" ) then
 		echo config file name: $config_file_name
     endif
     
+	cp beam.config $STANDARD_NAME\_beam.conf
+
     if ( "$GENERATOR" == "genr8" ) then
 		echo "RUNNING GENR8"
 		set RUNNUM=$formatted_runNumber+$formatted_fileNumber
