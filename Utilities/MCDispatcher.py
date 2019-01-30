@@ -35,7 +35,7 @@ def AutoLaunch():
     #print "in autolaunch"
     RetryAllJobs()
 
-    query = "SELECT ID,Email,VersionSet,Tested FROM Project WHERE Tested != -1 && Dispatched_Time is NULL;"
+    query = "SELECT ID,Email,VersionSet,Tested,UName FROM Project WHERE Tested != -1 && Dispatched_Time is NULL ORDER BY (SELECT Priority from Users where name=UName) DESC;"
     #print query
     curs.execute(query) 
     rows=curs.fetchall()
@@ -70,7 +70,8 @@ def AutoLaunch():
         else:
             #EMAIL FAIL AND LOG
             print "echo 'Your Project ID "+str(row['ID'])+" failed the to properly test.  The log information is reproduced below:\n\n\n"+status[0]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+str(row['Email'])
-            subprocess.call("echo 'Your Project ID "+str(row['ID'])+" failed the test.  Please correct this issue and do NOT resubmit this request.  Write tbritton@jlab.org for assistance or if you are ready for a retest.\n\n The log information is reproduced below:\n\n\n"+status[0]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+str(row['Email']),shell=True)
+            subprocess.call("echo 'Your Project ID "+str(row['ID'])+" failed the test.  Please correct this issue by following the link: "+"https://halldweb.jlab.org/gluex_sim/SubmitSim.html?prefill="+str(row['ID'])+"&mod=1" +" .  Do NOT resubmit this request.  Write tbritton@jlab.org for additional assistance\n\n The log information is reproduced below:\n\n\n"+status[0]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+str(row['Email']),shell=True)
+            #subprocess.call("echo 'Your Project ID "+str(row['ID'])+" failed the test.  Please correct this issue and do NOT resubmit this request.  Write tbritton@jlab.org for assistance or if you are ready for a retest.\n\n The log information is reproduced below:\n\n\n"+status[0]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+"tbritton@jlab.org",shell=True)
             #print status[0]
             
 
@@ -105,6 +106,16 @@ def RetryAllJobs():
         print "Retrying Project "+str(row["ID"])
         RetryJobsFromProject(row["ID"],True)
 
+def RemoveAllJobs():
+    query= "SELECT * FROM Attempts WHERE ID IN (SELECT Max(ID) FROM Attempts GROUP BY Job_ID) && Job_ID IN (SELECT ID FROM Jobs WHERE IsActive=1 && Project_ID="+str(ID)+");"
+    curs.execute(query) 
+    rows=curs.fetchall()
+    i=0
+    for row in rows:
+        if(row["BatchSystem"]=="OSG"):
+            print row["BatchJobID"]
+
+
 def RetryJobsFromProject(ID, countLim):
     query= "SELECT * FROM Attempts WHERE ID IN (SELECT Max(ID) FROM Attempts GROUP BY Job_ID) && Job_ID IN (SELECT ID FROM Jobs WHERE IsActive=1 && Project_ID="+str(ID)+");"
     curs.execute(query) 
@@ -124,18 +135,18 @@ def RetryJobsFromProject(ID, countLim):
             #print row["Status"]
             #print row["ExitCode"]
             #print "=========================="
-            if(row["Status"] == "4" and row["ExitCode"] != 0) or row["Status"] == "3" or row["Status"]=="5":
+            if (row["Status"] == "4" and row["ExitCode"] != 0) or row["Status"] == "3" or row["Status"]=="5":
                 if ( countLim ):
-                    countq="SELECT Count(Job_ID) from Attempts where Job_ID="+row["Job_ID"]
+                    countq="SELECT Count(Job_ID) from Attempts where Job_ID="+str(row["Job_ID"])
                     curs.execute(countq)
                     count=curs.fetchall()
-                    if int(count[0]["Count(Job_ID)"]) > 3 :
+                    if int(count[0]["Count(Job_ID)"]) > 5 :
                         j=j+1
                         continue
                 RetryJob(row["Job_ID"])
                 i=i+1
     print "retried "+str(i)+" Jobs"
-    print str(j)+" jobs over restart limit of 3"
+    print str(j)+" jobs over restart limit of 5"
 
 #def DoMissingJobs(ID,SYS):
 #    query="SELECT ID FROM Jobs where ID NOT IN (SELECT Job_ID FROM Attempts) && IsActive=1 && Project_ID="+str(ID)+";"
@@ -236,7 +247,7 @@ def CheckGenConfig(order):
     #print fileSTR
     if(os.path.isfile(fileSTR)==False and socket.gethostname() == "scosg16.jlab.org" ):
         copyTo="/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"
-        subprocess.call("scp tbritton@ifarm1402:"+fileSTR+" "+copyTo+str(ID)+"_"+name,shell=True)
+        subprocess.call("scp tbritton@ifarm:"+fileSTR+" "+copyTo+str(ID)+"_"+name,shell=True)
         #subprocess.call("rsync -ruvt ifarm1402:"+fileSTR+" "+copyTo,shell=True)
         order["Generator_Config"]=copyTo+name
         return copyTo+str(ID)+"_"+name
@@ -444,6 +455,12 @@ def DispatchToSWIF(ID,order,PERCENT):
 def WritePayloadConfig(order,foundConfig):
     
     MCconfig_file= open("MCDispatched.config","a")
+    MCconfig_file.write("PROJECT="+str(order["Exp"])+"\n")
+
+    if str(order["Exp"]) == "CPP":
+        MCconfig_file.write("VARIATION=mc_cpp"+"\n")
+        MCconfig_file.write("FLUX_TO_GEN=cobrems"+"\n")
+
     splitlist=order["OutputLocation"].split("/")
     MCconfig_file.write("WORKFLOW_NAME="+splitlist[len(splitlist)-2]+"\n")
     MCconfig_file.write(order["Config_Stub"]+"\n")
@@ -457,6 +474,9 @@ def WritePayloadConfig(order,foundConfig):
         MaxE = MaxE[:-cutnum]
     MCconfig_file.write("GEN_MIN_ENERGY="+MinE+"\n")
     MCconfig_file.write("GEN_MAX_ENERGY="+MaxE+"\n")
+
+    if order["CoherentPeak"] is not None :
+        MCconfig_file.write("COHERENT_PEAK="+str(order["CoherentPeak"])+"\n")
 
     if str(order["Generator"]) == "file:":
         if foundConfig == "True":
@@ -473,7 +493,10 @@ def WritePayloadConfig(order,foundConfig):
     MCconfig_file.write("GEANT_VERSION="+str(order["GeantVersion"])+"\n")
     MCconfig_file.write("NOSECONDARIES="+str(abs(order["GeantSecondaries"]-1))+"\n")
     MCconfig_file.write("BKG="+str(order["BKG"])+"\n")
-    MCconfig_file.write("DATA_OUTPUT_BASE_DIR=/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/"+str(order["OutputLocation"]).split("/")[7]+"\n")
+    splitLoc=str(order["OutputLocation"]).split("/")
+    outputstring="/".join(splitLoc[7:-1])
+    #order["OutputLocation"]).split("/")[7]
+    MCconfig_file.write("DATA_OUTPUT_BASE_DIR=/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/"+str(outputstring)+"\n")
     #print "FOUND CONFIG="+foundConfig
 
     if(order["RCDBQuery"] != ""):
@@ -600,6 +623,8 @@ def main(argv):
         elif MODE == "AUTOLAUNCH":
             #print "AUTOLAUNCHING NOW"
             AutoLaunch()
+        elif MODE == "REMOVEJOBS":
+            RemoveAllJobs()
         else:
             print "MODE NOT FOUND"
 

@@ -53,12 +53,22 @@ except:
         pass
 
 def checkProjectsForCompletion():
-    OutstandingProjectsQuery="SELECT ID FROM Project WHERE Completed_Time IS NULL && Is_Dispatched != '0' && Notified is NULL"
+    OutstandingProjectsQuery="SELECT ID,OutputLocation,Email FROM Project WHERE Is_Dispatched != '0' && Notified is NULL"
     dbcursor.execute(OutstandingProjectsQuery)
     OutstandingProjects=dbcursor.fetchall()
 
+    outdir_root="/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/"
+
     for proj in OutstandingProjects:
         #print proj['ID']
+        locparts=proj['OutputLocation'].split("/")
+
+        #print("~~~~~~~~~~~~~~~~~~")
+        #print locparts[len(locparts)-2]
+        filesToMove = sum([len(files) for r, d, files in os.walk(outdir_root+locparts[len(locparts)-2])])
+        #print cpt
+
+        
         TOTCompletedQuery ="SELECT DISTINCT ID From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1 && ID in (SELECT DISTINCT Job_ID FROM Attempts WHERE ExitCode = 0 && (Status ='4' || Status='success')  && ExitCode IS NOT NULL);" 
         dbcursor.execute(TOTCompletedQuery)
         fulfilledJobs=dbcursor.fetchall()
@@ -71,8 +81,9 @@ def checkProjectsForCompletion():
         print len(fulfilledJobs)
         print len(AllActiveJobs)
         
-        if(len(fulfilledJobs)==len(AllActiveJobs) and len(AllActiveJobs) != 0):
-            #print("DONE")
+        if(len(fulfilledJobs)==len(AllActiveJobs) and len(AllActiveJobs) != 0 and filesToMove ==0):
+            print("DONE")
+
             getFinalCompleteTime="SELECT MAX(Completed_Time) FROM Attempts WHERE Job_ID IN (SELECT ID FROM Jobs WHERE Project_ID="+str(proj['ID'])+");"
             #print getFinalCompleteTime
             dbcursor.execute(getFinalCompleteTime)
@@ -80,9 +91,15 @@ def checkProjectsForCompletion():
             #print "============"
             #print finalTimeRes[0]["MAX(Completed_Time)"]
             updateProjectstatus="UPDATE Project SET Completed_Time="+"'"+str(finalTimeRes[0]["MAX(Completed_Time)"])+"'"+ " WHERE ID="+str(proj['ID'])+";"
-            #print updateProjectstatus
+            print updateProjectstatus
             #print "============"
             dbcursor.execute(updateProjectstatus)
+            dbcnx.commit()
+
+            #print "echo 'Your Project ID "+str(proj['ID'])+" has been completed.  Output may be found:\n"+proj['OutputLocation']+"' | mail -s 'GlueX MC Request #"+str(proj['ID'])+" Completed' "+str(proj['Email'])
+            subprocess.call("echo 'Your Project ID "+str(proj['ID'])+" has been completed.  Output may be found here:\n"+proj['OutputLocation']+"' | mail -s 'GlueX MC Request #"+str(proj['ID'])+" Completed' "+str(proj['Email']),shell=True)
+            sql_notified = "UPDATE Project Set Notified=1 WHERE ID="+str(proj['ID'])
+            dbcursor.execute(sql_notified)
             dbcnx.commit()
         else:
             updateProjectstatus="UPDATE Project SET Completed_Time=NULL WHERE ID="+str(proj['ID'])+";"
@@ -243,7 +260,7 @@ def UpdateOutputSize():
             location=Project[0]["FinalDestination"]
 
         try:
-            statuscommand="du -sh --total "+location
+            statuscommand="du -sh --exclude \".*\" --total "+location
             #print statuscommand
             totalSizeStr=subprocess.check_output([statuscommand], shell=True)
             #print "==============="
@@ -417,20 +434,24 @@ def main(argv):
         numprocesses_running=subprocess.check_output(["echo `ps all -u tbritton | grep MCOverlord.py | grep -v grep | wc -l`"], shell=True)
 
         print int(numprocesses_running)
-        if(int(numprocesses_running) <3 or numOverRide):
-            dbcursor.execute("INSERT INTO MCOverlord (Host,StartTime) VALUES ('"+str(socket.gethostname())+"', NOW() )")
+        if(int(numprocesses_running) <2 or numOverRide):
+            dbcursor.execute("INSERT INTO MCOverlord (Host,StartTime,Status) VALUES ('"+str(socket.gethostname())+"', NOW(), 'Running' )")
             dbcnx.commit()
             queryoverlords="SELECT MAX(ID) FROM MCOverlord;"
             dbcursor.execute(queryoverlords)
             lastid = dbcursor.fetchall()
             #print lastid
-            checkSWIF()
-            checkOSG()
-            UpdateOutputSize()
-            checkProjectsForCompletion()
-            dbcursor.execute("UPDATE MCOverlord SET EndTime=NOW() where ID="+str(lastid[0]["MAX(ID)"]))
-            dbcnx.commit()
-
+            try:
+                checkSWIF()
+                checkOSG()
+                UpdateOutputSize()
+                checkProjectsForCompletion()
+                dbcursor.execute("UPDATE MCOverlord SET EndTime=NOW(), Status=\"Success\" where ID="+str(lastid[0]["MAX(ID)"]))
+                dbcnx.commit()
+            except:
+                dbcursor.execute("UPDATE MCOverlord SET Status=\"Fail\" where ID="+str(lastid[0]["MAX(ID)"]))
+                dbcnx.commit()
+                pass
 
 
         dbcnx.close()

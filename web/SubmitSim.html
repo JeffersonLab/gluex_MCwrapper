@@ -2,383 +2,413 @@
     <head>
         <title>MCwrapper Submit Form by Thomas Britton</title>
     </head>
-
+    <script src="../data_monitoring/js_utilities/jquery-3.3.1.min.js" type="text/javascript"></script>
+    <link rel="stylesheet" type="text/css" href="./css/animations.css"/>
+    <link rel="stylesheet" type="text/css" href="./css/Form.css"/>
 <body>
-        <script src="../data_monitoring/js_utilities/jquery-3.3.1.min.js" type="text/javascript"></script>
-        <link href="./animations.css" rel="stylesheet">
-        <style>
-            .hidden{
-                visibility: hidden;
-            }
-            #sides{
-            margin:0;
-            }
-            #left{
-            float:left;
-            width:75%;
-            overflow:hidden;
-            animation-name: slideInLeft;
-                animation-duration: 1s;
-                animation-iteration-count: 1;
-            }
-            #right{
-            float:right;
-            width:25%;
-            overflow:hidden;
-            position:fixed;
-            right:0px;
-            
-            animation-name: bounceInDown;
-            animation-duration: 1s;
-            animation-iteration-count: 1;
-            
-            } 
-              #numOrRange
-              {
-                  width: 12%;
-                  
-              }
-              #generator
-              {
-                  width: 15%;
-              }
-              #bkg
-              {
-                  width: 12%;
-              }
-              #output
-              {
-                  width: 200px;
-              }
-              #genconfig
-              {
-                  width: 51.6%;
-              }
-              #maxRunNum{
-                    width: 15%;
-                    padding: 12px 20px;
-                    margin: 8px 0;
-                    display: inline-block;
-                    border: 1px solid #ccc;
-                    border-radius: 4px;
-                    box-sizing: border-box;
-                    visibility: hidden;
-                }
-                #rcdbq{
-                    width: 45%;
-                    padding: 12px 20px;
-                    margin: 8px 0;
-                    display: inline-block;
-                    border: 1px solid #ccc;
-                    border-radius: 4px;
-                    box-sizing: border-box;
-                    visibility: hidden;
-                }
-                #runnum {
-                    width: 15%;
-                    padding: 12px 20px;
-                    margin: 8px 0;
-                    display: inline-block;
-                    border: 1px solid #ccc;
-                    border-radius: 4px;
-                    box-sizing: border-box;
-                    visibility: visible;
-                }
-                #randomtag {
-                    width: 50%;
-                    padding: 12px 20px;
-                    margin: 8px 0;
-                    display: inline-block;
-                    border: 1px solid #ccc;
-                    border-radius: 4px;
-                    box-sizing: border-box;
-                    visibility: hidden;
-                }
-                #additionalreq {
-                    width: 68%;
-                    height: 100px;
-                    padding: 12px 20px;
-                    margin: 8px 0;
-                    display: inline-block;
-                    border: 1px solid #ccc;
-                    border-radius: 4px;
-                    box-sizing: border-box;
-                }
-                #BGRate {
-                    width: 50%;
-                    padding: 12px 20px;
-                    margin: 8px 0;
-                    display: inline-block;
-                    border: 1px solid #ccc;
-                    border-radius: 4px;
-                    box-sizing: border-box;
-                    visibility: hidden;
-                }
-                
-                input[type=text], select {
-                    width: 65%;
-                    padding: 12px 20px;
-                    margin: 8px 0;
-                    display: inline-block;
-                    border: 1px solid #ccc;
-                    border-radius: 4px;
-                    box-sizing: border-box;
-                }
-                
-                input[type=submit] {
-                    width: 50%;
-                    background-color: #4CAF50;
-                    color: white;
-                    padding: 14px 20px;
-                    margin: 8px 0;
-                    border: none;
-                    border-radius: 4px;
-                    cursor: pointer;
-                }
-                
-                input[type=submit]:hover {
-                    background-color: #45a049;
-                    /*animation-name: hinge;
-                    animation-duration: 1s;
-                    animation-iteration-count: 1;*/
-                }
-                input[type=submit]:active {
-                    background-color: #45a049;
-                    
-                }
-                #logo {
-                    display: block;
-                    margin-left: 0px;
-                    margin-right: auto;
-                    animation-name: rollIn;
-                    animation-duration: 1s;
-                    animation-iteration-count: 1;
-                    animation-delay:1.2s;
-                    animation-fill-mode:both;
-                    /*height:30%;
-                    width: 30%;*/
-                }
-                
-                div {
-                    border-radius: 5px;
-                    background-color: #f2f2f2;
-                    /*padding: 20px;*/
-                    width:70%;
-                }
-                .run-bounceinDown{
-                    animation-name: bounceInDown;
-                    animation-duration: 1s;
-                    animation-iteration-count: 1;
-                }
-                .run-bounceoutDown{
-                    animation-name: bounceOutDown;
-                    animation-duration: 1s;
-                    animation-iteration-count: 1;
-                }
-                </style>
 
-   <div id="left" >
-    <form id="form" action="./WrapperForm.php">
-        <img src="./logo.png" id="logo" class="logo"><br>
-    <label for="uname">Name</label>
-    <input type="text" id="uname" name="username" placeholder="Your name...">
-    <br>
-    <label for="email">Email</label>
-    <input type="text" id="email" name="useremail" placeholder="e.g. me@jlab.org" required>
-    <br>
-    <br>
-    <br>
-    <label for="recon_stack">halld_recon version:</label><select id="recon_stack" onchange="DoSimQuery()"></select><br>
-    <label for="sim_ver">halld_sim version:</label><select id="sim_ver" onchange="DoSetQuery()"></select><br>
-    <label for="verSet">version Set:</label><select id="verSet" name="versionSet" onchange="updatePreview()"></select><br><br>
-    <br>
-    <br>
+<div id="Form-pane">
+    <div id="Form-header">
+        
+        <div id="links">
+                <nav role="navigation">
+                        <div id="menuToggle">
+                          <!--
+                          A fake / hidden checkbox is used as click reciever,
+                          so you can use the :checked selector on it.
+                          -->
+                          <input type="checkbox" />
+                          
+                          <!--
+                          Some spans to act as a hamburger.
+                          
+                          They are acting like a real hamburger,
+                          not that McDonalds stuff.
+                          -->
+                          <span></span>
+                          <span></span>
+                          <span></span>
+                          
+                          <!--
+                          Too bad the menu has to be inside of the button
+                          but hey, it's pure CSS magic.
+                          -->
+                          <ul id="menu">
+                            <a href="https://halldweb.jlab.org/gluex_sim/Dashboard.html"><li>Dashboard</li></a>
+                            <a href="https://halldweb.jlab.org/gluex_sim/Records.html"><li>Records</li></a>
+                            <a href="https://github.com/JeffersonLab/gluex_MCwrapper"><li>Github Repository</li></a>
+                            <a href="mailto: tbritton@jlab.org"><li>Contact Me</li></a>
+                          </ul>
+                        </div>
+                      </nav>
+        </div>
+        <div id="logoh">
+        <img src="./logo.png" id="logo" class="logo">
+        <img src="./gluexlogo.png" id="explogo" class="explogo">
+        </div>
 
-    <label for="runnum">Run</label>
-    <select id="numOrRange" name="numOrRange" onChange="updateRangeoptions()">
-            <option value="Number" select="">Number</option>
-            <option value="Range">Range</option>
-    </select>
-    <input type="number" id="runnum" name="runnumber" placeholder="11366" required>
-    <input type="number" id="maxRunNum" name="maxRunNum" placeholder="11555">
-    <label for="numevt">Number of Events</label><input type="number" id="numevt" name="numevents" placeholder="1000000" required>
-    <br>
-    <label id="rcdbqL" for="rcdbq" class="hidden">RCDB Query</label> <input type="text" id="rcdbq" name="rcdbq" placeholder="RCDB query to use for run range.  Default: @is_production && @status_approved will be used if unset" >
-    <br><br>
-    
-    <label for="output">Output Directory Name</label>
-    
-    <input type="text" id="output" name="outputloc" placeholder="My_MC" required pattern="[^()/><\][\\\x22,;|]+" title="No / allowed (or other special characters)">
-
-    <br>
-    <br>
-    <br>
-    <br>
-    <br>
-    <label for="Generator">Generator</label>
-    <select id="generator" name="generator" onchange="updateGenConfig()">
-      <option value="genr8">genr8</option>
-      <option value="bggen" selected="bggen">bggen</option>
-      <option value="genEtaRegge">genEtaRegge</option>
-      <option value="gen_2pi_amp">gen_2pi_amp</option>
-      <option value="gen_2pi_primakoff">gen_2pi_primakoff</option>
-      <option value="gen_pi0">gen_pi0</option>
-      <option value="gen_omega_3pi">gen_omega_3pi</option>
-      <option value="gen_2k">gen_2k</option>
-      <option value="bggen_jpsi">bggen_jpsi</option>
-      <option value="gen_ee">gen_ee</option>
-      <option value="gen_ee_hb">gen_ee_hb</option>
-      <option value="bggen_phi_ee">bggen_phi_ee</option>
-      <option value="particle_gun">particle_gun</option>
-      <option value="genBH">genBH</option>
-      <option value="gen_omega_radiative">gen_omega_radiative</option>
-      <option value="gen_amp">gen_amp</option>
-      <option value="file:">file:/</option>
-    </select>
-
-    <br>
-
-    Min Photon E: <input type="number" step="0.01" id="GenMinE" name="GenMinE" placeholder="3.0 [GeV]" required>
-    Max Photon E:<input type="number" step="0.01" id="GenMaxE" name="GenMaxE" placeholder="11.6 [GeV]" required>
-    <br>
-    <label for="genconfig">Full Path to Generator Config</label>
-    <input type="text" id="genconfig" name="generator_config" placeholder="/.../Generators/bggen/examples/bggen_config.template" required>
-    <br>
-
-    <label for="Geantconf">Geant Version: </label>
-    <input type="radio" name="Geantver" value="3" checked> Geant3
-    <input type="radio" name="Geantver" value="4"> Geant4<br>
-
-    <br>
-    Geant Secondaries: <input type="checkbox" name="GeantSecondaries" value="GeantSecondaries" checked="">
-    <br>
-    
- 
-    <label for="bkgconf">Background: </label>
-    <select id="bkg" name="bkg" onChange="updateBKGoptions()">
-    <option value="None" selected="">None</option>
-    <option value="Random" >Random</option>
-    <option value="loc" >Random loc:/ </option>
-    <option value="BeamPhotons">BeamPhotons</option>
-    <option value="TagOnly">TagOnly</option>
-    </select>
-
-    
-    <input type="text" id="randomtag" name="randomtag" placeholder="sim-recon tag. e.g recon-2017_01-ver02" >
-    <br>
-    <br>
-    Reaction filter lines: <input type="button" id="ReactionFilter" value="Add Reactions" onclick="GetReactions()"><textarea id="ReactionLines" name="ReactionLines" readonly class="hidden"></textarea>
-    <br>
-    <br>
-    <label for="additionalreq">Additional requests: </label><br>
-    <textarea type="textarea" rows="25" cols="25" wrap="soft" id="additionalreq" name="addreq" placeholder="Type any other requirements here"> </textarea>
-    <br>
-    <br>
-    <input type="checkbox" name="RunGeneration" value="RunGen" checked=""> Run Generation
-    <input type="checkbox" name="RunGeant" value="RunGeant" checked="">  Run Geant
-    <input type="checkbox" name="RunSmear" value="RunSmear" checked=""> Smear
-    <input type="checkbox" name="RunRecon" value="RunRecon" checked=""> Reconstruct
-    <br>
-    <input type="checkbox" name="SaveGeneration" value="SaveGen" > Save Generation
-    <input type="checkbox" name="SaveGeant" value="SaveGen" > Save Geant
-    <input type="checkbox" name="SaveSmear" value="SaveSmear" > Save Smear
-    <input type="checkbox" name="SaveRecon" value="SaveRecon" checked=""> Save Reconstruct
-    <br>
-    <br>
-    <input type="submit" value="Submit" id="Submit_btn">
-    </form>
+        <br>
+        
+        
+        
     </div>
-    <div id="right" style="margin: 0 auto; height:800px; " >
-            <object type="text/html" id="setpreview" data="https://halldweb.jlab.org/dist/version_3.4_jlab.xml"
-                    style="width:100%; height:100%; margin:1%; align:right;">
-            </object>
-    </div>
-    <script>
-        $(document).ready(function(){alphabetizeslector();DoReconQuery();});
+        <form id="Form" action="./WrapperForm.php">
+            <input type="hidden" value="-1" id="prefill" name="prefill">
+            <input type="hidden" value="0" id="mod" name="mod">
+            <input type="hidden" value=0 id="wall" name="wall">
+            <div id="expSelector" class="switch-field">
+                    <div class="switch-title">Experiment</div>
+                    <input type="radio" id="GlueX" name="exp" value="GlueX" onclick="ChangeLogo('GlueX');MakeGluexForm();MakeCheckButton();alphabetizeslector()" checked/>
+                    <label for="GlueX">GlueX</label>
+                    <input type="radio" id="CPP" name="exp" value="CPP" onclick="ChangeLogo('CPP');MakeCPPForm();MakeCheckButton();alphabetizeslector()" />
+                    <label for="CPP">CPP</label>
+                    <!--<input type="radio" id="switch_3_right" name="switch_3" value="no" />
+                    <label for="switch_3_right">Three</label>-->
+            </div>
+            <div id="personal">
+                
 
-    var popup=null;
-    var lines=null;
-    var firstLoad=true;
+                    <label for="uname">Name</label>
+                    <input type="text" id="uname" name="username" placeholder="Your name...">
+                    <br>
+                    <br>
+                    <label for="email">Email</label>
+                    <input type="text" id="email" name="useremail" placeholder="e.g. me@jlab.org" required>
+            </div>
+            <br>
+            <br>
+            <div id="expform" style="width:100%;">
 
-    function GetReactions()
-    {
-       
-            popup=window.open("https://halldweb.jlab.org/gluex_sim/ReactionFilterLines.html", "popupwindow", 'width=800,height=600');
-
-
-            popup.onload = function() {
-            setTimeout(function(){ console.log(popup.document.getElementById("collection")); }, 2000);
+            </div>
+            <div id="submitbutton">
+                    <label for="wallet" id="balance" class="hidden">Balance </label>
+                    <input type="number" min="0" id="spend" name="spend" step=".001" class="hidden">
+            </div>
             
-            }
-            popup.onbeforeunload = function(){lines=popup.document.getElementById("collection");console.log(lines);MakeLines(lines);}
-        
-        
-    }
-    function MakeLines(lines)
-    {
-        document.getElementById("ReactionLines").value="";
-        if(lines)
-        {
-            for(var i=0;i<lines.children.length;i++)
-            {
-                if(lines.children[i].nodeName!="SPAN")
-                    continue;
+        </form>
+    
+</div>
+<div id="Info-pane">
+        <object type="text/html" id="setpreview" data="https://halldweb.jlab.org/dist/version_3.4_jlab.xml"
+        style="width:100%; height:100%; margin:1%; align:center; position:relative; display:block">
+</object>
+</div>
 
-                document.getElementById("ReactionLines").value+=lines.children[i].children[1].value+'\n';
-                document.getElementById("ReactionFilter").value="Reactions Set";
-                document.getElementById("ReactionLines").className="";
-            }
-        }
-        
-    }
-    function updateBKGoptions()
-    {
-        var sel_val=document.getElementById("bkg").value;
-        document.getElementById("randomtag").value="";
-        if(sel_val==="Random")
-        {
-            document.getElementById("randomtag").style.visibility='visible';
-            document.getElementById("randomtag").placeholder="sim-recon tag. e.g recon-2017_01-ver02";
-            document.getElementById("randomtag").pattern="[^' ']+"
-        }
-        else if(sel_val==="BeamPhotons" || sel_val==="TagOnly")
-        {
-            document.getElementById("randomtag").style.visibility='visible';
-            document.getElementById("randomtag").placeholder="optional: .12345 [GHz]";
-       
-        }
-        else if(sel_val==="loc")
-        {
-            document.getElementById("randomtag").style.visibility='visible';
-            document.getElementById("randomtag").placeholder="full path to folder containing the random trigger files";
-       
-        }
-        else
-        {
-            document.getElementById("randomtag").style.visibility='hidden';
-        }
-    }
-    function updateRangeoptions()
-    {
-        var sel_val=document.getElementById("numOrRange").value;
 
-        if(sel_val==="Number")
+</body>
+<script>
+    var urlvals;
+  $(document).ready(function(){getUrlVars();Initialize()})
+  var firstLoad=true;
+  var project;
+  function getUrlVars() {
+    var vars = {};
+    var parts = window.location.href.replace(/[?&]+([^=&]+)=([^&]*)/gi, function(m,key,value) {
+        vars[key] = value;
+    });
+    urlvals=vars;
+
+    console.log(urlvals);
+    for (var key in urlvals)
+    {
+        var obj=document.getElementById(key);
+
+        if(obj)
         {
-            document.getElementById("maxRunNum").style.visibility='hidden';
-            document.getElementById("rcdbq").style.visibility='hidden';
-            document.getElementById("rcdbqL").className='hidden';
-            document.getElementById("rcdbq").value="";
+            obj.value=urlvals[key]
         }
-        else if(sel_val==="Range")
-        {
-            document.getElementById("maxRunNum").style.visibility='visible';
-            document.getElementById("rcdbq").style.visibility='visible';
-            document.getElementById("rcdbqL").className='';
-       
-        }
-        
+        console.log(key);
+        console.log(urlvals[key])
     }
-    function alphabetizeslector()
+}
+function prefillForm()
+{
+    if (window.XMLHttpRequest) {
+            // code for IE7+, Firefox, Chrome, Opera, Safari
+            xmlhttp = new XMLHttpRequest();
+        } else {
+            // code for IE6, IE5
+            xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+        }
+
+        xmlhttp.onreadystatechange = function() {
+            if (this.readyState == 4 && this.status == 200) {
+
+                result=JSON.parse(this.responseText)[0];
+                console.log("PREFILL")
+                console.log(result)
+                project=result;
+            
+                if(!result.Exp)
+                {
+                    alert("no expirement found" )
+                    return
+                }
+
+                if(result.Exp=="GlueX" || result.Exp == "gluex")
+                {
+                    document.getElementById("GlueX").checked=true;
+                    MakeGluexForm();
+                    ChangeLogo("GlueX")
+
+                }
+                else if( result.Exp=="CPP")
+                {
+                    document.getElementById("CPP").checked=true;
+                    MakeCPPForm()
+                    ChangeLogo("CPP")
+                }
+                else
+                {
+                    alert("Failed to find valid form")
+                }
+
+                LoopAndFill(result);
+
+
+                }
+                
+            }
+            query_to_do="SELECT DISTINCT"
+
+        console.log("./getForm.php?id="+document.getElementById("prefill").value)
+        xmlhttp.open("GET","./getForm.php?id="+document.getElementById("prefill").value);
+
+        
+        xmlhttp.send();
+
+}
+function LoopAndFill(result)
+{
+    document.getElementById("uname").value=result.UName;
+    document.getElementById("email").value=result.Email;
+    //NEED VERSION STUFF!!!
+
+    if(result.Exp == "CPP" || result.Exp =="GlueX")
+    {
+        DoReconQuery();
+    }
+
+    
+    
+    if(result.RunNumLow == result.RunNumHigh)
+    {
+        document.getElementById("runnum").value=result.RunNumLow
+    }
+    else
+    {
+        MakeSelectedByValue(document.getElementById("numOrRange"),"Range")
+        updateRangeoptions();
+        document.getElementById("runnum").value=result.RunNumLow
+        document.getElementById("maxRunNum").value=result.RunNumHigh
+        document.getElementById("rcdbq").value=result.RCDBQuery
+    }
+
+    document.getElementById("numevt").value=result.NumEvents
+    document.getElementById("output").value=result.OutputLocation
+    MakeSelectedByValue(document.getElementById("generator"),result.Generator)
+    updateGenConfig();
+    document.getElementById("genconfig").value=result.Generator_Config
+
+    document.getElementById("GenMinE").value=parseFloat(result.GenMinE).toFixed(2)
+    document.getElementById("GenMaxE").value=parseFloat(result.GenMaxE).toFixed(2)
+
+    var cohpeak=document.getElementById("cohPos")
+    if(cohpeak)
+    {
+        if(result.CoherentPeak)
+        {
+            cohpeak.value=result.CoherentPeak
+        }
+    }
+    if(result.GeantVersion == "3")
+    {
+        document.getElementById("Geant3").checked=true;
+    }
+    else if( result.GeantVersion == "4" )
+    {
+        document.getElementById("Geant4").checked=true;
+    }
+
+    if(result.GeantSecondaries == "1")
+    {
+        document.getElementById("GeantSecondaries").checked=true;
+    }
+    else
+    {
+        document.getElementById("GeantSecondaries").checked=false;
+    }
+
+    var bkgarr=result.BKG.split(/:(.+)/)
+
+    if(bkgarr.length==1)
+    {
+        MakeSelectedByValue(document.getElementById("bkg"),result.BKG)
+        updateBKGoptions();
+    }
+    else if(bkgarr[0]=="loc")
+    {
+        MakeSelectedByValue(document.getElementById("bkg"),"Random loc:/")
+        updateBKGoptions();
+        document.getElementById("randomtag").value=bkgarr[1];
+
+    }
+    else if( bkgarr[0]=="Random")
+    {
+        MakeSelectedByValue(document.getElementById("bkg"),bkgarr[0])
+        updateBKGoptions();
+        document.getElementById("randomtag").value=bkgarr[1];
+    }
+    else if( bkgarr[0]=="BeamPhotons")
+    {
+        MakeSelectedByValue(document.getElementById("bkg"),bkgarr[0])
+        updateBKGoptions();
+        document.getElementById("randomtag").value=bkgarr[1];
+    }
+    else if (bkgarr[0]=="TagOnly")
+    {
+        MakeSelectedByValue(document.getElementById("bkg"),bkgarr[0])
+        updateBKGoptions();
+        document.getElementById("randomtag").value=bkgarr[1];
+    }
+    document.getElementById("ReactionLines").style.visibility="visible"
+    document.getElementById("ReactionLines").class=""
+    document.getElementById("ReactionLines").value=result.ReactionLines
+    document.getElementById("ReactionFilter").value="Reactions Set";
+
+    if(result.RunGeneration == "1")
+    {
+        document.getElementById("RunGeneration").checked=true;
+    }
+    else
+    {
+        document.getElementById("RunGeneration").checked=false;
+    }
+    if(result.RunGeant == "1")
+    {
+        document.getElementById("RunGeant").checked=true;
+    }
+    else
+    {
+        document.getElementById("RunGeant").checked=false;
+    }
+    if(result.RunSmear == "1")
+    {
+        document.getElementById("RunSmear").checked=true;
+    }
+    else
+    {
+        document.getElementById("RunSmear").checked=false;
+    }
+    if(result.RunReconstruction == "1")
+    {
+        document.getElementById("RunRecon").checked=true;
+    }
+    else
+    {
+        document.getElementById("RunRecon").checked=false;
+    }
+
+    if(result.SaveGeneration == "1")
+    {
+        document.getElementById("SaveGeneration").checked=true;
+    }
+    else
+    {
+        document.getElementById("SaveGeneration").checked=false;
+    }
+    if(result.SaveGeant == "1")
+    {
+        document.getElementById("SaveGeant").checked=true;
+    }
+    else
+    {
+        document.getElementById("SaveGeant").checked=false;
+    }
+    if(result.SaveSmear == "1")
+    {
+        document.getElementById("SaveSmear").checked=true;
+    }
+    else
+    {
+        document.getElementById("SaveSmear").checked=false;
+    }
+    if(result.SaveReconstruction == "1")
+    {
+        document.getElementById("SaveRecon").checked=true;
+    }
+    else
+    {
+        document.getElementById("SaveRecon").checked=false;
+    }
+
+    document.getElementById("additionalreq").value=result.Comments
+
+    if(document.getElementById("mod").value=="1")
+    {
+    MakeUpdateButton();
+    
+    }
+}
+function MakeSelectedByValue(select,val)
+{
+  for (var i = 0; i < select.length; i++){
+    var option = select.options[i];
+    // now have option.text, option.value
+    if (option.value==val)
+    {
+        option.selected=true;
+    }
+    else
+    {
+        option.selected=false;
+    }
+  }
+}
+function Initialize()
+{
+    var prefill=document.getElementById("prefill").value
+    if(prefill != "-1")
+    {
+        prefillForm()
+    }
+    else
+    {
+      MakeGluexForm();MakeCheckButton();alphabetizeslector()
+    }
+    getBalance();
+}
+function getBalance()
+{
+    if (window.XMLHttpRequest) {
+            // code for IE7+, Firefox, Chrome, Opera, Safari
+            xmlhttp = new XMLHttpRequest();
+        } else {
+            // code for IE6, IE5
+            xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+        }
+
+        xmlhttp.onreadystatechange = function() {
+            if (this.readyState == 4 && this.status == 200) {
+
+                console.log(this.responseText)
+                balresult=JSON.parse(this.responseText);
+
+                document.getElementById("balance").innerHTML="Current Balance: "+balresult[0].wc+" wc"
+                document.getElementById("wall").value=parseFloat(balresult[0].wc);
+                document.getElementById("spend").max=parseFloat(balresult[0].wc);
+                
+                }
+                
+            }
+
+        
+        xmlhttp.open("GET","./wcwall.php");
+
+        
+        xmlhttp.send();  
+}
+  function alphabetizeslector()
     {
         var selected = $("#generator option:selected")[0].value
         
@@ -398,20 +428,1226 @@
         }
 
     }
-
-    function updateGenConfig()
+function ChangeLogo(newlogo)
+{
+    if(newlogo=="CPP")
     {
-        if($("#generator option:selected")[0].value == "file:")
+        $("#explogo").attr("src","./cpplogo.png");
+        document.getElementById("explogo").style.className="run-fadeIn";
+    }
+    else
+    {
+        $("#explogo").attr("src","./gluexlogo.png");
+        document.getElementById("explogo").style.className="run-fadeIn";
+    }
+
+}
+function MakeGluexForm()
+{
+    var form=document.getElementById("expform");
+    form.innerHTML=""
+
+    form.appendChild(document.createElement("BR"))
+    form.appendChild(document.createElement("BR"))
+
+    var reclabel=document.createElement("LABEL");
+    reclabel.setAttribute("for", "recon_stack");
+    reclabel.appendChild(document.createTextNode("halld_recon version:"))
+    form.appendChild(reclabel)
+
+    var recselect=document.createElement("SELECT")
+    recselect.id="recon_stack"
+    recselect.setAttribute("onchange","DoSimQuery();MakeCheckButton();");
+    form.appendChild(recselect)
+    form.appendChild(document.createElement("BR"))
+
+    var simlabel=document.createElement("LABEL");
+    simlabel.setAttribute("for", "sim_ver");
+    simlabel.appendChild(document.createTextNode("halld_sim version:"))
+    form.appendChild(simlabel)
+    var simselect=document.createElement("SELECT")
+    simselect.id="sim_ver"
+    simselect.setAttribute("onchange","DoSetQuery();MakeCheckButton();");
+    form.appendChild(simselect)
+
+    form.appendChild(document.createElement("BR"))
+
+    var verlabel=document.createElement("LABEL");
+    verlabel.setAttribute("for", "verSet");
+    verlabel.appendChild(document.createTextNode("version Set:"))
+    form.appendChild(verlabel)
+    var verselect=document.createElement("SELECT")
+    verselect.id="verSet"
+    verselect.name="versionSet"
+    verselect.setAttribute("onchange","updatePreview();MakeCheckButton();");
+    //verselect.onchange="updatePreview();MakeCheckButton()"
+    form.appendChild(verselect)
+
+    DoReconQuery();
+
+    form.appendChild(document.createElement("BR"))
+    form.appendChild(document.createElement("BR"))
+    form.appendChild(document.createElement("BR"))
+    form.appendChild(document.createElement("BR"))
+
+//RUN NUMBER/RANGE AND EVENTS
+    var Runlabel=document.createElement("LABEL");
+    Runlabel.setAttribute("for", "verSet");
+    Runlabel.appendChild(document.createTextNode("Run"))
+    
+    form.appendChild(Runlabel)
+    var runselect=document.createElement("SELECT")
+    runselect.id="numOrRange"
+    runselect.setAttribute("onchange","updateRangeoptions();MakeCheckButton();");
+
+    var runnum=document.createElement("OPTION");
+    runnum.value="Number";
+    runnum.text="Number";
+    //runnum.data-tip="The run number you wish to simulate"
+    runnum.selected=true;
+    runselect.appendChild(runnum)
+    var runrange=document.createElement("OPTION");
+    runrange.value="Range";
+    runrange.text="Range";
+    runselect.appendChild(runrange)
+
+    form.appendChild(runselect)
+
+    var runnumlow=document.createElement("INPUT")
+    runnumlow.type="number"
+    runnumlow.id="runnum"
+    runnumlow.name="runnumber"
+    runnumlow.placeholder="11366"
+    runnumlow.title="Place the desired run number to simulate here"
+    runnum.required=true;
+    form.appendChild(runnumlow);
+
+    var evtslabel=document.createElement("LABEL");
+    evtslabel.setAttribute("for", "numevt");
+    evtslabel.id="evtslabel"
+    evtslabel.appendChild(document.createTextNode("      Number of Events"))
+    form.appendChild(evtslabel)
+    var numevts=document.createElement("INPUT")
+    numevts.type="number"
+    numevts.id="numevt"
+    numevts.name="numevents"
+    numevts.placeholder="1000000"
+    numevts.required=true;
+    numevts.title="Integer number representing the total desired events to produce"
+    numevts.style.width="15%";
+    form.appendChild(numevts);
+
+    //OUTPUT
+    form.appendChild(document.createElement("BR"))
+    form.appendChild(document.createElement("BR"))
+    form.appendChild(document.createElement("BR"))
+    form.appendChild(document.createElement("BR"))
+
+    var outputlabel=document.createElement("LABEL");
+    outputlabel.setAttribute("for", "output");
+    outputlabel.appendChild(document.createTextNode("Output Directory Name"))
+    form.appendChild(outputlabel)
+    var outputloc=document.createElement("INPUT")
+    outputloc.type="text"
+    outputloc.id="output"
+    outputloc.name="outputloc"
+    outputloc.placeholder="My_MC"
+    outputloc.required=true;
+    outputloc.title="The root title of the output directory. NOT the full path. \nNo / allowed (or other special characters)"
+    outputloc.pattern="[^()/><\][\\\x22,;|]+"
+    outputloc.style.width="25%";
+    form.appendChild(outputloc);
+
+    //GENERATOR
+    form.appendChild(document.createElement("BR"))
+    form.appendChild(document.createElement("BR"))
+    form.appendChild(document.createElement("BR"))
+    form.appendChild(document.createElement("BR"))
+
+    var genlabel=document.createElement("LABEL");
+    genlabel.setAttribute("for", "Generator");
+    genlabel.appendChild(document.createTextNode("Generator"))
+    form.appendChild(genlabel)
+    var genselect=document.createElement("SELECT")
+    genselect.id="generator"
+    genselect.name="generator"
+    genselect.setAttribute("onchange","updateGenConfig();MakeCheckButton();");
+    //verselect.onchange="updatePreview();MakeCheckButton()"
+    form.appendChild(genselect)
+
+    populateGenerators("GlueX");
+
+    form.appendChild(document.createElement("BR"))
+    form.appendChild(document.createElement("BR"))
+
+    var genconflabel=document.createElement("LABEL");
+    genconflabel.setAttribute("for", "genconfig");
+    genconflabel.appendChild(document.createTextNode("Full Path to Generator Config"))
+    form.appendChild(genconflabel)
+    var genconfloc=document.createElement("INPUT")
+    genconfloc.type="text"
+    genconfloc.id="genconfig"
+    genconfloc.name="generator_config"
+    genconfloc.placeholder="/.../Generators/bggen/examples/bggen_config.template"
+    genconfloc.required=true;
+    genconfloc.title="The full path for the file that configures the above generator. It and the containing directories must be readable and reachable from the interactive farm."
+    genconfloc.style.width="52%";
+    form.appendChild(genconfloc);
+
+    form.appendChild(document.createElement("BR"))
+    form.appendChild(document.createElement("BR"))
+
+    //PHOTON ENERGIES
+    var minElabel=document.createElement("LABEL");
+    minElabel.setAttribute("for", "GenMinE");
+    minElabel.appendChild(document.createTextNode("Min Photon E:"))
+    form.appendChild(minElabel)
+    var minEin=document.createElement("INPUT")
+    minEin.type="number"
+    minEin.step="0.01"
+    minEin.id="GenMinE"
+    minEin.name="GenMinE"
+    minEin.placeholder="3.0 [GeV]"
+    minEin.required=true;
+    minEin.title="Minimum beam photon energy to simulate rounded to the nearest 10 MeV"
+    minEin.style.width="14%";
+    form.appendChild(minEin);
+
+    var maxElabel=document.createElement("LABEL");
+    maxElabel.setAttribute("for", "GenMaxE");
+    maxElabel.appendChild(document.createTextNode("Max Photon E:"))
+    form.appendChild(maxElabel)
+    var maxEin=document.createElement("INPUT")
+    maxEin.type="number"
+    maxEin.step="0.01"
+    maxEin.id="GenMaxE"
+    maxEin.name="GenMaxE"
+    maxEin.placeholder="11.6 [GeV]"
+    maxEin.required=true;
+    maxEin.title="Maximum beam photon energy to simulate rounded to the nearest 10 MeV"
+    maxEin.style.width="14%";
+    form.appendChild(maxEin);
+
+    form.appendChild(document.createElement("BR"))
+    form.appendChild(document.createElement("BR"))
+
+    //GEANT VER
+    var geantlabel=document.createElement("LABEL");
+    geantlabel.setAttribute("for", "Geantver");
+    geantlabel.appendChild(document.createTextNode("Geant Version:"))
+    form.appendChild(geantlabel)
+    var g3in=document.createElement("INPUT");
+    g3in.type="radio"
+    g3in.id="Geant3"
+    g3in.name="Geantver"
+    g3in.value="3"
+    g3in.checked=true;
+    g3in.setAttribute("onclick","MakeCheckButton();");
+
+    form.appendChild(g3in);
+    form.appendChild(document.createTextNode("Geant3"))
+
+    var g4in=document.createElement("INPUT");
+    g4in.type="radio"
+    g4in.id="Geant4"
+    g4in.value="4"
+    g4in.name="Geantver"
+    g4in.setAttribute("onclick","MakeCheckButton();");
+   
+
+    form.appendChild(g4in);
+    form.appendChild(document.createTextNode("Geant4"))
+   
+    form.appendChild(document.createElement("BR"))
+
+    //GEANT SECONDARIES
+    var geantseclabel=document.createElement("LABEL");
+    geantseclabel.setAttribute("for", "Geantver");
+    geantseclabel.appendChild(document.createTextNode("Geant Secondaries?"))
+    form.appendChild(geantseclabel)
+    var gsecin=document.createElement("INPUT");
+    gsecin.type="checkbox"
+    gsecin.id="GeantSecondaries"
+    gsecin.name="GeantSecondaries"
+    gsecin.value="GeantSecondaries"
+    gsecin.checked=true;
+
+    form.appendChild(gsecin);
+
+    form.appendChild(document.createElement("BR"))
+    form.appendChild(document.createElement("BR"))
+    form.appendChild(document.createElement("BR"))
+    form.appendChild(document.createElement("BR"))
+    //BACKGROUNDS
+    var bkglabel=document.createElement("LABEL");
+    bkglabel.setAttribute("for", "bkgconf");
+    bkglabel.appendChild(document.createTextNode("Background:"))
+    form.appendChild(bkglabel)
+    var bkgselect=document.createElement("SELECT")
+    bkgselect.id="bkg"
+    bkgselect.name="bkg"
+    bkgselect.setAttribute("onchange","updateBKGoptions();MakeCheckButton();");
+    //verselect.onchange="updatePreview();MakeCheckButton()"
+    form.appendChild(bkgselect)
+
+    populateBackgrounds("GlueX");
+
+    form.appendChild(document.createElement("BR"))
+    form.appendChild(document.createElement("BR"))
+    form.appendChild(document.createElement("BR"))
+    form.appendChild(document.createElement("BR"))
+    //REACTION FILTER
+    var rflabel=document.createElement("LABEL");
+    rflabel.setAttribute("for", "ReactionFilter");
+    rflabel.appendChild(document.createTextNode("Reaction Filter"))
+    form.appendChild(rflabel)
+    var rfin=document.createElement("INPUT");
+    rfin.type="button"
+    rfin.id="ReactionFilter"
+    rfin.name="ReactionFilter"
+    rfin.value="Add Reactions"
+    rfin.setAttribute("onclick","GetReactions();MakeCheckButton();");
+    form.appendChild(rfin)
+
+    var rltext=document.createElement("textarea")
+    rltext.id="ReactionLines"
+    rltext.name="ReactionLines"
+    rltext.readOnly=true;
+    rltext.className="hidden"
+    form.appendChild(rltext)
+
+    form.appendChild(document.createElement("BR"))
+    form.appendChild(document.createElement("BR"))
+    form.appendChild(document.createElement("BR"))
+    form.appendChild(document.createElement("BR"))
+    //Runnings boxes
+
+    var rgen=document.createElement("INPUT");
+    rgen.type="checkbox"
+    rgen.id="RunGeneration"
+    rgen.name="RunGeneration"
+    rgen.value="RunGen"
+    rgen.checked=true;
+    form.appendChild(rgen);
+    form.appendChild(document.createTextNode("Run Generation"))
+
+    var rgeant=document.createElement("INPUT");
+    rgeant.type="checkbox"
+    rgeant.id="RunGeant"
+    rgeant.name="RunGeant"
+    rgeant.value="RunGeant"
+    rgeant.checked=true;
+    form.appendChild(rgeant);
+    form.appendChild(document.createTextNode("Run Geant"))
+
+    var rsmear=document.createElement("INPUT");
+    rsmear.type="checkbox"
+    rsmear.id="RunSmear"
+    rsmear.name="RunSmear"
+    rsmear.value="RunSmear"
+    rsmear.checked=true;
+    form.appendChild(rsmear);
+    form.appendChild(document.createTextNode("Run Smearing"))
+
+    var rrecon=document.createElement("INPUT");
+    rrecon.type="checkbox"
+    rrecon.id="RunRecon"
+    rrecon.name="RunRecon"
+    rrecon.value="RunRecon"
+    rrecon.checked=true;
+    form.appendChild(rrecon);
+    form.appendChild(document.createTextNode("Run Reconstruction"))
+  
+    form.appendChild(document.createElement("BR"))
+
+    var sgen=document.createElement("INPUT");
+    sgen.type="checkbox"
+    sgen.id="SaveGeneration"
+    sgen.name="SaveGeneration"
+    sgen.value="SaveGen"
+    form.appendChild(sgen);
+    form.appendChild(document.createTextNode("Save Generation"))
+
+    var sgeant=document.createElement("INPUT");
+    sgeant.type="checkbox"
+    sgeant.id="SaveGeant"
+    sgeant.name="SaveGeant"
+    sgeant.value="SaveGeant"
+    form.appendChild(sgeant);
+    form.appendChild(document.createTextNode("Save Geant"))
+
+    var ssmear=document.createElement("INPUT");
+    ssmear.type="checkbox"
+    ssmear.id="SaveSmear"
+    ssmear.name="SaveSmear"
+    ssmear.value="SaveSmear"
+    form.appendChild(ssmear);
+    form.appendChild(document.createTextNode("Save Smearing"))
+
+    var srecon=document.createElement("INPUT");
+    srecon.type="checkbox"
+    srecon.id="SaveRecon"
+    srecon.name="SaveRecon"
+    srecon.value="SaveRecon"
+    srecon.checked=true;
+    form.appendChild(srecon);
+    form.appendChild(document.createTextNode("Save Reconstruction"))
+
+    form.appendChild(document.createElement("BR"))
+    form.appendChild(document.createElement("BR"))
+    
+    //ADDITIONAL COMMENTS
+    var comlabel=document.createElement("LABEL");
+    comlabel.setAttribute("for", "additionalreq");
+    comlabel.appendChild(document.createTextNode("Additional Comments:"))
+    form.appendChild(comlabel)
+    form.appendChild(document.createElement("BR"))
+    var addcom=document.createElement("textarea")
+    addcom.rows=10;
+    addcom.cols=50
+    addcom.wrap="soft"
+    addcom.id="additionalreq"
+    addcom.name="addreq"
+
+    form.appendChild(addcom)
+    
+}
+function MakeCPPForm()
+{
+    var form=document.getElementById("expform");
+    form.innerHTML=""
+
+    form.appendChild(document.createElement("BR"))
+    form.appendChild(document.createElement("BR"))
+
+    var reclabel=document.createElement("LABEL");
+    reclabel.setAttribute("for", "recon_stack");
+    reclabel.appendChild(document.createTextNode("halld_recon version:"))
+    form.appendChild(reclabel)
+
+    var recselect=document.createElement("SELECT")
+    recselect.id="recon_stack"
+    recselect.setAttribute("onchange","DoSimQuery();MakeCheckButton();");
+    form.appendChild(recselect)
+    form.appendChild(document.createElement("BR"))
+
+    var simlabel=document.createElement("LABEL");
+    simlabel.setAttribute("for", "sim_ver");
+    simlabel.appendChild(document.createTextNode("halld_sim version:"))
+    form.appendChild(simlabel)
+    var simselect=document.createElement("SELECT")
+    simselect.id="sim_ver"
+    simselect.setAttribute("onchange","DoSetQuery();MakeCheckButton();");
+    form.appendChild(simselect)
+
+    form.appendChild(document.createElement("BR"))
+
+    var verlabel=document.createElement("LABEL");
+    verlabel.setAttribute("for", "verSet");
+    verlabel.appendChild(document.createTextNode("version Set:"))
+    form.appendChild(verlabel)
+    var verselect=document.createElement("SELECT")
+    verselect.id="verSet"
+    verselect.name="versionSet"
+    verselect.setAttribute("onchange","updatePreview();MakeCheckButton();");
+    //verselect.onchange="updatePreview();MakeCheckButton()"
+    form.appendChild(verselect)
+
+    DoReconQuery();
+
+    form.appendChild(document.createElement("BR"))
+    form.appendChild(document.createElement("BR"))
+    form.appendChild(document.createElement("BR"))
+    form.appendChild(document.createElement("BR"))
+
+//RUN NUMBER/RANGE AND EVENTS
+    var Runlabel=document.createElement("LABEL");
+    Runlabel.setAttribute("for", "verSet");
+    Runlabel.appendChild(document.createTextNode("Run"))
+    form.appendChild(Runlabel)
+    var runselect=document.createElement("SELECT")
+    runselect.id="numOrRange"
+    runselect.setAttribute("onchange","updateRangeoptions();MakeCheckButton();");
+
+    var runnum=document.createElement("OPTION");
+    runnum.value="Number";
+    runnum.text="Number";
+    runnum.selected=true;
+    runselect.appendChild(runnum)
+    var runrange=document.createElement("OPTION");
+    runrange.value="Range";
+    runrange.text="Range";
+    runselect.appendChild(runrange)
+
+    form.appendChild(runselect)
+
+    var runnumlow=document.createElement("INPUT")
+    runnumlow.type="number"
+    runnumlow.id="runnum"
+    runnumlow.name="runnumber"
+    runnumlow.placeholder="11366"
+    runnumlow.title="Place the desired run number to simulate here"
+    runnum.required=true;
+    form.appendChild(runnumlow);
+
+    var evtslabel=document.createElement("LABEL");
+    evtslabel.setAttribute("for", "numevt");
+    evtslabel.id="evtslabel"
+    evtslabel.appendChild(document.createTextNode("      Number of Events"))
+    form.appendChild(evtslabel)
+    var numevts=document.createElement("INPUT")
+    numevts.type="number"
+    numevts.id="numevt"
+    numevts.name="numevents"
+    numevts.placeholder="1000000"
+    numevts.required=true;
+    numevts.title="Integer number representing the total desired events to produce"
+    numevts.style.width="15%";
+    form.appendChild(numevts);
+
+    //OUTPUT
+    form.appendChild(document.createElement("BR"))
+    form.appendChild(document.createElement("BR"))
+    form.appendChild(document.createElement("BR"))
+    form.appendChild(document.createElement("BR"))
+
+    var outputlabel=document.createElement("LABEL");
+    outputlabel.setAttribute("for", "output");
+    outputlabel.appendChild(document.createTextNode("Output Directory Name"))
+    form.appendChild(outputlabel)
+    var outputloc=document.createElement("INPUT")
+    outputloc.type="text"
+    outputloc.id="output"
+    outputloc.name="outputloc"
+    outputloc.placeholder="My_MC"
+    outputloc.required=true;
+    outputloc.title="The root title of the output directory. NOT the full path. \nNo / allowed (or other special characters)"
+    outputloc.pattern="[^()/><\][\\\x22,;|]+"
+    outputloc.style.width="25%";
+    form.appendChild(outputloc);
+    //GENERATOR
+    form.appendChild(document.createElement("BR"))
+    form.appendChild(document.createElement("BR"))
+    form.appendChild(document.createElement("BR"))
+    form.appendChild(document.createElement("BR"))
+
+    var genlabel=document.createElement("LABEL");
+    genlabel.setAttribute("for", "Generator");
+    genlabel.appendChild(document.createTextNode("Generator"))
+    form.appendChild(genlabel)
+    var genselect=document.createElement("SELECT")
+    genselect.id="generator"
+    genselect.name="generator"
+    genselect.setAttribute("onchange","updateGenConfig();MakeCheckButton();");
+    //verselect.onchange="updatePreview();MakeCheckButton()"
+    form.appendChild(genselect)
+
+    populateGenerators("CPP");
+    form.appendChild(document.createElement("BR"))
+    form.appendChild(document.createElement("BR"))
+
+    var genconflabel=document.createElement("LABEL");
+    genconflabel.setAttribute("for", "genconfig");
+    genconflabel.appendChild(document.createTextNode("Full Path to Generator Config"))
+    form.appendChild(genconflabel)
+    var genconfloc=document.createElement("INPUT")
+    genconfloc.type="text"
+    genconfloc.id="genconfig"
+    genconfloc.name="generator_config"
+    genconfloc.placeholder="/.../Generators/bggen/examples/bggen_config.template"
+    genconfloc.required=true;
+    genconfloc.title="The full path for the file that configures the above generator. It and the containing directories must be readable and reachable from the interactive farm."
+    genconfloc.style.width="52%";
+    form.appendChild(genconfloc);
+
+    form.appendChild(document.createElement("BR"))
+    form.appendChild(document.createElement("BR"))
+
+    //PHOTON ENERGIES
+    var minElabel=document.createElement("LABEL");
+    minElabel.setAttribute("for", "GenMinE");
+    minElabel.appendChild(document.createTextNode("Min Photon E:"))
+    form.appendChild(minElabel)
+    var minEin=document.createElement("INPUT")
+    minEin.type="number"
+    minEin.step="0.01"
+    minEin.id="GenMinE"
+    minEin.name="GenMinE"
+    minEin.placeholder="3.0 [GeV]"
+    minEin.required=true;
+    minEin.title="Minimum beam photon energy to simulate rounded to the nearest 10 MeV"
+    minEin.style.width="14%";
+    form.appendChild(minEin);
+
+    var maxElabel=document.createElement("LABEL");
+    maxElabel.setAttribute("for", "GenMaxE");
+    maxElabel.appendChild(document.createTextNode("Max Photon E:"))
+    form.appendChild(maxElabel)
+    var maxEin=document.createElement("INPUT")
+    maxEin.type="number"
+    maxEin.step="0.01"
+    maxEin.id="GenMaxE"
+    maxEin.name="GenMaxE"
+    maxEin.placeholder="11.6 [GeV]"
+    maxEin.required=true;
+    maxEin.title="Maximum beam photon energy to simulate rounded to the nearest 10 MeV"
+    maxEin.style.width="14%";
+    form.appendChild(maxEin);
+
+    form.appendChild(document.createElement("BR"))
+    //COHERENT PEAK POSITION
+    var cohElabel=document.createElement("LABEL");
+    cohElabel.setAttribute("for", "cohPos");
+    cohElabel.appendChild(document.createTextNode("Coherent Peak Position"))
+    form.appendChild(cohElabel)
+    var coherent=document.createElement("INPUT")
+    coherent.type="number"
+    coherent.step="0.01"
+    coherent.id="cohPos"
+    coherent.name="cohPos"
+    coherent.placeholder="9.0 [GeV]"
+    coherent.title="Enter the desired coherent peak position to the nearest 10 GeV.  Note: this overrides the actual value from the chosen run number."
+    coherent.style.width="14%";
+    form.appendChild(coherent);
+
+    form.appendChild(document.createElement("BR"))
+    form.appendChild(document.createElement("BR"))
+
+    //GEANT VER
+    var geantlabel=document.createElement("LABEL");
+    geantlabel.setAttribute("for", "Geantver");
+    geantlabel.appendChild(document.createTextNode("Geant Version:"))
+    form.appendChild(geantlabel)
+    var g3in=document.createElement("INPUT");
+    g3in.type="radio"
+    g3in.id="Geant3"
+    g3in.name="Geantver"
+    g3in.value="3"
+    g3in.checked=true;
+    g3in.setAttribute("onclick","MakeCheckButton();");
+   
+
+    form.appendChild(g3in);
+    form.appendChild(document.createTextNode("Geant3"))
+
+    var g4in=document.createElement("INPUT");
+    g4in.type="radio"
+    g4in.id="Geant4"
+    g4in.name="Geantver"
+    g4in.value="4"
+    g4in.setAttribute("onclick","MakeCheckButton();");
+
+    form.appendChild(g4in);
+    form.appendChild(document.createTextNode("Geant4"));
+
+    form.appendChild(document.createElement("BR"));
+    //GEANT SECONDARIES
+    var geantseclabel=document.createElement("LABEL");
+    geantseclabel.setAttribute("for", "Geantver");
+    geantseclabel.appendChild(document.createTextNode("Geant Secondaries?"))
+    form.appendChild(geantseclabel)
+    var gsecin=document.createElement("INPUT");
+    gsecin.type="checkbox"
+    gsecin.id="GeantSecondaries"
+    gsecin.name="GeantSecondaries"
+    gsecin.value="GeantSecondaries"
+    gsecin.checked=true;
+
+    form.appendChild(gsecin);
+
+    form.appendChild(document.createElement("BR"))
+    form.appendChild(document.createElement("BR"))
+    form.appendChild(document.createElement("BR"))
+    form.appendChild(document.createElement("BR"))
+    //BACKGROUNDS
+    var bkglabel=document.createElement("LABEL");
+    bkglabel.setAttribute("for", "bkgconf");
+    bkglabel.appendChild(document.createTextNode("Background:"))
+    form.appendChild(bkglabel)
+    var bkgselect=document.createElement("SELECT")
+    bkgselect.id="bkg"
+    bkgselect.name="bkg"
+    bkgselect.setAttribute("onchange","updateBKGoptions();MakeCheckButton();");
+    //verselect.onchange="updatePreview();MakeCheckButton()"
+    form.appendChild(bkgselect)
+
+    populateBackgrounds("CPP");
+
+    form.appendChild(document.createElement("BR"))
+    form.appendChild(document.createElement("BR"))
+    form.appendChild(document.createElement("BR"))
+    form.appendChild(document.createElement("BR"))
+    //REACTION FILTER
+    var rflabel=document.createElement("LABEL");
+    rflabel.setAttribute("for", "ReactionFilter");
+    rflabel.appendChild(document.createTextNode("Reaction Filter"))
+    form.appendChild(rflabel)
+    var rfin=document.createElement("INPUT");
+    rfin.type="button"
+    rfin.id="ReactionFilter"
+    rfin.name="ReactionFilter"
+    rfin.value="Add Reactions"
+    rfin.setAttribute("onclick","GetReactions();MakeCheckButton();");
+    form.appendChild(rfin)
+
+    var rltext=document.createElement("textarea")
+    rltext.id="ReactionLines"
+    rltext.name="ReactionLines"
+    rltext.readOnly=true;
+    rltext.className="hidden"
+    form.appendChild(rltext)
+
+    form.appendChild(document.createElement("BR"))
+    form.appendChild(document.createElement("BR"))
+    form.appendChild(document.createElement("BR"))
+    form.appendChild(document.createElement("BR"))
+    //Runnings boxes
+
+    var rgen=document.createElement("INPUT");
+    rgen.type="checkbox"
+    rgen.id="RunGeneration"
+    rgen.name="RunGeneration"
+    rgen.value="RunGen"
+    rgen.checked=true;
+    form.appendChild(rgen);
+    form.appendChild(document.createTextNode("Run Generation"))
+
+    var rgeant=document.createElement("INPUT");
+    rgeant.type="checkbox"
+    rgeant.id="RunGeant"
+    rgeant.name="RunGeant"
+    rgeant.value="RunGeant"
+    rgeant.checked=true;
+    form.appendChild(rgeant);
+    form.appendChild(document.createTextNode("Run Geant"))
+
+    var rsmear=document.createElement("INPUT");
+    rsmear.type="checkbox"
+    rsmear.id="RunSmear"
+    rsmear.name="RunSmear"
+    rsmear.value="RunSmear"
+    rsmear.checked=true;
+    form.appendChild(rsmear);
+    form.appendChild(document.createTextNode("Run Smearing"))
+
+    var rrecon=document.createElement("INPUT");
+    rrecon.type="checkbox"
+    rrecon.id="RunRecon"
+    rrecon.name="RunRecon"
+    rrecon.value="RunRecon"
+    rrecon.checked=true;
+    form.appendChild(rrecon);
+    form.appendChild(document.createTextNode("Run Reconstruction"))
+  
+    form.appendChild(document.createElement("BR"))
+
+    var sgen=document.createElement("INPUT");
+    sgen.type="checkbox"
+    sgen.id="SaveGeneration"
+    sgen.name="SaveGeneration"
+    sgen.value="SaveGen"
+    form.appendChild(sgen);
+    form.appendChild(document.createTextNode("Save Generation"))
+
+    var sgeant=document.createElement("INPUT");
+    sgeant.type="checkbox"
+    sgeant.id="SaveGeant"
+    sgeant.name="SaveGeant"
+    sgeant.value="SaveGeant"
+    form.appendChild(sgeant);
+    form.appendChild(document.createTextNode("Save Geant"))
+
+    var ssmear=document.createElement("INPUT");
+    ssmear.type="checkbox"
+    ssmear.id="SaveSmear"
+    ssmear.name="SaveSmear"
+    ssmear.value="SaveSmear"
+    form.appendChild(ssmear);
+    form.appendChild(document.createTextNode("Save Smearing"))
+
+    var srecon=document.createElement("INPUT");
+    srecon.type="checkbox"
+    srecon.id="SaveRecon"
+    srecon.name="SaveRecon"
+    srecon.value="SaveRecon"
+    srecon.checked=true;
+    form.appendChild(srecon);
+    form.appendChild(document.createTextNode("Save Reconstruction"))
+
+    form.appendChild(document.createElement("BR"))
+    form.appendChild(document.createElement("BR"))
+    
+    //ADDITIONAL COMMENTS
+    var comlabel=document.createElement("LABEL");
+    comlabel.setAttribute("for", "additionalreq");
+    comlabel.appendChild(document.createTextNode("Additional Comments:"))
+    form.appendChild(comlabel)
+    form.appendChild(document.createElement("BR"))
+    var addcom=document.createElement("textarea")
+    addcom.rows=10;
+    addcom.cols=50;
+    addcom.wrap="soft"
+    addcom.id="additionalreq"
+    addcom.name="addreq"
+
+    form.appendChild(addcom)
+}
+
+function MakeCheckButton()
+    {
+        buttoncont=document.getElementById("submitbutton");
+        confirmbtn=document.getElementById("Submit");
+        if(confirmbtn)
         {
-            document.getElementById("genconfig").placeholder="full path to hddm file to use as input to geant";
+            buttoncont.removeChild(confirmbtn)
+        }
+
+        if(!document.getElementById("Query"))
+        {
+            newbutton=document.createElement("INPUT");
+            var text=document.createTextNode("Confirm");
+            newbutton.appendChild(text);
+            newbutton.type="button";
+            newbutton.id="Query"
+            newbutton.addEventListener('click', function() {
+            DoCheck();
+                }, false);
+            newbutton.value="Confirm";
+            newbutton.className="Confirm"
+
+            buttoncont.appendChild(newbutton);
+        }
+    }
+    function DoCheck()
+    {
+        if (window.XMLHttpRequest) {
+            // code for IE7+, Firefox, Chrome, Opera, Safari
+            xmlhttp = new XMLHttpRequest();
+        } else {
+            // code for IE6, IE5
+            xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+        }
+
+        xmlhttp.onreadystatechange = function() {
+            if (this.readyState == 4 && this.status == 200) {
+
+                console.log(this.responseText)
+                result=JSON.parse(this.responseText);
+
+                console.log(result)
+                if(result.length!=0)
+                {
+                    message="I found "+result.length+" MC requests on file matching the requested version Set, generator, and background.\n\nTheir Project IDs are: \n"
+                    
+                    for(var i=0;i<result.length;i++)
+                    {
+                        message=message+result[i].ID+", "
+                    }
+                    message = message.substring(0, message.length - 2);
+                    message=message+"\n\n Please check to see if these samples would be usable by looking in MCWrapper Records.\nIf not please confirm the request."
+                    if(window.confirm(message))
+                    {
+                        MakeSubmitButton();
+                    }
+                }
+                else{
+                    MakeSubmitButton();
+                }
+                }
+                
+            }
+
+            var generator_name=$("#generator option:selected")[0].value
+            var selected_version=$("#verSet option:selected")[0].value
+            var selected_background=$("#bkg option:selected")[0].value
+
+            var chosen_randomtag=""
+            var randomtag_ele=document.getElementById("randomtag")
+            if(randomtag_ele)
+            {
+                chosen_randomtag=randomtag_ele.value;
+            }
+
+
+        console.log("./checkForMC.php?generator="+generator_name+"&versionSet="+selected_version+"&bkg="+selected_background+"&randomtag="+chosen_randomtag)
+        xmlhttp.open("GET","./checkForMC.php?generator="+generator_name+"&versionSet="+selected_version+"&bkg="+selected_background+"&randomtag="+chosen_randomtag);
+
+        
+        xmlhttp.send();
+
+        
+    }
+    function MakeUpdateButton()
+    {
+        buttoncont=document.getElementById("submitbutton");
+        confirmbtn=document.getElementById("Query");
+        if(confirmbtn)
+        {
+            buttoncont.removeChild(confirmbtn)
+        }
+        
+        newbutton=document.createElement("INPUT");
+        var text=document.createTextNode("Confirm");
+        newbutton.appendChild(text);
+        newbutton.type="submit";
+        newbutton.id="Update"
+       
+        newbutton.value="Update";
+        newbutton.className="Update"
+
+        buttoncont.appendChild(newbutton);
+    }
+    function MakeSubmitButton()
+    {
+        buttoncont=document.getElementById("submitbutton");
+        confirmbtn=document.getElementById("Query");
+        if(confirmbtn)
+        {
+            buttoncont.removeChild(confirmbtn)
+        }
+        
+        newbutton=document.createElement("INPUT");
+        var text=document.createTextNode("Confirm");
+        newbutton.appendChild(text);
+        newbutton.type="submit";
+        newbutton.id="Submit"
+       
+        newbutton.value="Submit";
+        newbutton.className="Submit"
+
+        buttoncont.appendChild(newbutton);
+    }
+function GetReactions()
+{
+       
+    popup=window.open("https://halldweb.jlab.org/gluex_sim/ReactionFilterLines.html", "popupwindow", 'width=800,height=600');
+
+
+    popup.onload = function() 
+    {
+        setTimeout(function(){ console.log(popup.document.getElementById("collection")); }, 2000);        
+    }
+    popup.onbeforeunload = function(){lines=popup.document.getElementById("collection");console.log(lines);MakeLines(lines);}
+        
+        
+}
+function MakeLines(lines)
+    {
+        document.getElementById("ReactionLines").value="";
+        if(lines)
+        {
+            for(var i=0;i<lines.children.length;i++)
+            {
+                if(lines.children[i].nodeName!="SPAN")
+                    continue;
+
+                document.getElementById("ReactionLines").value+=lines.children[i].children[1].value+'\n';
+                document.getElementById("ReactionFilter").value="Reactions Set";
+                document.getElementById("ReactionLines").className="fadeInLeft-vis";
+            }
+        }
+        
+    }
+function populateGenerators(exp)
+{
+    var gensel=document.getElementById("generator");
+    var Gens= ["file:/"];
+    var defgen="file:/"
+
+    if(exp=="CPP")
+    {
+        defgen="gen_2pi_primakoff"
+        Gens=["genr8","bggen","gen_2pi_amp","gen_2pi_primakoff","gen_pi0","particle_gun","gen_amp","file:/"]
+    }
+    else
+    {
+        defgen="bggen"
+        Gens = ["genr8","bggen","genEtaRegge","gen_2pi_amp","gen_2pi_primakoff","gen_pi0","gen_omega_3pi","gen_2k","bggen_jpsi","gen_ee","gen_ee_hb","bggen_phi_ee","particle_gun","genBH","gen_omega_radiative","gen_amp","file:/"]
+    }
+
+    Gens.forEach(function(element) { 
+        var sel=false;
+        if(element==defgen)
+        {
+            sel=true;
+        }
+        
+        MakeOption(gensel,element,sel)
+        });
+}
+
+function updateBKGoptions()
+    {
+        var sel=document.getElementById("bkg");
+        var sel_val=document.getElementById("bkg").value;
+
+        if(sel_val != "None")
+        {
+            if(document.getElementById("randomtag")==null)
+            {
+                var randomtag=document.createElement("INPUT")
+                randomtag.id="randomtag"
+                randomtag.name="randomtag"
+                sel.parentNode.insertBefore(randomtag,sel.nextSibling)
+                
+                
+            }
+        }
+
+        if(sel_val==="Random")
+        {
+            
+            document.getElementById("randomtag").style.width="38%"
+            document.getElementById("randomtag").placeholder="sim-recon tag. e.g recon-2017_01-ver02";
+            document.getElementById("randomtag").title="place a github tag here that corresponds to the reconstruction tag used in producing the random triggers"
+            document.getElementById("randomtag").pattern="[^' ']+"
+        }
+        else if(sel_val==="BeamPhotons" || sel_val==="TagOnly")
+        {
+            document.getElementById("randomtag").style.width="20%"
+            document.getElementById("randomtag").placeholder="optional: .12345 [GHz]";
+            document.getElementById("randomtag").title="The rate desired in GhZ.  If no rate is given one will be calculated based on the other parameters of the run."
+       
+        }
+        else if(sel_val==="Random loc:/")
+        {
+
+            document.getElementById("randomtag").style.width="50%"
+            document.getElementById("randomtag").placeholder="full path to folder containing the random trigger files";
+            document.getElementById("randomtag").title="the full path to a folder containing random trigger files of the form runXXXXXX_random.hddm"
+       
         }
         else
         {
-            document.getElementById("genconfig").placeholder="/u/home/Generators/bggen/examples/bggen_config.template";
+            if(document.getElementById("randomtag"))
+            {
+                removeElementByID("randomtag");
+            }
         }
+}
+function populateBackgrounds(exp)
+{
+    var bkgsel=document.getElementById("bkg");
+    var bkgs= ["None"];
+    var defbkg="None"
+
+    if(exp=="CPP")
+    {
+
+        bkgs=["None","Random","Random loc:/","BeamPhotons","TagOnly"]
+    }
+    else
+    {
+        bkgs=["None","Random","Random loc:/","BeamPhotons","TagOnly"]
     }
 
-    function DoReconQuery()
+    bkgs.forEach(function(element) { 
+        var sel=false;
+        if(element==defbkg)
+        {
+            sel=true;
+        }
+        
+        MakeOption(bkgsel,element,sel)
+        });
+}
+function MakeOption(selector,val,selected)
+{
+    if(selector)
+    {
+    var opt=document.createElement("OPTION");
+    opt.value=val;
+    opt.text=val;
+    if(selected)
+    {
+        opt.selected=true;
+    }
+    selector.appendChild(opt)
+
+    }
+    
+
+}
+function updateGenConfig()
+{
+    if($("#generator option:selected")[0].value == "file:/")
+    {
+        document.getElementById("genconfig").placeholder="full path to hddm file to use as input to geant";
+    }
+    else
+    {
+        document.getElementById("genconfig").placeholder="/u/home/Generators/bggen/examples/bggen_config.template";
+    }
+}
+function removeElementByID(id)
+{
+    if(document.getElementById(id))
+    {
+        var el=document.getElementById(id)
+        el.parentNode.removeChild(el);
+    }
+}
+function updateRangeoptions()
+    {
+
+        var form=document.getElementById("expform");
+        var sel_val=document.getElementById("numOrRange").value;
+
+        if(sel_val==="Number")
+        {
+            var anchor=document.getElementById("runnum");
+            anchor.title="Place the desired run number to simulate here";
+            var numevts=document.getElementById("numevt");
+            numevts.title="Integer number representing the total desired events to produce.\nNote: because events are generated in proporition to events taken and non integers values are not possible then this is only an approximate value"
+
+            removeElementByID("dash")
+            removeElementByID("rcdbbr")
+            removeElementByID("rcdbbr2")
+            removeElementByID("maxRunNum")
+            removeElementByID("rcdbL")
+            removeElementByID("rcdbq")
+        }
+        else if(sel_val==="Range")
+        {
+            var numevts=document.getElementById("numevt");
+            numevts.title="Integer number representing the total desired events to produce"
+
+            var anchor=document.getElementById("runnum");
+            anchor.title="Place the lower run number of the range here"
+
+            var runnumhigh=document.createElement("INPUT")
+            runnumhigh.type="number"
+            runnumhigh.id="maxRunNum"
+            runnumhigh.name="maxRunNum"
+            runnumhigh.title="Place the upper run number of the range here"
+            runnumhigh.placeholder="11555"
+            runnumhigh.required=true;
+            //form.appendChild(runnumhigh);
+
+            anchor.parentNode.insertBefore(runnumhigh,anchor.nextSibling)
+
+            var dash=document.createElement("text");
+            dash.id="dash"
+            dash.innerHTML="-"
+            dash.style.fontSize="25pt"
+            anchor.parentNode.insertBefore(dash,anchor.nextSibling);
+
+            var numevt_anchor=document.getElementById("evtslabel");
+            var namedbr=document.createElement("BR")
+            namedbr.id="rcdbbr"
+
+            numevt_anchor.parentNode.insertBefore(namedbr,numevt_anchor)
+
+            var rcdblabel=document.createElement("LABEL");
+            rcdblabel.id="rcdbL"
+            rcdblabel.setAttribute("for", "rcdbq");
+            rcdblabel.appendChild(document.createTextNode("RCDB Query"))
+            
+            namedbr.parentNode.insertBefore(rcdblabel,namedbr.nextSibling)
+
+            var rcdbq=document.createElement("INPUT")
+            rcdbq.type="text"
+            rcdbq.id="rcdbq"
+            rcdbq.name="rcdbq"
+            rcdbq.placeholder="RCDB query to use for run range.  Default: @is_production && @status_approved"
+            rcdbq.style.width="75%";
+
+            rcdblabel.parentNode.insertBefore(rcdbq,rcdblabel.nextSibling)
+
+            var namedbr2=document.createElement("BR")
+            namedbr2.id="rcdbbr2"
+
+            rcdbq.parentNode.insertBefore(namedbr2,rcdbq.nextSibling)
+            
+
+        }
+        
+    }
+function MakeCheckButton()
+    {
+        buttoncont=document.getElementById("submitbutton");
+        confirmbtn=document.getElementById("Submit");
+        if(confirmbtn)
+        {
+            buttoncont.removeChild(confirmbtn)
+        }
+
+        if(!document.getElementById("Query"))
+        {
+            newbutton=document.createElement("INPUT");
+            var text=document.createTextNode("Confirm");
+            newbutton.appendChild(text);
+            newbutton.type="button";
+            newbutton.id="Query"
+            newbutton.addEventListener('click', function() {
+            DoCheck();
+                }, false);
+            newbutton.value="Confirm";
+            newbutton.className="Confirm"
+
+            buttoncont.appendChild(newbutton);
+        }
+    }
+function PopulateVer(id,result)
+{
+    reconSel=document.getElementById(id)
+    removeOptions(reconSel)
+
+    for(var i=0;i<result.length;i++)
+    {
+        var newoption = document.createElement("option");
+
+        newoption.text = result[i].version;
+        newoption.value = result[i].version;
+        
+        
+        reconSel.add(newoption);
+
+        if (id == "recon_stack" && newoption.text=="recon-ver03.3")
+        {
+            newoption.selected=true;
+        }
+        else if(i==0)
+        {
+            newoption.selected=true;
+        }
+    }
+}
+function removeOptions(selectbox)
+{
+    for(var i = selectbox.options.length - 1 ; i >= 0 ; i--)
+    {
+        selectbox.remove(i);
+    }
+}
+function updatePreview()
+{
+    rightDIV=document.getElementById("Info-pane");
+
+    if(firstLoad==false)
+    {
+    
+        rightDIV.style.animationName="bounceOutDown";
+    
+    }
+    else
+    {
+        firstLoad=false;
+    }
+    //
+    
+   // window.setTimeout(2005);
+   
+    var e = document.getElementById("verSet");
+    var selSet = e.options[e.selectedIndex].text;
+
+    document.getElementById("setpreview").className="run-bounceInDown"
+    rightDIV.style.animationName="bounceInDown";
+    rightDIV.className="run-bounceInDown"
+    document.getElementById("setpreview").data="https://halldweb.jlab.org/dist/"+selSet;
+    
+}
+function DoReconQuery()
     {
         if (window.XMLHttpRequest) {
             // code for IE7+, Firefox, Chrome, Opera, Safari
@@ -428,6 +1664,10 @@
 
                 console.log(result)
                 PopulateVer("recon_stack",result)
+                if(document.getElementById("prefill").value != "-1" )
+                {
+                MakeSelectedByValue(document.getElementById("recon_stack"),project.recon_ver)
+                }
                 DoSimQuery()
 
                 }
@@ -461,6 +1701,11 @@ function DoSimQuery()
 
                 console.log(result)
                 PopulateVer("sim_ver",result)
+
+                if(document.getElementById("prefill").value != "-1" )
+                {
+                MakeSelectedByValue(document.getElementById("sim_ver"),project.sim_ver)
+                }
                 DoSetQuery()
 
                 }
@@ -498,6 +1743,12 @@ function DoSetQuery()
 
                 console.log(result)
                 PopulateVer("verSet",result)
+                if(document.getElementById("prefill").value != "-1" )
+                {
+
+                MakeSelectedByValue(document.getElementById("verSet"),project.VersionSet)
+                }
+                
                 updatePreview();
 
                 }
@@ -512,94 +1763,5 @@ function DoSetQuery()
         
         xmlhttp.send();
 }
-function PopulateVer(id,result)
-{
-    reconSel=document.getElementById(id)
-    removeOptions(reconSel)
-
-    for(var i=0;i<result.length;i++)
-    {
-        var newoption = document.createElement("option");
-
-        newoption.text = result[i].version;
-        newoption.value = result[i].version;
-        
-        
-        reconSel.add(newoption);
-
-        if (id == "recon_stack" && newoption.text=="recon-2017_01-ver03_hdr")
-        {
-            newoption.selected=true;
-        }
-        else if(i==0)
-        {
-            newoption.selected=true;
-        }
-    }
-}
-function removeOptions(selectbox)
-{
-    for(var i = selectbox.options.length - 1 ; i >= 0 ; i--)
-    {
-        selectbox.remove(i);
-    }
-}
-function updatePreview()
-{
-    rightDIV=document.getElementById("right");
-
-
-    if(firstLoad==false)
-    {
-    
-        rightDIV.style.animationName="bounceOutDown";
-    //rightDIV.style.animation = "bounceOutDown 2s 1 0 1 forward"
-        //console.log(rightDIB.style.)
-    
-    
-    }
-    else
-    {
-        firstLoad=false;
-        
-    }
-    //
-    
-   // window.setTimeout(2005);
-   
-    var e = document.getElementById("verSet");
-    var selSet = e.options[e.selectedIndex].text;
-
-    document.getElementById("setpreview").data="https://halldweb.jlab.org/dist/"+selSet;
-    rightDIV.style.animationName="bounceInDown";
-    
-
-    
-    
-
-
-}
-
-function whichTransitionEvent(){
-    var t;
-    var el = document.createElement('fakeelement');
-    var transitions = {
-      'transition':'transitionend',
-      'OTransition':'oTransitionEnd',
-      'MozTransition':'transitionend',
-      'WebkitTransition':'webkitTransitionEnd'
-    }
-
-    for(t in transitions){
-        if( el.style[t] !== undefined ){
-            return transitions[t];
-        }
-    }
-}
-
-    </script>
-
-
-</body>
-
+</script>
 </html>

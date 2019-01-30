@@ -13,15 +13,15 @@ if (!$conn) {
 
 if( $_GET["recon_ver"] == "unknown")
 {
-    $sql="SELECT DISTINCT version FROM version WHERE packageID=2 && versionSetId in (SELECT DISTINCT versionSetId from version where packageID=3);";
+    $sql="SELECT DISTINCT version FROM version WHERE packageID in (SELECT id from package where name=\"halld_recon\") && versionSetId in (SELECT DISTINCT versionSetId from version where packageID in (SELECT id from package where name=\"halld_sim\") ) && versionSetID in (SELECT id from versionSet where onOasis=1);";
 }
 else if( $_GET["sim_ver"] == "unknown")
 {
-    $sql="SELECT DISTINCT version from version where packageID=3 && versionSetID IN (SELECT DISTINCT versionSetId from version where packageId=2 && version=\"" . $_GET["recon_ver"] . "\");";
+    $sql="SELECT DISTINCT version from version where packageID in (SELECT id from package where name=\"halld_sim\") && versionSetID IN (SELECT DISTINCT versionSetId from version where packageId in (SELECT id from package where name=\"halld_recon\") && version=\"" . $_GET["recon_ver"] . "\") && versionSetID in (SELECT id from versionSet where onOasis=1);";
 }
 else
 {
-    $sqlsub="SELECT DISTINCT versionSetID from version where versionSetID IN (SELECT DISTINCT versionSetId from version where packageId=2 && version=\"" . $_GET["recon_ver"] . "\")" . " && versionSetID IN (SELECT DISTINCT versionSetId from version where packageId=3 && version=\"" . $_GET["sim_ver"] . "\")";
+    $sqlsub="SELECT DISTINCT versionSetID from version where versionSetID IN (SELECT DISTINCT versionSetId from version where packageId in (SELECT id from package where name=\"halld_recon\") && version=\"" . $_GET["recon_ver"] . "\")" . " && versionSetID IN (SELECT DISTINCT versionSetId from version where packageId in (SELECT id from package where name=\"halld_sim\") && versionSetID in (SELECT id from versionSet where onOasis=1) && version=\"" . $_GET["sim_ver"] . "\")";
     $sql="SELECT filename as version,id as SetNum from versionSet where id in (" . $sqlsub . ");";
     //$sql="SELECT DISTINCT versionSetID from version where versionSetID IN (SELECT DISTINCT versionSetId from version where packageId=2 && version=\"" . $_GET["recon_ver"] . "\")" . " && versionSetID IN (SELECT DISTINCT versionSetId from version where packageId=3 && version=\"" . $_GET["sim_ver"] . "\");";
     //echo $sql;

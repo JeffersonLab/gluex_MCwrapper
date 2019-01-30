@@ -11,6 +11,7 @@ import socket
 import pprint
 import math
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 
@@ -69,11 +70,11 @@ def getTotalSizeOut():
     print("T")
 
 def getUserProjectPercent():
-    query= "SELECT Email From Project;"
+    query= "SELECT UName From Project;"
     curs.execute(query) 
     rows=curs.fetchall()
     userlist=[]
-
+    #print rows
     sum=0
     for proj in rows:
         #print proj['Email']
@@ -81,7 +82,7 @@ def getUserProjectPercent():
         found=False
         for user in userlist:
             #print user.split("_")[0]+" vs "+proj['Email']
-            if user.split("_")[0]==proj['Email']:
+            if user.split("_")[0]==proj['UName']:
                 #print "FOUND"
                 index=userlist.index(user)
                 found=True
@@ -89,7 +90,7 @@ def getUserProjectPercent():
                 break
 
         if not found:
-            userlist.append(proj['Email']+"_1")
+            userlist.append(proj['UName']+"_1")
 
     print(userlist)
 
@@ -141,10 +142,29 @@ def getAttemptsTimes():
     ax.hist(wallTimes, bins=50, color='lightblue')
     plt.show()
 
+def getStartAndLength():
+    query= "SELECT UNIX_TIMESTAMP(Start_Time),CPUTime From Attempts where CPUTime != 0;"
+    curs.execute(query) 
+    rows=curs.fetchall()
+    totaltime=datetime.timedelta(0)
+    Starttimes=[]
+    for time in rows:
+        Starttimes.append(time["UNIX_TIMESTAMP(Start_Time)"])
+        totaltime=totaltime+time["CPUTime"]
+        print str(time["UNIX_TIMESTAMP(Start_Time)"])+" , "+str(time["CPUTime"])
+
+
+    print totaltime
+    fig, ax = plt.subplots(1,1)
+    
+    ax.hist(Starttimes, bins=6, color='lightblue')
+    plt.show()
+
 def main(argv):
     getTotalSizeOut()
     getUserProjectPercent()
     getAttemptsTimes()
+    getStartAndLength()
         
         
     conn.close()

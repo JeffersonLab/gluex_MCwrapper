@@ -109,6 +109,8 @@ shift
 export POL_HIST=$1
 shift
 export eBEAM_CURRENT=$1
+shift
+export EXPERIMENT=$1
 
 export USER_BC=`which bc`
 export USER_PYTHON=`which python`
@@ -181,7 +183,7 @@ current_files=`find . -maxdepth 1 -type f`
 
 radthick="50.e-6"
 
-if [[ "$RADIATOR_THICKNESS" != "rcdb" || "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" ]]; then
+if [[ "$RADIATOR_THICKNESS" != "rcdb" || "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" ]]; then
 	radthick=$RADIATOR_THICKNESS
 else
 	words=`rcnd $RUN_NUMBER radiator_type | sed 's/ / /g' `
@@ -210,9 +212,9 @@ if [[ "$polarization_angle" == "" ]]; then
 	if [[ "$poldir" == "PARA" ]]; then
 		polarization_angle="0.0"
 	elif [[ "$poldir" == "PERP" ]]; then
-		set polarization_angle="90.0"
+		polarization_angle="90.0"
 	else
-		set polarization_angle="-1.0"
+		polarization_angle="-1.0"
 	fi
 fi
 
@@ -230,7 +232,7 @@ ccdbelece="`ccdb dump PHOTON_BEAM/endpoint_energy:${RUN_NUMBER}:${variation} | g
 elecE_text="$ccdbelece" #`echo ${ccdblist[$(($ccdblist_length-1))]}`
 #elecE_text=`rcnd $RUN_NUMBER beam_energy | awk '{print $1}'`
 
-if [[ "$eBEAM_ENERGY" != "rcdb" || "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" ]]; then
+if [[ "$eBEAM_ENERGY" != "rcdb" || "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" ]]; then
     elecE=$eBEAM_ENERGY
 elif [[ $elecE_text == "Run" ]]; then
 	elecE=12
@@ -247,7 +249,7 @@ copeak_text=`rcnd $RUN_NUMBER coherent_peak | awk '{print $1}'`
 if [[ "$COHERENT_PEAK" != "rcdb" && "$polarization_angle" == "-1.0" ]]; then
 copeak=$COHERENT_PEAK
 else
-	if [[ "$COHERENT_PEAK" != "rcdb" || "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" ]]; then
+	if [[ "$COHERENT_PEAK" != "rcdb" || "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" ]]; then
     	copeak=$COHERENT_PEAK
 	elif [[ $copeak_text == "Run" ]]; then
 		copeak=9
@@ -267,14 +269,14 @@ fi
 
 export COHERENT_PEAK=$copeak
 
-if [[ "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$COHERENT_PEAK" == "rcdb" ]]; then
+if [[ "$VERSION" != "mc" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_workfest2018" && "$COHERENT_PEAK" == "rcdb" ]]; then
 	echo "error in requesting rcdb for the coherent peak while not using variation=mc"
 	exit 1
 fi
 
 export eBEAM_ENERGY=$elecE
 
-if [[ "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$eBEAM_ENERGY" == "rcdb" ]]; then
+if [[ "$VERSION" != "mc" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_workfest2018" && "$eBEAM_ENERGY" == "rcdb" ]]; then
 	echo "error in requesting rcdb for the electron beam energy and not using variation=mc"
 	exit 1
 fi
@@ -301,7 +303,7 @@ fi
 
 BGRATE_toUse=$BGRATE
 
-if [[ "$BGRATE" != "rcdb" || "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" ]]; then
+if [[ "$BGRATE" != "rcdb" || "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" ]]; then
     BGRATE_toUse=$BGRATE
 else
 	if [[ $BGTAGONLY_OPTION == "1" || $BKGFOLDSTR == "BeamPhotons" ]]; then
@@ -322,6 +324,7 @@ fi
 
 # PRINT INPUTS
 echo "Job started: " `date`
+echo "Simulating the Experiment: " $EXPERIMENT
 echo "ccdbsqlite path: " $ccdbSQLITEPATH $CCDB_CONNECTION
 echo "rcdbsqlite path: " $rcdbSQLITEPATH $RCDB_CONNECTION
 echo "Producing file number: "$FILE_NUMBER
@@ -343,7 +346,7 @@ echo "----------------------------------------------"
 echo "Run generation step? "$GENR"  Will be cleaned?" $CLEANGENR
 echo "Flux Hist to use: " "$FLUX_TO_GEN" " : " "$FLUX_HIST"
 echo "Polarization to use: " "$POL_TO_GEN" " : " "$POL_HIST"
-echo "Using "$GENERATOR"  with config: "$CONFIG_FILE
+echo "Using "$GENERATOR" with config: "$CONFIG_FILE
 echo "----------------------------------------------"
 echo "Run geant step? "$GEANT"  Will be cleaned?" $CLEANGEANT
 echo "Using geant"$GEANTVER
@@ -381,12 +384,19 @@ isGreater=`echo $GEN_MAX_ENERGY'>'$eBEAM_ENERGY | $USER_BC -l`
 #echo "$isGreater"
 if [[ "$isGreater" == "1"  ]]; then 
 echo "something went wrong with initialization"
-echo "Error: Requested Max photon energy is above the electron beam energy!"
+echo "Error: Requested Max photon energy $GEN_MAX_ENERGY is above the electron beam energy $eBEAM_ENERGY!"
 exit 1
 fi
 
-if [[ "$CUSTOM_GCONTROL" == "0" ]]; then
-    cp $MCWRAPPER_CENTRAL/Gcontrol.in ./temp_Gcontrol.in
+if [[ "$CUSTOM_GCONTROL" == "0" && "$GEANT" == "1" ]]; then
+	if [[ "$EXPERIMENT" == "GlueX" ]]; then
+		 cp $MCWRAPPER_CENTRAL/Gcontrol.in ./temp_Gcontrol.in
+	elif [[ "$EXPERIMENT" == "CPP" ]]; then
+		cp $MCWRAPPER_CENTRAL/Gcontrol_cpp.in ./temp_Gcontrol.in
+	else
+		cp $MCWRAPPER_CENTRAL/Gcontrol.in ./temp_Gcontrol.in
+	fi
+
     chmod 777 ./temp_Gcontrol.in
 else
     cp $CUSTOM_GCONTROL ./temp_Gcontrol.in
@@ -531,6 +541,7 @@ if [[ "$GENR" != "0" ]]; then
 	if [[ "$gen_pre" == "file" ]]; then
 		gen_in_file=`echo $GENERATOR | sed -r 's/^.{5}//'`
 		echo "bypassing generation"
+		echo "using "$gen_in_file
 		
 		if [[ -f $gen_in_file ]]; then
 			echo "using pre-generated file: "$gen_in_file
@@ -615,21 +626,17 @@ if [[ "$GENR" != "0" ]]; then
 		fi
 	fi
 
-	
-
-	cp beam.config $GENERATOR\_$STANDARD_NAME\_beam.conf
-
     if [[ "$GENERATOR" == "genr8" ]]; then
 		echo "configuring genr8"
 		STANDARD_NAME="genr8_"$STANDARD_NAME
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
 
 		replacementNum=`grep TEMPCOHERENT ./$STANDARD_NAME.conf | wc -l`
-		if [[ "$polarization_angle" == "-1.0" && "$COHERENT_PEAK" == "0." && $replacementNum != 0 ]]; then
-			echo "Running genr8 with an AMO run number without supplying the energy desired to COHERENT_PEAK causes an inifinite loop."
-			echo "Please specify the desired energy via the COHERENT_PEAK parameter and retry."
-			exit 1
-		fi
+		#if [[ "$polarization_angle" == "-1.0" && "$COHERENT_PEAK" == "0." && $replacementNum != 0 && "1"=="0" ]]; then
+		#	echo "Running genr8 with an AMO run number without supplying the energy desired to COHERENT_PEAK causes an inifinite loop."
+		#	echo "Please specify the desired energy via the COHERENT_PEAK parameter and retry."
+		#	exit 1
+		#fi
     elif [[ "$GENERATOR" == "genr8_new" ]]; then
 		echo "configuring new genr8"
 
@@ -677,7 +684,7 @@ if [[ "$GENR" != "0" ]]; then
 		echo "configuring gen_2pi_primakoff"
 		STANDARD_NAME="gen_2pi_primakoff_"$STANDARD_NAME
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
-        elif [[ "$GENERATOR" == "gen_pi0" ]]; then
+    elif [[ "$GENERATOR" == "gen_pi0" ]]; then
 		echo "configuring gen_pi0"
 		STANDARD_NAME="gen_pi0_"$STANDARD_NAME
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
@@ -691,40 +698,40 @@ if [[ "$GENR" != "0" ]]; then
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
 	elif [[ "$GENERATOR" == "gen_2k" ]]; then
 		echo "configuring gen_2k"
-		set STANDARD_NAME="gen_2k_"$STANDARD_NAME
+		STANDARD_NAME="gen_2k_"$STANDARD_NAME
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
 	elif [[ "$GENERATOR" == "bggen_jpsi" ]]; then
 		echo "configuring bggen_jpsi"
-		set STANDARD_NAME="bggen_jpsi_"$STANDARD_NAME
+		STANDARD_NAME="bggen_jpsi_"$STANDARD_NAME
 		cp $MCWRAPPER_CENTRAL/Generators/bggen_jpsi/particle.dat ./
 		cp $MCWRAPPER_CENTRAL/Generators/bggen_jpsi/pythia.dat ./
 		cp $MCWRAPPER_CENTRAL/Generators/bggen_jpsi/pythia-geant.map ./
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
 	elif [[ "$GENERATOR" == "bggen_phi_ee" ]]; then
 		echo "configuring bggen_phi_ee"
-		set STANDARD_NAME="bggen_phi_ee_"$STANDARD_NAME
+		STANDARD_NAME="bggen_phi_ee_"$STANDARD_NAME
 		cp $MCWRAPPER_CENTRAL/Generators/bggen_phi_ee/particle.dat ./
 		cp $MCWRAPPER_CENTRAL/Generators/bggen_phi_ee/pythia.dat ./
 		cp $MCWRAPPER_CENTRAL/Generators/bggen_phi_ee/pythia-geant.map ./
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
 	elif [[ "$GENERATOR" == "gen_ee" ]]; then
 		echo "configuring gen_ee"
-		set STANDARD_NAME="gen_ee_"$STANDARD_NAME
+		STANDARD_NAME="gen_ee_"$STANDARD_NAME
 		echo "note: this generator is run completely from command line, thus no config file will be made and/or modified"
 		cp $CONFIG_FILE ./cobrems.root
 	elif [[ "$GENERATOR" == "gen_ee_hb" ]]; then
 		echo "configuring gen_ee_hb"
-		set STANDARD_NAME="gen_ee_hb_"$STANDARD_NAME
+		STANDARD_NAME="gen_ee_hb_"$STANDARD_NAME
 		echo "note: this generator is run completely from command line, thus no config file will be made and/or modified"
 		cp $CONFIG_FILE ./cobrems.root
 		cp $MCWRAPPER_CENTRAL/Generators/gen_ee_hb/CFFs_DD_Feb2012.dat ./
 	elif [[ "$GENERATOR" == "particle_gun" ]]; then
 		echo "configuring the particle gun"
-		set STANDARD_NAME="particle_gun_"$STANDARD_NAME
+		STANDARD_NAME="particle_gun_"$STANDARD_NAME
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
 	elif [[ "$GENERATOR" == "genBH" ]]; then
 		echo "configuring genBH"
-		set STANDARD_NAME="genBH_"$STANDARD_NAME
+		STANDARD_NAME="genBH_"$STANDARD_NAME
 		echo "note: this generator is run completely from command line, thus no config file will be made and/or modified"
 
 		cp $CONFIG_FILE ./cobrems.root
@@ -737,12 +744,13 @@ if [[ "$GENR" != "0" ]]; then
     fi
 
 	#RANDOMnum_forGeneration=`bash -c 'echo $RANDOM'`
+	cp beam.config $STANDARD_NAME\_beam.conf
 
     if [[ "$GENERATOR" == "genr8" ]]; then
 	echo "RUNNING GENR8"
 	RUNNUM=$formatted_runNumber+$formatted_fileNumber
-	sed -i 's/TEMPCOHERENT/'$COHERENT_PEAK'/' $STANDARD_NAME.conf
-	sed -i 's/TEMPMAXE/'$GEN_MAX_ENERGY'/' $STANDARD_NAME.conf
+	#sed -i 's/TEMPCOHERENT/'$COHERENT_PEAK'/' $STANDARD_NAME.conf
+	#sed -i 's/TEMPMAXE/'$GEN_MAX_ENERGY'/' $STANDARD_NAME.conf
 	sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
 	# RUN genr8 and convert
 	genr8 -r$formatted_runNumber -M$EVT_TO_GEN -A$STANDARD_NAME.ascii < $STANDARD_NAME.conf #$config_file_name
@@ -820,7 +828,8 @@ if [[ "$GENR" != "0" ]]; then
 	gen_2pi_amp -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
 	generator_return_code=$?
 	elif [[ "$GENERATOR" == "gen_omega_3pi" ]]; then
-	echo "RUNNING GEN_OMEGA_3PI" 
+	echo "RUNNING GEN_OMEGA_3PI"
+	sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
     optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
 
 		if [[ "$polarization_angle" == "-1.0" ]]; then
@@ -882,7 +891,7 @@ if [[ "$GENR" != "0" ]]; then
     generator_return_code=$?
 	elif [[ "$GENERATOR" == "gen_2k" ]]; then
 	echo "RUNNING GEN_2K" 
-    set optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
+    optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
 	#set RANDOMnum=`bash -c 'echo $RANDOM'`
 	echo $optionals_line
 	sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
@@ -1027,8 +1036,10 @@ if [[ "$GENR" != "0" ]]; then
 	mv $PWD/control'_'$formatted_runNumber'_'$formatted_fileNumber.in $PWD/control.in
 	
 	if [[ "$GEANTVER" == "3" ]]; then
-	    hdgeant
+
+		hdgeant -xml=ccdb://GEOMETRY/main_HDDS.xml,run=$RUN_NUMBER
 		geant_return_code=$?
+
 	elif [[ "$GEANTVER" == "4" ]]; then
 	    #make run.mac then call it below
 	    rm -f run.mac
@@ -1135,21 +1146,31 @@ if [[ "$GENR" != "0" ]]; then
 			echo "An hddm file was not created by mcsmear.  Terminating MC production.  Please consult logs to diagnose"
 			exit 13
 		fi
-
+	fi
+fi
 	    if [[ "$RECON" != "0" ]]; then
 		echo "RUNNING RECONSTRUCTION"
+		file_to_recon=$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm'
 
-		if [[ "$RECON_CALIBTIME" != "notime" ]]; then
-				reconwholecontext="variation=$VERSION calibtime=$RECON_CALIBTIME"
-				export JANA_CALIB_CONTEXT="$reconwholecontext"
-		fi
+			if [[ "$GENR" == "0" && "$GEANT" == "0" && "$SMEAR" == "0" ]]; then
+				file_to_recon="$CONFIG_FILE"
+			fi
+		
+			additional_hdroot=""
+			if [[ "$EXPERIMENT" == "CPP" ]]; then
+				additional_hdroot="-PKALMAN:ADD_VERTEX_POINT=1"
+			fi
+			if [[ "$RECON_CALIBTIME" != "notime" ]]; then
+					reconwholecontext="variation=$VERSION calibtime=$RECON_CALIBTIME"
+					export JANA_CALIB_CONTEXT="$reconwholecontext"
+			fi
 
-		if [[ "$recon_pre" == "file" ]]; then
-			echo "using config file: "$jana_config_file
-			hd_root ./$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' --config=jana_config.cfg -PNTHREADS=$NUMTHREADS
-			hd_root_return_code=$?
-			rm jana_config.cfg
-		else
+			if [[ "$recon_pre" == "file" ]]; then
+				echo "using config file: "$jana_config_file
+				hd_root $file_to_recon --config=jana_config.cfg -PNTHREADS=$NUMTHREADS $additional_hdroot
+				hd_root_return_code=$?
+				rm jana_config.cfg
+			else
 		
 			declare -a pluginlist=("danarest" "monitoring_hists" "mcthrown_tree")
 			
@@ -1167,7 +1188,7 @@ if [[ "$GENR" != "0" ]]; then
 			PluginStr=`echo $PluginStr | sed -r 's/.{1}$//'`
             echo "Running hd_root with: ""$PluginStr"
 			echo "hd_root ""$STANDARD_NAME"'_geant'"$GEANTVER"'_smeared.hddm'" -PPLUGINS=""$PluginStr ""-PNTHREADS=""$NUMTHREADS"
-			hd_root ./$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' -PPLUGINS=$PluginStr -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500
+			hd_root $file_to_recon -PPLUGINS=$PluginStr -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 $additional_hdroot
 			hd_root_return_code=$?
 		fi
 		
@@ -1184,7 +1205,7 @@ if [[ "$GENR" != "0" ]]; then
         fi
 
 
-		if [[ "$CLEANGEANT" == "1" ]]; then
+		if [[ "$CLEANGEANT" == "1" && "$GEANT" == "1" ]]; then
 		    rm $STANDARD_NAME'_geant'$GEANTVER'.hddm'
 		    rm control.in
 		    rm -f geant.hbook
@@ -1195,7 +1216,7 @@ if [[ "$GENR" != "0" ]]; then
 		    
 		fi
 		
-		if [[ "$CLEANSMEAR" == "1" ]]; then
+		if [[ "$CLEANSMEAR" == "1" && "$SMEAR" == "1" ]]; then
 		    rm $STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm'
 		    rm -rf smear.root
 		fi
@@ -1216,14 +1237,13 @@ if [[ "$GENR" != "0" ]]; then
 			    mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/
 			fi
 		done
-	    fi
 	fi
-fi
+
 
 rm -rf ccdb.sqlite
 rm -rf rcdb.sqlite
 
-if [[ "$gen_pre" != "file" && "$GENERATOR" != "gen_ee_hb" && "$GENERATOR" != "gen_ee" ]]; then
+if [[ "$gen_pre" != "file" && "$GENERATOR" != "gen_ee_hb" && "$GENERATOR" != "gen_ee" && "$GENR" == "1" ]]; then
 	mv $PWD/*.conf $OUTDIR/configurations/generation/
 fi
 hddmfiles=$(ls | grep .hddm)
