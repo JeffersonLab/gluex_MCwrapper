@@ -1026,8 +1026,10 @@ if ( "$GENR" != "0" ) then
 		mv $PWD/control'_'$formatted_runNumber'_'$formatted_fileNumber.in $PWD/control.in
 	
 		if ( "$GEANTVER" == "3" ) then
-	    	hdgeant 
+
+			hdgeant -xml=ccdb://GEOMETRY/main_HDDS.xml,run=$RUN_NUMBER
 			set geant_return_code=$status
+
 		else if ( "$GEANTVER" == "4" ) then
 	    	#make run.mac then call it below
 	    	rm -f run.mac
