@@ -125,7 +125,7 @@ export USER_STAT='/usr/bin/stat'
 fi
 
 export MAKE_MC_USING_XROOTD=0
-if [[ -f /usr/lib64/libXrdPosixPreload.so ]] then
+if [[ -f /usr/lib64/libXrdPosixPreload.so ]]; then
 	export MAKE_MC_USING_XROOTD=1
 	export LD_PRELOAD=/usr/lib64/libXrdPosixPreload.so
 fi
@@ -1079,7 +1079,7 @@ if [[ "$GENR" != "0" ]]; then
 		mcsmear_return_code=$?
 	elif [[ "$BKGFOLDSTR" == "DEFAULT" || "$BKGFOLDSTR" == "Random" ]]; then
 
-		if [[ $RANDOM_TRIG_NUM_EVT == -1 ]] then
+		if [[ $RANDOM_TRIG_NUM_EVT == -1 ]]; then
 			rm -f count.py
 	    	echo "import hddm_s" > count.py
 	    	echo "print(sum(1 for r in hddm_s.istream('$bkglocstring')))" >> count.py
@@ -1090,16 +1090,16 @@ if [[ "$GENR" != "0" ]]; then
 		fi
 		fold_skip_num=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
 		echo "skipping: "$fold_skip_num
-		if ( $MAKE_MC_USING_XROOTD == 0 ) then
+		if [[ $MAKE_MC_USING_XROOTD == 0 ]]; then
 			echo "mcsmear "$MCSMEAR_Flags" -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
 			mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
 		else
 			echo "mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm xroot://scosg16.jlab.org//osgpool/halld/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm:1\:1\+$fold_skip_num"
-			mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm xroot://scosg16.jlab.org//osgpool/halld/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm:1\:1\+$fold_skip_num		
+			mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm xroot://scosg16.jlab.org//osgpool/halld/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm\:1\+$fold_skip_num		
 		fi
 		mcsmear_return_code=$?
 	elif [[ "$bkgloc_pre" == "loc:" ]]; then
-		if [[ $RANDOM_TRIG_NUM_EVT == -1 ]] then
+		if [[ $RANDOM_TRIG_NUM_EVT == -1 ]]; then
 			rm -f count.py
 	    	echo "import hddm_s" > count.py
 	    	echo "print(sum(1 for r in hddm_s.istream('$bkglocstring')))" >> count.py
