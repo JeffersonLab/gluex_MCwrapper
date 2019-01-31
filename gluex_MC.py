@@ -36,14 +36,17 @@ import re
 import subprocess
 from subprocess import call
 import glob
+import hddm_s
 try:
+        import MySQLdb
         dbcnx = mysql.connector.connect(user='mcuser', database='gluex_mc', host='hallddb.jlab.org')
         dbcursor = dbcnx.cursor()
+        #dbcursor=dbcnx.cursor(MySQLdb.cursors.DictCursor)
 except:
         pass
 
-MCWRAPPER_VERSION="2.0.5"
-MCWRAPPER_DATE="01/30/19"
+MCWRAPPER_VERSION="2.1.0"
+MCWRAPPER_DATE="01/31/19"
 
 def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID):
 
@@ -235,21 +238,13 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DAT
                 for i in range(len(str(RUNNUM)),6):
                         formattedRUNNUM+="0"
                 formattedRUNNUM=formattedRUNNUM+str(RUNNUM)
-                if COMMAND_parts[21] == "Random":
+                if COMMAND_parts[21] == "Random" and COMMAND_parts[47] == "-1":
                         #print "/cache/halld/Simulation/random_triggers/"+RANDBGTAG+"/run"+formattedRUNNUM+"_random.hddm"
                         additional_passins+="/osgpool/halld/random_triggers/"+RANDBGTAG+"/run"+formattedRUNNUM+"_random.hddm"+", "
                 elif COMMAND_parts[21][:4] == "loc:":
                         #print COMMAND_parts[21][4:]
                         additional_passins+=COMMAND_parts[21][4:]+"/run"+formattedRUNNUM+"_random.hddm"+", "
 
-
-                #exit(1)
-                #BKG_parts=COMMAND_parts[21].split(":")
-                #if len(BKG_parts) == 2:
-                
-                #janaconfig_to_use=janaconfig_parts[len(janaconfig_parts)-1]
-                #additional_passins+="/cache/halld/Simulation/random_triggers/"+RANDBGTAG+"/run$formatted_runNumber""_random.hddm"+", "
-                #COMMAND_parts[28]="/srv/"+RandomBKGtouse
 
         if COMMAND_parts[28] != "None" and COMMAND_parts[28][:5]=="file:" :
                 janaconfig_parts=COMMAND_parts[28].split("/")
@@ -541,6 +536,7 @@ def main(argv):
 
         GEANTVER = 4        
         BGFOLD="DEFAULT"
+        RANDOM_NUM_EVT=-1
         RANDBGTAG="none"
 
         CUSTOM_MAKEMC="DEFAULT"
@@ -950,6 +946,9 @@ def main(argv):
                 sum2=0.
                 for runs in table: #do for each job
                         #print runs[0]
+
+                        
+
                         if len(table) <= 1:
                                 break
                         num_events_this_run=int(((float(runs[1])/float(event_sum))*EVTS)+.5)
@@ -958,6 +957,9 @@ def main(argv):
                         
                         if num_events_this_run == 0:
                                 continue
+
+                        if BGFOLD == "Random" or BGFOLD=="DEFAULT" or BGFOLD[0:3] == "loc":
+                                RANDOM_NUM_EVT=GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,runs[0])
 
                        #do for each file needed
                         FILES_TO_GEN_this_run=num_events_this_run/PERFILE
@@ -972,7 +974,8 @@ def main(argv):
                                 if num_this_file == 0:
                                         continue
 
-                                COMMAND=str(BATCHRUN)+" "+ENVFILE+" "+GENCONFIG+" "+str(outdir)+" "+str(runs[0])+" "+str(BASEFILENUM+FILENUM_this_run+-1)+" "+str(num_this_file)+" "+str(VERSION)+" "+str(CALIBTIME)+" "+str(GENR)+" "+str(GEANT)+" "+str(SMEAR)+" "+str(RECON)+" "+str(CLEANGENR)+" "+str(CLEANGEANT)+" "+str(CLEANSMEAR)+" "+str(CLEANRECON)+" "+str(BATCHSYS)+" "+str(NCORES).split(':')[-1]+" "+str(GENERATOR)+" "+str(GEANTVER)+" "+str(BGFOLD)+" "+str(CUSTOM_GCONTROL)+" "+str(eBEAM_ENERGY)+" "+str(COHERENT_PEAK)+" "+str(MIN_GEN_ENERGY)+" "+str(MAX_GEN_ENERGY)+" "+str(TAGSTR)+" "+str(CUSTOM_PLUGINS)+" "+str(PERFILE)+" "+str(RUNNING_DIR)+" "+str(ccdbSQLITEPATH)+" "+str(rcdbSQLITEPATH)+" "+str(BGTAGONLY)+" "+str(RADIATOR_THICKNESS)+" "+str(BGRATE)+" "+str(RANDBGTAG)+" "+str(RECON_CALIBTIME)+" "+str(NOSECONDARIES)+" "+str(MCWRAPPER_VERSION)+" "+str(NOSIPMSATURATION)+" "+str(FLUX_TO_GEN)+" "+str(FLUX_HIST)+" "+str(POL_TO_GEN)+" "+str(POL_HIST)+" "+str(eBEAM_CURRENT)+" "+str(PROJECT)
+                                COMMAND=str(BATCHRUN)+" "+ENVFILE+" "+GENCONFIG+" "+str(outdir)+" "+str(runs[0])+" "+str(BASEFILENUM+FILENUM_this_run+-1)+" "+str(num_this_file)+" "+str(VERSION)+" "+str(CALIBTIME)+" "+str(GENR)+" "+str(GEANT)+" "+str(SMEAR)+" "+str(RECON)+" "+str(CLEANGENR)+" "+str(CLEANGEANT)+" "+str(CLEANSMEAR)+" "+str(CLEANRECON)+" "+str(BATCHSYS)+" "+str(NCORES).split(':')[-1]+" "+str(GENERATOR)+" "+str(GEANTVER)+" "+str(BGFOLD)+" "+str(CUSTOM_GCONTROL)+" "+str(eBEAM_ENERGY)+" "+str(COHERENT_PEAK)+" "+str(MIN_GEN_ENERGY)+" "+str(MAX_GEN_ENERGY)+" "+str(TAGSTR)+" "+str(CUSTOM_PLUGINS)+" "+str(PERFILE)+" "+str(RUNNING_DIR)+" "+str(ccdbSQLITEPATH)+" "+str(rcdbSQLITEPATH)+" "+str(BGTAGONLY)+" "+str(RADIATOR_THICKNESS)+" "+str(BGRATE)+" "+str(RANDBGTAG)+" "+str(RECON_CALIBTIME)+" "+str(NOSECONDARIES)+" "+str(MCWRAPPER_VERSION)+" "+str(NOSIPMSATURATION)+" "+str(FLUX_TO_GEN)+" "+str(FLUX_HIST)+" "+str(POL_TO_GEN)+" "+str(POL_HIST)+" "+str(eBEAM_CURRENT)+" "+str(PROJECT)+" "+str(RANDOM_NUM_EVT)
+                                print(len(COMMAND.split(" ")))
                                 if BATCHRUN == 0 or BATCHSYS=="NULL":
                                         #print str(runs[0])+" "+str(BASEFILENUM+FILENUM_this_run+-1)+" "+str(num_this_file)
                                         os.system(str(indir)+" "+COMMAND)
@@ -998,6 +1001,11 @@ def main(argv):
                                                         JSUB_add_job(VERBOSE, WORKFLOW, PROJECT, TRACK, runs[0], BASEFILENUM+FILENUM_this_run+-1, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
                 
         else:
+                print BGFOLD
+
+                if BGFOLD == "Random" or BGFOLD=="DEFAULT" or BGFOLD[0:3] == "loc":
+                        RANDOM_NUM_EVT=GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,RUNNUM)
+
                 if FILES_TO_GEN >= 500 and ( ccdbSQLITEPATH == "no_sqlite" or rcdbSQLITEPATH == "no_sqlite"):
                         print( "This job has >500 subjobs and risks ddosing the servers.  Please use sqlite or request again with a larger per file. ")
                         return
@@ -1010,7 +1018,7 @@ def main(argv):
                         if num == 0:
                                 continue
                 
-                        COMMAND=str(BATCHRUN)+" "+ENVFILE+" "+GENCONFIG+" "+str(outdir)+" "+str(RUNNUM)+" "+str(BASEFILENUM+FILENUM+-1)+" "+str(num)+" "+str(VERSION)+" "+str(CALIBTIME)+" "+str(GENR)+" "+str(GEANT)+" "+str(SMEAR)+" "+str(RECON)+" "+str(CLEANGENR)+" "+str(CLEANGEANT)+" "+str(CLEANSMEAR)+" "+str(CLEANRECON)+" "+str(BATCHSYS).upper()+" "+str(NCORES).split(':')[-1]+" "+str(GENERATOR)+" "+str(GEANTVER)+" "+str(BGFOLD)+" "+str(CUSTOM_GCONTROL)+" "+str(eBEAM_ENERGY)+" "+str(COHERENT_PEAK)+" "+str(MIN_GEN_ENERGY)+" "+str(MAX_GEN_ENERGY)+" "+str(TAGSTR)+" "+str(CUSTOM_PLUGINS)+" "+str(PERFILE)+" "+str(RUNNING_DIR)+" "+str(ccdbSQLITEPATH)+" "+str(rcdbSQLITEPATH)+" "+str(BGTAGONLY)+" "+str(RADIATOR_THICKNESS)+" "+str(BGRATE)+" "+str(RANDBGTAG)+" "+str(RECON_CALIBTIME)+" "+str(NOSECONDARIES)+" "+str(MCWRAPPER_VERSION)+" "+str(NOSIPMSATURATION)+" "+str(FLUX_TO_GEN)+" "+str(FLUX_HIST)+" "+str(POL_TO_GEN)+" "+str(POL_HIST)+" "+str(eBEAM_CURRENT)+" "+str(PROJECT)
+                        COMMAND=str(BATCHRUN)+" "+ENVFILE+" "+GENCONFIG+" "+str(outdir)+" "+str(RUNNUM)+" "+str(BASEFILENUM+FILENUM+-1)+" "+str(num)+" "+str(VERSION)+" "+str(CALIBTIME)+" "+str(GENR)+" "+str(GEANT)+" "+str(SMEAR)+" "+str(RECON)+" "+str(CLEANGENR)+" "+str(CLEANGEANT)+" "+str(CLEANSMEAR)+" "+str(CLEANRECON)+" "+str(BATCHSYS).upper()+" "+str(NCORES).split(':')[-1]+" "+str(GENERATOR)+" "+str(GEANTVER)+" "+str(BGFOLD)+" "+str(CUSTOM_GCONTROL)+" "+str(eBEAM_ENERGY)+" "+str(COHERENT_PEAK)+" "+str(MIN_GEN_ENERGY)+" "+str(MAX_GEN_ENERGY)+" "+str(TAGSTR)+" "+str(CUSTOM_PLUGINS)+" "+str(PERFILE)+" "+str(RUNNING_DIR)+" "+str(ccdbSQLITEPATH)+" "+str(rcdbSQLITEPATH)+" "+str(BGTAGONLY)+" "+str(RADIATOR_THICKNESS)+" "+str(BGRATE)+" "+str(RANDBGTAG)+" "+str(RECON_CALIBTIME)+" "+str(NOSECONDARIES)+" "+str(MCWRAPPER_VERSION)+" "+str(NOSIPMSATURATION)+" "+str(FLUX_TO_GEN)+" "+str(FLUX_HIST)+" "+str(POL_TO_GEN)+" "+str(POL_HIST)+" "+str(eBEAM_CURRENT)+" "+str(PROJECT)+" "+str(RANDOM_NUM_EVT)
                
                         #either call MakeMC.csh or add a job depending on swif flag
                         if BATCHRUN == 0 or BATCHSYS=="NULL":
@@ -1047,5 +1055,66 @@ def main(argv):
                 dbcnx.close()
         except:
                 pass        
+
+def GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,RUNNUM):
+        try:
+                if BGFOLD[0:3] != "Ran" and BGFOLD[0:3] != "loc":
+                        return -1
+                #print BGFOLD
+                #print RANDBGTAG
+                Style=BGFOLD
+                #print BGFOLD[0:3]
+                if BGFOLD[0:3] == "loc":
+                        Style="loc"
+                queryrand="SELECT Num_Events FROM Randoms WHERE Style=\""+Style+"\" && Tag=\""+RANDBGTAG+"\""+" && Run_Number="+str(RUNNUM)
+                #print queryrand
+                dbcursor.execute(queryrand)
+                matches = dbcursor.fetchall()
+                #print matches
+                if len(matches) == 0:
+                        print "Attempting to scan and tag this random trigger file"
+                        path_base="/cache/halld/gluex_simulations/random_triggers/"
+
+                        if Style=="Random":
+                                path_base=path_base+RANDBGTAG+"/"
+                        else:
+                                path_base=BGFOLD[4:]
+
+                        formattedRUNNUM=""
+                        for i in range(len(str(RUNNUM)),6):
+                                formattedRUNNUM+="0"
+                        formattedRUNNUM=formattedRUNNUM+str(RUNNUM)
+
+                        path_base=path_base+"run"+formattedRUNNUM+"_random.hddm"
+                        print path_base
+                        realpath=os.path.realpath(path_base)
+                        if not os.path.isfile(realpath):
+                                print "can't find"
+                                return -1
+                        
+                        Size=os.stat(realpath).st_size
+                        Count=CountFile(realpath)
+                        #print Count
+                        addquery="INSERT INTO Randoms (Style,Tag,Path,Size,Num_Events,Run_Number) VALUES (\""+str(Style)+"\",\""+str(RANDBGTAG)+"\",\""+str(realpath) +"\",\""+str(Size)+"\","+str(Count)+","+str(RUNNUM)+")"
+                        #print addquery
+                        dbcursor.execute(addquery)
+                        dbcnx.commit()
+                        return Count
+                elif len(matches) == 1:
+                        print matches[0][0]
+                        return matches[0][0]
+                else:
+                        print "AMBIGUOUS!"
+                        return -1
+        except Exception as e:
+                print(e)
+                pass
+
+
+        return -1
+
+def CountFile(file):
+        return sum(1 for r in hddm_s.istream(file))
+
 if __name__ == "__main__":
    main(sys.argv[1:])

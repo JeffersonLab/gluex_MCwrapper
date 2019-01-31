@@ -111,6 +111,8 @@ shift
 export eBEAM_CURRENT=$1
 shift
 export EXPERIMENT=$1
+shift
+export RANDOM_TRIG_NUM_EVT=$1
 
 export USER_BC=`which bc`
 export USER_PYTHON=`which python`
@@ -122,7 +124,11 @@ export USER_BC='/usr/bin/bc'
 export USER_STAT='/usr/bin/stat'
 fi
 
-
+export MAKE_MC_USING_XROOTD=0
+if [[ -f /usr/lib64/libXrdPosixPreload.so ]] then
+	export MAKE_MC_USING_XROOTD=1
+	export LD_PRELOAD=/usr/lib64/libXrdPosixPreload.so
+fi
 
 #printenv
 #necessary to run swif, uses local directory if swif=0 is used
@@ -364,6 +370,7 @@ echo ""
 echo "=======SOFTWARE USED======="
 echo "MCwrapper version v"$MCWRAPPER_VERSION
 echo "MCwrapper location" $MCWRAPPER_CENTRAL
+echo "Streaming via xrootd? "$MAKE_MC_USING_XROOTD
 echo "BC "$USER_BC
 echo "python "$USER_PYTHON
 echo `which $GENERATOR`
@@ -475,17 +482,6 @@ if [[ "$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" == 
 			fi
 		    echo "Finding the right file to fold in during MCsmear step"
 		    
-			runperiod="RunPeriod-2017-01"
-
-		    if [[ $RUN_NUMBER -gt 40000 || $RUN_NUMBER == 40000 ]]; then
-				runperiod="RunPeriod-2018-01"
-			elif [[ $RUN_NUMBER -gt 30000 || $RUN_NUMBER == 30000 ]]; then
-				runperiod="RunPeriod-2017-01"
-			elif [[ $RUN_NUMBER -gt 20000 || $RUN_NUMBER == 20000 ]]; then
-				runperiod="RunPeriod-2016-10"
-			elif [[ $RUN_NUMBER -gt 10000 || $RUN_NUMBER == 10000 ]]; then
-				runperiod="RunPeriod-2016-02"
-		    fi
 
 		    if [[ $RUN_NUMBER < 10000 ]]; then
 			echo "Warning: random triggers do not exist for this run number"
@@ -509,7 +505,7 @@ if [[ "$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" == 
 			fi
 			#set bkglocstring="/w/halld-scifs1a/home/tbritton/converted.hddm"
 		    
-		    if [[ ! -f $bkglocstring ]]; then
+		    if [[ ! -f $bkglocstring && $MAKE_MC_USING_XROOTD == 0 ]]; then
 			echo "something went wrong with initialization"
 			echo "Could not find mix-in file "$bkglocstring
 			exit
@@ -1082,22 +1078,36 @@ if [[ "$GENR" != "0" ]]; then
 		mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' $STANDARD_NAME'_geant'$GEANTVER'.hddm'
 		mcsmear_return_code=$?
 	elif [[ "$BKGFOLDSTR" == "DEFAULT" || "$BKGFOLDSTR" == "Random" ]]; then
-		rm -f count.py
-	   echo "import hddm_s" > count.py
-	   echo "print(sum(1 for r in hddm_s.istream('$bkglocstring')))" >> count.py
-	   totalnum=$( $USER_PYTHON count.py )
-	   rm count.py
+
+		if [[ $RANDOM_TRIG_NUM_EVT == -1 ]] then
+			rm -f count.py
+	    	echo "import hddm_s" > count.py
+	    	echo "print(sum(1 for r in hddm_s.istream('$bkglocstring')))" >> count.py
+	    	totalnum=$( $USER_PYTHON count.py )
+	    	rm count.py
+		else
+			totalnum=$RANDOM_TRIG_NUM_EVT
+		fi
 		fold_skip_num=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
 		echo "skipping: "$fold_skip_num
-		echo "mcsmear "$MCSMEAR_Flags " -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
-		mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
+		if ( $MAKE_MC_USING_XROOTD == 0 ) then
+			echo "mcsmear "$MCSMEAR_Flags" -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
+			mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
+		else
+			echo "mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm xroot://scosg16.jlab.org//osgpool/halld/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm:1\:1\+$fold_skip_num"
+			mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm xroot://scosg16.jlab.org//osgpool/halld/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm:1\:1\+$fold_skip_num		
+		fi
 		mcsmear_return_code=$?
 	elif [[ "$bkgloc_pre" == "loc:" ]]; then
-		rm -f count.py
-	   echo "import hddm_s" > count.py
-	   echo "print(sum(1 for r in hddm_s.istream('$bkglocstring')))" >> count.py
-	   totalnum=`$USER_PYTHON count.py`
-	   rm count.py
+		if [[ $RANDOM_TRIG_NUM_EVT == -1 ]] then
+			rm -f count.py
+	    	echo "import hddm_s" > count.py
+	    	echo "print(sum(1 for r in hddm_s.istream('$bkglocstring')))" >> count.py
+	    	totalnum=$( $USER_PYTHON count.py )
+	    	rm count.py
+		else
+			totalnum=$RANDOM_TRIG_NUM_EVT
+		fi
 		fold_skip_num=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
 		echo "mcsmear "$MCSMEAR_Flags " -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
 		mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
