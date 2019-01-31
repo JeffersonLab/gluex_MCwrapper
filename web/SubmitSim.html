@@ -6,7 +6,8 @@
     <link rel="stylesheet" type="text/css" href="./css/animations.css"/>
     <link rel="stylesheet" type="text/css" href="./css/Form.css"/>
 <body>
-
+        <div id="newsstand">
+            </div>
 <div id="Form-pane">
     <div id="Form-header">
         
@@ -55,6 +56,7 @@
         <form id="Form" action="./WrapperForm.php">
             <input type="hidden" value="-1" id="prefill" name="prefill">
             <input type="hidden" value="0" id="mod" name="mod">
+            <input type="hidden" value="" id="blockname" name="blockname">
             <input type="hidden" value=0 id="wall" name="wall">
             <div id="expSelector" class="switch-field">
                     <div class="switch-title">Experiment</div>
@@ -98,7 +100,10 @@
 </body>
 <script>
     var urlvals;
-  $(document).ready(function(){getUrlVars();Initialize()})
+    setInterval(function(){
+            GetNews();
+        },300000)
+  $(document).ready(function(){getUrlVars();Initialize();GetNews()})
   var firstLoad=true;
   var project;
   function getUrlVars() {
@@ -120,6 +125,124 @@
         console.log(key);
         console.log(urlvals[key])
     }
+}
+function GetNews()
+  {
+    
+        if (window.XMLHttpRequest) {
+            // code for IE7+, Firefox, Chrome, Opera, Safari
+            xmlhttp = new XMLHttpRequest();
+        } else {
+            // code for IE6, IE5
+            xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+        }
+        xmlhttp.onreadystatechange = function() {
+            if (this.readyState == 4 && this.status == 200) {
+                //console.log(this.responseText)
+                if(this.responseText != "")
+                {
+                    newsList=JSON.parse(this.responseText);
+                    MakeNews(newsList);
+
+                }
+                
+            }
+        };
+        
+         
+        //console.log("mchb.php");
+        xmlhttp.open("GET","getNews.php",true);
+        xmlhttp.send();
+  }
+  function MakeNews(newsList)
+  {
+    if(document.getElementById("newsstand").children.length==0 && newsList.length !=0 )
+    {
+        console.log(newsList)
+        var newsanchor=document.getElementById("newsstand")
+        var tickerDiv= document.createElement("DIV")
+        tickerDiv.id="tickerDIV"
+        tickerDiv.className="news-ticker"
+
+        var tickerTexts= document.createElement("DIV")
+        tickerTexts.id="tickerTexts"
+        tickerTexts.className="ticker"
+
+        var tickerHolder= document.createElement("SPAN")
+        tickerHolder.id="tickerHolder"
+        tickerHolder.className="ticker-holder"
+
+        tickerTexts.appendChild(tickerHolder);
+        tickerDiv.appendChild(tickerTexts)
+        newsanchor.appendChild(tickerDiv)
+
+        for(var i=0; i< newsList.length;i++)
+        {
+            var CSPAN=document.createElement("SPAN");
+            CSPAN.id="newsSpan_"+toString(i);
+            CSPAN.innerHTML="<strong>"+newsList[i].header+"</strong>:   "+newsList[i].text+"               </span>";
+            tickerHolder.appendChild(CSPAN)
+
+        }
+
+        try {
+        var ticker_holder = $('.ticker-holder').get(0);
+        var ticker_text = $('.ticker').get(0);
+        var ticker_pos = ticker_text.parentNode.offsetWidth;
+
+        var ticker_data = $(ticker_holder).html();
+        $(ticker_text).parent().html('<marquee id="marquee" scrollamount="10" scrolldelay="">' + ticker_data + '</marquee>');
+
+        $('.news-ticker').hover(
+
+        function() {
+            $('marquee', this).get(0).stop();
+        }, function() {
+            $('marquee', this).get(0).start();
+        });
+
+
+    }
+    catch (o) {}
+
+    }
+    else if( document.getElementById("newsstand").children.length!=0 && newsList.length !=0)
+    {
+        //UPDATE
+        //delete children and repopulate
+        var myNode = document.getElementById("marquee");
+        while (myNode.firstChild) {
+            myNode.removeChild(myNode.firstChild);
+        }
+        
+        for(var i=0; i< newsList.length;i++)
+        {
+            var CSPAN=document.createElement("SPAN");
+            CSPAN.id="newsSpan_"+toString(i);
+            CSPAN.innerHTML="<strong>"+newsList[i].header+"</strong>:   "+newsList[i].text+"               </span>";
+            myNode.appendChild(CSPAN)
+
+        }
+
+    }
+    else if( document.getElementById("newsstand").children.length!=0 && newsList.length ==0)
+    {
+        //DESTROY
+        //console.log("EXISTS")
+        var myNode = document.getElementById("newsstand");
+        while (myNode.firstChild) {
+            myNode.removeChild(myNode.firstChild);
+        }
+    }
+  }
+function checkInput(name)
+{
+    if(!document.getElementById(name))
+        return
+    
+    objvalue = document.getElementById(name).value;
+
+    console.log(objvalue)
 }
 function prefillForm()
 {
@@ -180,9 +303,9 @@ function prefillForm()
 }
 function LoopAndFill(result)
 {
-    document.getElementById("uname").value=result.UName;
+    document.getElementById("uname").value=result.Submitter;
     document.getElementById("email").value=result.Email;
-    //NEED VERSION STUFF!!!
+
 
     if(result.Exp == "CPP" || result.Exp =="GlueX")
     {
@@ -347,8 +470,46 @@ function LoopAndFill(result)
     if(document.getElementById("mod").value=="1")
     {
     MakeUpdateButton();
-    
     }
+    else if(document.getElementById("mod").value=="2")
+    {
+        console.log(document.getElementById("output").value)
+        var trunkpath=document.getElementById("output").value.replace("/lustre/expphy/cache/halld/halld-scratch/REQUESTED_MC/",'')
+        var oldpath=trunkpath.split("/")
+        console.log("SPLIT")
+        console.log(oldpath)
+        if(document.getElementById("blockname").value=="")
+        {
+            document.getElementById("blockname").value=oldpath[0]
+        }
+        var oldnameparts=oldpath[0].split("_")
+        if(oldpath.length==3)
+        {
+            oldnameparts=oldpath[1].split("_")
+        }
+        var oldname=""
+        for(var i=0;i<oldnameparts.length-1;i++)
+        {
+            if(oldnameparts[i]==document.getElementById("blockname").value)
+                continue;
+            else
+            {
+                oldname+=oldnameparts[i]+"_"
+            }
+        }
+        oldname=oldname.substring(0,oldname.length-1)
+        var outname=""
+        outname+=document.getElementById("blockname").value
+        if(outname!="")
+        {
+            outname+="/"
+        }
+        outname+=oldname
+
+        document.getElementById("output").value=outname
+        MakeSubmitButton();
+    }
+
 }
 function MakeSelectedByValue(select,val)
 {
@@ -553,8 +714,8 @@ function MakeGluexForm()
     outputloc.name="outputloc"
     outputloc.placeholder="My_MC"
     outputloc.required=true;
-    outputloc.title="The root title of the output directory. NOT the full path. \nNo / allowed (or other special characters)"
-    outputloc.pattern="[^()/><\][\\\x22,;|]+"
+    outputloc.title="The root title of the output directory. NOT the full path. \nNo more than 1 / allowed)"
+    //outputloc.pattern="[^()/><\][\\\x22,;|]+"
     outputloc.style.width="25%";
     form.appendChild(outputloc);
 
@@ -922,7 +1083,7 @@ function MakeCPPForm()
     outputloc.placeholder="My_MC"
     outputloc.required=true;
     outputloc.title="The root title of the output directory. NOT the full path. \nNo / allowed (or other special characters)"
-    outputloc.pattern="[^()/><\][\\\x22,;|]+"
+    //outputloc.pattern="[^()/><\][\\\x22,;|]+"
     outputloc.style.width="25%";
     form.appendChild(outputloc);
     //GENERATOR
@@ -1195,6 +1356,11 @@ function MakeCPPForm()
 
 function MakeCheckButton()
     {
+        if(document.getElementById("prefill").value != "-1" && document.getElementById("mod").value != "2" )
+        {
+            return
+        }
+
         buttoncont=document.getElementById("submitbutton");
         confirmbtn=document.getElementById("Submit");
         if(confirmbtn)
@@ -1220,6 +1386,14 @@ function MakeCheckButton()
     }
     function DoCheck()
     {
+
+        if(document.getElementById("output").value.split("/").length-1 > 1)
+        {
+            alert("THE OUTPUT DIRECTORY NAME IS JUST THE NAME. NOT THE PATH.  PLEASE CHOOSE ANOTHER NAME")
+            document.getElementById("output").value="";
+            return;
+        }
+
         if (window.XMLHttpRequest) {
             // code for IE7+, Firefox, Chrome, Opera, Safari
             xmlhttp = new XMLHttpRequest();
@@ -1267,6 +1441,7 @@ function MakeCheckButton()
             {
                 chosen_randomtag=randomtag_ele.value;
             }
+
 
 
         console.log("./checkForMC.php?generator="+generator_name+"&versionSet="+selected_version+"&bkg="+selected_background+"&randomtag="+chosen_randomtag)
@@ -1351,18 +1526,18 @@ function MakeLines(lines)
 function populateGenerators(exp)
 {
     var gensel=document.getElementById("generator");
-    var Gens= ["file:/"];
-    var defgen="file:/"
+    var Gens= ["file:"];
+    var defgen="file:"
 
     if(exp=="CPP")
     {
         defgen="gen_2pi_primakoff"
-        Gens=["genr8","bggen","gen_2pi_amp","gen_2pi_primakoff","gen_pi0","particle_gun","gen_amp","file:/"]
+        Gens=["genr8","bggen","gen_2pi_amp","gen_2pi_primakoff","gen_pi0","particle_gun","gen_amp","file:"]
     }
     else
     {
         defgen="bggen"
-        Gens = ["genr8","bggen","genEtaRegge","gen_2pi_amp","gen_2pi_primakoff","gen_pi0","gen_omega_3pi","gen_2k","bggen_jpsi","gen_ee","gen_ee_hb","bggen_phi_ee","particle_gun","genBH","gen_omega_radiative","gen_amp","file:/"]
+        Gens = ["genr8","bggen","genEtaRegge","gen_2pi_amp","gen_2pi_primakoff","gen_pi0","gen_omega_3pi","gen_2k","bggen_jpsi","gen_ee","gen_ee_hb","bggen_phi_ee","particle_gun","genBH","gen_omega_radiative","gen_amp","file:"]
     }
 
     Gens.forEach(function(element) { 
@@ -1401,6 +1576,7 @@ function updateBKGoptions()
             document.getElementById("randomtag").placeholder="sim-recon tag. e.g recon-2017_01-ver02";
             document.getElementById("randomtag").title="place a github tag here that corresponds to the reconstruction tag used in producing the random triggers"
             document.getElementById("randomtag").pattern="[^' ']+"
+            document.getElementById("randomtag").required=true;
         }
         else if(sel_val==="BeamPhotons" || sel_val==="TagOnly")
         {
@@ -1415,7 +1591,7 @@ function updateBKGoptions()
             document.getElementById("randomtag").style.width="50%"
             document.getElementById("randomtag").placeholder="full path to folder containing the random trigger files";
             document.getElementById("randomtag").title="the full path to a folder containing random trigger files of the form runXXXXXX_random.hddm"
-       
+            document.getElementById("randomtag").required=true;
         }
         else
         {
@@ -1470,7 +1646,7 @@ function MakeOption(selector,val,selected)
 }
 function updateGenConfig()
 {
-    if($("#generator option:selected")[0].value == "file:/")
+    if($("#generator option:selected")[0].value == "file:")
     {
         document.getElementById("genconfig").placeholder="full path to hddm file to use as input to geant";
     }
@@ -1563,31 +1739,7 @@ function updateRangeoptions()
         }
         
     }
-function MakeCheckButton()
-    {
-        buttoncont=document.getElementById("submitbutton");
-        confirmbtn=document.getElementById("Submit");
-        if(confirmbtn)
-        {
-            buttoncont.removeChild(confirmbtn)
-        }
 
-        if(!document.getElementById("Query"))
-        {
-            newbutton=document.createElement("INPUT");
-            var text=document.createTextNode("Confirm");
-            newbutton.appendChild(text);
-            newbutton.type="button";
-            newbutton.id="Query"
-            newbutton.addEventListener('click', function() {
-            DoCheck();
-                }, false);
-            newbutton.value="Confirm";
-            newbutton.className="Confirm"
-
-            buttoncont.appendChild(newbutton);
-        }
-    }
 function PopulateVer(id,result)
 {
     reconSel=document.getElementById(id)
@@ -1597,8 +1749,17 @@ function PopulateVer(id,result)
     {
         var newoption = document.createElement("option");
 
-        newoption.text = result[i].version;
-        newoption.value = result[i].version;
+        if(!result[i].version)
+        {
+            newoption.text = "master";
+            newoption.value = "master";
+        }
+        else
+        {
+            newoption.text = result[i].version;
+            newoption.value = result[i].version;
+        }
+        
         
         
         reconSel.add(newoption);
@@ -1685,6 +1846,7 @@ function DoSimQuery()
     {
         var e = document.getElementById("recon_stack");
         var selRecon = e.options[e.selectedIndex].value;
+        
 
         if (window.XMLHttpRequest) {
             // code for IE7+, Firefox, Chrome, Opera, Safari

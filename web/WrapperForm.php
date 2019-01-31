@@ -1,5 +1,5 @@
 <?php
-
+header('Location: http://' . $_SERVER['HTTP_HOST'] . '/gluex_sim/thanks.html', true, 303);
 function UpdateProject($conn)
 {
     $coherent=NULL;
@@ -19,6 +19,11 @@ function UpdateProject($conn)
     $geant_secondaries=0;
     
     $rcdb_query="";
+
+    if($_GET["rcdbq"] != "")
+    {
+        $rcdb_query=$_GET["rcdbq"];
+    }
 
 if($_GET["cohPos"] != "")
 {
@@ -317,7 +322,7 @@ $msg = $msg . "You have requested " . $_GET["numevents"] . " events to be produc
 $msg = $msg . "The configuration, will be checked by our team of skilled technicians to ensure you will receive only the finest artisanal Monte Carlo samples.\n";
 $msg = $msg . "You will be contacted at " . $_GET["useremail"] . " in the event issues are encountered.\n";
 $msg = $msg . "===============================================================================\n";
-$msg = $msg . "You may view your request here: https://halldweb.jlab.org/gluex_sim/SubmitSim_DEV_new.html?prefill=" . $row["MAX(ID)"];
+$msg = $msg . "You may view your request here: https://halldweb.jlab.org/gluex_sim/SubmitSim.html?prefill=" . $row["MAX(ID)"];
 $msg = $msg . " \nWhen completed your output will be found at: " . $fullOutput;
 $msg = $msg . "\n\n\n\n";
 
@@ -326,10 +331,10 @@ $msg = $msg . $_GET["addreq"];
 
 
 mail("tbritton@jlab.org," . $_GET["useremail"],"MC Request #" . $row["MAX(ID)"] ,$msg);
-echo "<br>";
-echo "Thanks for your submission, your request should have been received.  A copy of your request has been emailed to the given address for your records.";
-echo "<br>";
-echo "Jobs may be monitored via the " . "<a href='https://halldweb.jlab.org/gluex_sim/Dashboard.html'> MCwrapper Dashboard </a>";
+#echo "<br>";
+#echo "Thanks for your submission, your request should have been received.  A copy of your request has been emailed to the given address for your records.";
+#echo "<br>";
+#echo "Jobs may be monitored via the " . "<a href='https://halldweb.jlab.org/gluex_sim/Dashboard.html'> MCwrapper Dashboard </a>";
 
 $conn->close();
 }
@@ -347,7 +352,7 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 } 
 
-if( $_GET["mod"] == 0 || $_GET["prefill"] == -1 )
+if( $_GET["mod"] == 0 || $_GET["prefill"] == -1 || $_GET["mod"] == 2)
 {
     
     InsertProject($conn);
