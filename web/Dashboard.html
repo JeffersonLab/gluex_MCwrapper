@@ -14,7 +14,7 @@
 <link rel="stylesheet" type="text/css" href="./css/datatables.css"/>
 <script type="text/javascript" src="../data_monitoring/js_utilities/datatables.min.js"></script>
 <script type="text/javascript" src="./js/fnFindCellRowIndexes.js"></script>
-
+<script src="./js/dataTables.fixedHeader.min.js"></script>
 <script src="js/three.min.js"></script>
 <script src="js/globe/globe.js"></script>
 
@@ -52,33 +52,16 @@ var result=[];
             document.getElementById('condor_idle').src=newsource_idle
         },5000)
         
+        setInterval(function(){
+            GetNews();
+        },300000)
+
         setInterval(function (){
             GetHeartbeats();
         },1000)
         
-        $(document).ready(function(){checkForeman();QueryDatabase();GetHeartbeats();}); 
+        $(document).ready(function(){checkForeman();GetNews();QueryDatabase();GetHeartbeats();}); 
 
-    $(document).ready(function() {
-    try {
-        var ticker_holder = $('.ticker-holder').get(0);
-        var ticker_text = $('.ticker').get(0);
-        var ticker_pos = ticker_text.parentNode.offsetWidth;
-
-        var ticker_data = $(ticker_holder).html();
-        $(ticker_text).parent().html('<marquee scrollamount="10" scrolldelay="">' + ticker_data + '</marquee>');
-
-        $('.news-ticker').hover(
-
-        function() {
-            $('marquee', this).get(0).stop();
-        }, function() {
-            $('marquee', this).get(0).start();
-        });
-
-
-    }
-    catch (o) {}
-});
     document.addEventListener("mousemove",function (e){locX=e.clientX;locY=e.clientY;})
 
 
@@ -340,7 +323,7 @@ function StatusLight(light_name,poll_table,cron_freq)
 
                         
     }
-    if(Now-getTimestampFromDate(poll_table[0].StartTime)<1.3*cron_freq*60*1000 || poll_table[0].Status=="Running")
+    if(Now-getTimestampFromDate(poll_table[0].StartTime)<2*cron_freq*60*1000 || poll_table[0].Status=="Running")
         Recent=true;
 
 
@@ -552,10 +535,10 @@ function QueryDatabase()
     {
         MakeProjectTable();
     }
-    else if( table == "Jobs")
+    /*else if( table == "Jobs")
     {
         MakeJobsTable(qresult);
-    }
+    }*/
   }
 
 
@@ -563,6 +546,7 @@ function MakeProjectTable()
 {
 
     ProjTable = $('#ProjTable').DataTable( {
+
       ajax: "./dat_mon_sql2.php?Table=ProjectF",
       columns: [
         { title: "ID" , data: "ID" },
@@ -887,6 +871,7 @@ function DisplayJobs(e,obj)
 }
 function DisplayAttempts(e,obj)
 {
+    console.log("Attempts")
     var projID=obj.parentNode.childNodes[0].innerHTML;
 
     
@@ -1011,19 +996,120 @@ function disposeHierarchy (node, callback)
         }
     }
 }
+function GetNews()
+  {
+    
+        if (window.XMLHttpRequest) {
+            // code for IE7+, Firefox, Chrome, Opera, Safari
+            xmlhttp = new XMLHttpRequest();
+        } else {
+            // code for IE6, IE5
+            xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+        }
+        xmlhttp.onreadystatechange = function() {
+            if (this.readyState == 4 && this.status == 200) {
+                //console.log(this.responseText)
+                if(this.responseText != "")
+                {
+                    newsList=JSON.parse(this.responseText);
+                    MakeNews(newsList);
+
+                }
+                
+            }
+        };
+        
+         
+        //console.log("mchb.php");
+        xmlhttp.open("GET","getNews.php",true);
+        xmlhttp.send();
+  }
+  function MakeNews(newsList)
+  {
+    if(document.getElementById("newsstand").children.length==0 && newsList.length !=0 )
+    {
+        console.log(newsList)
+        var newsanchor=document.getElementById("newsstand")
+        var tickerDiv= document.createElement("DIV")
+        tickerDiv.id="tickerDIV"
+        tickerDiv.className="news-ticker"
+
+        var tickerTexts= document.createElement("DIV")
+        tickerTexts.id="tickerTexts"
+        tickerTexts.className="ticker"
+
+        var tickerHolder= document.createElement("SPAN")
+        tickerHolder.id="tickerHolder"
+        tickerHolder.className="ticker-holder"
+
+        tickerTexts.appendChild(tickerHolder);
+        tickerDiv.appendChild(tickerTexts)
+        newsanchor.appendChild(tickerDiv)
+
+        for(var i=0; i< newsList.length;i++)
+        {
+            var CSPAN=document.createElement("SPAN");
+            CSPAN.id="newsSpan_"+toString(i);
+            CSPAN.innerHTML="<strong>"+newsList[i].header+"</strong>:   "+newsList[i].text+"               </span>";
+            tickerHolder.appendChild(CSPAN)
+
+        }
+
+        try {
+        var ticker_holder = $('.ticker-holder').get(0);
+        var ticker_text = $('.ticker').get(0);
+        var ticker_pos = ticker_text.parentNode.offsetWidth;
+
+        var ticker_data = $(ticker_holder).html();
+        $(ticker_text).parent().html('<marquee id="marquee" scrollamount="10" scrolldelay="">' + ticker_data + '</marquee>');
+
+        $('.news-ticker').hover(
+
+        function() {
+            $('marquee', this).get(0).stop();
+        }, function() {
+            $('marquee', this).get(0).start();
+        });
+
+
+    }
+    catch (o) {}
+
+    }
+    else if( document.getElementById("newsstand").children.length!=0 && newsList.length !=0)
+    {
+        //UPDATE
+        //delete children and repopulate
+        
+        var myNode = document.getElementById("marquee");
+        while (myNode.firstChild) {
+            myNode.removeChild(myNode.firstChild);
+        }
+        
+        for(var i=0; i< newsList.length;i++)
+        {
+            var CSPAN=document.createElement("SPAN");
+            CSPAN.id="newsSpan_"+toString(i);
+            CSPAN.innerHTML="<strong>"+newsList[i].header+"</strong>:   "+newsList[i].text+"               </span>";
+            myNode.appendChild(CSPAN)
+
+        }
+
+    }
+    else if( document.getElementById("newsstand").children.length!=0 && newsList.length ==0)
+    {
+        //DESTROY
+        //console.log("EXISTS")
+        var myNode = document.getElementById("newsstand");
+        while (myNode.firstChild) {
+            myNode.removeChild(myNode.firstChild);
+        }
+    }
+  }
     </script>
 <body style="background-color:black" >
-
-<!--<div class="news-ticker" >
-        <div class="ticker" id="tickerTexts">
-                <span class="ticker-holder">
-                    <span id="ticker1"><strong></strong> Possible edge cases have cause me to stop the automated mover for the time being.  Rest assured that system is operational, there may just be some delay in initial file moving.</span>
-                    
-                </span>    
-
-
+<div id="newsstand">
 </div>
-</div>-->
 <div class="header-block">
 <div class="header-menu">
         <nav role="navigation">

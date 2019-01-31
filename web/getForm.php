@@ -35,7 +35,7 @@ if (!$conn_vs) {
     die("Connection failed: " . mysqli_connect_error());
 }
 
-$vsreconq="select version from version where packageId=2 && versionSetId in (SELECT id from versionSet where filename=\"" . $data[0]['VersionSet'] . "\");";
+$vsreconq="select version from version where packageId in (SELECT id from package where name=\"halld_recon\") && versionSetId in (SELECT id from versionSet where filename=\"" . $data[0]['VersionSet'] . "\");";
 //echo $vsreconq;
 //echo $conn_vs;
 $reconresult = $conn_vs->query($vsreconq);
@@ -43,7 +43,7 @@ $recon = $reconresult->fetch_assoc();
 //print_r($recon);
 $data[0]["recon_ver"]=$recon["version"];
 
-$vssimq="select version from version where packageId=3 && versionSetId in (SELECT id from versionSet where filename=\"" . $data[0]['VersionSet'] . "\");";
+$vssimq="select version from version where packageId in (SELECT id from package where name=\"halld_sim\") && versionSetId in (SELECT id from versionSet where filename=\"" . $data[0]['VersionSet'] . "\");";
 $simresult = $conn_vs->query($vssimq);
 $sim = $simresult->fetch_assoc();
 //print_r($recon);
