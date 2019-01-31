@@ -1073,6 +1073,7 @@ if ( "$GENR" != "0" ) then
 	    else if ( "$BKGFOLDSTR" == "DEFAULT" || "$BKGFOLDSTR" == "Random" ) then
 			
 			if ( $RANDOM_TRIG_NUM_EVT == -1 ) then
+				echo "counting"
 				rm -f count.py
 	    		echo "import hddm_s" > count.py
 	    		echo "print(sum(1 for r in hddm_s.istream('$bkglocstring')))" >>! count.py
