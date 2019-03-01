@@ -31,11 +31,22 @@ class bcolors:
 
 #DELETE FROM Attempts WHERE Job_ID IN (SELECT ID FROM Jobs WHERE Project_ID=65);
 
+def RecallAll():
+    query="SELECT BatchJobID, BatchSystem from Attempts where (Status=\"2\" || Status=\"1\" || Status=\"5\") && Job_ID in (SELECT ID from Jobs where Project_ID in (SELECT ID FROM Project where Tested=-2));"
+    curs.execute(query)
+    rows=curs.fetchall()
+    for row in rows:
+        if row["BatchSystem"] == "OSG":
+            command="condor_rm "+str(row["BatchJobID"])
+            subprocess.call(command,shell=True)
+
+
 def AutoLaunch():
     #print "in autolaunch"
+    RecallAll()
     RetryAllJobs()
 
-    query = "SELECT ID,Email,VersionSet,Tested,UName FROM Project WHERE Tested != -1 && Dispatched_Time is NULL ORDER BY (SELECT Priority from Users where name=UName) DESC;"
+    query = "SELECT ID,Email,VersionSet,Tested,UName FROM Project WHERE (Tested = 0 || Tested=1) && Dispatched_Time is NULL ORDER BY (SELECT Priority from Users where name=UName) DESC;"
     #print query
     curs.execute(query) 
     rows=curs.fetchall()
