@@ -32,7 +32,7 @@ class bcolors:
 #DELETE FROM Attempts WHERE Job_ID IN (SELECT ID FROM Jobs WHERE Project_ID=65);
 
 def RecallAll():
-    query="SELECT BatchJobID, BatchSystem from Attempts where (Status=\"2\" || Status=\"1\" || Status=\"5\") && Job_ID in (SELECT ID from Jobs where Project_ID in (SELECT ID FROM Project where Tested=-2));"
+    query="SELECT BatchJobID, BatchSystem from Attempts where (Status=\"2\" || Status=\"1\" || Status=\"5\") && Job_ID in (SELECT ID from Jobs where Project_ID in (SELECT ID FROM Project where Tested=2));"
     curs.execute(query)
     rows=curs.fetchall()
     for row in rows:
@@ -110,7 +110,7 @@ def DispatchProject(ID,SYSTEM,PERCENT):
         print("Error: Cannot find Project with ID="+ID)
     
 def RetryAllJobs():
-    query= "SELECT ID FROM Project where Completed_Time is NULL && Is_Dispatched=1.0;"
+    query= "SELECT ID FROM Project where Completed_Time is NULL && Is_Dispatched=1.0 && Tested!=2;"
     curs.execute(query) 
     rows=curs.fetchall()
     for row in rows:
