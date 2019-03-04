@@ -41,7 +41,7 @@ def RecallAll():
             subprocess.call(command,shell=True)
 
 def DeclareAllComplete():
-    query="SELECT ID,OutputLocation,Email from Project where Tested=4;"
+    query="SELECT ID,OutputLocation,Email from Project where Tested=4 && Notified!=1;"
     curs.execute(query)
     rows=curs.fetchall()
     for proj in rows:
@@ -68,7 +68,6 @@ def CancelAll():
         delq= "DELETE FROM Project where ID="+str(proj['ID'])+";"
         curs.execute(delq)
         conn.commit()
-
 
 
 def AutoLaunch():
