@@ -32,7 +32,7 @@ class bcolors:
 #DELETE FROM Attempts WHERE Job_ID IN (SELECT ID FROM Jobs WHERE Project_ID=65);
 
 def RecallAll():
-    query="SELECT BatchJobID, BatchSystem from Attempts where (Status=\"2\" || Status=\"1\" || Status=\"5\") && Job_ID in (SELECT ID from Jobs where Project_ID in (SELECT ID FROM Project where Tested=2 || Tested=4 ));"
+    query="SELECT BatchJobID, BatchSystem from Attempts where (Status=\"2\" || Status=\"1\" || Status=\"5\") && Job_ID in (SELECT ID from Jobs where Project_ID in (SELECT ID FROM Project where Tested=2 || Tested=4 || Tested=3 ));"
     curs.execute(query)
     rows=curs.fetchall()
     for row in rows:
@@ -50,11 +50,31 @@ def DeclareAllComplete():
         curs.execute(updatequery)
         conn.commit()
 
+def CancelAll():
+    query="SELECT ID,OutputLocation,Email from Project where Tested=3;"
+    curs.execute(query)
+    rows=curs.fetchall()
+    for proj in rows:
+        subprocess.call("echo 'Your Project ID "+str(proj['ID'])+" has been canceled.  Outstanding jobs have been recalled."+"' | mail -s 'GlueX MC Request #"+str(proj['ID'])+" Canceled' "+str(proj['Email']),shell=True)
+        sql = "DELETE FROM Attempts where Job_ID in ( SELECT ID FROM Jobs WHERE Project_ID="+str(proj['ID'])+" );"
+
+        sql2 = "DELETE FROM Jobs WHERE Project_ID="+str(proj['ID'])+";"
+        sql3 = "UPDATE Project SET Is_Dispatched='0',Completed_Time=NULL,Dispatched_Time=NULL WHERE ID="+str(proj['ID']) 
+
+        curs.execute(sql)
+        curs.execute(sql2)
+        curs.execute(sql3)
+        
+        delq= "DELETE FROM Project where ID="+str(proj['ID'])+";"
+        curs.execute(delq)
+        conn.commit()
+
 
 
 def AutoLaunch():
     #print "in autolaunch"
     RecallAll()
+    CancelAll()
     DeclareAllComplete()
     RetryAllJobs()
 
