@@ -32,13 +32,24 @@ class bcolors:
 #DELETE FROM Attempts WHERE Job_ID IN (SELECT ID FROM Jobs WHERE Project_ID=65);
 
 def RecallAll():
-    query="SELECT BatchJobID, BatchSystem from Attempts where (Status=\"2\" || Status=\"1\" || Status=\"5\") && Job_ID in (SELECT ID from Jobs where Project_ID in (SELECT ID FROM Project where Tested=2));"
+    query="SELECT BatchJobID, BatchSystem from Attempts where (Status=\"2\" || Status=\"1\" || Status=\"5\") && Job_ID in (SELECT ID from Jobs where Project_ID in (SELECT ID FROM Project where Tested=2 || Tested=4 ));"
     curs.execute(query)
     rows=curs.fetchall()
     for row in rows:
         if row["BatchSystem"] == "OSG":
             command="condor_rm "+str(row["BatchJobID"])
             subprocess.call(command,shell=True)
+
+def DeclareAllComplete():
+    query="SELECT ID,OutputLocation,Email from Project where Tested=4;"
+    curs.execute(query)
+    rows=curs.fetchall()
+    for proj in rows:
+        subprocess.call("echo 'Your Project ID "+str(proj['ID'])+" has been declared completed.  Outstanding jobs have been recalled. Output may be found here:\n"+proj['OutputLocation']+"' | mail -s 'GlueX MC Request #"+str(proj['ID'])+" Completed' "+str(proj['Email']),shell=True)
+        updatequery="UPDATE Project SET Completed_Time=NOW(),Notified=1 where ID="+str(proj["ID"])
+        curs.execute(updatequery)
+        conn.commit()
+
 
 
 def AutoLaunch():
@@ -110,7 +121,7 @@ def DispatchProject(ID,SYSTEM,PERCENT):
         print("Error: Cannot find Project with ID="+ID)
     
 def RetryAllJobs():
-    query= "SELECT ID FROM Project where Completed_Time is NULL && Is_Dispatched=1.0 && Tested!=2;"
+    query= "SELECT ID FROM Project where Completed_Time is NULL && Is_Dispatched=1.0 && Tested!=2 && Tested!=4;"
     curs.execute(query) 
     rows=curs.fetchall()
     for row in rows:
