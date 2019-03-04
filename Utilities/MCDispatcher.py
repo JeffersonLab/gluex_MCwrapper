@@ -55,6 +55,7 @@ def DeclareAllComplete():
 def AutoLaunch():
     #print "in autolaunch"
     RecallAll()
+    DeclareAllComplete()
     RetryAllJobs()
 
     query = "SELECT ID,Email,VersionSet,Tested,UName FROM Project WHERE (Tested = 0 || Tested=1) && Dispatched_Time is NULL ORDER BY (SELECT Priority from Users where name=UName) DESC;"
