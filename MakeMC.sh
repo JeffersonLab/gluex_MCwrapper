@@ -1235,7 +1235,34 @@ fi
 			
 			if [[ "$filecheck" == "0" ]]; then
 			    mv $filetomv $filename_root\_$STANDARD_NAME.root
-			    mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/
+			    hdroot_test=`echo $filename_root\_$STANDARD_NAME.root | grep hd_root_`
+				thrown_test=`echo $filename_root\_$STANDARD_NAME.root | grep tree_thrown`
+				gen_test=`echo $filename_root\_$STANDARD_NAME.root | grep gen_`
+				reaction_test=`echo $filename_root\_$STANDARD_NAME.root | grep tree_`
+				#echo hdroot_test = $hdroot_test
+				if [[ $hdroot_test != "" ]]; then
+					if [[ ! -d "$OUTDIR/root/monitoring_hists/" ]]; then
+    					mkdir $OUTDIR/root/monitoring_hists/
+					fi
+					mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/monitoring_hists
+				elif [[ $thrown_test != "" ]]; then
+					if [[ ! -d "$OUTDIR/root/thrown/" ]]; then
+						mkdir $OUTDIR/root/thrown/
+					fi
+					mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/thrown
+				elif [[ $reaction_test != "" ]]; then
+					if [[ ! -d "$OUTDIR/root/trees/" ]]; then
+						mkdir $OUTDIR/root/trees/
+					fi
+					mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/trees
+				elif [[ $gen_test != "" ]]; then
+					if [[ ! -d "$OUTDIR/root/generator/" ]]; then
+						mkdir $OUTDIR/root/generator/
+					fi
+					mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/generator
+				else
+					mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/
+				fi
 			fi
 		done
 	fi

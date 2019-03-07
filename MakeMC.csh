@@ -1228,9 +1228,49 @@ endif
 				set filecheck=`echo $current_files | grep -c $filetomv`
 
 				if ( "$filecheck" == "0" ) then
-
-		   			mv $filetomv $filename_root\_$STANDARD_NAME.root
-		   			mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/
+					mv $filetomv $filename_root\_$STANDARD_NAME.root
+					echo $filename_root\_$STANDARD_NAME.root
+					set hdroot_test=`echo $filename_root\_$STANDARD_NAME.root | grep hd_root_`
+					set thrown_test=`echo $filename_root\_$STANDARD_NAME.root | grep tree_thrown`
+					set gen_test=`echo $filename_root\_$STANDARD_NAME.root | grep gen_`
+					set reaction_test=`echo $filename_root\_$STANDARD_NAME.root | grep tree_`
+					#echo hdroot_test = $hdroot_test
+					if ($hdroot_test !~ "") then
+						echo "hdroot"
+						if ( ! -d "$OUTDIR/root/monitoring_hists/" ) then
+							#echo "DNE"
+							#echo "$OUTDIR/root/monitoring_hists/"
+    						mkdir $OUTDIR/root/monitoring_hists/
+						endif
+						mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/monitoring_hists
+					else if ($thrown_test !~ "") then
+						echo "thrown"
+						if ( ! -d "$OUTDIR/root/thrown/" ) then
+							#echo "DNE"
+							#echo "$OUTDIR/root/monitoring_hists/"
+    						mkdir $OUTDIR/root/thrown/
+						endif
+						mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/thrown
+					else if ($reaction_test !~ "") then
+						echo "reaction"
+						if ( ! -d "$OUTDIR/root/trees/" ) then
+							#echo "DNE"
+							#echo "$OUTDIR/root/monitoring_hists/"
+    						mkdir $OUTDIR/root/trees/
+						endif
+						mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/trees
+					else if ($gen_test !~ "") then
+						echo "gen"
+						if ( ! -d "$OUTDIR/root/generator/" ) then
+							#echo "DNE"
+							#echo "$OUTDIR/root/monitoring_hists/"
+    						mkdir $OUTDIR/root/generator/
+						endif
+						mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/generator
+					else
+						mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/
+					endif
+		   			
 				endif
 			end
 	    endif

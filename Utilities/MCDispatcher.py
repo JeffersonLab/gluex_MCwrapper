@@ -140,13 +140,13 @@ def DispatchProject(ID,SYSTEM,PERCENT):
     else:
         print("Error: Cannot find Project with ID="+ID)
     
-def RetryAllJobs():
+def RetryAllJobs(rlim):
     query= "SELECT ID FROM Project where Completed_Time is NULL && Is_Dispatched=1.0 && Tested!=2 && Tested!=4;"
     curs.execute(query) 
     rows=curs.fetchall()
     for row in rows:
         print "Retrying Project "+str(row["ID"])
-        RetryJobsFromProject(row["ID"],True)
+        RetryJobsFromProject(row["ID"],not rlim)
 
 def RemoveAllJobs():
     query= "SELECT * FROM Attempts WHERE ID IN (SELECT Max(ID) FROM Attempts GROUP BY Job_ID) && Job_ID IN (SELECT ID FROM Jobs WHERE IsActive=1 && Project_ID="+str(ID)+");"
@@ -659,7 +659,7 @@ def main(argv):
         elif MODE == "RETRYJOBS":
             RetryJobsFromProject(ID, False)
         elif MODE == "RETRYALLJOBS":
-            RetryAllJobs()
+            RetryAllJobs(RUNNING_LIMIT_OVERRIDE)
         elif MODE == "CANCELJOB":
             CancelJob(ID)
         elif MODE == "AUTOLAUNCH":
