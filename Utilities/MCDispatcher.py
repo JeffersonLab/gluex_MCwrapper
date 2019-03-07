@@ -141,7 +141,7 @@ def DispatchProject(ID,SYSTEM,PERCENT):
         print("Error: Cannot find Project with ID="+ID)
     
 def RetryAllJobs(rlim):
-    query= "SELECT ID FROM Project where Completed_Time is NULL && Is_Dispatched=1.0 && Tested!=2 && Tested!=4;"
+    query= "SELECT ID FROM Project where Completed_Time is NULL && Is_Dispatched=1.0 && Tested!=2 && Tested!=4; && Tested!=3"
     curs.execute(query) 
     rows=curs.fetchall()
     for row in rows:
