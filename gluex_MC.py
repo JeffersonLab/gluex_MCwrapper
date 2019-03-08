@@ -956,7 +956,7 @@ def main(argv):
         COMMAND_dict['experiment']=str(PROJECT)
         
 
-        if IS_SUBMITTER == 1:
+        if str(IS_SUBMITTER) == "1":
                 if BATCHRUN == 0 or BATCHSYS.upper()=="NULL":
                         os.system(str(indir)+" "+COMMAND)
                 else:
