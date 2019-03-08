@@ -15,7 +15,7 @@ import pprint
 dbhost = "hallddb.jlab.org"
 dbuser = 'mcuser'
 dbpass = ''
-dbname = 'gluex_mc_test'
+dbname = 'gluex_mc'
 
 conn=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
 curs=conn.cursor(MySQLdb.cursors.DictCursor)
@@ -99,10 +99,8 @@ def WritePayloadConfig(order,foundConfig):
 def main(argv):
     #print(argv)
 
-    Block_size=10
-
-
-    test_i=0
+    Block_size=2
+    int_i=0
     if(os.path.isfile("/osgpool/halld/tbritton/.ALLSTOP")==True):
         print "ALL STOP DETECTED"
         exit(1)
@@ -113,14 +111,18 @@ def main(argv):
 
     if(int(numprocesses_running) <2 or RUNNING_LIMIT_OVERRIDE ):
         while True:
-            query = "SELECT UName,FileNumber,Jobs.ID,Project_ID,Priority from Jobs,Project,Users where Jobs.ID not in (Select Job_ID from Attempts) and Project_ID = Project.ID and Uname = name order by Priority desc limit "+str(test_i*Block_size)+","+str(Block_size)
+            query = "SELECT UName,FileNumber,Tested,Notified,Jobs.ID,Project_ID,Priority from Jobs,Project,Users where Tested=1 && Notified is NULL && Jobs.ID not in (Select Job_ID from Attempts) and Project_ID = Project.ID and Uname = name order by Priority desc limit "+str(Block_size)
             if(Block_size==1):
-                query = "SELECT UName,FileNumber,Jobs.ID,Project_ID,Priority from Jobs,Project,Users where Jobs.ID not in (Select Job_ID from Attempts) and Project_ID = Project.ID and Uname = name order by Priority desc"
+                query = "SELECT UName,FileNumber,Tested,Notified,Jobs.ID,Project_ID,Priority from Jobs,Project,Users where Tested=1 && Notified is NULL && Jobs.ID not in (Select Job_ID from Attempts) and Project_ID = Project.ID and Uname = name order by Priority desc"
     
             curs.execute(query) 
             rows=curs.fetchall()
+
+            if(len(rows)==0):
+                break
+            #print rows
             for row in rows:
-                #print row
+                print row
                 projinfo_q="SELECT * FROM Project where ID="+str(row['Project_ID'])
                 curs.execute(projinfo_q) 
                 proj=curs.fetchall()
@@ -151,12 +153,11 @@ def main(argv):
 
                 command="$MCWRAPPER_CENTRAL/gluex_MC.py MCDispatched.config "+str(RunNumber)+" "+str(proj[0]["NumEvents"])+" per_file=20000 base_file_number="+str(row["FileNumber"])+" generate="+str(proj[0]["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(proj[0]["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(proj[0]["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(proj[0]["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid=-"+str(row['ID'])+" logdir=/osgpool/halld/tbritton/REQUESTEDMC_LOGS/"+proj[0]["OutputLocation"].split("/")[7]+" batch=1"
                 print command
+                status = subprocess.call(command, shell=True)
 
-            
+            int_i+=1
             print "=================="
-            test_i+=1
-            if test_i >3:
-                break
+            
         
     conn.close()
         

@@ -572,7 +572,7 @@ def main(argv):
         OS         = "centos7"        # Specify CentOS65 machines
 
         PROJECT_ID=0 #internally used when needed
-
+        IS_SUBMITTER=0
         #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         VERSION  = "mc"
         CALIBTIME="notime"
@@ -592,6 +592,7 @@ def main(argv):
         NOSIPMSATURATION=0
         SHELL_TO_USE="csh"
         MYJOB=[]
+        
         #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         #loop over config file and set the "parameters"
         f = open(CONFIG_FILE,"r")
@@ -825,6 +826,9 @@ def main(argv):
                         if flag[0]=="shell":
                                 argfound=1
                                 SHELL_TO_USE=str(flag[1])
+                        if flag[0]=="submitter":
+                                argfound=1
+                                IS_SUBMITTER=str(flag[1])
                         if argfound==0:
                                 print( "WARNING OPTION: "+argu+" NOT FOUND!")
         
@@ -952,152 +956,176 @@ def main(argv):
         COMMAND_dict['experiment']=str(PROJECT)
         
 
-        if len(RunType) != 1 :
-                event_sum=0.
-                #Make python rcdb calls to form the vector
-                db = rcdb.RCDBProvider("mysql://rcdb@hallddb.jlab.org/rcdb")
-
-                runlow=0
-                runhigh=0
-
-                if RunType[0] != "RunPeriod":
-                        runlow=RunType[0]
-                        runhigh=RunType[1]
+        if IS_SUBMITTER == 1:
+                if BATCHRUN == 0 or BATCHSYS.upper()=="NULL":
+                        os.system(str(indir)+" "+COMMAND)
                 else:
-                        cnx = mysql.connector.connect(user='ccdb_user', database='ccdb', host='hallddb.jlab.org')
-                        cursor = cnx.cursor()
+                        if PROJECT_ID != 0:
+                                print "SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(RUNNUM)+" && FileNumber="+str(BASEFILENUM+FILENUM+-1)+" && NumEvts="+str(num)
+                                findmyjob="SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(RUNNUM)+" && FileNumber="+str(BASEFILENUM+FILENUM+-1)+" && NumEvts="+str(num)
+                                dbcursor.execute(findmyjob)
+                                MYJOB = dbcursor.fetchall() 
+                                print len(MYJOB) 
+                        if len(MYJOB) == 0:
+                                if BATCHSYS.upper()=="SWIF":
+                                        swif_add_job(WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1,str(indir),COMMAND_dict,VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID)
+                                elif BATCHSYS.upper()=="QSUB":
+                                        qsub_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, RAM, QUEUENAME, LOG_DIR, PROJECT_ID )
+                                elif BATCHSYS.upper()=="CONDOR":
+                                        condor_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, PROJECT_ID )
+                                elif BATCHSYS.upper()=="OSG":
+                                        OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
+                                elif BATCHSYS.upper()=="SLURM":
+                                        SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
+                                elif BATCHSYS.upper()=="JSLURM":
+                                        JSUB_add_job(VERBOSE, WORKFLOW, PROJECT, TRACK, RUNNUM, BASEFILENUM+FILENUM+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
+        else:
+                if len(RunType) != 1 :
+                        event_sum=0.
+                        #Make python rcdb calls to form the vector
+                        db = rcdb.RCDBProvider("mysql://rcdb@hallddb.jlab.org/rcdb")
 
-                        runrange_name=""
-                        for npart in RunType:
-                                if npart=="RunPeriod":
-                                        continue
-                                else:
-                                        runrange_name=runrange_name+npart
+                        runlow=0
+                        runhigh=0
 
-                        cursor.execute("select runMin,runMax from runRanges where name = '"+runrange_name+"'")
-                        runRange = cursor.fetchall()
-                        runlow=runRange[0][0]
-                        runhigh=runRange[0][1]
-                        print( runRange)
-                        #cursor.close()
-                        #cnx.close()
-                        print( str(runlow)+"-->"+str(runhigh))
+                        if RunType[0] != "RunPeriod":
+                                runlow=RunType[0]
+                                runhigh=RunType[1]
+                        else:
+                                cnx = mysql.connector.connect(user='ccdb_user', database='ccdb', host='hallddb.jlab.org')
+                                cursor = cnx.cursor()
 
-                query_to_do="@is_production and @status_approved"
-                print "RCDB_QUERY IS: "+str(RCDB_QUERY)
-                if(RCDB_QUERY!=""):
-                        query_to_do=RCDB_QUERY
+                                runrange_name=""
+                                for npart in RunType:
+                                        if npart=="RunPeriod":
+                                                continue
+                                        else:
+                                                runrange_name=runrange_name+npart
 
-                table = db.select_runs(str(query_to_do),runlow,runhigh).get_values(['event_count'],True)
-                #print table
-                #print len(table)
-                for runs in table:
-                        if len(table)<=1:
-                                break
-                        event_sum = event_sum + runs[1]
+                                cursor.execute("select runMin,runMax from runRanges where name = '"+runrange_name+"'")
+                                runRange = cursor.fetchall()
+                                runlow=runRange[0][0]
+                                runhigh=runRange[0][1]
+                                print( runRange)
+                                #cursor.close()
+                                #cnx.close()
+                                print( str(runlow)+"-->"+str(runhigh))
 
-                print( event_sum)
-                sum2=0.
-                for runs in table: #do for each job
-                        #print runs[0]
-                        if len(table) <= 1:
-                                break
-                        num_events_this_run=int(((float(runs[1])/float(event_sum))*EVTS)+.5)
-                        sum2=sum2+int(((float(runs[1])/float(event_sum))*EVTS)+.5)
-                        #print num_events_this_run
+                        query_to_do="@is_production and @status_approved"
+                        print "RCDB_QUERY IS: "+str(RCDB_QUERY)
+                        if(RCDB_QUERY!=""):
+                                query_to_do=RCDB_QUERY
+
+                        table = db.select_runs(str(query_to_do),runlow,runhigh).get_values(['event_count'],True)
+                        #print table
+                        #print len(table)
+                        for runs in table:
+                                if len(table)<=1:
+                                        break
+                                event_sum = event_sum + runs[1]
+
+                        print( event_sum)
+                        sum2=0.
+                        for runs in table: #do for each job
+                                #print runs[0]
+                                if len(table) <= 1:
+                                        break
+                                num_events_this_run=int(((float(runs[1])/float(event_sum))*EVTS)+.5)
+                                sum2=sum2+int(((float(runs[1])/float(event_sum))*EVTS)+.5)
+                                #print num_events_this_run
                         
-                        if num_events_this_run == 0:
-                                continue
-
-                       #do for each file needed
-                        FILES_TO_GEN_this_run=num_events_this_run/PERFILE
-                        REMAINING_GEN_this_run=num_events_this_run%PERFILE
-
-                        for FILENUM_this_run in range(1, FILES_TO_GEN_this_run + 2):
-                                num_this_file=PERFILE
-
-                                if FILENUM_this_run == FILES_TO_GEN_this_run +1:
-                                        num_this_file=REMAINING_GEN_this_run
-                                
-                                if num_this_file == 0:
+                                if num_events_this_run == 0:
                                         continue
 
-                                COMMAND_dict['run_number']=str(runs[0])
-                                COMMAND_dict['file_number']=str(BASEFILENUM+FILENUM_this_run+-1)
-                                COMMAND_dict['num_events']=str(num_this_file)
-                                COMMAND=getCommandString(COMMAND_dict) #str(BATCHRUN)+" "+ENVFILE+" "+GENCONFIG+" "+str(outdir)+" "+str(runs[0])+" "+str(BASEFILENUM+FILENUM_this_run+-1)+" "+str(num_this_file)+" "+str(VERSION)+" "+str(CALIBTIME)+" "+str(GENR)+" "+str(GEANT)+" "+str(SMEAR)+" "+str(RECON)+" "+str(CLEANGENR)+" "+str(CLEANGEANT)+" "+str(CLEANSMEAR)+" "+str(CLEANRECON)+" "+str(BATCHSYS)+" "+str(NCORES).split(':')[-1]+" "+str(GENERATOR)+" "+str(GEANTVER)+" "+str(BGFOLD)+" "+str(CUSTOM_GCONTROL)+" "+str(eBEAM_ENERGY)+" "+str(COHERENT_PEAK)+" "+str(MIN_GEN_ENERGY)+" "+str(MAX_GEN_ENERGY)+" "+str(TAGSTR)+" "+str(CUSTOM_PLUGINS)+" "+str(PERFILE)+" "+str(RUNNING_DIR)+" "+str(ccdbSQLITEPATH)+" "+str(rcdbSQLITEPATH)+" "+str(BGTAGONLY)+" "+str(RADIATOR_THICKNESS)+" "+str(BGRATE)+" "+str(RANDBGTAG)+" "+str(RECON_CALIBTIME)+" "+str(NOSECONDARIES)+" "+str(MCWRAPPER_VERSION)+" "+str(NOSIPMSATURATION)+" "+str(FLUX_TO_GEN)+" "+str(FLUX_HIST)+" "+str(POL_TO_GEN)+" "+str(POL_HIST)+" "+str(eBEAM_CURRENT)+" "+str(PROJECT)
+                               #do for each file needed
+                                FILES_TO_GEN_this_run=num_events_this_run/PERFILE
+                                REMAINING_GEN_this_run=num_events_this_run%PERFILE
+
+                                for FILENUM_this_run in range(1, FILES_TO_GEN_this_run + 2):
+                                        num_this_file=PERFILE
+
+                                        if FILENUM_this_run == FILES_TO_GEN_this_run +1:
+                                                num_this_file=REMAINING_GEN_this_run
+                                
+                                        if num_this_file == 0:
+                                                continue
+
+                                        COMMAND_dict['run_number']=str(runs[0])
+                                        COMMAND_dict['file_number']=str(BASEFILENUM+FILENUM_this_run+-1)
+                                        COMMAND_dict['num_events']=str(num_this_file)
+                                        COMMAND=getCommandString(COMMAND_dict) #str(BATCHRUN)+" "+ENVFILE+" "+GENCONFIG+" "+str(outdir)+" "+str(runs[0])+" "+str(BASEFILENUM+FILENUM_this_run+-1)+" "+str(num_this_file)+" "+str(VERSION)+" "+str(CALIBTIME)+" "+str(GENR)+" "+str(GEANT)+" "+str(SMEAR)+" "+str(RECON)+" "+str(CLEANGENR)+" "+str(CLEANGEANT)+" "+str(CLEANSMEAR)+" "+str(CLEANRECON)+" "+str(BATCHSYS)+" "+str(NCORES).split(':')[-1]+" "+str(GENERATOR)+" "+str(GEANTVER)+" "+str(BGFOLD)+" "+str(CUSTOM_GCONTROL)+" "+str(eBEAM_ENERGY)+" "+str(COHERENT_PEAK)+" "+str(MIN_GEN_ENERGY)+" "+str(MAX_GEN_ENERGY)+" "+str(TAGSTR)+" "+str(CUSTOM_PLUGINS)+" "+str(PERFILE)+" "+str(RUNNING_DIR)+" "+str(ccdbSQLITEPATH)+" "+str(rcdbSQLITEPATH)+" "+str(BGTAGONLY)+" "+str(RADIATOR_THICKNESS)+" "+str(BGRATE)+" "+str(RANDBGTAG)+" "+str(RECON_CALIBTIME)+" "+str(NOSECONDARIES)+" "+str(MCWRAPPER_VERSION)+" "+str(NOSIPMSATURATION)+" "+str(FLUX_TO_GEN)+" "+str(FLUX_HIST)+" "+str(POL_TO_GEN)+" "+str(POL_HIST)+" "+str(eBEAM_CURRENT)+" "+str(PROJECT)
+                                        if BATCHRUN == 0 or BATCHSYS.upper()=="NULL":
+                                                #print str(runs[0])+" "+str(BASEFILENUM+FILENUM_this_run+-1)+" "+str(num_this_file)
+                                                os.system(str(indir)+" "+getCommandString(COMMAND_dict))
+                                        else:
+                                                if PROJECT_ID != 0:
+                                                        print "SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(runs[0])+" && FileNumber="+str(BASEFILENUM+FILENUM_this_run+-1)+" && NumEvts="+str(num_this_file)
+                                                        findmyjob="SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(runs[0])+" && FileNumber="+str(BASEFILENUM+FILENUM_this_run+-1)+" && NumEvts="+str(num_this_file)
+                                                        dbcursor.execute(findmyjob)
+                                                        MYJOB = dbcursor.fetchall()
+                                                        print len(MYJOB) 
+                                                if len(MYJOB) == 0:
+                                                        if BATCHSYS.upper()=="SWIF":
+                                                                swif_add_job(WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1,str(indir),COMMAND_dict,VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID)
+                                                        elif BATCHSYS.upper()=="QSUB":
+                                                                qsub_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, RAM, QUEUENAME, LOG_DIR, PROJECT_ID )
+                                                        elif BATCHSYS.upper()=="CONDOR":
+                                                                condor_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, PROJECT_ID )
+                                                        elif BATCHSYS.upper()=="OSG":
+                                                                OSG_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID)
+                                                        elif BATCHSYS.upper()=="SLURM":
+                                                                SLURM_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
+                                                        elif BATCHSYS.upper()=="JSLURM":
+                                                                JSUB_add_job(VERBOSE, WORKFLOW, PROJECT, TRACK, runs[0], BASEFILENUM+FILENUM_this_run+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
+                
+                else:
+                        if FILES_TO_GEN >= 500 and ( ccdbSQLITEPATH == "no_sqlite" or rcdbSQLITEPATH == "no_sqlite"):
+                                print( "This job has >500 subjobs and risks ddosing the servers.  Please use sqlite or request again with a larger per file. ")
+                                return
+                        for FILENUM in range(1, FILES_TO_GEN + 2):
+                                num=PERFILE
+                                #last file gets the remainder
+                                if FILENUM == FILES_TO_GEN +1:
+                                        num=REMAINING_GEN
+                                #if ever asked to generate 0 events....just don't
+                                if num == 0:
+                                        continue
+
+                                COMMAND_dict['run_number']=str(RUNNUM)
+                                COMMAND_dict['file_number']=str(BASEFILENUM+FILENUM+-1)
+                                COMMAND_dict['num_events']=str(num)
+                                COMMAND=getCommandString(COMMAND_dict)#str(BATCHRUN)+" "+ENVFILE+" "+GENCONFIG+" "+str(outdir)+" "+str(RUNNUM)+" "+str(BASEFILENUM+FILENUM+-1)+" "+str(num)+" "+str(VERSION)+" "+str(CALIBTIME)+" "+str(GENR)+" "+str(GEANT)+" "+str(SMEAR)+" "+str(RECON)+" "+str(CLEANGENR)+" "+str(CLEANGEANT)+" "+str(CLEANSMEAR)+" "+str(CLEANRECON)+" "+str(BATCHSYS).upper()+" "+str(NCORES).split(':')[-1]+" "+str(GENERATOR)+" "+str(GEANTVER)+" "+str(BGFOLD)+" "+str(CUSTOM_GCONTROL)+" "+str(eBEAM_ENERGY)+" "+str(COHERENT_PEAK)+" "+str(MIN_GEN_ENERGY)+" "+str(MAX_GEN_ENERGY)+" "+str(TAGSTR)+" "+str(CUSTOM_PLUGINS)+" "+str(PERFILE)+" "+str(RUNNING_DIR)+" "+str(ccdbSQLITEPATH)+" "+str(rcdbSQLITEPATH)+" "+str(BGTAGONLY)+" "+str(RADIATOR_THICKNESS)+" "+str(BGRATE)+" "+str(RANDBGTAG)+" "+str(RECON_CALIBTIME)+" "+str(NOSECONDARIES)+" "+str(MCWRAPPER_VERSION)+" "+str(NOSIPMSATURATION)+" "+str(FLUX_TO_GEN)+" "+str(FLUX_HIST)+" "+str(POL_TO_GEN)+" "+str(POL_HIST)+" "+str(eBEAM_CURRENT)+" "+str(PROJECT)
+               
+                                #either call MakeMC.csh or add a job depending on swif flag
                                 if BATCHRUN == 0 or BATCHSYS.upper()=="NULL":
-                                        #print str(runs[0])+" "+str(BASEFILENUM+FILENUM_this_run+-1)+" "+str(num_this_file)
-                                        os.system(str(indir)+" "+getCommandString(COMMAND_dict))
+                                        os.system(str(indir)+" "+COMMAND)
                                 else:
                                         if PROJECT_ID != 0:
-                                                print "SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(runs[0])+" && FileNumber="+str(BASEFILENUM+FILENUM_this_run+-1)+" && NumEvts="+str(num_this_file)
-                                                findmyjob="SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(runs[0])+" && FileNumber="+str(BASEFILENUM+FILENUM_this_run+-1)+" && NumEvts="+str(num_this_file)
+                                                print "SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(RUNNUM)+" && FileNumber="+str(BASEFILENUM+FILENUM+-1)+" && NumEvts="+str(num)
+                                                findmyjob="SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(RUNNUM)+" && FileNumber="+str(BASEFILENUM+FILENUM+-1)+" && NumEvts="+str(num)
                                                 dbcursor.execute(findmyjob)
-                                                MYJOB = dbcursor.fetchall()
+                                                MYJOB = dbcursor.fetchall() 
                                                 print len(MYJOB) 
                                         if len(MYJOB) == 0:
                                                 if BATCHSYS.upper()=="SWIF":
-                                                        swif_add_job(WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1,str(indir),COMMAND_dict,VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID)
+                                                        swif_add_job(WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1,str(indir),COMMAND_dict,VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID)
                                                 elif BATCHSYS.upper()=="QSUB":
-                                                        qsub_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, RAM, QUEUENAME, LOG_DIR, PROJECT_ID )
+                                                        qsub_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, RAM, QUEUENAME, LOG_DIR, PROJECT_ID )
                                                 elif BATCHSYS.upper()=="CONDOR":
-                                                        condor_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, PROJECT_ID )
+                                                        condor_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, PROJECT_ID )
                                                 elif BATCHSYS.upper()=="OSG":
-                                                        OSG_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID)
+                                                        OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
                                                 elif BATCHSYS.upper()=="SLURM":
-                                                        SLURM_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
+                                                        SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
                                                 elif BATCHSYS.upper()=="JSLURM":
-                                                        JSUB_add_job(VERBOSE, WORKFLOW, PROJECT, TRACK, runs[0], BASEFILENUM+FILENUM_this_run+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
-                
-        else:
-                if FILES_TO_GEN >= 500 and ( ccdbSQLITEPATH == "no_sqlite" or rcdbSQLITEPATH == "no_sqlite"):
-                        print( "This job has >500 subjobs and risks ddosing the servers.  Please use sqlite or request again with a larger per file. ")
-                        return
-                for FILENUM in range(1, FILES_TO_GEN + 2):
-                        num=PERFILE
-                        #last file gets the remainder
-                        if FILENUM == FILES_TO_GEN +1:
-                                num=REMAINING_GEN
-                        #if ever asked to generate 0 events....just don't
-                        if num == 0:
-                                continue
-
-                        COMMAND_dict['run_number']=str(RUNNUM)
-                        COMMAND_dict['file_number']=str(BASEFILENUM+FILENUM+-1)
-                        COMMAND_dict['num_events']=str(num)
-                        COMMAND=getCommandString(COMMAND_dict)#str(BATCHRUN)+" "+ENVFILE+" "+GENCONFIG+" "+str(outdir)+" "+str(RUNNUM)+" "+str(BASEFILENUM+FILENUM+-1)+" "+str(num)+" "+str(VERSION)+" "+str(CALIBTIME)+" "+str(GENR)+" "+str(GEANT)+" "+str(SMEAR)+" "+str(RECON)+" "+str(CLEANGENR)+" "+str(CLEANGEANT)+" "+str(CLEANSMEAR)+" "+str(CLEANRECON)+" "+str(BATCHSYS).upper()+" "+str(NCORES).split(':')[-1]+" "+str(GENERATOR)+" "+str(GEANTVER)+" "+str(BGFOLD)+" "+str(CUSTOM_GCONTROL)+" "+str(eBEAM_ENERGY)+" "+str(COHERENT_PEAK)+" "+str(MIN_GEN_ENERGY)+" "+str(MAX_GEN_ENERGY)+" "+str(TAGSTR)+" "+str(CUSTOM_PLUGINS)+" "+str(PERFILE)+" "+str(RUNNING_DIR)+" "+str(ccdbSQLITEPATH)+" "+str(rcdbSQLITEPATH)+" "+str(BGTAGONLY)+" "+str(RADIATOR_THICKNESS)+" "+str(BGRATE)+" "+str(RANDBGTAG)+" "+str(RECON_CALIBTIME)+" "+str(NOSECONDARIES)+" "+str(MCWRAPPER_VERSION)+" "+str(NOSIPMSATURATION)+" "+str(FLUX_TO_GEN)+" "+str(FLUX_HIST)+" "+str(POL_TO_GEN)+" "+str(POL_HIST)+" "+str(eBEAM_CURRENT)+" "+str(PROJECT)
-               
-                        #either call MakeMC.csh or add a job depending on swif flag
-                        if BATCHRUN == 0 or BATCHSYS.upper()=="NULL":
-                                os.system(str(indir)+" "+COMMAND)
-                        else:
-                                if PROJECT_ID != 0:
-                                        print "SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(RUNNUM)+" && FileNumber="+str(BASEFILENUM+FILENUM+-1)+" && NumEvts="+str(num)
-                                        findmyjob="SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(RUNNUM)+" && FileNumber="+str(BASEFILENUM+FILENUM+-1)+" && NumEvts="+str(num)
-                                        dbcursor.execute(findmyjob)
-                                        MYJOB = dbcursor.fetchall() 
-                                        print len(MYJOB) 
-                                if len(MYJOB) == 0:
-                                        if BATCHSYS.upper()=="SWIF":
-                                                swif_add_job(WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1,str(indir),COMMAND_dict,VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID)
-                                        elif BATCHSYS.upper()=="QSUB":
-                                                qsub_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, RAM, QUEUENAME, LOG_DIR, PROJECT_ID )
-                                        elif BATCHSYS.upper()=="CONDOR":
-                                                condor_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, PROJECT_ID )
-                                        elif BATCHSYS.upper()=="OSG":
-                                                OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
-                                        elif BATCHSYS.upper()=="SLURM":
-                                                SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
-                                        elif BATCHSYS.upper()=="JSLURM":
-                                                JSUB_add_job(VERBOSE, WORKFLOW, PROJECT, TRACK, RUNNUM, BASEFILENUM+FILENUM+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
+                                                        JSUB_add_job(VERBOSE, WORKFLOW, PROJECT, TRACK, RUNNUM, BASEFILENUM+FILENUM+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
 
                                         
-        if BATCHRUN == 1 and BATCHSYS.upper() == "SWIF":
-                print( "All Jobs created.  Please call \"swif run "+WORKFLOW+"\" to run")
-        elif BATCHRUN == 2 and BATCHSYS.upper()=="SWIF":
-                swifrun = "swif run "+WORKFLOW
-                subprocess.call(swifrun.split(" "))
+                if BATCHRUN == 1 and BATCHSYS.upper() == "SWIF":
+                        print( "All Jobs created.  Please call \"swif run "+WORKFLOW+"\" to run")
+                elif BATCHRUN == 2 and BATCHSYS.upper()=="SWIF":
+                        swifrun = "swif run "+WORKFLOW
+                        subprocess.call(swifrun.split(" "))
 
         try:
                 dbcnx.close()
