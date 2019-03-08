@@ -69,7 +69,7 @@ def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,N
         # tags
         add_command += " -tag file_number " + str(FILENO)
         # script with options command
-        add_command += " "+SCRIPT  +" "+ COMMAND
+        add_command += " "+SCRIPT  +" "+ getCommandString(COMMAND)
 
         if(VERBOSE == True):
                 print( "job add command is \n" + str(add_command))
@@ -92,10 +92,10 @@ def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,N
                 SWIF_ID_NUM=str(idnumline[1])
 
         if int(PROJECT_ID) > 0:
-                recordJob(PROJECT_ID,RUNNO,FILENO,SWIF_ID_NUM,COMMAND.split(" ")[6])
-                recordFirstAttempt(PROJECT_ID,RUNNO,FILENO,"SWIF",SWIF_ID_NUM,COMMAND.split(" ")[6],NCORES,RAM)
+                recordJob(PROJECT_ID,RUNNO,FILENO,SWIF_ID_NUM,COMMAND['num_events'])
+                recordFirstAttempt(PROJECT_ID,RUNNO,FILENO,"SWIF",SWIF_ID_NUM,COMMAND['num_events'],NCORES,RAM)
         elif int(PROJECT_ID) < 0:
-                recordAttempt(abs(int(PROJECT_ID)),RUNNO,FILENO,"SWIF",SWIF_ID_NUM,COMMAND.split(" ")[6],NCORES,RAM)
+                recordAttempt(abs(int(PROJECT_ID)),RUNNO,FILENO,"SWIF",SWIF_ID_NUM,COMMAND['num_events'],NCORES,RAM)
 
 
 def  qsub_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, MEMLIMIT, QUEUENAME, LOG_DIR, PROJECT_ID ):
@@ -133,7 +133,7 @@ def  qsub_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DA
         f.write("NNODES=\\ \n")    
        
        # f.write("trap \'\' 2 9 15 \n" )
-        f.write(shell_to_use+indir+" "+COMMAND+"\n" )
+        f.write(shell_to_use+indir+" "+getCommandString(COMMAND)+"\n" )
         f.write("exit 0\n")
         f.close()
 
@@ -151,10 +151,10 @@ def  qsub_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DA
                 status = subprocess.call("rm MCqsub.submit", shell=True)
         
         if int(PROJECT_ID) > 0:
-                recordJob(PROJECT_ID,RUNNO,FILENO,SWIF_ID_NUM,COMMAND.split(" ")[6])
-                recordFirstAttempt(PROJECT_ID,RUNNO,FILENO,"QSUB",SWIF_ID_NUM,COMMAND.split(" ")[6],NCORES,MEMLIMIT)
+                recordJob(PROJECT_ID,RUNNO,FILENO,SWIF_ID_NUM,COMMAND['num_events'])
+                recordFirstAttempt(PROJECT_ID,RUNNO,FILENO,"QSUB",SWIF_ID_NUM,COMMAND['num_events'],NCORES,MEMLIMIT)
         elif int(PROJECT_ID) < 0:
-                recordAttempt(abs(int(PROJECT_ID)),RUNNO,FILENO,"QSUB",SWIF_ID_NUM,COMMAND.split(" ")[6],NCORES,MEMLIMIT)
+                recordAttempt(abs(int(PROJECT_ID)),RUNNO,FILENO,"QSUB",SWIF_ID_NUM,COMMAND['num_events'],NCORES,MEMLIMIT)
         
 
 def  condor_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, PROJECT_ID ):
@@ -165,7 +165,7 @@ def  condor_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, 
 
         f=open('MCcondor.submit','w')
         f.write("Executable = "+indir+"\n") 
-        f.write("Arguments  = "+COMMAND+"\n")
+        f.write("Arguments  = "+getCommandString(COMMAND)+"\n")
         f.write("Error      = "+DATA_OUTPUT_BASE_DIR+"/log/"+"error_"+JOBNAME+".log\n")
         f.write("Output      = "+DATA_OUTPUT_BASE_DIR+"/log/"+"out_"+JOBNAME+".log\n")
         f.write("Log = "+DATA_OUTPUT_BASE_DIR+"/log/"+"CONDOR_"+JOBNAME+".log\n")
@@ -185,10 +185,10 @@ def  condor_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, 
         status = subprocess.call("rm MCcondor.submit", shell=True)
 
         if int(PROJECT_ID) > 0:
-                recordJob(PROJECT_ID,RUNNO,FILENO,SWIF_ID_NUM,COMMAND.split(" ")[6])
-                recordFirstAttempt(PROJECT_ID,RUNNO,FILENO,"Condor",SWIF_ID_NUM,COMMAND.split(" ")[6],NCORES,"UnSet")
+                recordJob(PROJECT_ID,RUNNO,FILENO,SWIF_ID_NUM,COMMAND['num_events'])
+                recordFirstAttempt(PROJECT_ID,RUNNO,FILENO,"Condor",SWIF_ID_NUM,COMMAND['num_events'],NCORES,"UnSet")
         elif int(PROJECT_ID) < 0:
-                recordAttempt(abs(int(PROJECT_ID)),RUNNO,FILENO,"Condor",SWIF_ID_NUM,COMMAND.split(" ")[6],NCORES,"UnSet")
+                recordAttempt(abs(int(PROJECT_ID)),RUNNO,FILENO,"Condor",SWIF_ID_NUM,COMMAND['num_events'],NCORES,"UnSet")
 
 
 def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID ):
@@ -204,42 +204,42 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DAT
         envfile_to_source="/srv/"+ENVFILE_parts[len(ENVFILE_parts)-1]
 
         
-        COMMAND_parts=COMMAND.split(" ")
-        COMMAND_parts[1]=envfile_to_source
+        COMMAND_parts=COMMAND#COMMAND.split(" ")
+        COMMAND_parts['environment_file']=envfile_to_source
         
-        COMMAND_parts[3]="./"
-        COMMAND_parts[30]="./"
+        COMMAND_parts['output_directory']="./"
+        COMMAND_parts['running_directory']="./"
 
         additional_passins=""
-        if COMMAND_parts[2][:5] == "file:":
-                gen_config_parts=COMMAND_parts[2].split("/")
+        if COMMAND_parts['generator_config'][:5] == "file:":
+                gen_config_parts=COMMAND_parts['generator_config'].split("/")
                 gen_config_to_use=gen_config_parts[len(gen_config_parts)-1]
-                additional_passins+=COMMAND_parts[2][5:]+", "
-                COMMAND_parts[2]="file:/srv/"+gen_config_to_use
-        elif COMMAND_parts[2] != "NA":
-                gen_config_parts=COMMAND_parts[2].split("/")
+                additional_passins+=COMMAND_parts['generator_config'][5:]+", "
+                COMMAND_parts['generator_config']="file:/srv/"+gen_config_to_use
+        elif COMMAND_parts['generator_config'] != "NA":
+                gen_config_parts=COMMAND_parts['generator_config'].split("/")
                 gen_config_to_use=gen_config_parts[len(gen_config_parts)-1]
-                additional_passins+=COMMAND_parts[2]+", "
-                COMMAND_parts[2]="/srv/"+gen_config_to_use
+                additional_passins+=COMMAND_parts['generator_config']+", "
+                COMMAND_parts['generator_config']="/srv/"+gen_config_to_use
 
-        if COMMAND_parts[19][:5] == "file:":
-                filegen_parts=COMMAND_parts[19][5:].split("/")
+        if COMMAND_parts['generator'][:5] == "file:":
+                filegen_parts=COMMAND_parts['generator'][5:].split("/")
                 #print filegen_parts
-                additional_passins+=COMMAND_parts[19][5:]+", "
-                COMMAND_parts[19]="file:/srv/"+filegen_parts[len(filegen_parts)-1]
+                additional_passins+=COMMAND_parts['generator'][5:]+", "
+                COMMAND_parts['generator']="file:/srv/"+filegen_parts[len(filegen_parts)-1]
         
 
-        if COMMAND_parts[21] == "Random" or COMMAND_parts[21][:4] == "loc:":
+        if COMMAND_parts['background_to_include'] == "Random" or COMMAND_parts['background_to_include'][:4] == "loc:":
                 formattedRUNNUM=""
                 for i in range(len(str(RUNNUM)),6):
                         formattedRUNNUM+="0"
                 formattedRUNNUM=formattedRUNNUM+str(RUNNUM)
-                if COMMAND_parts[21] == "Random":
+                if COMMAND_parts['background_to_include'] == "Random":
                         #print "/cache/halld/Simulation/random_triggers/"+RANDBGTAG+"/run"+formattedRUNNUM+"_random.hddm"
                         additional_passins+="/osgpool/halld/random_triggers/"+RANDBGTAG+"/run"+formattedRUNNUM+"_random.hddm"+", "
-                elif COMMAND_parts[21][:4] == "loc:":
+                elif COMMAND_parts['background_to_include'][:4] == "loc:":
                         #print COMMAND_parts[21][4:]
-                        additional_passins+=COMMAND_parts[21][4:]+"/run"+formattedRUNNUM+"_random.hddm"+", "
+                        additional_passins+=COMMAND_parts['background_to_include'][4:]+"/run"+formattedRUNNUM+"_random.hddm"+", "
 
 
                 #exit(1)
@@ -250,50 +250,50 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DAT
                 #additional_passins+="/cache/halld/Simulation/random_triggers/"+RANDBGTAG+"/run$formatted_runNumber""_random.hddm"+", "
                 #COMMAND_parts[28]="/srv/"+RandomBKGtouse
 
-        if COMMAND_parts[28] != "None" and COMMAND_parts[28][:5]=="file:" :
-                janaconfig_parts=COMMAND_parts[28].split("/")
+        if COMMAND_parts['custom_plugins'] != "None" and COMMAND_parts['custom_plugins'][:5]=="file:" :
+                janaconfig_parts=COMMAND_parts['custom_plugins'].split("/")
                 janaconfig_to_use=janaconfig_parts[len(janaconfig_parts)-1]
-                additional_passins+=COMMAND_parts[28][5:]+", "
-                COMMAND_parts[28]="file:/srv/"+janaconfig_to_use
+                additional_passins+=COMMAND_parts['custom_plugins'][5:]+", "
+                COMMAND_parts['custom_plugins']="file:/srv/"+janaconfig_to_use
 
-        if COMMAND_parts[31] != "no_sqlite" and COMMAND_parts[31] != "batch_default":
-                ccdbsqlite_parts=COMMAND_parts[31].split("/")
+        if COMMAND_parts['ccdb_sqlite_path'] != "no_sqlite" and COMMAND_parts['ccdb_sqlite_path'] != "batch_default":
+                ccdbsqlite_parts=COMMAND_parts['ccdb_sqlite_path'].split("/")
                 ccdbsqlite_to_use=ccdbsqlite_parts[len(ccdbsqlite_parts)-1]
-                additional_passins+=COMMAND_parts[31]+", "
-                COMMAND_parts[31]="/srv/"+ccdbsqlite_to_use
+                additional_passins+=COMMAND_parts['ccdb_sqlite_path']+", "
+                COMMAND_parts['ccdb_sqlite_path']="/srv/"+ccdbsqlite_to_use
 
-        if COMMAND_parts[32] != "no_sqlite" and COMMAND_parts[32] != "batch_default":
-                rcdbsqlite_parts=COMMAND_parts[32].split("/")
+        if COMMAND_parts['rcdb_sqlite_path'] != "no_sqlite" and COMMAND_parts['rcdb_sqlite_path'] != "batch_default":
+                rcdbsqlite_parts=COMMAND_parts['rcdb_sqlite_path'].split("/")
                 rcdbsqlite_to_use=rcdbsqlite_parts[len(rcdbsqlite_parts)-1]
-                additional_passins+=COMMAND_parts[32]+", "
-                COMMAND_parts[32]="/srv/"+rcdbsqlite_to_use
+                additional_passins+=COMMAND_parts['rcdb_sqlite_path']+", "
+                COMMAND_parts['rcdb_sqlite_path']="/srv/"+rcdbsqlite_to_use
 
-        if COMMAND_parts[41] != "unset" and COMMAND_parts[41]!="ccdb" and COMMAND_parts[41]!="cobrems" :
-                flux_to_use=COMMAND_parts[41]
-                additional_passins+=COMMAND_parts[41]+", "
-                COMMAND_parts[41]="/srv/"+flux_to_use
+        if COMMAND_parts['flux_to_generate'] != "unset" and COMMAND_parts['flux_to_generate']!="ccdb" and COMMAND_parts['flux_to_generate']!="cobrems" :
+                flux_to_use=COMMAND_parts['flux_to_generate']
+                additional_passins+=COMMAND_parts['flux_to_generate']+", "
+                COMMAND_parts['flux_to_generate']="/srv/"+flux_to_use
         
-        if COMMAND_parts[43]!="ccdb" and COMMAND_parts[44] != "unset":
-                tpol_to_use=COMMAND_parts[43]
-                additional_passins+=COMMAND_parts[43]+", "
-                COMMAND_parts[43]="/srv/"+tpol_to_use
+        if COMMAND_parts['polarization_to_generate']!="ccdb" and COMMAND_parts['polarization_histogram'] != "unset":
+                tpol_to_use=COMMAND_parts['polarization_to_generate']
+                additional_passins+=COMMAND_parts['polarization_to_generate']+", "
+                COMMAND_parts['polarization_to_generate']="/srv/"+tpol_to_use
 
         if additional_passins != "":
                 additional_passins=", "+additional_passins
                 additional_passins=additional_passins[:-2]
 
-        modified_COMMAND=""
+        #modified_COMMAND=""
 
-        for com in COMMAND_parts:
-                modified_COMMAND=modified_COMMAND+com+" "
-        
-        modified_COMMAND=modified_COMMAND[:-1]
+        #for com in COMMAND_parts:
+        #        modified_COMMAND=modified_COMMAND+com+" "
+        #
+        #modified_COMMAND=modified_COMMAND[:-1]
 
         f=open('MCOSG.submit','w')
         f.write("universe = vanilla"+"\n")
         f.write("Executable = "+os.environ.get('MCWRAPPER_CENTRAL')+"/osg-container.sh"+"\n") 
         #f.write("Arguments  = "+indir+" "+COMMAND+"\n")
-        f.write("Arguments  = "+"./"+script_to_use+" "+modified_COMMAND+"\n")
+        f.write("Arguments  = "+"./"+script_to_use+" "+getCommandString(COMMAND_parts)+"\n")
         f.write("Requirements = (HAS_SINGULARITY == TRUE) && (HAS_CVMFS_oasis_opensciencegrid_org == True)"+"\n") 
         #f.write('wantjobrouter=true'+"\n")
         f.write('+SingularityImage = "/cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_devel:latest"'+"\n") 
@@ -356,11 +356,11 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DAT
 
         if int(PROJECT_ID) > 0:
                 #print "FIRST ATTEMPT"
-                recordJob(PROJECT_ID,RUNNUM,FILENUM,SWIF_ID_NUM,COMMAND.split(" ")[6])
-                recordFirstAttempt(PROJECT_ID,RUNNUM,FILENUM,"OSG",SWIF_ID_NUM,COMMAND.split(" ")[6],NCORES,"Unset")
+                recordJob(PROJECT_ID,RUNNUM,FILENUM,SWIF_ID_NUM,COMMAND['num_events'])
+                recordFirstAttempt(PROJECT_ID,RUNNUM,FILENUM,"OSG",SWIF_ID_NUM,COMMAND['num_events'],NCORES,"Unset")
         elif int(PROJECT_ID) < 0:
                 #print "A NEW ATTEMPT"
-                recordAttempt(abs(int(PROJECT_ID)),RUNNUM,FILENUM,"OSG",SWIF_ID_NUM,COMMAND.split(" ")[6],NCORES,"Unset")
+                recordAttempt(abs(int(PROJECT_ID)),RUNNUM,FILENUM,"OSG",SWIF_ID_NUM,COMMAND['num_events'],NCORES,"Unset")
 
 def JSUB_add_job(VERBOSE, WORKFLOW, PROJECT,TRACK, RUNNUM, FILENUM, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID):
         STUBNAME = str(RUNNUM) + "_" + str(FILENUM)
@@ -374,7 +374,7 @@ def JSUB_add_job(VERBOSE, WORKFLOW, PROJECT,TRACK, RUNNUM, FILENUM, indir, COMMA
         f.write("<Project name=\""+PROJECT+"\"/>"+"\n")
         f.write("<Track name=\""+TRACK+"\"/>"+"\n")
         f.write("<Name name=\""+JOBNAME+"\"/>"+"\n")
-        f.write("<Command><![CDATA[ "+indir+" "+COMMAND+" ]]></Command>"+"\n")
+        f.write("<Command><![CDATA[ "+indir+" "+getCommandString(COMMAND)+" ]]></Command>"+"\n")
         f.write("<Job> </Job>"+"\n")
         f.write("</Request>"+"\n")
 
@@ -400,7 +400,7 @@ def  SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, D
         f.write("#SBATCH -C haswell"+"\n")
         f.write("#SBATCH -L project"+"\n")
         #f.write("srun "+indir+" "+COMMAND+"\n")
-        f.write("shifter $MCWRAPPER_CENTRAL/MakeMC.sh"+COMMAND+"\n")
+        f.write("shifter $MCWRAPPER_CENTRAL/MakeMC.sh"+getCommandString(COMMAND)+"\n")
 
         f.close()
         
@@ -412,10 +412,10 @@ def  SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, D
                 exit(1)
 
         if int(PROJECT_ID) > 0:
-                recordJob(PROJECT_ID,RUNNO,FILENO,SWIF_ID_NUM,COMMAND.split(" ")[6])
-                recordFirstAttempt(PROJECT_ID,RUNNO,FILENO,"SLURM",SWIF_ID_NUM,COMMAND.split(" ")[6],NCORES, "UnSet")
+                recordJob(PROJECT_ID,RUNNO,FILENO,SWIF_ID_NUM,COMMAND['num_events'])
+                recordFirstAttempt(PROJECT_ID,RUNNO,FILENO,"SLURM",SWIF_ID_NUM,COMMAND['num_events'],NCORES, "UnSet")
         elif int(PROJECT_ID) < 0:
-                recordAttempt(abs(int(PROJECT_ID)),RUNNO,FILENO,"SLURM",SWIF_ID_NUM,COMMAND.split(" ")[6],NCORES,"UnSet")
+                recordAttempt(abs(int(PROJECT_ID)),RUNNO,FILENO,"SLURM",SWIF_ID_NUM,COMMAND['num_events'],NCORES,"UnSet")
 
         status = subprocess.call(mkdircom, shell=True)
         status = subprocess.call(add_command, shell=True)
@@ -464,6 +464,8 @@ def recordAttempt(JOB_ID,RUNNO,FILENO,BatchSYS,BatchJobID, NUMEVTS,NCORES, RAM):
         dbcursor.execute(addAttempt)
         dbcnx.commit()
 
+def getCommandString(COMMAND):
+        return COMMAND['batchrun']+" "+COMMAND['environment_file']+" "+COMMAND['generator_config']+" "+COMMAND['output_directory']+" "+COMMAND['run_number']+" "+COMMAND['file_number']+" "+COMMAND['num_events']+" "+COMMAND['jana_calib_context']+" "+COMMAND['jana_calibtime']+" "+COMMAND['do_gen']+" "+COMMAND['do_geant']+" "+COMMAND['do_mcsmear']+" "+COMMAND['do_recon']+" "+COMMAND['clean_gen']+" "+COMMAND['clean_geant']+" "+COMMAND['clean_mcsmear']+" "+COMMAND['clean_recon']+" "+COMMAND['batch_system']+" "+COMMAND['num_cores']+" "+COMMAND['generator']+" "+COMMAND['geant_version']+" "+COMMAND['background_to_include']+" "+COMMAND['custom_Gcontrol']+" "+COMMAND['eBeam_energy']+" "+COMMAND['coherent_peak']+" "+COMMAND['min_generator_energy']+" "+COMMAND['max_generator_energy']+" "+COMMAND['custom_tag_string']+" "+COMMAND['custom_plugins']+" "+COMMAND['events_per_file']+" "+COMMAND['running_directory']+" "+COMMAND['ccdb_sqlite_path']+" "+COMMAND['rcdb_sqlite_path']+" "+COMMAND['background_tagger_only']+" "+COMMAND['radiator_thickness']+" "+COMMAND['background_rate']+" "+COMMAND['random_background_tag']+" "+COMMAND['recon_calibtime']+" "+COMMAND['no_geant_secondaries']+" "+COMMAND['mcwrapper_version']+" "+COMMAND['no_bcal_sipm_saturation']+" "+COMMAND['flux_to_generate']+" "+COMMAND['flux_histogram']+" "+COMMAND['polarization_to_generate']+" "+COMMAND['polarization_histogram']+" "+COMMAND['eBeam_current']+" "+COMMAND['experiment']
 
 def showhelp():
         helpstring= "variation=%s where %s is a valid jana_calib_context variation string (default is \"mc\")\n"
@@ -894,15 +896,59 @@ def main(argv):
         RunType=str(RUNNUM).split("-")
         
 
+        COMMAND_dict={'batchrun':str(BATCHRUN)}
+        COMMAND_dict['environment_file']=ENVFILE
+        COMMAND_dict['generator_config']=GENCONFIG
+        COMMAND_dict['output_directory']=str(outdir)
+        COMMAND_dict['run_number']=str(0)
+        COMMAND_dict['file_number']=str(0)
+        COMMAND_dict['num_events']=str(0)
+        COMMAND_dict['jana_calib_context']=str(VERSION)
+        COMMAND_dict['jana_calibtime']=str(CALIBTIME)
+        COMMAND_dict['do_gen']=str(GENR)
+        COMMAND_dict['do_geant']=str(GEANT)
+        COMMAND_dict['do_mcsmear']=str(SMEAR)
+        COMMAND_dict['do_recon']=str(RECON)
+        COMMAND_dict['clean_gen']=str(CLEANGENR)
+        COMMAND_dict['clean_geant']=str(CLEANGEANT)
+        COMMAND_dict['clean_mcsmear']=str(CLEANSMEAR)
+        COMMAND_dict['clean_recon']=str(CLEANRECON)
+        COMMAND_dict['batch_system']=str(BATCHSYS)
+        COMMAND_dict['num_cores']=str(NCORES).split(':')[-1]
+        COMMAND_dict['generator']=str(GENERATOR)
+        COMMAND_dict['geant_version']=str(GEANTVER)
+        COMMAND_dict['background_to_include']=str(BGFOLD)
+        COMMAND_dict['custom_Gcontrol']=str(CUSTOM_GCONTROL)
+        COMMAND_dict['eBeam_energy']=str(eBEAM_ENERGY)
+        COMMAND_dict['coherent_peak']=str(COHERENT_PEAK)
+        COMMAND_dict['min_generator_energy']=str(MIN_GEN_ENERGY)
+        COMMAND_dict['max_generator_energy']=str(MAX_GEN_ENERGY)
+        COMMAND_dict['custom_tag_string']=str(TAGSTR)
+        COMMAND_dict['custom_plugins']=str(CUSTOM_PLUGINS)
+        COMMAND_dict['events_per_file']=str(PERFILE)
+        COMMAND_dict['running_directory']=str(RUNNING_DIR)
+        COMMAND_dict['ccdb_sqlite_path']=str(ccdbSQLITEPATH)
+        COMMAND_dict['rcdb_sqlite_path']=str(rcdbSQLITEPATH)
+        COMMAND_dict['background_tagger_only']=str(BGTAGONLY)
+        COMMAND_dict['radiator_thickness']=str(RADIATOR_THICKNESS)
+        COMMAND_dict['background_rate']=str(BGRATE)
+        COMMAND_dict['random_background_tag']=str(RANDBGTAG)
+        COMMAND_dict['recon_calibtime']=str(RECON_CALIBTIME)
+        COMMAND_dict['no_geant_secondaries']=str(NOSECONDARIES)
+        COMMAND_dict['mcwrapper_version']=str(MCWRAPPER_VERSION)
+        COMMAND_dict['no_bcal_sipm_saturation']=str(NOSIPMSATURATION)
+        COMMAND_dict['flux_to_generate']=str(FLUX_TO_GEN)
+        COMMAND_dict['flux_histogram']=str(FLUX_HIST)
+        COMMAND_dict['polarization_to_generate']=str(POL_TO_GEN)
+        COMMAND_dict['polarization_histogram']=str(POL_HIST)
+        COMMAND_dict['eBeam_current']=str(eBEAM_CURRENT)
+        COMMAND_dict['experiment']=str(PROJECT)
+        
+
         if len(RunType) != 1 :
                 event_sum=0.
                 #Make python rcdb calls to form the vector
                 db = rcdb.RCDBProvider("mysql://rcdb@hallddb.jlab.org/rcdb")
-
-                #dbhost = "hallddb.jlab.org"
-                #dbuser = 'datmon'
-                #dbpass = ''
-                #dbname = 'data_monitoring'
 
                 runlow=0
                 runhigh=0
@@ -913,11 +959,7 @@ def main(argv):
                 else:
                         cnx = mysql.connector.connect(user='ccdb_user', database='ccdb', host='hallddb.jlab.org')
                         cursor = cnx.cursor()
-                        #ccddb = ccdb.CCDBProvider("mysql://ccdb_user@hallddb/ccdb")
-                
-                        #runhigh=ccdbcon.session.query("select runMax from runRanges where name = test2")
-                        #runlow=runRange[0]
-                        #runhigh=runRange[1]
+
                         runrange_name=""
                         for npart in RunType:
                                 if npart=="RunPeriod":
@@ -973,10 +1015,13 @@ def main(argv):
                                 if num_this_file == 0:
                                         continue
 
-                                COMMAND=str(BATCHRUN)+" "+ENVFILE+" "+GENCONFIG+" "+str(outdir)+" "+str(runs[0])+" "+str(BASEFILENUM+FILENUM_this_run+-1)+" "+str(num_this_file)+" "+str(VERSION)+" "+str(CALIBTIME)+" "+str(GENR)+" "+str(GEANT)+" "+str(SMEAR)+" "+str(RECON)+" "+str(CLEANGENR)+" "+str(CLEANGEANT)+" "+str(CLEANSMEAR)+" "+str(CLEANRECON)+" "+str(BATCHSYS)+" "+str(NCORES).split(':')[-1]+" "+str(GENERATOR)+" "+str(GEANTVER)+" "+str(BGFOLD)+" "+str(CUSTOM_GCONTROL)+" "+str(eBEAM_ENERGY)+" "+str(COHERENT_PEAK)+" "+str(MIN_GEN_ENERGY)+" "+str(MAX_GEN_ENERGY)+" "+str(TAGSTR)+" "+str(CUSTOM_PLUGINS)+" "+str(PERFILE)+" "+str(RUNNING_DIR)+" "+str(ccdbSQLITEPATH)+" "+str(rcdbSQLITEPATH)+" "+str(BGTAGONLY)+" "+str(RADIATOR_THICKNESS)+" "+str(BGRATE)+" "+str(RANDBGTAG)+" "+str(RECON_CALIBTIME)+" "+str(NOSECONDARIES)+" "+str(MCWRAPPER_VERSION)+" "+str(NOSIPMSATURATION)+" "+str(FLUX_TO_GEN)+" "+str(FLUX_HIST)+" "+str(POL_TO_GEN)+" "+str(POL_HIST)+" "+str(eBEAM_CURRENT)+" "+str(PROJECT)
-                                if BATCHRUN == 0 or BATCHSYS=="NULL":
+                                COMMAND_dict['run_number']=str(runs[0])
+                                COMMAND_dict['file_number']=str(BASEFILENUM+FILENUM_this_run+-1)
+                                COMMAND_dict['num_events']=str(num_this_file)
+                                COMMAND=getCommandString(COMMAND_dict) #str(BATCHRUN)+" "+ENVFILE+" "+GENCONFIG+" "+str(outdir)+" "+str(runs[0])+" "+str(BASEFILENUM+FILENUM_this_run+-1)+" "+str(num_this_file)+" "+str(VERSION)+" "+str(CALIBTIME)+" "+str(GENR)+" "+str(GEANT)+" "+str(SMEAR)+" "+str(RECON)+" "+str(CLEANGENR)+" "+str(CLEANGEANT)+" "+str(CLEANSMEAR)+" "+str(CLEANRECON)+" "+str(BATCHSYS)+" "+str(NCORES).split(':')[-1]+" "+str(GENERATOR)+" "+str(GEANTVER)+" "+str(BGFOLD)+" "+str(CUSTOM_GCONTROL)+" "+str(eBEAM_ENERGY)+" "+str(COHERENT_PEAK)+" "+str(MIN_GEN_ENERGY)+" "+str(MAX_GEN_ENERGY)+" "+str(TAGSTR)+" "+str(CUSTOM_PLUGINS)+" "+str(PERFILE)+" "+str(RUNNING_DIR)+" "+str(ccdbSQLITEPATH)+" "+str(rcdbSQLITEPATH)+" "+str(BGTAGONLY)+" "+str(RADIATOR_THICKNESS)+" "+str(BGRATE)+" "+str(RANDBGTAG)+" "+str(RECON_CALIBTIME)+" "+str(NOSECONDARIES)+" "+str(MCWRAPPER_VERSION)+" "+str(NOSIPMSATURATION)+" "+str(FLUX_TO_GEN)+" "+str(FLUX_HIST)+" "+str(POL_TO_GEN)+" "+str(POL_HIST)+" "+str(eBEAM_CURRENT)+" "+str(PROJECT)
+                                if BATCHRUN == 0 or BATCHSYS.upper()=="NULL":
                                         #print str(runs[0])+" "+str(BASEFILENUM+FILENUM_this_run+-1)+" "+str(num_this_file)
-                                        os.system(str(indir)+" "+COMMAND)
+                                        os.system(str(indir)+" "+getCommandString(COMMAND_dict))
                                 else:
                                         if PROJECT_ID != 0:
                                                 print "SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(runs[0])+" && FileNumber="+str(BASEFILENUM+FILENUM_this_run+-1)+" && NumEvts="+str(num_this_file)
@@ -986,7 +1031,7 @@ def main(argv):
                                                 print len(MYJOB) 
                                         if len(MYJOB) == 0:
                                                 if BATCHSYS.upper()=="SWIF":
-                                                        swif_add_job(WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1,str(indir),COMMAND,VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID)
+                                                        swif_add_job(WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1,str(indir),COMMAND_dict,VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID)
                                                 elif BATCHSYS.upper()=="QSUB":
                                                         qsub_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, RAM, QUEUENAME, LOG_DIR, PROJECT_ID )
                                                 elif BATCHSYS.upper()=="CONDOR":
@@ -1010,11 +1055,14 @@ def main(argv):
                         #if ever asked to generate 0 events....just don't
                         if num == 0:
                                 continue
-                
-                        COMMAND=str(BATCHRUN)+" "+ENVFILE+" "+GENCONFIG+" "+str(outdir)+" "+str(RUNNUM)+" "+str(BASEFILENUM+FILENUM+-1)+" "+str(num)+" "+str(VERSION)+" "+str(CALIBTIME)+" "+str(GENR)+" "+str(GEANT)+" "+str(SMEAR)+" "+str(RECON)+" "+str(CLEANGENR)+" "+str(CLEANGEANT)+" "+str(CLEANSMEAR)+" "+str(CLEANRECON)+" "+str(BATCHSYS).upper()+" "+str(NCORES).split(':')[-1]+" "+str(GENERATOR)+" "+str(GEANTVER)+" "+str(BGFOLD)+" "+str(CUSTOM_GCONTROL)+" "+str(eBEAM_ENERGY)+" "+str(COHERENT_PEAK)+" "+str(MIN_GEN_ENERGY)+" "+str(MAX_GEN_ENERGY)+" "+str(TAGSTR)+" "+str(CUSTOM_PLUGINS)+" "+str(PERFILE)+" "+str(RUNNING_DIR)+" "+str(ccdbSQLITEPATH)+" "+str(rcdbSQLITEPATH)+" "+str(BGTAGONLY)+" "+str(RADIATOR_THICKNESS)+" "+str(BGRATE)+" "+str(RANDBGTAG)+" "+str(RECON_CALIBTIME)+" "+str(NOSECONDARIES)+" "+str(MCWRAPPER_VERSION)+" "+str(NOSIPMSATURATION)+" "+str(FLUX_TO_GEN)+" "+str(FLUX_HIST)+" "+str(POL_TO_GEN)+" "+str(POL_HIST)+" "+str(eBEAM_CURRENT)+" "+str(PROJECT)
+
+                        COMMAND_dict['run_number']=str(RUNNUM)
+                        COMMAND_dict['file_number']=str(BASEFILENUM+FILENUM+-1)
+                        COMMAND_dict['num_events']=str(num)
+                        COMMAND=getCommandString(COMMAND_dict)#str(BATCHRUN)+" "+ENVFILE+" "+GENCONFIG+" "+str(outdir)+" "+str(RUNNUM)+" "+str(BASEFILENUM+FILENUM+-1)+" "+str(num)+" "+str(VERSION)+" "+str(CALIBTIME)+" "+str(GENR)+" "+str(GEANT)+" "+str(SMEAR)+" "+str(RECON)+" "+str(CLEANGENR)+" "+str(CLEANGEANT)+" "+str(CLEANSMEAR)+" "+str(CLEANRECON)+" "+str(BATCHSYS).upper()+" "+str(NCORES).split(':')[-1]+" "+str(GENERATOR)+" "+str(GEANTVER)+" "+str(BGFOLD)+" "+str(CUSTOM_GCONTROL)+" "+str(eBEAM_ENERGY)+" "+str(COHERENT_PEAK)+" "+str(MIN_GEN_ENERGY)+" "+str(MAX_GEN_ENERGY)+" "+str(TAGSTR)+" "+str(CUSTOM_PLUGINS)+" "+str(PERFILE)+" "+str(RUNNING_DIR)+" "+str(ccdbSQLITEPATH)+" "+str(rcdbSQLITEPATH)+" "+str(BGTAGONLY)+" "+str(RADIATOR_THICKNESS)+" "+str(BGRATE)+" "+str(RANDBGTAG)+" "+str(RECON_CALIBTIME)+" "+str(NOSECONDARIES)+" "+str(MCWRAPPER_VERSION)+" "+str(NOSIPMSATURATION)+" "+str(FLUX_TO_GEN)+" "+str(FLUX_HIST)+" "+str(POL_TO_GEN)+" "+str(POL_HIST)+" "+str(eBEAM_CURRENT)+" "+str(PROJECT)
                
                         #either call MakeMC.csh or add a job depending on swif flag
-                        if BATCHRUN == 0 or BATCHSYS=="NULL":
+                        if BATCHRUN == 0 or BATCHSYS.upper()=="NULL":
                                 os.system(str(indir)+" "+COMMAND)
                         else:
                                 if PROJECT_ID != 0:
