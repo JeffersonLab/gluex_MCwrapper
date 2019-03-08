@@ -1109,8 +1109,6 @@ if ( "$GENR" != "0" ) then
 			exit $mcsmear_return_code
 		endif
 
-		
-
 	    #run reconstruction
 	    if ( "$CLEANGENR" == "1" ) then
 			rm beam.config
@@ -1141,7 +1139,8 @@ if ( "$GENR" != "0" ) then
 			echo "An hddm file was not created by mcsmear.  Terminating MC production.  Please consult logs to diagnose"
 			exit 13
 		endif
-    endif
+	endif
+    
 endif
 	    if ( "$RECON" != "0" ) then
 			echo "RUNNING RECONSTRUCTION"

@@ -1076,6 +1076,8 @@ if [[ "$GENR" != "0" ]]; then
 		MCSMEAR_Flags="$MCSMEAR_Flags"" -T"
 	fi
 	
+	echo $RECON and $SMEAR
+	
 	echo "RUNNING MCSMEAR"
 	   
 	if [[ "$BKGFOLDSTR" == "BeamPhotons" || "$BKGFOLDSTR" == "None" || "$BKGFOLDSTR" == "TagOnly" ]]; then
@@ -1147,7 +1149,9 @@ if [[ "$GENR" != "0" ]]; then
 			echo "An hddm file was not created by mcsmear.  Terminating MC production.  Please consult logs to diagnose"
 			exit 13
 		fi
+		
 	fi
+	
 fi
 	    if [[ "$RECON" != "0" ]]; then
 		echo "RUNNING RECONSTRUCTION"

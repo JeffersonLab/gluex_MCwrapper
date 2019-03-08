@@ -43,7 +43,7 @@ except:
         pass
 
 MCWRAPPER_VERSION="2.0.5"
-MCWRAPPER_DATE="03/07/19"
+MCWRAPPER_DATE="03/08/19"
 
 def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID):
 
@@ -84,16 +84,19 @@ def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,N
                 print( "Nice try.....you cannot use ; or &")
                 exit(1)
         #status = subprocess.call(add_command.split(" "))
-        jobSubout=subprocess.check_output(add_command.split(" "))
-        print jobSubout
-        idnumline=jobSubout.split("\n")[0].strip().split("=")
         SWIF_ID_NUM="-1"
-        if(len(idnumline) == 2 ):
-                SWIF_ID_NUM=str(idnumline[1])
+
+        if( int(PROJECT_ID) <=0 ):
+                jobSubout=subprocess.check_output(add_command.split(" "))
+                print jobSubout
+                idnumline=jobSubout.split("\n")[0].strip().split("=")
+                
+                if(len(idnumline) == 2 ):
+                        SWIF_ID_NUM=str(idnumline[1])
 
         if int(PROJECT_ID) > 0:
                 recordJob(PROJECT_ID,RUNNO,FILENO,SWIF_ID_NUM,COMMAND['num_events'])
-                recordFirstAttempt(PROJECT_ID,RUNNO,FILENO,"SWIF",SWIF_ID_NUM,COMMAND['num_events'],NCORES,RAM)
+                #recordFirstAttempt(PROJECT_ID,RUNNO,FILENO,"SWIF",SWIF_ID_NUM,COMMAND['num_events'],NCORES,RAM)
         elif int(PROJECT_ID) < 0:
                 recordAttempt(abs(int(PROJECT_ID)),RUNNO,FILENO,"SWIF",SWIF_ID_NUM,COMMAND['num_events'],NCORES,RAM)
 
@@ -146,15 +149,17 @@ def  qsub_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DA
         mkdircom="mkdir -p "+DATA_OUTPUT_BASE_DIR+"/log/"
 
         status = subprocess.call(mkdircom, shell=True)
-        status = subprocess.call(sub_command, shell=True)
-        if ( VERBOSE == False ) :
-                status = subprocess.call("rm MCqsub.submit", shell=True)
+        if( int(PROJECT_ID) <=0 ):
         
-        if int(PROJECT_ID) > 0:
-                recordJob(PROJECT_ID,RUNNO,FILENO,SWIF_ID_NUM,COMMAND['num_events'])
-                recordFirstAttempt(PROJECT_ID,RUNNO,FILENO,"QSUB",SWIF_ID_NUM,COMMAND['num_events'],NCORES,MEMLIMIT)
-        elif int(PROJECT_ID) < 0:
-                recordAttempt(abs(int(PROJECT_ID)),RUNNO,FILENO,"QSUB",SWIF_ID_NUM,COMMAND['num_events'],NCORES,MEMLIMIT)
+                status = subprocess.call(sub_command, shell=True)
+                if ( VERBOSE == False ) :
+                        status = subprocess.call("rm MCqsub.submit", shell=True)
+        
+                if int(PROJECT_ID) > 0:
+                        recordJob(PROJECT_ID,RUNNO,FILENO,SWIF_ID_NUM,COMMAND['num_events'])
+                        #recordFirstAttempt(PROJECT_ID,RUNNO,FILENO,"QSUB",SWIF_ID_NUM,COMMAND['num_events'],NCORES,MEMLIMIT)
+                elif int(PROJECT_ID) < 0:
+                        recordAttempt(abs(int(PROJECT_ID)),RUNNO,FILENO,"QSUB",SWIF_ID_NUM,COMMAND['num_events'],NCORES,MEMLIMIT)
         
 
 def  condor_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, PROJECT_ID ):
@@ -174,19 +179,19 @@ def  condor_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, 
         f.close()
         
         JOBNAME=JOBNAME.replace(".","p")
+        if( int(PROJECT_ID) <=0 ):
+                add_command="condor_submit -name "+JOBNAME+" MCcondor.submit"
+                if add_command.find(';')!=-1 or add_command.find('&')!=-1 or mkdircom.find(';')!=-1 or mkdircom.find('&')!=-1:#THIS CHECK HELPS PROTEXT AGAINST A POTENTIAL HACK VIA CONFIG FILES
+                        print( "Nice try.....you cannot use ; or &")
+                        exit(1)
 
-        add_command="condor_submit -name "+JOBNAME+" MCcondor.submit"
-        if add_command.find(';')!=-1 or add_command.find('&')!=-1 or mkdircom.find(';')!=-1 or mkdircom.find('&')!=-1:#THIS CHECK HELPS PROTEXT AGAINST A POTENTIAL HACK VIA CONFIG FILES
-                print( "Nice try.....you cannot use ; or &")
-                exit(1)
-
-        status = subprocess.call(mkdircom, shell=True)
-        status = subprocess.call(add_command, shell=True)
-        status = subprocess.call("rm MCcondor.submit", shell=True)
+                status = subprocess.call(mkdircom, shell=True)
+                status = subprocess.call(add_command, shell=True)
+                status = subprocess.call("rm MCcondor.submit", shell=True)
 
         if int(PROJECT_ID) > 0:
                 recordJob(PROJECT_ID,RUNNO,FILENO,SWIF_ID_NUM,COMMAND['num_events'])
-                recordFirstAttempt(PROJECT_ID,RUNNO,FILENO,"Condor",SWIF_ID_NUM,COMMAND['num_events'],NCORES,"UnSet")
+                #recordFirstAttempt(PROJECT_ID,RUNNO,FILENO,"Condor",SWIF_ID_NUM,COMMAND['num_events'],NCORES,"UnSet")
         elif int(PROJECT_ID) < 0:
                 recordAttempt(abs(int(PROJECT_ID)),RUNNO,FILENO,"Condor",SWIF_ID_NUM,COMMAND['num_events'],NCORES,"UnSet")
 
@@ -329,35 +334,36 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DAT
         mkdircom2="mkdir -p "+LOG_DIR+"/log/"
         status2 = subprocess.call(mkdircom2, shell=True)
         status = subprocess.call(mkdircom, shell=True)
-        
-        jobSubout=subprocess.check_output(add_command.split(" "))
-        print jobSubout
-        idnumline=jobSubout.split("\n")[1].split(".")[0].split(" ")
         SWIF_ID_NUM="-1"
-        if(len(idnumline) == 6 ):
-                SWIF_ID_NUM=str(idnumline[5])+".0"
-        #1 job(s) submitted to cluster 425013.
+        if( int(PROJECT_ID) <=0 ):
+                jobSubout=subprocess.check_output(add_command.split(" "))
+                print jobSubout
+                idnumline=jobSubout.split("\n")[1].split(".")[0].split(" ")
+                
+                if(len(idnumline) == 6 ):
+                        SWIF_ID_NUM=str(idnumline[5])+".0"
+                #1 job(s) submitted to cluster 425013.
 
-        if int(PROJECT_ID) !=0:
-                findmyjob="SELECT * FROM Attempts where BatchJobID='"+str(SWIF_ID_NUM)+"';"
-                dbcursor.execute(findmyjob)
-                MYJOB = dbcursor.fetchall()
+                if int(PROJECT_ID) !=0:
+                        findmyjob="SELECT * FROM Attempts where BatchJobID='"+str(SWIF_ID_NUM)+"';"
+                        dbcursor.execute(findmyjob)
+                        MYJOB = dbcursor.fetchall()
 
-                if len(MYJOB) != 0:
-                        #SELECT DISTINCT Project_ID FROM Jobs where ID in (select Job_ID from Attempts WHERE BatchSystem='OSG' GROUP BY BatchJobID HAVING COUNT(Job_ID)>1 ORDER BY BatchJobID DESC);
-                        print "THE TIMELINE HAS BEEN FRACTURED. TERMINATING SUBMITS AND SHUTTING THE ROBOT DOWN!!!"
-                        f=open("/osgpool/halld/tbritton/.ALLSTOP","x")
-                        exit(1)
+                        if len(MYJOB) != 0:
+                                #SELECT DISTINCT Project_ID FROM Jobs where ID in (select Job_ID from Attempts WHERE BatchSystem='OSG' GROUP BY BatchJobID HAVING COUNT(Job_ID)>1 ORDER BY BatchJobID DESC);
+                                print "THE TIMELINE HAS BEEN FRACTURED. TERMINATING SUBMITS AND SHUTTING THE ROBOT DOWN!!!"
+                                f=open("/osgpool/halld/tbritton/.ALLSTOP","x")
+                                exit(1)
 
-        status = subprocess.call("rm MCOSG.submit", shell=True)
+                status = subprocess.call("rm MCOSG.submit", shell=True)
         
-        #print "DECIDING IF FIRST JOB"
-        #print PROJECT_ID
+                #print "DECIDING IF FIRST JOB"
+                #print PROJECT_ID
 
         if int(PROJECT_ID) > 0:
                 #print "FIRST ATTEMPT"
                 recordJob(PROJECT_ID,RUNNUM,FILENUM,SWIF_ID_NUM,COMMAND['num_events'])
-                recordFirstAttempt(PROJECT_ID,RUNNUM,FILENUM,"OSG",SWIF_ID_NUM,COMMAND['num_events'],NCORES,"Unset")
+                #recordFirstAttempt(PROJECT_ID,RUNNUM,FILENUM,"OSG",SWIF_ID_NUM,COMMAND['num_events'],NCORES,"Unset")
         elif int(PROJECT_ID) < 0:
                 #print "A NEW ATTEMPT"
                 recordAttempt(abs(int(PROJECT_ID)),RUNNUM,FILENUM,"OSG",SWIF_ID_NUM,COMMAND['num_events'],NCORES,"Unset")
@@ -405,15 +411,15 @@ def  SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, D
         f.close()
         
         exit(1)
-        
-        add_command="condor_submit -name "+JOBNAME+" MCOSG.submit"
-        if add_command.find(';')!=-1 or add_command.find('&')!=-1 :#THIS CHECK HELPS PROTEXT AGAINST A POTENTIAL HACK VIA CONFIG FILES
-                print( "Nice try.....you cannot use ; or &")
-                exit(1)
+        if( int(PROJECT_ID) <=0 ):
+                add_command="condor_submit -name "+JOBNAME+" MCOSG.submit"
+                if add_command.find(';')!=-1 or add_command.find('&')!=-1 :#THIS CHECK HELPS PROTEXT AGAINST A POTENTIAL HACK VIA CONFIG FILES
+                        print( "Nice try.....you cannot use ; or &")
+                        exit(1)
 
         if int(PROJECT_ID) > 0:
                 recordJob(PROJECT_ID,RUNNO,FILENO,SWIF_ID_NUM,COMMAND['num_events'])
-                recordFirstAttempt(PROJECT_ID,RUNNO,FILENO,"SLURM",SWIF_ID_NUM,COMMAND['num_events'],NCORES, "UnSet")
+                #recordFirstAttempt(PROJECT_ID,RUNNO,FILENO,"SLURM",SWIF_ID_NUM,COMMAND['num_events'],NCORES, "UnSet")
         elif int(PROJECT_ID) < 0:
                 recordAttempt(abs(int(PROJECT_ID)),RUNNO,FILENO,"SLURM",SWIF_ID_NUM,COMMAND['num_events'],NCORES,"UnSet")
 
@@ -424,7 +430,6 @@ def  SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, D
 
 
 def recordJob(PROJECT_ID,RUNNO,FILENO,BatchJobID, NUMEVTS):
-
         dbcursor.execute("INSERT INTO Jobs (Project_ID, RunNumber, FileNumber, Creation_Time, IsActive, NumEvts) VALUES ("+str(PROJECT_ID)+", "+str(RUNNO)+", "+str(FILENO)+", NOW(), 1, "+str(NUMEVTS)+")")
         dbcnx.commit()
 def recordFirstAttempt(PROJECT_ID,RUNNO,FILENO,BatchSYS,BatchJobID, NUMEVTS,NCORES, RAM):
@@ -439,6 +444,7 @@ def recordFirstAttempt(PROJECT_ID,RUNNO,FILENO,BatchSYS,BatchJobID, NUMEVTS,NCOR
         Job_ID=MYJOB[0][0]
 
         addAttempt="INSERT INTO Attempts (Job_ID,Creation_Time,BatchSystem,BatchJobID,Status,WallTime,CPUTime,ThreadsRequested,RAMRequested, RAMUsed) VALUES ("+str(Job_ID)+", NOW(), "+str("'"+BatchSYS+"'")+", "+str(BatchJobID)+", 'Created', 0, 0, "+str(NCORES)+", "+str("'"+RAM+"'")+", '0'"+");"
+
         print addAttempt
         dbcursor.execute(addAttempt)
         dbcnx.commit()
