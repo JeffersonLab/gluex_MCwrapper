@@ -153,7 +153,7 @@ def main(argv):
     job_IDs_submitted=[]
 
 
-    if(int(numprocesses_running) <2 or RUNNING_LIMIT_OVERRIDE ):
+    if(int(numprocesses_running) <2):
         curs.execute("INSERT INTO MCSubmitter (Host,StartTime,Status) VALUES ('"+str(socket.gethostname())+"', NOW(), 'Running' )")
         conn.commit()
         querysubmitters="SELECT MAX(ID) FROM MCSubmitter;"
