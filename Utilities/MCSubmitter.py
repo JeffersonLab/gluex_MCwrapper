@@ -96,11 +96,53 @@ def WritePayloadConfig(order,foundConfig):
     MCconfig_file.write("ENVIRONMENT_FILE=/group/halld/www/halldweb/html/dist/"+str(order["VersionSet"])+"\n")
     MCconfig_file.close()
 
+def SubmitList(SubList,job_IDs_submitted):
+    for row in SubList:
+        print row
+                
+        if row['ID'] in job_IDs_submitted:
+            continue
+
+        projinfo_q="SELECT * FROM Project where ID="+str(row['Project_ID'])
+        curs.execute(projinfo_q) 
+        proj=curs.fetchall()
+        #print proj
+        RunNumber=str(proj[0]["RunNumLow"])
+        if proj[0]["RunNumLow"] != proj[0]["RunNumHigh"] :
+            RunNumber = RunNumber + "-" + str(proj[0]["RunNumHigh"])
+
+        cleangen=1
+        if proj[0]["SaveGeneration"]==1:
+            cleangen=0
+
+        cleangeant=1
+        if proj[0]["SaveGeant"]==1:
+            cleangeant=0
+    
+        cleansmear=1
+        if proj[0]["SaveSmear"]==1:
+            cleansmear=0
+    
+        cleanrecon=1
+        if proj[0]["SaveReconstruction"]==1:
+            cleanrecon=0
+
+        status = subprocess.call("cp $MCWRAPPER_CENTRAL/examples/OSGShell.config ./MCDispatched.config", shell=True)
+        WritePayloadConfig(proj[0],"True")
+
+        command="$MCWRAPPER_CENTRAL/gluex_MC.py MCDispatched.config "+str(RunNumber)+" "+str(row["NumEvts"])+" per_file=20000 base_file_number="+str(row["FileNumber"])+" generate="+str(proj[0]["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(proj[0]["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(proj[0]["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(proj[0]["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid=-"+str(row['ID'])+" logdir=/osgpool/halld/tbritton/REQUESTEDMC_LOGS/"+proj[0]["OutputLocation"].split("/")[7]+" batch=1 submitter=1"
+        print command
+        status = subprocess.call(command, shell=True)
+
+        job_IDs_submitted.append(row['ID'])
+
 def main(argv):
     #print(argv)
 
     Block_size=2
     int_i=0
+    more_sub=True
+    rows=[]
     if(os.path.isfile("/osgpool/halld/tbritton/.ALLSTOP")==True):
         print "ALL STOP DETECTED"
         exit(1)
@@ -108,57 +150,43 @@ def main(argv):
     numprocesses_running=subprocess.check_output(["echo `ps all -u tbritton | grep MCDispatcher.py | grep -v grep | wc -l`"], shell=True)
     #print(args)
 
+    job_IDs_submitted=[]
+
 
     if(int(numprocesses_running) <2 or RUNNING_LIMIT_OVERRIDE ):
-        while True:
-            query = "SELECT UName,FileNumber,Tested,Notified,Jobs.ID,Project_ID,Priority from Jobs,Project,Users where Tested=1 && Notified is NULL && Jobs.ID not in (Select Job_ID from Attempts) and Project_ID = Project.ID and Uname = name order by Priority desc limit "+str(Block_size)
-            if(Block_size==1):
-                query = "SELECT UName,FileNumber,Tested,Notified,Jobs.ID,Project_ID,Priority from Jobs,Project,Users where Tested=1 && Notified is NULL && Jobs.ID not in (Select Job_ID from Attempts) and Project_ID = Project.ID and Uname = name order by Priority desc"
-    
-            curs.execute(query) 
-            rows=curs.fetchall()
+        curs.execute("INSERT INTO MCSubmitter (Host,StartTime,Status) VALUES ('"+str(socket.gethostname())+"', NOW(), 'Running' )")
+        conn.commit()
+        querysubmitters="SELECT MAX(ID) FROM MCSubmitter;"
+        curs.execute(querysubmitters)
+        lastid = curs.fetchall()
+        try:    
+            while more_sub:
+                rows=[]
+                int_i=0
+                print "============================================================="
+                query = "SELECT UName,FileNumber,Tested,NumEvts,Notified,Jobs.ID,Project_ID,Priority from Jobs,Project,Users where Tested=1 && Notified is NULL && Jobs.ID not in (Select Job_ID from Attempts) and Project_ID = Project.ID and Uname = name order by Priority desc limit "+str(Block_size)
+                if(Block_size==1):
+                    query = "SELECT UName,FileNumber,Tested,NumEvts,Notified,Jobs.ID,Project_ID,Priority from Jobs,Project,Users where Tested=1 && Notified is NULL && Jobs.ID not in (Select Job_ID from Attempts) and Project_ID = Project.ID and Uname = name order by Priority desc"
 
-            if(len(rows)==0):
-                break
-            print rows
-            for row in rows:
-                print row
-                projinfo_q="SELECT * FROM Project where ID="+str(row['Project_ID'])
-                curs.execute(projinfo_q) 
-                proj=curs.fetchall()
-                #print proj
-                RunNumber=str(proj[0]["RunNumLow"])
-                if proj[0]["RunNumLow"] != proj[0]["RunNumHigh"] :
-                    RunNumber = RunNumber + "-" + str(proj[0]["RunNumHigh"])
+                print query
+                curs.execute(query) 
+                rows=curs.fetchall()
 
+                print("length of rows: "+str(len(rows)))
 
-                cleangen=1
-                if proj[0]["SaveGeneration"]==1:
-                    cleangen=0
+                if(len(rows)==0):
+                    more_sub=False
+                    break
 
-                cleangeant=1
-                if proj[0]["SaveGeant"]==1:
-                    cleangeant=0
-    
-                cleansmear=1
-                if proj[0]["SaveSmear"]==1:
-                    cleansmear=0
-    
-                cleanrecon=1
-                if proj[0]["SaveReconstruction"]==1:
-                    cleanrecon=0
-
-                status = subprocess.call("cp $MCWRAPPER_CENTRAL/examples/OSGShell.config ./MCDispatched.config", shell=True)
-                WritePayloadConfig(proj[0],"True")
-
-                command="$MCWRAPPER_CENTRAL/gluex_MC.py MCDispatched.config "+str(RunNumber)+" "+str(proj[0]["NumEvents"])+" per_file=20000 base_file_number="+str(row["FileNumber"])+" generate="+str(proj[0]["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(proj[0]["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(proj[0]["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(proj[0]["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid=-"+str(row['ID'])+" logdir=/osgpool/halld/tbritton/REQUESTEDMC_LOGS/"+proj[0]["OutputLocation"].split("/")[7]+" batch=1 submitter=1"
-                print command
-                #status = subprocess.call(command, shell=True)
-
-            int_i+=1
-            print "=================="
-            
-        
+                SubmitList(rows,job_IDs_submitted)
+                #Must do the following commit even through gluex_MC.py does one.  Else the above query is cached and does not update properly
+                conn.commit()
+            curs.execute("UPDATE MCSubmitter SET EndTime=NOW(), Status=\"Success\" where ID="+str(lastid[0]["MAX(ID)"]))
+            conn.commit()
+        except:
+            curs.execute("UPDATE MCSubmitter SET Status=\"Fail\" where ID="+str(lastid[0]["MAX(ID)"]))
+            conn.commit()
+            pass
     conn.close()
         
 
