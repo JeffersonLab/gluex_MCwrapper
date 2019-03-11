@@ -147,7 +147,7 @@ def main(argv):
         print "ALL STOP DETECTED"
         exit(1)
 
-    numprocesses_running=subprocess.check_output(["echo `ps all -u tbritton | grep MCDispatcher.py | grep -v grep | wc -l`"], shell=True)
+    numprocesses_running=subprocess.check_output(["echo `ps all -u tbritton | grep MCSubmitter.py | grep -v grep | wc -l`"], shell=True)
     #print(args)
 
     job_IDs_submitted=[]
