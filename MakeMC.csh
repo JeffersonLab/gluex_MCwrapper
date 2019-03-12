@@ -169,7 +169,8 @@ if ( "$rcdbSQLITEPATH" != "no_sqlite" && "$rcdbSQLITEPATH" != "batch_default" ) 
     cp $rcdbSQLITEPATH ./rcdb.sqlite
     setenv RCDB_CONNECTION sqlite:///$PWD/rcdb.sqlite
 else if ( "$rcdbSQLITEPATH" == "batch_default" ) then
-    setenv RCDB_CONNECTION sqlite:////group/halld/www/halldweb/html/dist/rcdb.sqlite 
+	echo "keeping the RCDB on mysql now"
+    #setenv RCDB_CONNECTION sqlite:////group/halld/www/halldweb/html/dist/rcdb.sqlite 
 endif
 
 echo ""

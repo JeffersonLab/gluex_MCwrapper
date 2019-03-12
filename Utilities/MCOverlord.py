@@ -63,11 +63,11 @@ def checkProjectsForCompletion():
         #print proj['ID']
         locparts=proj['OutputLocation'].split("/")
 
-        #print("~~~~~~~~~~~~~~~~~~")
+        print("~~~~~~~~~~~~~~~~~~")
         #print locparts[len(locparts)-2]
         filesToMove = sum([len(files) for r, d, files in os.walk(outdir_root+locparts[len(locparts)-2])])
         #print cpt
-
+        print filesToMove
         
         TOTCompletedQuery ="SELECT DISTINCT ID From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1 && ID in (SELECT DISTINCT Job_ID FROM Attempts WHERE ExitCode = 0 && (Status ='4' || Status='success')  && ExitCode IS NOT NULL);" 
         dbcursor.execute(TOTCompletedQuery)
