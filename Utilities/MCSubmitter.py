@@ -139,7 +139,7 @@ def SubmitList(SubList,job_IDs_submitted):
 def main(argv):
     #print(argv)
 
-    Block_size=2
+    Block_size=10
     int_i=0
     more_sub=True
     rows=[]
@@ -152,8 +152,7 @@ def main(argv):
 
     job_IDs_submitted=[]
 
-
-    if(int(numprocesses_running) <2):
+    if(int(numprocesses_running) <5):
         curs.execute("INSERT INTO MCSubmitter (Host,StartTime,Status) VALUES ('"+str(socket.gethostname())+"', NOW(), 'Running' )")
         conn.commit()
         querysubmitters="SELECT MAX(ID) FROM MCSubmitter;"
