@@ -11,7 +11,7 @@ if [[ `ps all -u tbritton | grep MCMover.csh | grep -v grep | wc -l` == 2 ]]; th
     input_dir=/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/
     output_dir=/cache/halld/halld-scratch/REQUESTED_MC/
     # move slag-like files in the input directory out of the way
-    mkdir -p $input_dir/slag
+    mkdir -pv $input_dir/slag
     find $input_dir -maxdepth 2 -mindepth 2 -type f -exec mv -v {} $input_dir/slag/ \;
     rsync_command="rsync -pruvt $input_dir/ $output_dir/ --exclude $input_dir/slag"
     echo rsync_command = $rsync_command

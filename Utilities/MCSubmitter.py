@@ -152,7 +152,7 @@ def main(argv):
 
     job_IDs_submitted=[]
 
-    if(int(numprocesses_running) <5):
+    if(int(numprocesses_running) <3):
         curs.execute("INSERT INTO MCSubmitter (Host,StartTime,Status) VALUES ('"+str(socket.gethostname())+"', NOW(), 'Running' )")
         conn.commit()
         querysubmitters="SELECT MAX(ID) FROM MCSubmitter;"
@@ -163,7 +163,7 @@ def main(argv):
                 rows=[]
                 int_i=0
                 print "============================================================="
-                query = "SELECT UName,FileNumber,Tested,NumEvts,Notified,Jobs.ID,Project_ID,Priority from Jobs,Project,Users where Tested=1 && Notified is NULL && Jobs.ID not in (Select Job_ID from Attempts) and Project_ID = Project.ID and Uname = name order by Priority desc limit "+str(Block_size)
+                query = "SELECT UName,FileNumber,Tested,NumEvts,Notified,Jobs.ID,Project_ID,Priority,IsActive from Jobs,Project,Users where Tested=1 && Notified is NULL && IsActive=1 && Jobs.ID not in (Select Job_ID from Attempts) and Project_ID = Project.ID and Uname = name order by Priority desc limit "+str(Block_size)
                 if(Block_size==1):
                     query = "SELECT UName,FileNumber,Tested,NumEvts,Notified,Jobs.ID,Project_ID,Priority from Jobs,Project,Users where Tested=1 && Notified is NULL && Jobs.ID not in (Select Job_ID from Attempts) and Project_ID = Project.ID and Uname = name order by Priority desc"
 
