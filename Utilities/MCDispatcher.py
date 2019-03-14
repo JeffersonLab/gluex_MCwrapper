@@ -31,11 +31,53 @@ class bcolors:
 
 #DELETE FROM Attempts WHERE Job_ID IN (SELECT ID FROM Jobs WHERE Project_ID=65);
 
+def RecallAll():
+    query="SELECT BatchJobID, BatchSystem from Attempts where (Status=\"2\" || Status=\"1\" || Status=\"5\") && Job_ID in (SELECT ID from Jobs where Project_ID in (SELECT ID FROM Project where Tested=2 || Tested=4 || Tested=3 ));"
+    curs.execute(query)
+    rows=curs.fetchall()
+    for row in rows:
+        if row["BatchSystem"] == "OSG":
+            command="condor_rm "+str(row["BatchJobID"])
+            subprocess.call(command,shell=True)
+
+def DeclareAllComplete():
+    query="SELECT ID,OutputLocation,Email from Project where Tested=4 && Notified is NULL;"
+    curs.execute(query)
+    rows=curs.fetchall()
+    for proj in rows:
+        subprocess.call("echo 'Your Project ID "+str(proj['ID'])+" has been declared completed.  Outstanding jobs have been recalled. Output may be found here:\n"+proj['OutputLocation']+"' | mail -s 'GlueX MC Request #"+str(proj['ID'])+" Completed' "+str(proj['Email']),shell=True)
+        updatequery="UPDATE Project SET Completed_Time=NOW(),Notified=1 where ID="+str(proj["ID"])
+        curs.execute(updatequery)
+        conn.commit()
+
+def CancelAll():
+    query="SELECT ID,OutputLocation,Email from Project where Tested=3;"
+    curs.execute(query)
+    rows=curs.fetchall()
+    for proj in rows:
+        subprocess.call("echo 'Your Project ID "+str(proj['ID'])+" has been canceled.  Outstanding jobs have been recalled."+"' | mail -s 'GlueX MC Request #"+str(proj['ID'])+" Canceled' "+str(proj['Email']),shell=True)
+        sql = "DELETE FROM Attempts where Job_ID in ( SELECT ID FROM Jobs WHERE Project_ID="+str(proj['ID'])+" );"
+
+        sql2 = "DELETE FROM Jobs WHERE Project_ID="+str(proj['ID'])+";"
+        sql3 = "UPDATE Project SET Is_Dispatched='0',Completed_Time=NULL,Dispatched_Time=NULL WHERE ID="+str(proj['ID']) 
+
+        curs.execute(sql)
+        curs.execute(sql2)
+        curs.execute(sql3)
+        
+        delq= "DELETE FROM Project where ID="+str(proj['ID'])+";"
+        curs.execute(delq)
+        conn.commit()
+
+
 def AutoLaunch():
     #print "in autolaunch"
+    RecallAll()
+    CancelAll()
+    DeclareAllComplete()
     RetryAllJobs()
 
-    query = "SELECT ID,Email,VersionSet,Tested,UName FROM Project WHERE Tested != -1 && Dispatched_Time is NULL ORDER BY (SELECT Priority from Users where name=UName) DESC;"
+    query = "SELECT ID,Email,VersionSet,Tested,UName FROM Project WHERE (Tested = 0 || Tested=1) && Dispatched_Time is NULL ORDER BY (SELECT Priority from Users where name=UName) DESC;"
     #print query
     curs.execute(query) 
     rows=curs.fetchall()
@@ -98,13 +140,13 @@ def DispatchProject(ID,SYSTEM,PERCENT):
     else:
         print("Error: Cannot find Project with ID="+ID)
     
-def RetryAllJobs():
-    query= "SELECT ID FROM Project where Completed_Time is NULL && Is_Dispatched=1.0;"
+def RetryAllJobs(rlim=False):
+    query= "SELECT ID FROM Project where Completed_Time is NULL && Is_Dispatched=1.0 && Tested!=2 && Tested!=4 && Tested!=3;"
     curs.execute(query) 
     rows=curs.fetchall()
     for row in rows:
         print "Retrying Project "+str(row["ID"])
-        RetryJobsFromProject(row["ID"],True)
+        RetryJobsFromProject(row["ID"],not rlim)
 
 def RemoveAllJobs():
     query= "SELECT * FROM Attempts WHERE ID IN (SELECT Max(ID) FROM Attempts GROUP BY Job_ID) && Job_ID IN (SELECT ID FROM Jobs WHERE IsActive=1 && Project_ID="+str(ID)+");"
@@ -617,7 +659,7 @@ def main(argv):
         elif MODE == "RETRYJOBS":
             RetryJobsFromProject(ID, False)
         elif MODE == "RETRYALLJOBS":
-            RetryAllJobs()
+            RetryAllJobs(RUNNING_LIMIT_OVERRIDE)
         elif MODE == "CANCELJOB":
             CancelJob(ID)
         elif MODE == "AUTOLAUNCH":

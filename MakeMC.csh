@@ -169,6 +169,7 @@ if ( "$rcdbSQLITEPATH" != "no_sqlite" && "$rcdbSQLITEPATH" != "batch_default" ) 
     cp $rcdbSQLITEPATH ./rcdb.sqlite
     setenv RCDB_CONNECTION sqlite:///$PWD/rcdb.sqlite
 else if ( "$rcdbSQLITEPATH" == "batch_default" ) then
+	#echo "keeping the RCDB on mysql now"
     setenv RCDB_CONNECTION sqlite:////group/halld/www/halldweb/html/dist/rcdb.sqlite 
 endif
 
@@ -1010,6 +1011,7 @@ if ( "$GENR" != "0" ) then
 	    	sed -i 's/BGGATE/cBGGATE/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 	    	sed -i 's/TEMPMINE/'$GEN_MIN_ENERGY'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 		else if ( "$BKGFOLDSTR" == "BeamPhotons" ) then
+			sed -i 's/cBEAM/BEAM/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 	    	sed -i 's/TEMPMINE/0.0012/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 		else if ( ("$BKGFOLDSTR" == "DEFAULT" || "$BKGFOLDSTR" == "Random" || "$bkgloc_pre" == "loc:") && "$BGTAGONLY_OPTION" == "0") then
 	    	sed -i 's/BGRATE/cBGRATE/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
@@ -1108,8 +1110,6 @@ if ( "$GENR" != "0" ) then
 			exit $mcsmear_return_code
 		endif
 
-		
-
 	    #run reconstruction
 	    if ( "$CLEANGENR" == "1" ) then
 			rm beam.config
@@ -1140,7 +1140,8 @@ if ( "$GENR" != "0" ) then
 			echo "An hddm file was not created by mcsmear.  Terminating MC production.  Please consult logs to diagnose"
 			exit 13
 		endif
-    endif
+	endif
+    
 endif
 	    if ( "$RECON" != "0" ) then
 			echo "RUNNING RECONSTRUCTION"
@@ -1227,9 +1228,49 @@ endif
 				set filecheck=`echo $current_files | grep -c $filetomv`
 
 				if ( "$filecheck" == "0" ) then
-
-		   			mv $filetomv $filename_root\_$STANDARD_NAME.root
-		   			mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/
+					mv $filetomv $filename_root\_$STANDARD_NAME.root
+					echo $filename_root\_$STANDARD_NAME.root
+					set hdroot_test=`echo $filename_root\_$STANDARD_NAME.root | grep hd_root_`
+					set thrown_test=`echo $filename_root\_$STANDARD_NAME.root | grep tree_thrown`
+					set gen_test=`echo $filename_root\_$STANDARD_NAME.root | grep gen_`
+					set reaction_test=`echo $filename_root\_$STANDARD_NAME.root | grep tree_`
+					#echo hdroot_test = $hdroot_test
+					if ($hdroot_test !~ "") then
+						echo "hdroot"
+						if ( ! -d "$OUTDIR/root/monitoring_hists/" ) then
+							#echo "DNE"
+							#echo "$OUTDIR/root/monitoring_hists/"
+    						mkdir $OUTDIR/root/monitoring_hists/
+						endif
+						mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/monitoring_hists
+					else if ($thrown_test !~ "") then
+						echo "thrown"
+						if ( ! -d "$OUTDIR/root/thrown/" ) then
+							#echo "DNE"
+							#echo "$OUTDIR/root/monitoring_hists/"
+    						mkdir $OUTDIR/root/thrown/
+						endif
+						mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/thrown
+					else if ($reaction_test !~ "") then
+						echo "reaction"
+						if ( ! -d "$OUTDIR/root/trees/" ) then
+							#echo "DNE"
+							#echo "$OUTDIR/root/monitoring_hists/"
+    						mkdir $OUTDIR/root/trees/
+						endif
+						mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/trees
+					else if ($gen_test !~ "") then
+						echo "gen"
+						if ( ! -d "$OUTDIR/root/generator/" ) then
+							#echo "DNE"
+							#echo "$OUTDIR/root/monitoring_hists/"
+    						mkdir $OUTDIR/root/generator/
+						endif
+						mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/generator
+					else
+						mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/
+					endif
+		   			
 				endif
 			end
 	    endif

@@ -172,6 +172,7 @@ if [[ "$rcdbSQLITEPATH" != "no_sqlite" && "$rcdbSQLITEPATH" != "batch_default" ]
     cp $rcdbSQLITEPATH ./rcdb.sqlite
     export RCDB_CONNECTION=sqlite:///$PWD/rcdb.sqlite
 elif [[ "$rcdbSQLITEPATH" == "batch_default" ]]; then
+	#echo "keeping the RCDB on mysql now"
     export RCDB_CONNECTION=sqlite:////group/halld/www/halldweb/html/dist/rcdb.sqlite
 fi
 
@@ -1020,6 +1021,7 @@ if [[ "$GENR" != "0" ]]; then
 	    sed -i 's/BGGATE/cBGGATE/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 	    sed -i 's/TEMPMINE/'$GEN_MIN_ENERGY'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 	elif [[ "$BKGFOLDSTR" == "BeamPhotons" ]]; then
+		sed -i 's/cBEAM/BEAM/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 		sed -i 's/TEMPMINE/0.0012/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 	elif [[ "$BKGFOLDSTR" == "DEFAULT" || "$BKGFOLDSTR" == "Random" ||  "$bkgloc_pre" == "loc:" ]]  && [[ "$BGTAGONLY_OPTION" == "0" ]]; then
 	    sed -i 's/BGRATE/cBGRATE/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
@@ -1074,6 +1076,8 @@ if [[ "$GENR" != "0" ]]; then
 	if [[ "$NOSIPMSATURATION" == "1" ]]; then 
 		MCSMEAR_Flags="$MCSMEAR_Flags"" -T"
 	fi
+	
+	echo $RECON and $SMEAR
 	
 	echo "RUNNING MCSMEAR"
 	   
@@ -1146,7 +1150,9 @@ if [[ "$GENR" != "0" ]]; then
 			echo "An hddm file was not created by mcsmear.  Terminating MC production.  Please consult logs to diagnose"
 			exit 13
 		fi
+		
 	fi
+	
 fi
 	    if [[ "$RECON" != "0" ]]; then
 		echo "RUNNING RECONSTRUCTION"
@@ -1234,7 +1240,34 @@ fi
 			
 			if [[ "$filecheck" == "0" ]]; then
 			    mv $filetomv $filename_root\_$STANDARD_NAME.root
-			    mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/
+			    hdroot_test=`echo $filename_root\_$STANDARD_NAME.root | grep hd_root_`
+				thrown_test=`echo $filename_root\_$STANDARD_NAME.root | grep tree_thrown`
+				gen_test=`echo $filename_root\_$STANDARD_NAME.root | grep gen_`
+				reaction_test=`echo $filename_root\_$STANDARD_NAME.root | grep tree_`
+				#echo hdroot_test = $hdroot_test
+				if [[ $hdroot_test != "" ]]; then
+					if [[ ! -d "$OUTDIR/root/monitoring_hists/" ]]; then
+    					mkdir $OUTDIR/root/monitoring_hists/
+					fi
+					mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/monitoring_hists
+				elif [[ $thrown_test != "" ]]; then
+					if [[ ! -d "$OUTDIR/root/thrown/" ]]; then
+						mkdir $OUTDIR/root/thrown/
+					fi
+					mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/thrown
+				elif [[ $reaction_test != "" ]]; then
+					if [[ ! -d "$OUTDIR/root/trees/" ]]; then
+						mkdir $OUTDIR/root/trees/
+					fi
+					mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/trees
+				elif [[ $gen_test != "" ]]; then
+					if [[ ! -d "$OUTDIR/root/generator/" ]]; then
+						mkdir $OUTDIR/root/generator/
+					fi
+					mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/generator
+				else
+					mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/
+				fi
 			fi
 		done
 	fi

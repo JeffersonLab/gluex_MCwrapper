@@ -54,6 +54,7 @@ except:
 
 def DroneDo():
     retcode=subprocess.check_output(["/osgpool/halld/tbritton/gluex_MCwrapper/Utilities/MCMover.csh"],shell=True)
+    print retcode
 
 
 
