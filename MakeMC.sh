@@ -172,8 +172,8 @@ if [[ "$rcdbSQLITEPATH" != "no_sqlite" && "$rcdbSQLITEPATH" != "batch_default" ]
     cp $rcdbSQLITEPATH ./rcdb.sqlite
     export RCDB_CONNECTION=sqlite:///$PWD/rcdb.sqlite
 elif [[ "$rcdbSQLITEPATH" == "batch_default" ]]; then
-	echo "keeping the RCDB on mysql now"
-    #export RCDB_CONNECTION=sqlite:////group/halld/www/halldweb/html/dist/rcdb.sqlite
+	#echo "keeping the RCDB on mysql now"
+    export RCDB_CONNECTION=sqlite:////group/halld/www/halldweb/html/dist/rcdb.sqlite
 fi
 
 echo ""

@@ -885,9 +885,11 @@ def main(argv):
         if len(CUSTOM_MAKEMC)!= 0 and CUSTOM_MAKEMC != "DEFAULT":
                 indir=CUSTOM_MAKEMC
 
-        if (BATCHSYS.upper() == "OSG" or BATCHSYS.upper() == "SWIF") and int(BATCHRUN) != 0 and ccdbSQLITEPATH=="no_sqlite":
+        #if (BATCHSYS.upper() == "OSG" or BATCHSYS.upper() == "SWIF") and int(BATCHRUN) != 0 and ccdbSQLITEPATH=="no_sqlite":
+        if (BATCHSYS.upper() == "OSG") and int(BATCHRUN) != 0 and ccdbSQLITEPATH=="no_sqlite":
                 ccdbSQLITEPATH="batch_default"
-        if (BATCHSYS.upper() == "OSG" or BATCHSYS.upper() == "SWIF") and int(BATCHRUN) != 0 and rcdbSQLITEPATH=="no_sqlite":
+        #if (BATCHSYS.upper() == "OSG" or BATCHSYS.upper() == "SWIF") and int(BATCHRUN) != 0 and rcdbSQLITEPATH=="no_sqlite":
+        if (BATCHSYS.upper() == "OSG" ) and int(BATCHRUN) != 0 and rcdbSQLITEPATH=="no_sqlite":
                 rcdbSQLITEPATH="batch_default"
 
         if str(indir) == "None":
