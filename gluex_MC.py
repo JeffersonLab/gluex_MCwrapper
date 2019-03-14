@@ -356,7 +356,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DAT
                                 f=open("/osgpool/halld/tbritton/.ALLSTOP","x")
                                 exit(1)
 
-                status = subprocess.call("rm MCOSG.submit", shell=True)
+                #status = subprocess.call("rm MCOSG.submit", shell=True)
         
                 #print "DECIDING IF FIRST JOB"
                 #print PROJECT_ID
@@ -366,7 +366,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DAT
                 recordJob(PROJECT_ID,RUNNUM,FILENUM,SWIF_ID_NUM,COMMAND['num_events'])
                 #recordFirstAttempt(PROJECT_ID,RUNNUM,FILENUM,"OSG",SWIF_ID_NUM,COMMAND['num_events'],NCORES,"Unset")
         elif int(PROJECT_ID) < 0:
-                #print "A NEW ATTEMPT"
+                print "A NEW ATTEMPT"
                 recordAttempt(abs(int(PROJECT_ID)),RUNNUM,FILENUM,"OSG",SWIF_ID_NUM,COMMAND['num_events'],NCORES,"Unset")
 
 def JSUB_add_job(VERBOSE, WORKFLOW, PROJECT,TRACK, RUNNUM, FILENUM, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID):
@@ -911,9 +911,9 @@ def main(argv):
         COMMAND_dict['environment_file']=ENVFILE
         COMMAND_dict['generator_config']=GENCONFIG
         COMMAND_dict['output_directory']=str(outdir)
-        COMMAND_dict['run_number']=str(0)
-        COMMAND_dict['file_number']=str(0)
-        COMMAND_dict['num_events']=str(0)
+        COMMAND_dict['run_number']=str(RUNNUM)
+        COMMAND_dict['file_number']=str(BASEFILENUM)
+        COMMAND_dict['num_events']=str(EVTS)
         COMMAND_dict['jana_calib_context']=str(VERSION)
         COMMAND_dict['jana_calibtime']=str(CALIBTIME)
         COMMAND_dict['do_gen']=str(GENR)
@@ -961,24 +961,24 @@ def main(argv):
                         os.system(str(indir)+" "+COMMAND)
                 else:
                         if PROJECT_ID != 0:
-                                print "SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(RUNNUM)+" && FileNumber="+str(BASEFILENUM+FILENUM+-1)+" && NumEvts="+str(num)
-                                findmyjob="SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(RUNNUM)+" && FileNumber="+str(BASEFILENUM+FILENUM+-1)+" && NumEvts="+str(num)
+                                print "SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(RUNNUM)+" && FileNumber="+str(BASEFILENUM)+" && NumEvts="+str(EVTS)
+                                findmyjob="SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(RUNNUM)+" && FileNumber="+str(BASEFILENUM)+" && NumEvts="+str(EVTS)
                                 dbcursor.execute(findmyjob)
                                 MYJOB = dbcursor.fetchall() 
                                 print len(MYJOB) 
                         if len(MYJOB) == 0:
                                 if BATCHSYS.upper()=="SWIF":
-                                        swif_add_job(WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1,str(indir),COMMAND_dict,VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID)
+                                        swif_add_job(WORKFLOW, RUNNUM, BASEFILENUM,str(indir),COMMAND_dict,VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID)
                                 elif BATCHSYS.upper()=="QSUB":
-                                        qsub_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, RAM, QUEUENAME, LOG_DIR, PROJECT_ID )
+                                        qsub_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, RAM, QUEUENAME, LOG_DIR, PROJECT_ID )
                                 elif BATCHSYS.upper()=="CONDOR":
-                                        condor_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, PROJECT_ID )
+                                        condor_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, PROJECT_ID )
                                 elif BATCHSYS.upper()=="OSG":
-                                        OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
+                                        OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
                                 elif BATCHSYS.upper()=="SLURM":
-                                        SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
+                                        SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
                                 elif BATCHSYS.upper()=="JSLURM":
-                                        JSUB_add_job(VERBOSE, WORKFLOW, PROJECT, TRACK, RUNNUM, BASEFILENUM+FILENUM+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
+                                        JSUB_add_job(VERBOSE, WORKFLOW, PROJECT, TRACK, RUNNUM, BASEFILENUM, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
         else:
                 if len(RunType) != 1 :
                         event_sum=0.
