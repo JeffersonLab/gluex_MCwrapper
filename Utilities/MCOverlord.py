@@ -329,9 +329,9 @@ def checkOSG():
                     HELDREASON=JSON_job["HoldReasonCode"]
 
                 if JOB_STATUS == 5:
-                    missingF=False
+                    missingF=True
                     for f in JSON_job["TransferInput"].split(","):
-                        if ".hddm" in f:
+                        if "_random" in f:
                             #print f
                             missingF=os.path.isfile(f)
                             #print missingF
