@@ -332,15 +332,15 @@ def checkOSG():
                     missingF=True
                     for f in JSON_job["TransferInput"].split(","):
                         if "_random" in f:
-                            #print f
+                            print f
                             missingF=os.path.isfile(f)
-                            #print missingF
+                            print missingF
                     if missingF == False:
                         #print "set to 6"
                         JOB_STATUS=6
                         deactivate_Job="UPDATE Jobs set IsActive=0 where ID="+str(job["Job_ID"])+";"
-                        dbcursor.execute(deactivate_Job)
-                        dbcnx.commit()
+                        #dbcursor.execute(deactivate_Job)
+                        #dbcnx.commit()
 
                 
                 RunIP="NULL"

@@ -107,9 +107,7 @@ def SubmitList(SubList,job_IDs_submitted):
         curs.execute(projinfo_q) 
         proj=curs.fetchall()
         #print proj
-        RunNumber=str(proj[0]["RunNumLow"])
-        if proj[0]["RunNumLow"] != proj[0]["RunNumHigh"] :
-            RunNumber = RunNumber + "-" + str(proj[0]["RunNumHigh"])
+        RunNumber=row["RunNumber"]
 
         cleangen=1
         if proj[0]["SaveGeneration"]==1:
@@ -163,9 +161,9 @@ def main(argv):
                 rows=[]
                 int_i=0
                 print "============================================================="
-                query = "SELECT UName,FileNumber,Tested,NumEvts,Notified,Jobs.ID,Project_ID,Priority,IsActive from Jobs,Project,Users where Tested=1 && Notified is NULL && IsActive=1 && Jobs.ID not in (Select Job_ID from Attempts) and Project_ID = Project.ID and Uname = name order by Priority desc limit "+str(Block_size)
+                query = "SELECT UName,RunNumber,FileNumber,Tested,NumEvts,Notified,Jobs.ID,Project_ID,Priority,IsActive from Jobs,Project,Users where Tested=1 && Notified is NULL && IsActive=1 && Jobs.ID not in (Select Job_ID from Attempts) and Project_ID = Project.ID and Uname = name order by Priority desc limit "+str(Block_size)
                 if(Block_size==1):
-                    query = "SELECT UName,FileNumber,Tested,NumEvts,Notified,Jobs.ID,Project_ID,Priority from Jobs,Project,Users where Tested=1 && Notified is NULL && Jobs.ID not in (Select Job_ID from Attempts) and Project_ID = Project.ID and Uname = name order by Priority desc"
+                    query = "SELECT UName,RunNumber,FileNumber,Tested,NumEvts,Notified,Jobs.ID,Project_ID,Priority from Jobs,Project,Users where Tested=1 && Notified is NULL && Jobs.ID not in (Select Job_ID from Attempts) and Project_ID = Project.ID and Uname = name order by Priority desc"
 
                 print query
                 curs.execute(query) 
