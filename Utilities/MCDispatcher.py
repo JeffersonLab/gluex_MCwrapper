@@ -101,7 +101,7 @@ def AutoLaunch():
         else:
             status[0]=0
             status[1]=0
-
+            status[2]=0
         #print "STATUS IS"
         #print status[0]
         #print status[1]
@@ -112,7 +112,13 @@ def AutoLaunch():
         else:
             #EMAIL FAIL AND LOG
             print "echo 'Your Project ID "+str(row['ID'])+" failed the to properly test.  The log information is reproduced below:\n\n\n"+status[0]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+str(row['Email'])
-            subprocess.call("echo 'Your Project ID "+str(row['ID'])+" failed the test.  Please correct this issue by following the link: "+"https://halldweb.jlab.org/gluex_sim/SubmitSim.html?prefill="+str(row['ID'])+"&mod=1" +" .  Do NOT resubmit this request.  Write tbritton@jlab.org for additional assistance\n\n The log information is reproduced below:\n\n\n"+status[0]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+str(row['Email']),shell=True)
+            try:
+                subprocess.call("echo 'Your Project ID "+str(row['ID'])+" failed the test.  Please correct this issue by following the link: "+"https://halldweb.jlab.org/gluex_sim/SubmitSim.html?prefill="+str(row['ID'])+"&mod=1" +" .  Do NOT resubmit this request.  Write tbritton@jlab.org for additional assistance\n\n The log information is reproduced below:\n\n\n"+status[0]+"\n\n\n"+status[2]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+str(row['Email']),shell=True)
+	    except:
+		log = open("/osgpool/halld/tbritton/"+str(row['ID'])+".err", "w+")
+		log.write("this was broke: \n" + status[0])
+		log.close()
+            
             #subprocess.call("echo 'Your Project ID "+str(row['ID'])+" failed the test.  Please correct this issue and do NOT resubmit this request.  Write tbritton@jlab.org for assistance or if you are ready for a retest.\n\n The log information is reproduced below:\n\n\n"+status[0]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+"tbritton@jlab.org",shell=True)
             #print status[0]
             
@@ -182,13 +188,13 @@ def RetryJobsFromProject(ID, countLim):
                     countq="SELECT Count(Job_ID) from Attempts where Job_ID="+str(row["Job_ID"])
                     curs.execute(countq)
                     count=curs.fetchall()
-                    if int(count[0]["Count(Job_ID)"]) > 5 :
+                    if int(count[0]["Count(Job_ID)"]) > 15 :
                         j=j+1
                         continue
                 RetryJob(row["Job_ID"])
                 i=i+1
     print "retried "+str(i)+" Jobs"
-    print str(j)+" jobs over restart limit of 5"
+    print str(j)+" jobs over restart limit of 15"
 
 #def DoMissingJobs(ID,SYS):
 #    query="SELECT ID FROM Jobs where ID NOT IN (SELECT Job_ID FROM Attempts) && IsActive=1 && Project_ID="+str(ID)+";"
@@ -373,7 +379,7 @@ def TestProject(ID,commands_to_call=""):
         
         print bcolors.FAIL+"TEST FAILED"+bcolors.ENDC
         print "rm -rf "+order["OutputLocation"]
-    return [output,STATUS]
+    return [output,STATUS,errors]
 
 def DispatchToInteractive(ID,order,PERCENT):
     subprocess.call("rm -f MCDispatched.config", shell=True)

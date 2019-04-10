@@ -157,9 +157,9 @@ def main(argv):
         curs.execute(querysubmitters)
         lastid = curs.fetchall()
         try:    
-            while more_sub:
+            while more_sub and int_i<1000:
                 rows=[]
-                int_i=0
+                int_i+=1
                 print "============================================================="
                 query = "SELECT UName,RunNumber,FileNumber,Tested,NumEvts,Notified,Jobs.ID,Project_ID,Priority,IsActive from Jobs,Project,Users where Tested=1 && Notified is NULL && IsActive=1 && Jobs.ID not in (Select Job_ID from Attempts) and Project_ID = Project.ID and Uname = name order by Priority desc limit "+str(Block_size)
                 if(Block_size==1):

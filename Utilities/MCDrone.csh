@@ -1,5 +1,5 @@
 #!/bin/bash -f                                                                                                                                                                                                      
-
+cd /volatile/halld/home/tbritton/
 source /osgpool/halld/tbritton/local_setup.sh
 
 if [[ -f /osgpool/halld/tbritton/.ALLSTOP ]]; then
