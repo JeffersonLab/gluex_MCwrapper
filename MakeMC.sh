@@ -559,10 +559,10 @@ if [[ "$GENR" != "0" ]]; then
 			echo $CONFIG_FILE "not found"
 			exit 1
 		else
-			if [[ `grep KINE $CONFIG_FILE | awk '{print $2}' ` < 100 && ` grep KINE $CONFIG_FILE | wc -w` > 3 ]]; then
+			if [[ `grep "^[^c]" | grep KINE $CONFIG_FILE | awk '{print $2}' ` < 100 && `grep "^[^c]" | grep KINE $CONFIG_FILE | wc -w` > 3 ]]; then
 				echo "ERROR THETA AND PHI APPEAR TO BE SET BUT WILL BE IGNORED.  PLEASE REMOVE THESE SETTINGS FROM:"$CONFIG_FILE" AND RESUBMIT."
 				exit 1
-			elif [[ `grep KINE $CONFIG_FILE | awk '{print $2}' ` > 100 && ` grep KINE $CONFIG_FILE | wc -w` < 8 ]]; then
+			elif [[ `grep "^[^c]" | grep KINE $CONFIG_FILE | awk '{print $2}' ` > 100 && `grep "^[^c]" | grep KINE $CONFIG_FILE | wc -w` < 8 ]]; then
 				echo "ERROR THETA AND PHI DON'T APPEAR TO BE SET BUT ARE GOING TO BE USED. PLEASE ADD THESE SETTINGS FROM: "$CONFIG_FILE" AND RESUBMIT."
 				exit 1
 			fi

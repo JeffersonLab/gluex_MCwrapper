@@ -43,7 +43,7 @@ except:
         pass
 
 MCWRAPPER_VERSION="2.1.0"
-MCWRAPPER_DATE="03/14/19"
+MCWRAPPER_DATE="04/10/19"
 
 def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID):
 
@@ -306,7 +306,6 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DAT
         f.write('+SingularityAutoLoad = True'+"\n") 
         f.write('should_transfer_files = YES'+"\n")
         f.write('when_to_transfer_output = ON_EXIT'+"\n")
-        
         f.write('concurrency_limits = GluexProduction'+"\n")
         f.write('on_exit_remove = true'+"\n")
         f.write('on_exit_hold = false'+"\n")
@@ -537,7 +536,7 @@ def main(argv):
         COHERENT_PEAK="rcdb"
         FLUX_TO_GEN="ccdb"
         FLUX_HIST="unset"
-        POL_TO_GEN="0"
+        POL_TO_GEN="0.4"
         POL_HIST="unset"
         MIN_GEN_ENERGY="3"
         MAX_GEN_ENERGY="12"
