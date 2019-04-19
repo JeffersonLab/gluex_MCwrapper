@@ -1276,7 +1276,7 @@ endif
 	    endif
 	
 
-
+rm -rf .hdds_tmp_*
 rm -rf ccdb.sqlite
 rm -rf rcdb.sqlite
 
