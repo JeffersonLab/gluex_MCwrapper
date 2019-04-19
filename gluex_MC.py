@@ -46,8 +46,6 @@ MCWRAPPER_VERSION="2.1.1"
 MCWRAPPER_DATE="04/19/19"
 
 def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID):
-
-        
         # PREPARE NAMES
         STUBNAME = str(RUNNO) + "_" + str(FILENO)
         JOBNAME = WORKFLOW + "_" + STUBNAME
@@ -509,7 +507,7 @@ def main(argv):
 
         #!!!!!!!!!!!!!!!!!!REQUIRED COMMAND LINE ARGUMENTS!!!!!!!!!!!!!!!!!!!!!!!!
         CONFIG_FILE = args[0]
-        RUNNUM = args[1]
+        RUNNUM = str(args[1]).lstrip("0")
         EVTS = int(args[2])
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -989,8 +987,8 @@ def main(argv):
                         runhigh=0
 
                         if RunType[0] != "RunPeriod":
-                                runlow=RunType[0]
-                                runhigh=RunType[1]
+                                runlow=RunType[0].lstrip("0")
+                                runhigh=RunType[1].lstrip("0")
                         else:
                                 cnx = mysql.connector.connect(user='ccdb_user', database='ccdb', host='hallddb.jlab.org')
                                 cursor = cnx.cursor()
