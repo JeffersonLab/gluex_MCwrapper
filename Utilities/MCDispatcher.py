@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import MySQLdb
 import sys
 import datetime
@@ -111,7 +111,7 @@ def AutoLaunch():
             subprocess.call("/osgpool/halld/tbritton/gluex_MCwrapper/Utilities/MCDispatcher.py dispatch -rlim -sys OSG "+str(row['ID']),shell=True)
         else:
             #EMAIL FAIL AND LOG
-            print "echo 'Your Project ID "+str(row['ID'])+" failed the to properly test.  The log information is reproduced below:\n\n\n"+status[0]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+str(row['Email'])
+            print("echo 'Your Project ID "+str(row['ID'])+" failed the to properly test.  The log information is reproduced below:\n\n\n"+status[0]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+str(row['Email']))
             try:
                 subprocess.call("echo 'Your Project ID "+str(row['ID'])+" failed the test.  Please correct this issue by following the link: "+"https://halldweb.jlab.org/gluex_sim/SubmitSim.html?prefill="+str(row['ID'])+"&mod=1" +" .  Do NOT resubmit this request.  Write tbritton@jlab.org for additional assistance\n\n The log information is reproduced below:\n\n\n"+status[0]+"\n\n\n"+status[2]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+str(row['Email']),shell=True)
 	    except:
@@ -151,7 +151,7 @@ def RetryAllJobs(rlim=False):
     curs.execute(query) 
     rows=curs.fetchall()
     for row in rows:
-        print "Retrying Project "+str(row["ID"])
+        print("Retrying Project "+str(row["ID"]))
         RetryJobsFromProject(row["ID"],not rlim)
 
 def RemoveAllJobs():
@@ -161,7 +161,7 @@ def RemoveAllJobs():
     i=0
     for row in rows:
         if(row["BatchSystem"]=="OSG"):
-            print row["BatchJobID"]
+            print(row["BatchJobID"])
 
 
 def RetryJobsFromProject(ID, countLim):
@@ -193,8 +193,8 @@ def RetryJobsFromProject(ID, countLim):
                         continue
                 RetryJob(row["Job_ID"])
                 i=i+1
-    print "retried "+str(i)+" Jobs"
-    print str(j)+" jobs over restart limit of 15"
+    print("retried "+str(i)+" Jobs")
+    print(str(j)+" jobs over restart limit of 15")
 
 #def DoMissingJobs(ID,SYS):
 #    query="SELECT ID FROM Jobs where ID NOT IN (SELECT Job_ID FROM Attempts) && IsActive=1 && Project_ID="+str(ID)+";"
@@ -241,7 +241,7 @@ def RetryJob(ID):
     if(rows[0]["BatchSystem"] == "SWIF"):
         splitL=len(proj[0]["OutputLocation"].split("/"))
         command = "swif retry-jobs -workflow "+proj[0]["OutputLocation"].split("/")[splitL-2]+" "+rows[0]["BatchJobID"]
-        print command
+        print(command)
         status = subprocess.call(command, shell=True)
     elif(rows[0]["BatchSystem"] == "OSG"):
         #print "OSG JOB FOUND"
@@ -307,7 +307,7 @@ def CheckGenConfig(order):
 
 def TestProject(ID,commands_to_call=""):
     subprocess.call("rm -f MCDispatched.config", shell=True)
-    print "TESTING PROJECT "+str(ID)
+    print("TESTING PROJECT "+str(ID))
     query = "SELECT * FROM Project WHERE ID="+str(ID)
     curs.execute(query) 
     rows=curs.fetchall()
@@ -365,20 +365,20 @@ def TestProject(ID,commands_to_call=""):
         conn.commit()
         if(newLoc != "True"):
             updateOrderquery="UPDATE Project SET Generator_Config=\""+newLoc+"\" WHERE ID="+str(ID)+";"
-            print updateOrderquery
+            print(updateOrderquery)
             curs.execute(updateOrderquery)
             conn.commit()
         
-        print bcolors.OKGREEN+"TEST SUCCEEDED"+bcolors.ENDC
-        print "rm -rf "+order["OutputLocation"]
+        print(bcolors.OKGREEN+"TEST SUCCEEDED"+bcolors.ENDC)
+        print("rm -rf "+order["OutputLocation"])
         #status = subprocess.call("rm -rf "+order["OutputLocation"],shell=True)
     else:
         updatequery="UPDATE Project SET Tested=-1"+" WHERE ID="+str(ID)+";"
         curs.execute(updatequery)
         conn.commit()
         
-        print bcolors.FAIL+"TEST FAILED"+bcolors.ENDC
-        print "rm -rf "+order["OutputLocation"]
+        print(bcolors.FAIL+"TEST FAILED"+bcolors.ENDC)
+        print("rm -rf "+order["OutputLocation"])
     return [output,STATUS,errors]
 
 def DispatchToInteractive(ID,order,PERCENT):
@@ -438,7 +438,7 @@ def DispatchToInteractive(ID,order,PERCENT):
         print(command)
         status = subprocess.call(command, shell=True)
     else:
-        print "All jobs submitted for this order"
+        print("All jobs submitted for this order")
 
 def DispatchToSWIF(ID,order,PERCENT):
     status = subprocess.call("cp $MCWRAPPER_CENTRAL/examples/SWIFShell.config ./MCDispatched.config", shell=True)
@@ -497,7 +497,7 @@ def DispatchToSWIF(ID,order,PERCENT):
         print(command)
         status = subprocess.call(command, shell=True)
     else:
-        print "All jobs submitted for this order"
+        print("All jobs submitted for this order")
 
 
 def WritePayloadConfig(order,foundConfig):
@@ -604,7 +604,7 @@ def main(argv):
     #print(argv)
 
     if(os.path.isfile("/osgpool/halld/tbritton/.ALLSTOP")==True):
-        print "ALL STOP DETECTED"
+        print("ALL STOP DETECTED")
         exit(1)
 
     numprocesses_running=subprocess.check_output(["echo `ps all -u tbritton | grep MCDispatcher.py | grep -v grep | wc -l`"], shell=True)
@@ -674,7 +674,7 @@ def main(argv):
         elif MODE == "REMOVEJOBS":
             RemoveAllJobs()
         else:
-            print "MODE NOT FOUND"
+            print("MODE NOT FOUND")
 
         
     conn.close()

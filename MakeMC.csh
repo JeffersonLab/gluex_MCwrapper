@@ -499,7 +499,7 @@ if ( "$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" == "
 		if ( "$BATCHSYS" == "OSG" && $BATCHRUN != 0 ) then
 			set	bkglocstring="/srv/run$formatted_runNumber""_random.hddm"
     	else
-			set bkglocstring="/cache/halld/gluex_simulations/random_triggers/"$RANDBGTAG"/run"$formatted_runNumber"_random.hddm"
+			set bkglocstring="/work/halld/random_triggers/"$RANDBGTAG"/run"$formatted_runNumber"_random.hddm"
 		endif
 	endif
 	
