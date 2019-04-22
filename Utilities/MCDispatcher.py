@@ -156,10 +156,10 @@ def AutoLaunch():
                 s.send_message(msg)
                 s.quit()            
                 #subprocess.call("echo 'Your Project ID "+str(row['ID'])+" failed the test.  Please correct this issue by following the link: "+"https://halldweb.jlab.org/gluex_sim/SubmitSim.html?prefill="+str(row['ID'])+"&mod=1" +" .  Do NOT resubmit this request.  Write tbritton@jlab.org for additional assistance\n\n The log information is reproduced below:\n\n\n"+status[0]+"\n\n\n"+status[2]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+str(row['Email']),shell=True)
-	        except:
-		        log = open("/osgpool/halld/tbritton/"+str(row['ID'])+".err", "w+")
-		        log.write("this was broke: \n" + status[0])
-		        log.close()
+            except:
+                log = open("/osgpool/halld/tbritton/"+str(row['ID'])+".err", "w+")
+                log.write("this was broke: \n" + status[0])
+                log.close()
             
             #subprocess.call("echo 'Your Project ID "+str(row['ID'])+" failed the test.  Please correct this issue and do NOT resubmit this request.  Write tbritton@jlab.org for assistance or if you are ready for a retest.\n\n The log information is reproduced below:\n\n\n"+status[0]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+"tbritton@jlab.org",shell=True)
             #print status[0]

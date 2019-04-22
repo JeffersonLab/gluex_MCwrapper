@@ -25,7 +25,7 @@ if [[ `ps all -u tbritton | grep MCMover.csh | grep -v grep | wc -l` == 2 ]]; th
     do
         
         projpath=`echo $dir | awk '{split($0,arr,"REQUESTEDMC_OUTPUT"); print arr[2]}'`
-        rsync_command="rsync -pruvt $dir $output_dir/$projpath" #--exclude $input_dir/slag"
+        rsync_command="rsync -pruvt $dir/* $output_dir/$projpath/" #--exclude $input_dir/slag"
         echo $rsync_command
         status="255"
         while [ "$status" -eq "255" ]
