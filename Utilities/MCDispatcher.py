@@ -144,15 +144,22 @@ def AutoLaunch():
             #EMAIL FAIL AND LOG
             #print("echo 'Your Project ID "+str(row['ID'])+" failed the to properly test.  The log information is reproduced below:\n\n\n"+status[0]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+str(row['Email']))
             try:
+                print("MAILING")
                 msg = EmailMessage()
-                msg.set_content('Your Project ID '+str(row['ID'])+' failed the test.  Please correct this issue by following the link: '+'https://halldweb.jlab.org/gluex_sim/SubmitSim.html?prefill='+str(row['ID'])+'&mod=1'+'.  Do NOT resubmit this request.  Write tbritton@jlab.org for additional assistance\n\n The log information is reproduced below:\n\n\n'+status[0]+'\n\n\nErrors:\n\n\n'+status[2]
 
+                msg.set_content('Your Project ID '+str(row['ID'])+' failed the test.  Please correct this issue by following the link: '+'https://halldweb.jlab.org/gluex_sim/SubmitSim.html?prefill='+str(row['ID'])+'&mod=1'+'.  Do NOT resubmit this request.  Write tbritton@jlab.org for additional assistance\n\n The log information is reproduced below:\n\n\n'+str(status[0])+'\n\n\nErrors:\n\n\n'+str(status[2]))
+                print("SET CONTENT")
                 msg['Subject'] = 'Project ID #'+str(row['ID'])+' Failed to test properly'
-                msg['From'] = 'MCwrapper-bot'
-                msg['To'] = str(proj['Email'])
+                print("SET SUB")
+                msg['From'] = str('MCwrapper-bot')
+                print("SET FROM")
 
+                msg['To'] = str(row['Email'])
+                print("SET SUB TO FROM")
                 # Send the message via our own SMTP server.                                                                                                                                                                        
                 s = smtplib.SMTP('localhost')
+                print(msg)
+                print("SENDING")
                 s.send_message(msg)
                 s.quit()            
                 #subprocess.call("echo 'Your Project ID "+str(row['ID'])+" failed the test.  Please correct this issue by following the link: "+"https://halldweb.jlab.org/gluex_sim/SubmitSim.html?prefill="+str(row['ID'])+"&mod=1" +" .  Do NOT resubmit this request.  Write tbritton@jlab.org for additional assistance\n\n The log information is reproduced below:\n\n\n"+status[0]+"\n\n\n"+status[2]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+str(row['Email']),shell=True)
@@ -396,7 +403,7 @@ def TestProject(ID,commands_to_call=""):
     output, errors = p.communicate()
     
     #print [p.returncode,errors,output]
-    output=output.replace('\\n', '\n')
+    output=str(output).replace('\\n', '\n')
     
     STATUS=output.find("Successfully completed")
     

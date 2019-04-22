@@ -506,6 +506,9 @@ if [[ "$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" == 
 					bkglocstring="/srv""/run$formatted_runNumber""_random.hddm"
 				else
 		    		bkglocstring="/work/halld/random_triggers/"$RANDBGTAG"/run"$formatted_runNumber"_random.hddm"
+					if [[ `hostname` == 'scosg16.jlab.org' ]]; then
+						bkglocstring="/osgpool/halld/random_triggers/"$RANDBGTAG"/run"$formatted_runNumber"_random.hddm"
+					fi
 				fi
 			fi
 			#set bkglocstring="/w/halld-scifs1a/home/tbritton/converted.hddm"
