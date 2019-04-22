@@ -9,6 +9,9 @@ from subprocess import call
 from subprocess import Popen, PIPE
 import socket
 import pprint
+import smtplib                                                                                                                                                                          
+from email.message import EmailMessage
+
 
 
 dbhost = "hallddb.jlab.org"
@@ -45,7 +48,21 @@ def DeclareAllComplete():
     curs.execute(query)
     rows=curs.fetchall()
     for proj in rows:
-        subprocess.call("echo 'Your Project ID "+str(proj['ID'])+" has been declared completed.  Outstanding jobs have been recalled. Output may be found here:\n"+proj['OutputLocation']+"' | mail -s 'GlueX MC Request #"+str(proj['ID'])+" Completed' "+str(proj['Email']),shell=True)
+        msg = EmailMessage()
+        msg.set_content('Your Project ID '+str(proj['ID'])+' has been declared completed.  Outstanding jobs have been recalled. Output may be found here:\n'+proj['OutputLocation'])
+
+        # me == the sender's email address                                                                                                                                                                                 
+        # you == the recipient's email address                                                                                                                                                                             
+        msg['Subject'] = 'GlueX MC Request #'+str(proj['ID'])+' Declared Completed'
+        msg['From'] = 'MCwrapper-bot'
+        msg['To'] = str(proj['Email'])
+
+        # Send the message via our own SMTP server.                                                                                                                                                                        
+        s = smtplib.SMTP('localhost')
+        s.send_message(msg)
+        s.quit()
+
+        #subprocess.call("echo 'Your Project ID "+str(proj['ID'])+" has been declared completed.  Outstanding jobs have been recalled. Output may be found here:\n"+proj['OutputLocation']+"' | mail -s 'GlueX MC Request #"+str(proj['ID'])+" Completed' "+str(proj['Email']),shell=True)
         updatequery="UPDATE Project SET Completed_Time=NOW(),Notified=1 where ID="+str(proj["ID"])
         curs.execute(updatequery)
         conn.commit()
@@ -55,7 +72,21 @@ def CancelAll():
     curs.execute(query)
     rows=curs.fetchall()
     for proj in rows:
-        subprocess.call("echo 'Your Project ID "+str(proj['ID'])+" has been canceled.  Outstanding jobs have been recalled."+"' | mail -s 'GlueX MC Request #"+str(proj['ID'])+" Canceled' "+str(proj['Email']),shell=True)
+        msg = EmailMessage()
+        msg.set_content('Your Project ID '+str(proj['ID'])+' has been canceled.  Outstanding jobs have been recalled.')
+
+        # me == the sender's email address                                                                                                                                                                                 
+        # you == the recipient's email address                                                                                                                                                                             
+        msg['Subject'] = 'GlueX MC Request #'+str(proj['ID'])+' Cancelled'
+        msg['From'] = 'MCwrapper-bot'
+        msg['To'] = str(proj['Email'])
+
+        # Send the message via our own SMTP server.                                                                                                                                                                        
+        s = smtplib.SMTP('localhost')
+        s.send_message(msg)
+        s.quit()
+
+        #subprocess.call("echo 'Your Project ID "+str(proj['ID'])+" has been canceled.  Outstanding jobs have been recalled."+"' | mail -s 'GlueX MC Request #"+str(proj['ID'])+" Canceled' "+str(proj['Email']),shell=True)
         sql = "DELETE FROM Attempts where Job_ID in ( SELECT ID FROM Jobs WHERE Project_ID="+str(proj['ID'])+" );"
 
         sql2 = "DELETE FROM Jobs WHERE Project_ID="+str(proj['ID'])+";"
@@ -111,13 +142,24 @@ def AutoLaunch():
             subprocess.call("/osgpool/halld/tbritton/gluex_MCwrapper/Utilities/MCDispatcher.py dispatch -rlim -sys OSG "+str(row['ID']),shell=True)
         else:
             #EMAIL FAIL AND LOG
-            print("echo 'Your Project ID "+str(row['ID'])+" failed the to properly test.  The log information is reproduced below:\n\n\n"+status[0]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+str(row['Email']))
+            #print("echo 'Your Project ID "+str(row['ID'])+" failed the to properly test.  The log information is reproduced below:\n\n\n"+status[0]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+str(row['Email']))
             try:
-                subprocess.call("echo 'Your Project ID "+str(row['ID'])+" failed the test.  Please correct this issue by following the link: "+"https://halldweb.jlab.org/gluex_sim/SubmitSim.html?prefill="+str(row['ID'])+"&mod=1" +" .  Do NOT resubmit this request.  Write tbritton@jlab.org for additional assistance\n\n The log information is reproduced below:\n\n\n"+status[0]+"\n\n\n"+status[2]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+str(row['Email']),shell=True)
-	    except:
-		log = open("/osgpool/halld/tbritton/"+str(row['ID'])+".err", "w+")
-		log.write("this was broke: \n" + status[0])
-		log.close()
+                msg = EmailMessage()
+                msg.set_content('Your Project ID '+str(row['ID'])+' failed the test.  Please correct this issue by following the link: '+'https://halldweb.jlab.org/gluex_sim/SubmitSim.html?prefill='+str(row['ID'])+'&mod=1'+'.  Do NOT resubmit this request.  Write tbritton@jlab.org for additional assistance\n\n The log information is reproduced below:\n\n\n'+status[0]+'\n\n\nErrors:\n\n\n'+status[2]
+
+                msg['Subject'] = 'Project ID #'+str(row['ID'])+' Failed to test properly'
+                msg['From'] = 'MCwrapper-bot'
+                msg['To'] = str(proj['Email'])
+
+                # Send the message via our own SMTP server.                                                                                                                                                                        
+                s = smtplib.SMTP('localhost')
+                s.send_message(msg)
+                s.quit()            
+                #subprocess.call("echo 'Your Project ID "+str(row['ID'])+" failed the test.  Please correct this issue by following the link: "+"https://halldweb.jlab.org/gluex_sim/SubmitSim.html?prefill="+str(row['ID'])+"&mod=1" +" .  Do NOT resubmit this request.  Write tbritton@jlab.org for additional assistance\n\n The log information is reproduced below:\n\n\n"+status[0]+"\n\n\n"+status[2]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+str(row['Email']),shell=True)
+	        except:
+		        log = open("/osgpool/halld/tbritton/"+str(row['ID'])+".err", "w+")
+		        log.write("this was broke: \n" + status[0])
+		        log.close()
             
             #subprocess.call("echo 'Your Project ID "+str(row['ID'])+" failed the test.  Please correct this issue and do NOT resubmit this request.  Write tbritton@jlab.org for assistance or if you are ready for a retest.\n\n The log information is reproduced below:\n\n\n"+status[0]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+"tbritton@jlab.org",shell=True)
             #print status[0]
