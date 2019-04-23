@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 ##########################################################################################################################
 #
 # 2017/03 Thomas Britton
@@ -49,7 +49,7 @@ try:
         dbcnx=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
         dbcursor=dbcnx.cursor(MySQLdb.cursors.DictCursor)
 except:
-        print "WARNING: CANNOT CONNECT TO DATABASE.  JOBS WILL NOT BE CONTROLLED OR MONITORED"
+        print("WARNING: CANNOT CONNECT TO DATABASE.  JOBS WILL NOT BE CONTROLLED OR MONITORED")
         pass
 
 def checkProjectsForCompletion():
@@ -67,7 +67,7 @@ def checkProjectsForCompletion():
         #print locparts[len(locparts)-2]
         filesToMove = sum([len(files) for r, d, files in os.walk(outdir_root+locparts[len(locparts)-2])])
         #print cpt
-        print filesToMove
+        print(filesToMove)
         
         TOTCompletedQuery ="SELECT DISTINCT ID From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1 && ID in (SELECT DISTINCT Job_ID FROM Attempts WHERE ExitCode = 0 && (Status ='4' || Status='success')  && ExitCode IS NOT NULL);" 
         dbcursor.execute(TOTCompletedQuery)
@@ -76,10 +76,10 @@ def checkProjectsForCompletion():
         TOTJobs="SELECT ID From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1;"
         dbcursor.execute(TOTJobs)
         AllActiveJobs=dbcursor.fetchall()
-        print "====================="
-        print proj['ID']
-        print len(fulfilledJobs)
-        print len(AllActiveJobs)
+        print("=====================")
+        print(proj['ID'])
+        print(len(fulfilledJobs))
+        print(len(AllActiveJobs))
         
         if(len(fulfilledJobs)==len(AllActiveJobs) and len(AllActiveJobs) != 0 and filesToMove ==0):
             print("DONE")
@@ -91,12 +91,25 @@ def checkProjectsForCompletion():
             #print "============"
             #print finalTimeRes[0]["MAX(Completed_Time)"]
             updateProjectstatus="UPDATE Project SET Completed_Time="+"'"+str(finalTimeRes[0]["MAX(Completed_Time)"])+"'"+ " WHERE ID="+str(proj['ID'])+";"
-            print updateProjectstatus
+            print(updateProjectstatus)
             #print "============"
             dbcursor.execute(updateProjectstatus)
             dbcnx.commit()
 
             #print "echo 'Your Project ID "+str(proj['ID'])+" has been completed.  Output may be found:\n"+proj['OutputLocation']+"' | mail -s 'GlueX MC Request #"+str(proj['ID'])+" Completed' "+str(proj['Email'])
+            msg = EmailMessage()
+            msg.set_content('Your Project ID '+str(proj['ID'])+' has been completed.  Output may be found here:\n'+str(proj['OutputLocation']))
+
+            # me == the sender's email address                                                                                                                                                                                 
+            # you == the recipient's email address                                                                                                                                                                             
+            msg['Subject'] = 'GlueX MC Request #'+str(proj['ID'])+' Completed'
+            msg['From'] = 'MCwrapper-bot'
+            msg['To'] = str(proj['Email'])
+
+            # Send the message via our own SMTP server.                                                                                                                                                                        
+            s = smtplib.SMTP('localhost')
+            s.send_message(msg)
+            s.quit()
             subprocess.call("echo 'Your Project ID "+str(proj['ID'])+" has been completed.  Output may be found here:\n"+proj['OutputLocation']+"' | mail -s 'GlueX MC Request #"+str(proj['ID'])+" Completed' "+str(proj['Email']),shell=True)
             sql_notified = "UPDATE Project Set Notified=1 WHERE ID="+str(proj['ID'])
             dbcursor.execute(sql_notified)
@@ -280,13 +293,13 @@ def checkOSG():
         dbcursor.execute(queryosgjobs)
         Alljobs = dbcursor.fetchall()
         count=0
-        print "UPDATING "+str(len(Alljobs))
+        print("UPDATING "+str(len(Alljobs)))
         for job in Alljobs:
             #print job
             count+=1
-            print count
+            print(count)
             statuscommand="condor_q "+str(job["BatchJobID"])+" -json"
-            print statuscommand
+            print(statuscommand)
             jsonOutputstr=subprocess.check_output(statuscommand.split(" "))
             #print "================"
             #print jsonOutputstr
@@ -332,9 +345,9 @@ def checkOSG():
                     missingF=True
                     for f in JSON_job["TransferInput"].split(","):
                         if "_random.hddm" in f:
-                            print f
+                            print(f)
                             missingF=os.path.isfile(f)
-                            print missingF
+                            print(missingF)
                     if missingF == False:
                         #print "set to 6"
                         JOB_STATUS=6
@@ -361,7 +374,7 @@ def checkOSG():
             else:
                 #print "looking up history"
                 historystatuscommand="condor_history -limit 1 "+str(job["BatchJobID"])+" -json"
-                print historystatuscommand
+                print(historystatuscommand)
                 jsonOutputstr=subprocess.check_output(historystatuscommand.split(" "))
                 #print "================"
                 #print jsonOutputstr
@@ -439,7 +452,7 @@ def main(argv):
         
         numprocesses_running=subprocess.check_output(["echo `ps all -u tbritton | grep MCOverlord.py | grep -v grep | wc -l`"], shell=True)
 
-        print int(numprocesses_running)
+        print(int(numprocesses_running))
         if(int(numprocesses_running) <2 or numOverRide):
             dbcursor.execute("INSERT INTO MCOverlord (Host,StartTime,Status) VALUES ('"+str(socket.gethostname())+"', NOW(), 'Running' )")
             dbcnx.commit()
