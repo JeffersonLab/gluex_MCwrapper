@@ -147,7 +147,7 @@ def AutoLaunch():
                 print("MAILING")
                 msg = EmailMessage()
 
-                msg.set_content('Your Project ID '+str(row['ID'])+' failed the test.  Please correct this issue by following the link: '+'https://halldweb.jlab.org/gluex_sim/SubmitSim.html?prefill='+str(row['ID'])+'&mod=1'+'.  Do NOT resubmit this request.  Write tbritton@jlab.org for additional assistance\n\n The log information is reproduced below:\n\n\n'+str(status[0])+'\n\n\nErrors:\n\n\n'+str(status[2]))
+                msg.set_content('Your Project ID '+str(row['ID'])+' failed the test.  Please correct this issue by following the link: '+'https://halldweb.jlab.org/gluex_sim/SubmitSim.html?prefill='+str(row['ID'])+'&mod=1'+'.  Do NOT resubmit this request.  Write tbritton@jlab.org for additional assistance\n\n The log information is reproduced below:\n\n\n'+str(status[0], "utf-8")+'\n\n\nErrors:\n\n\n'+str(status[2], "utf-8"))
                 print("SET CONTENT")
                 msg['Subject'] = 'Project ID #'+str(row['ID'])+' Failed to test properly'
                 print("SET SUB")

@@ -39,6 +39,8 @@ import json
 import time
 from datetime import timedelta
 from datetime import datetime
+import smtplib
+from email.message import EmailMessage
 
 dbhost = "hallddb.jlab.org"
 dbuser = 'mcuser'
@@ -143,7 +145,7 @@ def checkSWIF():
             statuscommand="/site/bin/swif status -workflow "+str(wkflowname)+" -jobs -display json"
             #print statuscommand
             jsonOutputstr=subprocess.check_output(statuscommand.split(" "))
-            ReturnedJobs=json.loads(jsonOutputstr)
+            ReturnedJobs=json.loads(str(jsonOutputstr, "utf-8"))
             #print "*******************"
             #print ReturnedJobs
             #print "======================"
@@ -302,17 +304,18 @@ def checkOSG():
             print(statuscommand)
             jsonOutputstr=subprocess.check_output(statuscommand.split(" "))
             #print "================"
-            #print jsonOutputstr
+            #print(jsonOutputstr)
             #print "================"
             if( jsonOutputstr != ""):
-                JSON_jobar=json.loads(jsonOutputstr)
-                #print JSON_jobar[0]
+                #print("JSONING")
+                JSON_jobar=json.loads(str(jsonOutputstr, "utf-8"))
+                #print(JSON_jobar[0])
                 if JSON_jobar == []:
                     continue
                 JSON_job=JSON_jobar[0]
                 #print JSON_job
                 ExitCode="NULL"
-                #print JSON_job["JobStatus"]
+                #print(JSON_job["JobStatus"])
                 if (JSON_job["JobStatus"]!=3 and "ExitCode" in JSON_job):
                     ExitCode=str(JSON_job["ExitCode"])
                     #print ExitCode
@@ -362,7 +365,7 @@ def checkOSG():
                     ipstr=ipstr.split("#")[0]
                     ipstr=ipstr[1:-1].split(":")[0]
                     RunIP=ipstr
-
+                #print("UPDATE")
                 updatejobstatus="UPDATE Attempts SET Status=\""+str(JOB_STATUS)+"\", ExitCode="+ExitCode+", Start_Time="+"'"+str(datetime.fromtimestamp(float(Start_Time)))+"'"+", RunningLocation="+"'"+str(REMOTE_HOST)+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+", RunIP='"+str(RunIP)+"' WHERE BatchJobID='"+str(job["BatchJobID"])+"';"
                 if Completed_Time != 'NULL':
                     updatejobstatus="UPDATE Attempts SET Status=\""+str(JOB_STATUS)+"\", ExitCode="+ExitCode+", Completed_Time='"+str(datetime.fromtimestamp(float(Completed_Time)))+"'"+", Start_Time="+"'"+str(datetime.fromtimestamp(float(Start_Time)))+"'"+", RunningLocation="+"'"+str(REMOTE_HOST)+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+", RunIP='"+str(RunIP)+"' WHERE BatchJobID='"+str(job["BatchJobID"])+"';"
@@ -377,10 +380,10 @@ def checkOSG():
                 print(historystatuscommand)
                 jsonOutputstr=subprocess.check_output(historystatuscommand.split(" "))
                 #print "================"
-                #print jsonOutputstr
+                #print(jsonOutputstr)
                 #print "================"
                 if( jsonOutputstr != ""):
-                    JSON_jobar=json.loads(jsonOutputstr)
+                    JSON_jobar=json.loads(str(jsonOutputstr, "utf-8"))
                     #print JSON_jobar[0]
                     if JSON_jobar == []:
                         continue
@@ -467,8 +470,9 @@ def main(argv):
                 checkProjectsForCompletion()
                 dbcursor.execute("UPDATE MCOverlord SET EndTime=NOW(), Status=\"Success\" where ID="+str(lastid[0]["MAX(ID)"]))
                 dbcnx.commit()
-            except:
+            except Exception as e:
                 print("exception")
+                print(e)
                 dbcursor.execute("UPDATE MCOverlord SET Status=\"Fail\" where ID="+str(lastid[0]["MAX(ID)"]))
                 dbcnx.commit()
                 pass
