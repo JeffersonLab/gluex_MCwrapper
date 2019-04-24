@@ -295,18 +295,18 @@ def checkOSG():
         dbcursor.execute(queryosgjobs)
         Alljobs = dbcursor.fetchall()
         count=0
-        print("UPDATING "+str(len(Alljobs), "utf-8"))
+        print("UPDATING "+str(len(Alljobs)))
         for job in Alljobs:
             #print job
             count+=1
             print(count)
-            statuscommand="condor_q "+str(job["BatchJobID"], "utf-8")+" -json"
+            statuscommand="condor_q "+str(job["BatchJobID"])+" -json"
             print(statuscommand)
             jsonOutputstr=subprocess.check_output(statuscommand.split(" "))
             #print "================"
-            #print(jsonOutputstr)
+            print(jsonOutputstr)
             #print "================"
-            if( jsonOutputstr != ""):
+            if( str(jsonOutputstr, "utf-8") != ""):
                 #print("JSONING")
                 JSON_jobar=json.loads(str(jsonOutputstr, "utf-8"))
                 #print(JSON_jobar[0])
@@ -317,7 +317,7 @@ def checkOSG():
                 ExitCode="NULL"
                 #print(JSON_job["JobStatus"])
                 if (JSON_job["JobStatus"]!=3 and "ExitCode" in JSON_job):
-                    ExitCode=str(JSON_job["ExitCode"], "utf-8")
+                    ExitCode=str(JSON_job["ExitCode"])
                     #print ExitCode
 
                 Completed_Time='NULL'
@@ -331,12 +331,12 @@ def checkOSG():
                 if "JobStartDate" in JSON_job:
                     Start_Time=JSON_job["JobStartDate"]
                 #"MemoryUsage": "\/Expr(( ( ResidentSetSize + 1023 ) / 1024 ))\/"
-                RAMUSED=str(float(JSON_job["ImageSize_RAW"], "utf-8")/ float(1024))
+                RAMUSED=str(float(JSON_job["ImageSize_RAW"])/ float(1024))
                 TransINSize=JSON_job["TransferInputSizeMB"]
 
                 REMOTE_HOST="NA"
                 if "RemoteHost" in JSON_job :
-                    REMOTE_HOST=str(JSON_job["RemoteHost"], "utf-8")
+                    REMOTE_HOST=str(JSON_job["RemoteHost"])
 
                 JOB_STATUS=JSON_job["JobStatus"]
                 HELDREASON=0
@@ -354,21 +354,21 @@ def checkOSG():
                     if missingF == False:
                         #print "set to 6"
                         JOB_STATUS=6
-                        deactivate_Job="UPDATE Jobs set IsActive=0 where ID="+str(job["Job_ID"], "utf-8")+";"
+                        deactivate_Job="UPDATE Jobs set IsActive=0 where ID="+str(job["Job_ID"])+";"
                         dbcursor.execute(deactivate_Job)
                         dbcnx.commit()
 
                 
                 RunIP="NULL"
                 if "LastPublicClaimId" in JSON_job:
-                    ipstr=str(JSON_job["LastPublicClaimId"], "utf-8")
+                    ipstr=str(JSON_job["LastPublicClaimId"])
                     ipstr=ipstr.split("#")[0]
                     ipstr=ipstr[1:-1].split(":")[0]
                     RunIP=ipstr
                 #print("UPDATE")
-                updatejobstatus="UPDATE Attempts SET Status=\""+str(JOB_STATUS, "utf-8")+"\", ExitCode="+ExitCode+", Start_Time="+"'"+str(datetime.fromtimestamp(float(Start_Time)), "utf-8")+"'"+", RunningLocation="+"'"+str(REMOTE_HOST, "utf-8")+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize, "utf-8")+", RunIP='"+str(RunIP, "utf-8")+"' WHERE BatchJobID='"+str(job["BatchJobID"], "utf-8")+"';"
+                updatejobstatus="UPDATE Attempts SET Status=\""+str(JOB_STATUS)+"\", ExitCode="+ExitCode+", Start_Time="+"'"+str(datetime.fromtimestamp(float(Start_Time)))+"'"+", RunningLocation="+"'"+str(REMOTE_HOST)+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+", RunIP='"+str(RunIP)+"' WHERE BatchJobID='"+str(job["BatchJobID"])+"';"
                 if Completed_Time != 'NULL':
-                    updatejobstatus="UPDATE Attempts SET Status=\""+str(JOB_STATUS, "utf-8")+"\", ExitCode="+ExitCode+", Completed_Time='"+str(datetime.fromtimestamp(float(Completed_Time)), "utf-8")+"'"+", Start_Time="+"'"+str(datetime.fromtimestamp(float(Start_Time)), "utf-8")+"'"+", RunningLocation="+"'"+str(REMOTE_HOST, "utf-8")+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize, "utf-8")+", RunIP='"+str(RunIP, "utf-8")+"' WHERE BatchJobID='"+str(job["BatchJobID"], "utf-8")+"';"
+                    updatejobstatus="UPDATE Attempts SET Status=\""+str(JOB_STATUS)+"\", ExitCode="+ExitCode+", Completed_Time='"+str(datetime.fromtimestamp(float(Completed_Time)))+"'"+", Start_Time="+"'"+str(datetime.fromtimestamp(float(Start_Time)))+"'"+", RunningLocation="+"'"+str(REMOTE_HOST)+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+", RunIP='"+str(RunIP)+"' WHERE BatchJobID='"+str(job["BatchJobID"])+"';"
 
 
                 #print updatejobstatus
@@ -376,22 +376,22 @@ def checkOSG():
                 dbcnx.commit()
             else:
                 #print "looking up history"
-                historystatuscommand="condor_history -limit 1 "+str(job["BatchJobID"], "utf-8")+" -json"
+                historystatuscommand="condor_history -limit 1 "+str(job["BatchJobID"])+" -json"
                 print(historystatuscommand)
                 jsonOutputstr=subprocess.check_output(historystatuscommand.split(" "))
                 #print "================"
-                #print(jsonOutputstr)
+                print(jsonOutputstr)
                 #print "================"
-                if( jsonOutputstr != ""):
+                if( str(jsonOutputstr, "utf-8") != ""):
                     JSON_jobar=json.loads(str(jsonOutputstr, "utf-8"))
                     #print JSON_jobar[0]
                     if JSON_jobar == []:
                         continue
                     JSON_job=JSON_jobar[0]
-                    
+                    print("Exit code")
                     ExitCode="NULL"
                     if (JSON_job["JobStatus"]!=3 and "ExitCode" in JSON_job):
-                        ExitCode=str(JSON_job["ExitCode"], "utf-8")
+                        ExitCode=str(JSON_job["ExitCode"])
                     
                     Start_Time=0
                     if "JobStartDate" in JSON_job:
@@ -404,7 +404,7 @@ def checkOSG():
                     WallTime=timedelta(seconds=JSON_job["RemoteWallClockTime"])
                     CpuTime=timedelta(seconds=JSON_job["RemoteUserCpu"])
                     #"MemoryUsage": "\/Expr(( ( ResidentSetSize + 1023 ) / 1024 ))\/"
-                    RAMUSED=str(float(JSON_job["ImageSize_RAW"])/ float(1024), "utf-8")
+                    RAMUSED=str(float(JSON_job["ImageSize_RAW"])/ float(1024))
                     TransINSize=JSON_job["TransferInputSizeMB"]
 
 
@@ -421,10 +421,10 @@ def checkOSG():
                                 missingF=os.path.isfile(f)
                         if missingF == False:
                             JOB_STATUS=6
-
+                    print("RUN IP")
                     RunIP="NULL"
                     if "LastPublicClaimId" in JSON_job:
-                        ipstr=str(JSON_job["LastPublicClaimId"], "utf-8")
+                        ipstr=str(JSON_job["LastPublicClaimId"])
                         ipstr=ipstr.split("#")[0]
                         ipstr=ipstr[1:-1].split(":")[0]
                         RunIP=ipstr
@@ -433,12 +433,12 @@ def checkOSG():
                     if "LastRemoteHost" in JSON_job:
                         LastRemoteHost=JSON_job["LastRemoteHost"]
 
-                    #print "UPDATE"
+                    print("UPDATE")
                     #print LastRemoteHost
-                    updatejobstatus="UPDATE Attempts SET Status=\""+str(JOB_STATUS, "utf-8")+"\", ExitCode="+str(ExitCode, "utf-8")+", Start_Time="+"'"+str(datetime.fromtimestamp(float(Start_Time)), "utf-8")+"'"+", RunningLocation="+"'"+str(LastRemoteHost, "utf-8")+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize, "utf-8")+", RunIP='"+str(RunIP, "utf-8")+"' WHERE BatchJobID='"+str(job["BatchJobID"], "utf-8")+"';"
+                    updatejobstatus="UPDATE Attempts SET Status=\""+str(JOB_STATUS)+"\", ExitCode="+str(ExitCode)+", Start_Time="+"'"+str(datetime.fromtimestamp(float(Start_Time)))+"'"+", RunningLocation="+"'"+str(LastRemoteHost)+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+", RunIP='"+str(RunIP)+"' WHERE BatchJobID='"+str(job["BatchJobID"])+"';"
                     
                     if Completed_Time != 'NULL':
-                        updatejobstatus="UPDATE Attempts SET Status=\""+str(JOB_STATUS), "utf-8"+"\", ExitCode="+str(ExitCode, "utf-8")+", Start_Time="+"'"+str(datetime.fromtimestamp(float(Start_Time)), "utf-8")+"'"+", Completed_Time='"+str(datetime.fromtimestamp(float(Completed_Time)), "utf-8")+"'"+", RunningLocation="+"'"+str(LastRemoteHost, "utf-8")+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize, "utf-8")+", RunIP='"+str(RunIP, "utf-8")+"' WHERE BatchJobID='"+str(job["BatchJobID"], "utf-8")+"';"                    
+                        updatejobstatus="UPDATE Attempts SET Status=\""+str(JOB_STATUS)+"\", ExitCode="+str(ExitCode)+", Start_Time="+"'"+str(datetime.fromtimestamp(float(Start_Time)))+"'"+", Completed_Time='"+str(datetime.fromtimestamp(float(Completed_Time)))+"'"+", RunningLocation="+"'"+str(LastRemoteHost)+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+", RunIP='"+str(RunIP)+"' WHERE BatchJobID='"+str(job["BatchJobID"])+"';"                    
 
                     #print updatejobstatus
                     dbcursor.execute(updatejobstatus)
@@ -457,7 +457,7 @@ def main(argv):
 
         print(int(numprocesses_running))
         if(int(numprocesses_running) <2 or numOverRide):
-            dbcursor.execute("INSERT INTO MCOverlord (Host,StartTime,Status) VALUES ('"+str(socket.gethostname(), "utf-8")+"', NOW(), 'Running' )")
+            dbcursor.execute("INSERT INTO MCOverlord (Host,StartTime,Status) VALUES ('"+str(socket.gethostname())+"', NOW(), 'Running' )")
             dbcnx.commit()
             queryoverlords="SELECT MAX(ID) FROM MCOverlord;"
             dbcursor.execute(queryoverlords)
@@ -473,7 +473,7 @@ def main(argv):
             except Exception as e:
                 print("exception")
                 print(e)
-                dbcursor.execute("UPDATE MCOverlord SET Status=\"Fail\" where ID="+str(lastid[0]["MAX(ID)"]), "utf-8")
+                dbcursor.execute("UPDATE MCOverlord SET Status=\"Fail\" where ID="+str(lastid[0]["MAX(ID)"]))
                 dbcnx.commit()
                 pass
 
