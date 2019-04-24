@@ -304,7 +304,7 @@ def checkOSG():
             print(statuscommand)
             jsonOutputstr=subprocess.check_output(statuscommand.split(" "))
             #print "================"
-            print(jsonOutputstr)
+            #print(jsonOutputstr)
             #print "================"
             if( str(jsonOutputstr, "utf-8") != ""):
                 #print("JSONING")
@@ -380,7 +380,7 @@ def checkOSG():
                 print(historystatuscommand)
                 jsonOutputstr=subprocess.check_output(historystatuscommand.split(" "))
                 #print "================"
-                print(jsonOutputstr)
+                #print(jsonOutputstr)
                 #print "================"
                 if( str(jsonOutputstr, "utf-8") != ""):
                     JSON_jobar=json.loads(str(jsonOutputstr, "utf-8"))
@@ -421,7 +421,7 @@ def checkOSG():
                                 missingF=os.path.isfile(f)
                         if missingF == False:
                             JOB_STATUS=6
-                    print("RUN IP")
+                    
                     RunIP="NULL"
                     if "LastPublicClaimId" in JSON_job:
                         ipstr=str(JSON_job["LastPublicClaimId"])
@@ -433,7 +433,7 @@ def checkOSG():
                     if "LastRemoteHost" in JSON_job:
                         LastRemoteHost=JSON_job["LastRemoteHost"]
 
-                    print("UPDATE")
+                    
                     #print LastRemoteHost
                     updatejobstatus="UPDATE Attempts SET Status=\""+str(JOB_STATUS)+"\", ExitCode="+str(ExitCode)+", Start_Time="+"'"+str(datetime.fromtimestamp(float(Start_Time)))+"'"+", RunningLocation="+"'"+str(LastRemoteHost)+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+", RunIP='"+str(RunIP)+"' WHERE BatchJobID='"+str(job["BatchJobID"])+"';"
                     
