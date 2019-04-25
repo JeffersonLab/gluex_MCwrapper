@@ -71,28 +71,28 @@ def checkProjectsForCompletion():
         #print cpt
         print(filesToMove)
         
-        TOTCompletedQuery ="SELECT DISTINCT ID From Jobs WHERE Project_ID="+str(proj['ID'], "utf-8")+" && IsActive=1 && ID in (SELECT DISTINCT Job_ID FROM Attempts WHERE ExitCode = 0 && (Status ='4' || Status='success')  && ExitCode IS NOT NULL);" 
+        TOTCompletedQuery ="SELECT DISTINCT ID From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1 && ID in (SELECT DISTINCT Job_ID FROM Attempts WHERE ExitCode = 0 && (Status ='4' || Status='success')  && ExitCode IS NOT NULL);" 
         dbcursor.execute(TOTCompletedQuery)
         fulfilledJobs=dbcursor.fetchall()
 
-        TOTJobs="SELECT ID From Jobs WHERE Project_ID="+str(proj['ID'], "utf-8")+" && IsActive=1;"
+        TOTJobs="SELECT ID From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1;"
         dbcursor.execute(TOTJobs)
         AllActiveJobs=dbcursor.fetchall()
         print("=====================")
         print(proj['ID'])
         print(len(fulfilledJobs))
         print(len(AllActiveJobs))
-        
+        print("TO MOVE: "+str(filesToMove))
         if(len(fulfilledJobs)==len(AllActiveJobs) and len(AllActiveJobs) != 0 and filesToMove ==0):
             print("DONE")
 
-            getFinalCompleteTime="SELECT MAX(Completed_Time) FROM Attempts WHERE Job_ID IN (SELECT ID FROM Jobs WHERE Project_ID="+str(proj['ID'], "utf-8")+");"
-            #print getFinalCompleteTime
+            getFinalCompleteTime="SELECT MAX(Completed_Time) FROM Attempts WHERE Job_ID IN (SELECT ID FROM Jobs WHERE Project_ID="+str(proj['ID'])+");"
+            print(getFinalCompleteTime)
             dbcursor.execute(getFinalCompleteTime)
             finalTimeRes=dbcursor.fetchall()
             #print "============"
             #print finalTimeRes[0]["MAX(Completed_Time)"]
-            updateProjectstatus="UPDATE Project SET Completed_Time="+"'"+str(finalTimeRes[0]["MAX(Completed_Time)"], "utf-8")+"'"+ " WHERE ID="+str(proj['ID'], "utf-8")+";"
+            updateProjectstatus="UPDATE Project SET Completed_Time="+"'"+str(finalTimeRes[0]["MAX(Completed_Time)"])+"'"+ " WHERE ID="+str(proj['ID'])+";"
             print(updateProjectstatus)
             #print "============"
             dbcursor.execute(updateProjectstatus)
@@ -100,24 +100,27 @@ def checkProjectsForCompletion():
 
             #print "echo 'Your Project ID "+str(proj['ID'])+" has been completed.  Output may be found:\n"+proj['OutputLocation']+"' | mail -s 'GlueX MC Request #"+str(proj['ID'])+" Completed' "+str(proj['Email'])
             msg = EmailMessage()
-            msg.set_content('Your Project ID '+str(proj['ID'], "utf-8")+' has been completed.  Output may be found here:\n'+str(proj['OutputLocation'], "utf-8"))
+            msg.set_content('Your Project ID '+str(proj['ID'])+' has been completed.  Output may be found here:\n'+str(proj['OutputLocation']))
 
             # me == the sender's email address                                                                                                                                                                                 
             # you == the recipient's email address                                                                                                                                                                             
-            msg['Subject'] = 'GlueX MC Request #'+str(proj['ID'], "utf-8")+' Completed'
+            msg['Subject'] = 'GlueX MC Request #'+str(proj['ID'])+' Completed'
             msg['From'] = 'MCwrapper-bot'
-            msg['To'] = str(proj['Email'], "utf-8")
+            msg['To'] = str(proj['Email'])
 
             # Send the message via our own SMTP server.                                                                                                                                                                        
             s = smtplib.SMTP('localhost')
             s.send_message(msg)
             s.quit()
-            subprocess.call("echo 'Your Project ID "+str(proj['ID'], "utf-8")+" has been completed.  Output may be found here:\n"+proj['OutputLocation']+"' | mail -s 'GlueX MC Request #"+str(proj['ID'], "utf-8")+" Completed' "+str(proj['Email'], "utf-8"),shell=True)
-            sql_notified = "UPDATE Project Set Notified=1 WHERE ID="+str(proj['ID'], "utf-8")
+            #subprocess.call("echo 'Your Project ID "+str(proj['ID'])+" has been completed.  Output may be found here:\n"+proj['OutputLocation']+"' | mail -s 'GlueX MC Request #"+str(proj['ID'], "utf-8")+" Completed' "+str(proj['Email'], "utf-8"),shell=True)
+            sql_notified = "UPDATE Project Set Notified=1 WHERE ID="+str(proj['ID'])
             dbcursor.execute(sql_notified)
             dbcnx.commit()
         else:
-            updateProjectstatus="UPDATE Project SET Completed_Time=NULL WHERE ID="+str(proj['ID'], "utf-8")+";"
+            #print("ELSE")
+            #print(proj['ID'])
+            updateProjectstatus="UPDATE Project SET Completed_Time=NULL WHERE ID="+str(proj['ID'])+";"
+            #print(updateProjectstatus)
             dbcursor.execute(updateProjectstatus)
             dbcnx.commit()
 
@@ -265,7 +268,7 @@ def UpdateOutputSize():
     for pr in Projects:
         id=pr["ID"]
         #print "Updating size for: "+str(id)
-        querygetLoc="SELECT * FROM Project WHERE ID="+str(id, "utf-8")+";"
+        querygetLoc="SELECT * FROM Project WHERE ID="+str(id)+";"
         #print querygetLoc
         dbcursor.execute(querygetLoc)
         Project = dbcursor.fetchall()
@@ -276,12 +279,12 @@ def UpdateOutputSize():
 
         try:
             statuscommand="du -sh --exclude \".*\" --total "+location
-            #print statuscommand
+            print(statuscommand)
             totalSizeStr=subprocess.check_output([statuscommand], shell=True)
             #print "==============="
             #print totalSizeStr.split("\n")[1].split("total")[0]
 
-            updateProjectSizeOut="UPDATE Project SET TotalSizeOut=\""+totalSizeStr.split("\n")[1].split("total")[0]+"\" WHERE ID="+str(id, "utf-8")
+            updateProjectSizeOut="UPDATE Project SET TotalSizeOut=\""+totalSizeStr.split("\n")[1].split("total")[0]+"\" WHERE ID="+str(id)
             dbcursor.execute(updateProjectSizeOut)
             dbcnx.commit()
         except:
@@ -388,7 +391,7 @@ def checkOSG():
                     if JSON_jobar == []:
                         continue
                     JSON_job=JSON_jobar[0]
-                    print("Exit code")
+                    
                     ExitCode="NULL"
                     if (JSON_job["JobStatus"]!=3 and "ExitCode" in JSON_job):
                         ExitCode=str(JSON_job["ExitCode"])
@@ -468,7 +471,7 @@ def main(argv):
                 checkOSG()
                 UpdateOutputSize()
                 checkProjectsForCompletion()
-                dbcursor.execute("UPDATE MCOverlord SET EndTime=NOW(), Status=\"Success\" where ID="+str(lastid[0]["MAX(ID)"]), "utf-8")
+                dbcursor.execute("UPDATE MCOverlord SET EndTime=NOW(), Status=\"Success\" where ID="+str(lastid[0]["MAX(ID)"]))
                 dbcnx.commit()
             except Exception as e:
                 print("exception")
