@@ -43,7 +43,7 @@ except:
         pass
 
 MCWRAPPER_VERSION="2.1.1"
-MCWRAPPER_DATE="04/23/19"
+MCWRAPPER_DATE="04/26/19"
 
 def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID):
         # PREPARE NAMES
@@ -53,6 +53,10 @@ def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,N
         # CREATE ADD-JOB COMMAND
         # job
         #try removing the name specification
+
+        mkdircom="mkdir -p "+DATA_OUTPUT_BASE_DIR+"/log/"
+        status = subprocess.call(mkdircom, shell=True)
+
         add_command = "swif add-job -workflow " + WORKFLOW #+ " -name " + JOBNAME
         # project/track
         add_command += " -project " + PROJECT + " -track " + TRACK

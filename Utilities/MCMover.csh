@@ -39,19 +39,20 @@ if [[ `ps all -u tbritton | grep MCMover.csh | grep -v grep | wc -l` == 2 ]]; th
             sleep 1
         done
     done
-    exit
+
     cd $output_dir
     # make list of files in the output directory
     find . -type f | sort > /tmp/output_files_list.txt
     cd $input_dir
     # make list of files in the input directory
     find . -type f -mmin +120 | sort > /tmp/input_files_list.txt
+    echo `comm -12 /tmp/input_files_list.txt /tmp/output_files_list.txt`
     if [[ `comm -12 /tmp/input_files_list.txt /tmp/output_files_list.txt | wc -l` != 0 ]]; then
         comm -12 /tmp/input_files_list.txt /tmp/output_files_list.txt | xargs rm -v
     fi
 
     #clean empty directories
-    find $input_dir -depth -empty -type d mmin -2880 -exec rmdir {} \;
+    #find $input_dir -depth -empty -type d mmin -2880 -exec rmdir {} \;
     
 else
     echo "too many running"
