@@ -67,7 +67,14 @@ def checkProjectsForCompletion():
 
         print("~~~~~~~~~~~~~~~~~~")
         #print locparts[len(locparts)-2]
-        filesToMove = sum([len(files) for r, d, files in os.walk(outdir_root+locparts[len(locparts)-2])])
+        for r, dirs, files in os.walk(outdir_root+locparts[len(locparts)-2]) : 
+            files = [f for f in files if not f[0] == '.']
+            dirs[:] = [d for d in dirs if not d[0] == '.']
+
+        print(len(files))
+        print(dirs)
+
+        filesToMove = len(files) #sum([len(files) for r, d, files in os.walk(outdir_root+locparts[len(locparts)-2])])
         #print cpt
         print(filesToMove)
         
@@ -80,6 +87,7 @@ def checkProjectsForCompletion():
         AllActiveJobs=dbcursor.fetchall()
         print("=====================")
         print(proj['ID'])
+        print(proj['OutputLocation'])
         print(len(fulfilledJobs))
         print(len(AllActiveJobs))
         print("TO MOVE: "+str(filesToMove))
