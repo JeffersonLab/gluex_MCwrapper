@@ -28,7 +28,7 @@ if [[ `ps all -u tbritton | grep MCMover.csh | grep -v grep | wc -l` == 2 ]]; th
         echo $projpath
         mkdir -p $output_dir/$projpath/
         
-        rsync_command="rsync -prRuvt $dir/* $output_dir/$projpath/" #--exclude $input_dir/slag"
+        rsync_command="rsync -pruvt $dir/ $output_dir/$projpath/ --exclude $input_dir/slag"
         echo $rsync_command
         status="255"
         while [ "$status" -eq "255" ]
