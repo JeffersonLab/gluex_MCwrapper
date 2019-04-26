@@ -51,7 +51,7 @@ if [[ `ps all -u tbritton | grep MCMover.csh | grep -v grep | wc -l` == 2 ]]; th
     fi
 
     #clean empty directories
-    find $input_dir -depth -empty -type d -exec rmdir {} \;
+    find $input_dir -depth -empty -type d mmin -960 -exec rmdir {} \;
     
 else
     echo "too many running"
