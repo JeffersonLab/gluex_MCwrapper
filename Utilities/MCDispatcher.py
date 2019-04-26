@@ -115,20 +115,20 @@ def AutoLaunch():
     #print rows
     #print len(rows)
     for row in rows:
-        commands_to_call="source /group/halld/Software/build_scripts/gluex_env_boot_jlab.sh;"
-        commands_to_call+="gxclean;"
+        #commands_to_call="source /group/halld/Software/build_scripts/gluex_env_boot_jlab.sh;"
+        #commands_to_call+="gxclean;"
         #subprocess.call("source /group/halld/Software/build_scripts/gluex_env_boot_jlab.sh;",shell=True)                                                                                                          
         #subprocess.call("gxclean",shell=True)                                                                                                                                                                     
-        commands_to_call+="source /group/halld/Software/build_scripts/gluex_env_jlab.sh /group/halld/www/halldweb/html/dist/"+str(row["VersionSet"])+";"
-        commands_to_call+="export MCWRAPPER_CENTRAL=/osgpool/halld/tbritton/gluex_MCwrapper/;"
-        commands_to_call+="export PATH=/apps/bin:${PATH};"
-        subprocess.call(commands_to_call,shell=True)
+        #commands_to_call+="source /group/halld/Software/build_scripts/gluex_env_jlab.sh /group/halld/www/halldweb/html/dist/"+str(row["VersionSet"])+";"
+        #commands_to_call+="export MCWRAPPER_CENTRAL=/osgpool/halld/tbritton/gluex_MCwrapper/;"
+        #commands_to_call+="export PATH=/apps/bin:${PATH};"
+        #subprocess.call(commands_to_call,shell=True)
 
         status=[]
         status.append(-1)
         status.append(-1)
         if(row['Tested'] !=1):
-            status=TestProject(row['ID'])
+            status=TestProject(row['ID'],str(row["VersionSet"]))
         else:
             status[0]=0
             status[1]=0
@@ -353,8 +353,25 @@ def CheckGenConfig(order):
 
     return "True"
 
+def source(script, update=True):
+    """                                                                                                                                                                                                            
+    http://pythonwise.blogspot.fr/2010/04/sourcing-shell-script.html (Miki Tebeka)                                                                                                                                 
+    http://stackoverflow.com/questions/3503719/#comment28061110_3505826 (ahal)                                                                                                                                     
+    """
+    import subprocess
+    import os
+    proc = subprocess.Popen(
+        ['bash', '-c', 'set -a && source {} && env -0'.format(script)],
+        stdout=subprocess.PIPE, shell=False)
+    output, err = proc.communicate()
+    output = output.decode('utf8')
+    env = dict((line.split("=", 1) for line in output.split('\x00') if line))
+    if update:
+        os.environ.update(env)
+    return env
 
-def TestProject(ID,commands_to_call=""):
+
+def TestProject(ID,versionSet,commands_to_call=""):
     subprocess.call("rm -f MCDispatched.config", shell=True)
     print("TESTING PROJECT "+str(ID))
     query = "SELECT * FROM Project WHERE ID="+str(ID)
@@ -396,8 +413,12 @@ def TestProject(ID,commands_to_call=""):
     command="$MCWRAPPER_CENTRAL/gluex_MC.py MCDispatched.config "+str(RunNumber)+" "+str(10)+" per_file=250000 base_file_number=0"+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=0"
     print(command)
     STATUS=-1
-   # print (command+command2).split(" ")
-    p = Popen(commands_to_call+command, stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True)
+    # print (command+command2).split(" ")
+    my_env=None
+    if(versionSet != ""):
+        my_env=source("/group/halld/Software/build_scripts/gluex_env_jlab.sh /group/halld/www/halldweb/html/dist/"+versionSet)
+        
+    p = Popen(commands_to_call+command, env=my_env ,stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True)
     #print p
     #print "p defined"
     output, errors = p.communicate()
@@ -708,7 +729,7 @@ def main(argv):
         elif MODE == "VIEW":
             ListUnDispatched()
         elif MODE == "TEST":
-            TestProject(ID)
+            TestProject(ID,"")
         elif MODE == "RETRYJOB":
             RetryJob(ID)
         elif MODE == "RETRYJOBS":
