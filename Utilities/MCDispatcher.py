@@ -417,7 +417,8 @@ def TestProject(ID,versionSet,commands_to_call=""):
     my_env=None
     if(versionSet != ""):
         my_env=source("/group/halld/Software/build_scripts/gluex_env_jlab.sh /group/halld/www/halldweb/html/dist/"+versionSet)
-        
+        my_env["MCWRAPPER_CENTRAL"]="/osgpool/halld/tbritton/gluex_MCwrapper/"
+
     p = Popen(commands_to_call+command, env=my_env ,stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True)
     #print p
     #print "p defined"
