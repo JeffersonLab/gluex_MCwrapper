@@ -28,7 +28,7 @@ if [[ `ps all -u tbritton | grep MCMover.csh | grep -v grep | wc -l` == 2 ]]; th
         echo $projpath
         mkdir -p $output_dir/$projpath/
         
-        rsync_command="rsync -pruvt $dir/ $output_dir/$projpath/ --exclude $input_dir/slag"
+        rsync_command="rsync -pruvt $dir/ $output_dir/$projpath/" #--exclude $input_dir/slag"
         echo $rsync_command
         status="255"
         while [ "$status" -eq "255" ]
@@ -49,6 +49,9 @@ if [[ `ps all -u tbritton | grep MCMover.csh | grep -v grep | wc -l` == 2 ]]; th
     if [[ `comm -12 /tmp/input_files_list.txt /tmp/output_files_list.txt | wc -l` != 0 ]]; then
         comm -12 /tmp/input_files_list.txt /tmp/output_files_list.txt | xargs rm -v
     fi
+
+    #clean empty directories
+    find $input_dir -depth -empty -type d -exec rmdir {} \;
     
 else
     echo "too many running"
