@@ -151,7 +151,7 @@ fi
 
 cd $RUNNING_DIR/${RUN_NUMBER}_${FILE_NUMBER}
 
-if [[ "$ccdbSQLITEPATH" != "no_sqlite" && "$ccdbSQLITEPATH" != "batch_default" ]]; then
+if [[ "$ccdbSQLITEPATH" != "no_sqlite" && "$ccdbSQLITEPATH" != "batch_default" && "$ccdbSQLITEPATH" != "jlab_batch_default" ]]; then
 	if [[ `$USER_STAT --file-system --format=%T $PWD` == "lustre" ]]; then
 		echo "Attempting to use sqlite on a lustre file system. This does not work.  Try running on a different file system!"
 		exit 1
@@ -162,6 +162,16 @@ if [[ "$ccdbSQLITEPATH" != "no_sqlite" && "$ccdbSQLITEPATH" != "batch_default" ]
 elif [[ "$ccdbSQLITEPATH" == "batch_default" ]]; then
     export CCDB_CONNECTION=sqlite:////group/halld/www/halldweb/html/dist/ccdb.sqlite
     export JANA_CALIB_URL=${CCDB_CONNECTION}
+elif [[ "$ccdbSQLITEPATH" == "jlab_batch_default" ]]; then
+		ccdb_jlab_sqlite_path=`echo $((1 + RANDOM % 100))`
+		if ( -f /work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite ) then
+			export CCDB_CONNECTION=sqlite:////work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite
+		else
+			export CCDB_CONNECTION=mysql://ccdb_user@hallddb.jlab.org/ccdb
+		endif
+
+    export JANA_CALIB_URL=${CCDB_CONNECTION}
+
 fi
 
 if [[ "$rcdbSQLITEPATH" != "no_sqlite" && "$rcdbSQLITEPATH" != "batch_default" ]]; then

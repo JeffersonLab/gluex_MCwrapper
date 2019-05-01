@@ -148,7 +148,7 @@ endif
 
 cd $RUNNING_DIR/${RUN_NUMBER}_${FILE_NUMBER}
 
-if ( "$ccdbSQLITEPATH" != "no_sqlite" && "$ccdbSQLITEPATH" != "batch_default" ) then
+if ( "$ccdbSQLITEPATH" != "no_sqlite" && "$ccdbSQLITEPATH" != "batch_default" && "$ccdbSQLITEPATH" != "jlab_batch_default" ) then
 	if (`$USER_STAT --file-system --format=%T $PWD` == "lustre" ) then
 		echo "Attempting to use sqlite on a lustre file system. This does not work.  Try running on a different file system!"
 		exit 1
@@ -158,6 +158,15 @@ if ( "$ccdbSQLITEPATH" != "no_sqlite" && "$ccdbSQLITEPATH" != "batch_default" ) 
     setenv JANA_CALIB_URL ${CCDB_CONNECTION}
 else if ( "$ccdbSQLITEPATH" == "batch_default" ) then
     setenv CCDB_CONNECTION sqlite:////group/halld/www/halldweb/html/dist/ccdb.sqlite
+    setenv JANA_CALIB_URL ${CCDB_CONNECTION}
+else if ( "$ccdbSQLITEPATH" == "jlab_batch_default" ) then
+		set ccdb_jlab_sqlite_path=`bash -c 'echo $((1 + RANDOM % 100))'`
+		if ( -f /work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite ) then
+			setenv CCDB_CONNECTION sqlite:////work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite
+		else
+			setenv CCDB_CONNECTION mysql://ccdb_user@hallddb.jlab.org/ccdb
+		endif
+
     setenv JANA_CALIB_URL ${CCDB_CONNECTION}
 endif
 
@@ -185,7 +194,7 @@ if ( "$RADIATOR_THICKNESS" != "rcdb" || ( "$VERSION" != "mc" && "$VERSION" != "m
     set radthick=$RADIATOR_THICKNESS
 else
 	set words = `rcnd $RUN_NUMBER radiator_type | sed 's/ / /g' `
-	foreach word ($words:q)	
+	foreach word ($words:q)
 
 		if ( $word != "number" ) then
 

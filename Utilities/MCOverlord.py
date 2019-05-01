@@ -468,25 +468,26 @@ def main(argv):
 
         print(int(numprocesses_running))
         if(int(numprocesses_running) <2 or numOverRide):
-            dbcursor.execute("INSERT INTO MCOverlord (Host,StartTime,Status) VALUES ('"+str(socket.gethostname())+"', NOW(), 'Running' )")
-            dbcnx.commit()
-            queryoverlords="SELECT MAX(ID) FROM MCOverlord;"
-            dbcursor.execute(queryoverlords)
-            lastid = dbcursor.fetchall()
-            #print lastid
-            try:
-                checkSWIF()
-                checkOSG()
-                UpdateOutputSize()
-                checkProjectsForCompletion()
-                dbcursor.execute("UPDATE MCOverlord SET EndTime=NOW(), Status=\"Success\" where ID="+str(lastid[0]["MAX(ID)"]))
+            while(1):
+                dbcursor.execute("INSERT INTO MCOverlord (Host,StartTime,Status) VALUES ('"+str(socket.gethostname())+"', NOW(), 'Running' )")
                 dbcnx.commit()
-            except Exception as e:
-                print("exception")
-                print(e)
-                dbcursor.execute("UPDATE MCOverlord SET Status=\"Fail\" where ID="+str(lastid[0]["MAX(ID)"]))
-                dbcnx.commit()
-                pass
+                queryoverlords="SELECT MAX(ID) FROM MCOverlord;"
+                dbcursor.execute(queryoverlords)
+                lastid = dbcursor.fetchall()
+                #print lastid
+                try:
+                    checkSWIF()
+                    checkOSG()
+                    UpdateOutputSize()
+                    checkProjectsForCompletion()
+                    dbcursor.execute("UPDATE MCOverlord SET EndTime=NOW(), Status=\"Success\" where ID="+str(lastid[0]["MAX(ID)"]))
+                    dbcnx.commit()
+                except Exception as e:
+                    print("exception")
+                    print(e)
+                    dbcursor.execute("UPDATE MCOverlord SET Status=\"Fail\" where ID="+str(lastid[0]["MAX(ID)"]))
+                    dbcnx.commit()
+                    pass
 
 
         dbcnx.close()
