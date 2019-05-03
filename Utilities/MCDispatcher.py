@@ -108,21 +108,13 @@ def AutoLaunch():
     DeclareAllComplete()
     RetryAllJobs()
 
-    query = "SELECT ID,Email,VersionSet,Tested,UName FROM Project WHERE (Tested = 0 || Tested=1) && Dispatched_Time is NULL ORDER BY (SELECT Priority from Users where name=UName) DESC;"
+    query = "SELECT ID,Email,VersionSet,Tested,UName FROM Project WHERE (Tested = 0) && Dispatched_Time is NULL ORDER BY (SELECT Priority from Users where name=UName) DESC;"
     #print query
     curs.execute(query) 
     rows=curs.fetchall()
     #print rows
     #print len(rows)
     for row in rows:
-        #commands_to_call="source /group/halld/Software/build_scripts/gluex_env_boot_jlab.sh;"
-        #commands_to_call+="gxclean;"
-        #subprocess.call("source /group/halld/Software/build_scripts/gluex_env_boot_jlab.sh;",shell=True)                                                                                                          
-        #subprocess.call("gxclean",shell=True)                                                                                                                                                                     
-        #commands_to_call+="source /group/halld/Software/build_scripts/gluex_env_jlab.sh /group/halld/www/halldweb/html/dist/"+str(row["VersionSet"])+";"
-        #commands_to_call+="export MCWRAPPER_CENTRAL=/osgpool/halld/tbritton/gluex_MCwrapper/;"
-        #commands_to_call+="export PATH=/apps/bin:${PATH};"
-        #subprocess.call(commands_to_call,shell=True)
 
         status=[]
         status.append(-1)
@@ -135,19 +127,21 @@ def AutoLaunch():
             status[2]=0
         #print "STATUS IS"
         #print status[0]
-        #print status[1]
+        print("JUST TESTED")
         if(status[1]!=-1):
             #print "TEST success"
             #EMAIL SUCCESS AND DISPATCH
+            print("YAY TESTED")
             subprocess.call("/osgpool/halld/tbritton/gluex_MCwrapper/Utilities/MCDispatcher.py dispatch -rlim -sys OSG "+str(row['ID']),shell=True)
         else:
+            print("BOO TESTED")
             #EMAIL FAIL AND LOG
             #print("echo 'Your Project ID "+str(row['ID'])+" failed the to properly test.  The log information is reproduced below:\n\n\n"+status[0]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+str(row['Email']))
             try:
-                print("MAILING")
+                print("MAILING\n")
                 msg = EmailMessage()
 
-                msg.set_content('Your Project ID '+str(row['ID'])+' failed the test.  Please correct this issue by following the link: '+'https://halldweb.jlab.org/gluex_sim/SubmitSim.html?prefill='+str(row['ID'])+'&mod=1'+'.  Do NOT resubmit this request.  Write tbritton@jlab.org for additional assistance\n\n The log information is reproduced below:\n\n\n'+str(status[0], "utf-8")+'\n\n\nErrors:\n\n\n'+str(status[2], "utf-8"))
+                msg.set_content('Your Project ID '+str(row['ID'])+' failed the test.  Please correct this issue by following the link: '+'https://halldweb.jlab.org/gluex_sim/SubmitSim.html?prefill='+str(row['ID'])+'&mod=1'+'.  Do NOT resubmit this request.  Write tbritton@jlab.org for additional assistance\n\n The log information is reproduced below:\n\n\n'+str(status[0])+'\n\n\nErrors:\n\n\n'+str(status[2]))
                 print("SET CONTENT")
                 msg['Subject'] = 'Project ID #'+str(row['ID'])+' Failed to test properly'
                 print("SET SUB")
@@ -164,8 +158,10 @@ def AutoLaunch():
                 s.quit()            
                 #subprocess.call("echo 'Your Project ID "+str(row['ID'])+" failed the test.  Please correct this issue by following the link: "+"https://halldweb.jlab.org/gluex_sim/SubmitSim.html?prefill="+str(row['ID'])+"&mod=1" +" .  Do NOT resubmit this request.  Write tbritton@jlab.org for additional assistance\n\n The log information is reproduced below:\n\n\n"+status[0]+"\n\n\n"+status[2]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+str(row['Email']),shell=True)
             except:
+                print("UH OH MAILING")
                 log = open("/osgpool/halld/tbritton/"+str(row['ID'])+".err", "w+")
-                log.write("this was broke: \n" + status[0])
+                log.write("this was broke: \n" + str(status[2]))
+                log.write("this was broke: \n" + str(status[0]))
                 log.close()
             
             #subprocess.call("echo 'Your Project ID "+str(row['ID'])+" failed the test.  Please correct this issue and do NOT resubmit this request.  Write tbritton@jlab.org for assistance or if you are ready for a retest.\n\n The log information is reproduced below:\n\n\n"+status[0]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+"tbritton@jlab.org",shell=True)
