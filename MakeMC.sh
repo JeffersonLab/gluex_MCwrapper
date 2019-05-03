@@ -130,8 +130,6 @@ if [[ "$BATCHRUN" != "0" ]]; then
     # ENVIRONMENT
     echo $ENVIRONMENT
 
-    
-    
     echo pwd=$PWD
     mkdir -p $OUTDIR
     mkdir -p $OUTDIR/log
@@ -168,7 +166,7 @@ elif [[ "$ccdbSQLITEPATH" == "jlab_batch_default" ]]; then
 			export CCDB_CONNECTION=sqlite:////work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite
 		else
 			export CCDB_CONNECTION=mysql://ccdb_user@hallddb.jlab.org/ccdb
-		endif
+		fi
 
     export JANA_CALIB_URL=${CCDB_CONNECTION}
 
