@@ -62,10 +62,12 @@ def checkProjectsForCompletion():
     outdir_root="/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/"
 
     for proj in OutstandingProjects:
-        #print proj['ID']
+        print(proj['ID'])
         locparts=proj['OutputLocation'].split("/")
 
         print("~~~~~~~~~~~~~~~~~~")
+        files=[]
+        dirs=[]
         #print locparts[len(locparts)-2]
         for r, dirs, files in os.walk(outdir_root+locparts[len(locparts)-2]) : 
             files = [f for f in files if not f[0] == '.']
@@ -153,7 +155,7 @@ def checkSWIF():
             ProjID=workflow["ID"]
             projIDs.append(ProjID)
             #statuscommand="swif status -workflow "+str("pim_g3_1_70_v2_20180718011203pm")+" -jobs -display json"
-            statuscommand="/site/bin/swif status -workflow "+str(wkflowname, "utf-8")+" -jobs -display json"
+            statuscommand="/site/bin/swif status -workflow "+str(wkflowname)+" -jobs -display json"
             #print statuscommand
             jsonOutputstr=subprocess.check_output(statuscommand.split(" "))
             ReturnedJobs=json.loads(str(jsonOutputstr, "utf-8"))
@@ -267,7 +269,6 @@ def checkSWIF():
 
 
 def UpdateOutputSize():
-
     getUntotaled="SELECT ID FROM Project WHERE Completed_Time IS NULL && Is_Dispatched != '0';"
     #print querygetLoc
     dbcursor.execute(getUntotaled)

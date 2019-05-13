@@ -564,6 +564,13 @@ def DispatchToSWIF(ID,order,PERCENT):
     else:
         print("All jobs submitted for this order")
 
+def WriteConfig(ID):
+    query = "SELECT * FROM Project WHERE ID="+str(ID)
+    curs.execute(query) 
+    rows=curs.fetchall()
+
+    status = subprocess.call("cp $MCWRAPPER_CENTRAL/examples/SWIFShell.config ./MCDispatched.config", shell=True)
+    WritePayloadConfig(rows[0],"True")
 
 def WritePayloadConfig(order,foundConfig):
     
@@ -738,6 +745,8 @@ def main(argv):
             AutoLaunch()
         elif MODE == "REMOVEJOBS":
             RemoveAllJobs()
+        elif MODE == "WRITECONFIG":
+            WriteConfig(ID)
         else:
             print("MODE NOT FOUND")
 

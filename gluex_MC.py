@@ -43,7 +43,7 @@ except:
         pass
 
 MCWRAPPER_VERSION="2.1.1"
-MCWRAPPER_DATE="05/03/19"
+MCWRAPPER_DATE="05/13/19"
 
 def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID):
         # PREPARE NAMES
@@ -56,6 +56,7 @@ def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,N
 
         mkdircom="mkdir -p "+DATA_OUTPUT_BASE_DIR+"/log/"
         status = subprocess.call(mkdircom, shell=True)
+        
 
         add_command = "swif add-job -workflow " + WORKFLOW #+ " -name " + JOBNAME
         # project/track
@@ -973,6 +974,7 @@ def main(argv):
                                 print len(MYJOB) 
                         if len(MYJOB) == 0:
                                 if BATCHSYS.upper()=="SWIF":
+                                        status = subprocess.call("swif create "+WORKFLOW,shell=True)
                                         swif_add_job(WORKFLOW, RUNNUM, BASEFILENUM,str(indir),COMMAND_dict,VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID)
                                 elif BATCHSYS.upper()=="QSUB":
                                         qsub_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, RAM, QUEUENAME, LOG_DIR, PROJECT_ID )
@@ -1071,6 +1073,7 @@ def main(argv):
                                                         print len(MYJOB) 
                                                 if len(MYJOB) == 0:
                                                         if BATCHSYS.upper()=="SWIF":
+                                                                status = subprocess.call("swif create "+WORKFLOW,shell=True)
                                                                 swif_add_job(WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1,str(indir),COMMAND_dict,VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID)
                                                         elif BATCHSYS.upper()=="QSUB":
                                                                 qsub_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, RAM, QUEUENAME, LOG_DIR, PROJECT_ID )
@@ -1113,6 +1116,7 @@ def main(argv):
                                                 print len(MYJOB) 
                                         if len(MYJOB) == 0:
                                                 if BATCHSYS.upper()=="SWIF":
+                                                        status = subprocess.call("swif create "+WORKFLOW,shell=True)
                                                         swif_add_job(WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1,str(indir),COMMAND_dict,VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID)
                                                 elif BATCHSYS.upper()=="QSUB":
                                                         qsub_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, RAM, QUEUENAME, LOG_DIR, PROJECT_ID )
