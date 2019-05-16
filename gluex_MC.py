@@ -319,8 +319,8 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DAT
                 exit(1)
 
 
-        
         mkdircom2="mkdir -p "+LOG_DIR+"/log/"
+        print(mkdircom2)
         status2 = subprocess.call(mkdircom2, shell=True)
         status = subprocess.call(mkdircom, shell=True)
         
@@ -342,8 +342,8 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DAT
                         print "THE TIMELINE HAS BEEN FRACTURED. TERMINATING SUBMITS AND SHUTTING THE ROBOT DOWN!!!"
                         f=open("/osgpool/halld/tbritton/.ALLSTOP","x")
                         exit(1)
-
-        status = subprocess.call("rm MCOSG.submit", shell=True)
+                        
+        #status = subprocess.call("rm MCOSG.submit", shell=True)
         
         #print "DECIDING IF FIRST JOB"
         #print PROJECT_ID
