@@ -112,6 +112,8 @@ shift
 setenv eBEAM_CURRENT $1
 shift
 setenv EXPERIMENT $1
+shift
+setenv RANDOM_TRIG_NUM_EVT $1
 
 setenv USER_BC `which bc`
 setenv USER_PYTHON `which python`
@@ -122,7 +124,16 @@ setenv USER_BC '/usr/bin/bc'
 setenv USER_STAT '/usr/bin/stat'
 endif
 
-
+setenv XRD_RANDOMS_URL root://nod25.phys.uconn.edu/Gluex/rawdata/
+setenv MAKE_MC_USING_XROOTD 0
+if ( -f /usr/lib64/libXrdPosixPreload.so ) then
+	setenv MAKE_MC_USING_XROOTD 1
+	setenv LD_PRELOAD /usr/lib64/libXrdPosixPreload.so
+	set con_test=`xrdfs $XRD_RANDOMS_URL ls`
+	if ( "$con_test" == "" ) then
+		setenv MAKE_MC_USING_XROOTD 0
+	endif
+endif
 
 #necessary to run swif, uses local directory if swif=0 is used
 if ( "$BATCHRUN" != "0"  ) then
@@ -369,6 +380,7 @@ echo ""
 echo "=======SOFTWARE USED======="
 echo "MCwrapper version v"$MCWRAPPER_VERSION
 echo "MCwrapper location" $MCWRAPPER_CENTRAL
+echo "Streaming via xrootd? "$MAKE_MC_USING_XROOTD "Event Count: "$RANDOM_TRIG_NUM_EVT
 echo "BC "$USER_BC
 echo "python "$USER_PYTHON
 echo `which $GENERATOR`
@@ -515,11 +527,11 @@ if ( "$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" == "
 		endif
 	endif
 	
-    if ( ! -f $bkglocstring ) then
+  if ( ! -f $bkglocstring && $MAKE_MC_USING_XROOTD == 0 ) then
 		echo "something went wrong with initialization"
 		echo "Could not find mix-in file "$bkglocstring
 		exit 1
-    endif
+  endif
 endif
 
 set recon_pre=`echo $CUSTOM_PLUGINS | cut -c1-4`
@@ -1088,32 +1100,49 @@ if ( "$GENR" != "0" ) then
 			set mcsmear_return_code=$status
 	    else if ( "$BKGFOLDSTR" == "DEFAULT" || "$BKGFOLDSTR" == "Random" ) then
 			rm -f count.py
+			if ( $RANDOM_TRIG_NUM_EVT == -1 ) then
 	    	echo "import hddm_s" > count.py
 	    	echo "print(sum(1 for r in hddm_s.istream('$bkglocstring')))" >>! count.py
 	    	set totalnum=`$USER_PYTHON count.py`
 	    	rm count.py
+			else
+				set totalnum=$RANDOM_TRIG_NUM_EVT
+			endif
+
 			set fold_skip_num=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
 			#set bkglocstring="/w/halld-scifs17exp/halld2/home/tbritton/MCwrapper_Development/converted.hddm"
 			
 			echo "mcsmear "$MCSMEAR_Flags" -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
+			if ( $MAKE_MC_USING_XROOTD == 0 ) then
 				mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
+			else
+				echo "mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm:1+$fold_skip_num"
+				mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm\:1\+$fold_skip_num
+			endif
 			set mcsmear_return_code=$status
 		else if ( "$bkgloc_pre" == "loc:" ) then
 			rm -f count.py
+			if ( $RANDOM_TRIG_NUM_EVT == -1 ) then
 	    	echo "import hddm_s" > count.py
 	    	echo "print(sum(1 for r in hddm_s.istream('$bkglocstring')))" >>! count.py
 	    	set totalnum=`$USER_PYTHON count.py`
 	    	rm count.py
+			else
+				set totalnum=$RANDOM_TRIG_NUM_EVT
+			endif
 			set fold_skip_num=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
+			
 			echo "mcsmear "$MCSMEAR_Flags" -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
 			mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
 			set mcsmear_return_code=$status
-	    else
+	    
+			else
 			#trust the user and use their string
 			echo 'mcsmear '$MCSMEAR_Flags' -PTHREAD_TIMEOUT=500 -o'$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm'' '$STANDARD_NAME'_geant'$GEANTVER'.hddm'' '$BKGFOLDSTR
 			mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' $STANDARD_NAME'_geant'$GEANTVER'.hddm' $BKGFOLDSTR
 			set mcsmear_return_code=$status
-	    endif
+	    
+			endif
 		if ( $mcsmear_return_code != 0 ) then
 			echo
 			echo

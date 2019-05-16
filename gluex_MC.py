@@ -36,14 +36,16 @@ import re
 import subprocess
 from subprocess import call
 import glob
+import hddm_s
+import socket
 try:
         dbcnx = mysql.connector.connect(user='mcuser', database='gluex_mc', host='hallddb.jlab.org')
         dbcursor = dbcnx.cursor()
 except:
         pass
 
-MCWRAPPER_VERSION="2.1.1"
-MCWRAPPER_DATE="05/13/19"
+MCWRAPPER_VERSION="2.2.0"
+MCWRAPPER_DATE="05/16/19"
 
 def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID):
         # PREPARE NAMES
@@ -237,7 +239,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DAT
                 COMMAND_parts['generator']="file:/srv/"+filegen_parts[len(filegen_parts)-1]
         
 
-        if COMMAND_parts['background_to_include'] == "Random" or COMMAND_parts['background_to_include'][:4] == "loc:":
+        if (COMMAND_parts['background_to_include'] == "Random" and COMMAND_parts['num_rand_trigs'] == -1 ) or COMMAND_parts['background_to_include'][:4] == "loc:":
                 formattedRUNNUM=""
                 for i in range(len(str(RUNNUM)),6):
                         formattedRUNNUM+="0"
@@ -304,7 +306,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DAT
         f.write("Arguments  = "+"./"+script_to_use+" "+getCommandString(COMMAND_parts)+"\n")
         f.write("Requirements = (HAS_SINGULARITY == TRUE) && (HAS_CVMFS_oasis_opensciencegrid_org == True)"+"\n") 
         #f.write('wantjobrouter=true'+"\n")
-        f.write('+SingularityImage = "/cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_devel:latest"'+"\n") 
+        f.write('+SingularityImage = "/cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest"'+"\n") 
         f.write('+SingularityBindCVMFS = True'+"\n") 
         f.write('+SingularityAutoLoad = True'+"\n") 
         f.write('should_transfer_files = YES'+"\n")
@@ -473,7 +475,7 @@ def recordAttempt(JOB_ID,RUNNO,FILENO,BatchSYS,BatchJobID, NUMEVTS,NCORES, RAM):
         dbcnx.commit()
 
 def getCommandString(COMMAND):
-        return COMMAND['batchrun']+" "+COMMAND['environment_file']+" "+COMMAND['generator_config']+" "+COMMAND['output_directory']+" "+COMMAND['run_number']+" "+COMMAND['file_number']+" "+COMMAND['num_events']+" "+COMMAND['jana_calib_context']+" "+COMMAND['jana_calibtime']+" "+COMMAND['do_gen']+" "+COMMAND['do_geant']+" "+COMMAND['do_mcsmear']+" "+COMMAND['do_recon']+" "+COMMAND['clean_gen']+" "+COMMAND['clean_geant']+" "+COMMAND['clean_mcsmear']+" "+COMMAND['clean_recon']+" "+COMMAND['batch_system']+" "+COMMAND['num_cores']+" "+COMMAND['generator']+" "+COMMAND['geant_version']+" "+COMMAND['background_to_include']+" "+COMMAND['custom_Gcontrol']+" "+COMMAND['eBeam_energy']+" "+COMMAND['coherent_peak']+" "+COMMAND['min_generator_energy']+" "+COMMAND['max_generator_energy']+" "+COMMAND['custom_tag_string']+" "+COMMAND['custom_plugins']+" "+COMMAND['events_per_file']+" "+COMMAND['running_directory']+" "+COMMAND['ccdb_sqlite_path']+" "+COMMAND['rcdb_sqlite_path']+" "+COMMAND['background_tagger_only']+" "+COMMAND['radiator_thickness']+" "+COMMAND['background_rate']+" "+COMMAND['random_background_tag']+" "+COMMAND['recon_calibtime']+" "+COMMAND['no_geant_secondaries']+" "+COMMAND['mcwrapper_version']+" "+COMMAND['no_bcal_sipm_saturation']+" "+COMMAND['flux_to_generate']+" "+COMMAND['flux_histogram']+" "+COMMAND['polarization_to_generate']+" "+COMMAND['polarization_histogram']+" "+COMMAND['eBeam_current']+" "+COMMAND['experiment']
+        return COMMAND['batchrun']+" "+COMMAND['environment_file']+" "+COMMAND['generator_config']+" "+COMMAND['output_directory']+" "+COMMAND['run_number']+" "+COMMAND['file_number']+" "+COMMAND['num_events']+" "+COMMAND['jana_calib_context']+" "+COMMAND['jana_calibtime']+" "+COMMAND['do_gen']+" "+COMMAND['do_geant']+" "+COMMAND['do_mcsmear']+" "+COMMAND['do_recon']+" "+COMMAND['clean_gen']+" "+COMMAND['clean_geant']+" "+COMMAND['clean_mcsmear']+" "+COMMAND['clean_recon']+" "+COMMAND['batch_system']+" "+COMMAND['num_cores']+" "+COMMAND['generator']+" "+COMMAND['geant_version']+" "+COMMAND['background_to_include']+" "+COMMAND['custom_Gcontrol']+" "+COMMAND['eBeam_energy']+" "+COMMAND['coherent_peak']+" "+COMMAND['min_generator_energy']+" "+COMMAND['max_generator_energy']+" "+COMMAND['custom_tag_string']+" "+COMMAND['custom_plugins']+" "+COMMAND['events_per_file']+" "+COMMAND['running_directory']+" "+COMMAND['ccdb_sqlite_path']+" "+COMMAND['rcdb_sqlite_path']+" "+COMMAND['background_tagger_only']+" "+COMMAND['radiator_thickness']+" "+COMMAND['background_rate']+" "+COMMAND['random_background_tag']+" "+COMMAND['recon_calibtime']+" "+COMMAND['no_geant_secondaries']+" "+COMMAND['mcwrapper_version']+" "+COMMAND['no_bcal_sipm_saturation']+" "+COMMAND['flux_to_generate']+" "+COMMAND['flux_histogram']+" "+COMMAND['polarization_to_generate']+" "+COMMAND['polarization_histogram']+" "+COMMAND['eBeam_current']+" "+COMMAND['experiment']+" "+COMMAND['num_rand_trigs']
 
 def showhelp():
         helpstring= "variation=%s where %s is a valid jana_calib_context variation string (default is \"mc\")\n"
@@ -552,6 +554,7 @@ def main(argv):
 
         GEANTVER = 4        
         BGFOLD="DEFAULT"
+        RANDOM_NUM_EVT=-1
         RANDBGTAG="none"
 
         CUSTOM_MAKEMC="DEFAULT"
@@ -960,6 +963,7 @@ def main(argv):
         COMMAND_dict['polarization_histogram']=str(POL_HIST)
         COMMAND_dict['eBeam_current']=str(eBEAM_CURRENT)
         COMMAND_dict['experiment']=str(PROJECT)
+        COMMAND_dict['num_rand_trigs']=str(RANDOM_NUM_EVT)
         
 
         if str(IS_SUBMITTER) == "1":
@@ -1060,7 +1064,12 @@ def main(argv):
                                         COMMAND_dict['run_number']=str(runs[0])
                                         COMMAND_dict['file_number']=str(BASEFILENUM+FILENUM_this_run+-1)
                                         COMMAND_dict['num_events']=str(num_this_file)
+                                        if BGFOLD == "Random" or BGFOLD=="DEFAULT" or BGFOLD[0:3] == "loc":
+                                                RANDOM_NUM_EVT=GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,runs[0])
+                                                COMMAND_dict['num_rand_trigs']=str(RANDOM_NUM_EVT)
                                         COMMAND=getCommandString(COMMAND_dict) #str(BATCHRUN)+" "+ENVFILE+" "+GENCONFIG+" "+str(outdir)+" "+str(runs[0])+" "+str(BASEFILENUM+FILENUM_this_run+-1)+" "+str(num_this_file)+" "+str(VERSION)+" "+str(CALIBTIME)+" "+str(GENR)+" "+str(GEANT)+" "+str(SMEAR)+" "+str(RECON)+" "+str(CLEANGENR)+" "+str(CLEANGEANT)+" "+str(CLEANSMEAR)+" "+str(CLEANRECON)+" "+str(BATCHSYS)+" "+str(NCORES).split(':')[-1]+" "+str(GENERATOR)+" "+str(GEANTVER)+" "+str(BGFOLD)+" "+str(CUSTOM_GCONTROL)+" "+str(eBEAM_ENERGY)+" "+str(COHERENT_PEAK)+" "+str(MIN_GEN_ENERGY)+" "+str(MAX_GEN_ENERGY)+" "+str(TAGSTR)+" "+str(CUSTOM_PLUGINS)+" "+str(PERFILE)+" "+str(RUNNING_DIR)+" "+str(ccdbSQLITEPATH)+" "+str(rcdbSQLITEPATH)+" "+str(BGTAGONLY)+" "+str(RADIATOR_THICKNESS)+" "+str(BGRATE)+" "+str(RANDBGTAG)+" "+str(RECON_CALIBTIME)+" "+str(NOSECONDARIES)+" "+str(MCWRAPPER_VERSION)+" "+str(NOSIPMSATURATION)+" "+str(FLUX_TO_GEN)+" "+str(FLUX_HIST)+" "+str(POL_TO_GEN)+" "+str(POL_HIST)+" "+str(eBEAM_CURRENT)+" "+str(PROJECT)
+                                        
+                                        
                                         if BATCHRUN == 0 or BATCHSYS.upper()=="NULL":
                                                 #print str(runs[0])+" "+str(BASEFILENUM+FILENUM_this_run+-1)+" "+str(num_this_file)
                                                 os.system(str(indir)+" "+getCommandString(COMMAND_dict))
@@ -1102,8 +1111,14 @@ def main(argv):
                                 COMMAND_dict['run_number']=str(RUNNUM)
                                 COMMAND_dict['file_number']=str(BASEFILENUM+FILENUM+-1)
                                 COMMAND_dict['num_events']=str(num)
-                                COMMAND=getCommandString(COMMAND_dict)#str(BATCHRUN)+" "+ENVFILE+" "+GENCONFIG+" "+str(outdir)+" "+str(RUNNUM)+" "+str(BASEFILENUM+FILENUM+-1)+" "+str(num)+" "+str(VERSION)+" "+str(CALIBTIME)+" "+str(GENR)+" "+str(GEANT)+" "+str(SMEAR)+" "+str(RECON)+" "+str(CLEANGENR)+" "+str(CLEANGEANT)+" "+str(CLEANSMEAR)+" "+str(CLEANRECON)+" "+str(BATCHSYS).upper()+" "+str(NCORES).split(':')[-1]+" "+str(GENERATOR)+" "+str(GEANTVER)+" "+str(BGFOLD)+" "+str(CUSTOM_GCONTROL)+" "+str(eBEAM_ENERGY)+" "+str(COHERENT_PEAK)+" "+str(MIN_GEN_ENERGY)+" "+str(MAX_GEN_ENERGY)+" "+str(TAGSTR)+" "+str(CUSTOM_PLUGINS)+" "+str(PERFILE)+" "+str(RUNNING_DIR)+" "+str(ccdbSQLITEPATH)+" "+str(rcdbSQLITEPATH)+" "+str(BGTAGONLY)+" "+str(RADIATOR_THICKNESS)+" "+str(BGRATE)+" "+str(RANDBGTAG)+" "+str(RECON_CALIBTIME)+" "+str(NOSECONDARIES)+" "+str(MCWRAPPER_VERSION)+" "+str(NOSIPMSATURATION)+" "+str(FLUX_TO_GEN)+" "+str(FLUX_HIST)+" "+str(POL_TO_GEN)+" "+str(POL_HIST)+" "+str(eBEAM_CURRENT)+" "+str(PROJECT)
+
+                                if BGFOLD == "Random" or BGFOLD=="DEFAULT" or BGFOLD[0:3] == "loc":
+                                        RANDOM_NUM_EVT=GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,RUNNUM)
+                                        COMMAND_dict['num_rand_trigs']=str(RANDOM_NUM_EVT)
+
+                                COMMAND=getCommandString(COMMAND_dict) #str(BATCHRUN)+" "+ENVFILE+" "+GENCONFIG+" "+str(outdir)+" "+str(RUNNUM)+" "+str(BASEFILENUM+FILENUM+-1)+" "+str(num)+" "+str(VERSION)+" "+str(CALIBTIME)+" "+str(GENR)+" "+str(GEANT)+" "+str(SMEAR)+" "+str(RECON)+" "+str(CLEANGENR)+" "+str(CLEANGEANT)+" "+str(CLEANSMEAR)+" "+str(CLEANRECON)+" "+str(BATCHSYS).upper()+" "+str(NCORES).split(':')[-1]+" "+str(GENERATOR)+" "+str(GEANTVER)+" "+str(BGFOLD)+" "+str(CUSTOM_GCONTROL)+" "+str(eBEAM_ENERGY)+" "+str(COHERENT_PEAK)+" "+str(MIN_GEN_ENERGY)+" "+str(MAX_GEN_ENERGY)+" "+str(TAGSTR)+" "+str(CUSTOM_PLUGINS)+" "+str(PERFILE)+" "+str(RUNNING_DIR)+" "+str(ccdbSQLITEPATH)+" "+str(rcdbSQLITEPATH)+" "+str(BGTAGONLY)+" "+str(RADIATOR_THICKNESS)+" "+str(BGRATE)+" "+str(RANDBGTAG)+" "+str(RECON_CALIBTIME)+" "+str(NOSECONDARIES)+" "+str(MCWRAPPER_VERSION)+" "+str(NOSIPMSATURATION)+" "+str(FLUX_TO_GEN)+" "+str(FLUX_HIST)+" "+str(POL_TO_GEN)+" "+str(POL_HIST)+" "+str(eBEAM_CURRENT)+" "+str(PROJECT)
                
+                               
                                 #either call MakeMC.csh or add a job depending on swif flag
                                 if BATCHRUN == 0 or BATCHSYS.upper()=="NULL":
                                         os.system(str(indir)+" "+COMMAND)
@@ -1140,5 +1155,73 @@ def main(argv):
                 dbcnx.close()
         except:
                 pass        
+
+def GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,RUNNUM):
+        try:
+                if BGFOLD[0:3] != "Ran" and BGFOLD[0:3] != "loc":
+                        return -1
+                #print BGFOLD
+                #print RANDBGTAG
+                Style=BGFOLD
+                #print BGFOLD[0:3]
+                if BGFOLD[0:3] == "loc":
+                        Style="loc"
+                
+                path_base="/work/halld/random_triggers/"
+
+                if socket.gethostname() == "scosg16.jlab.org":
+                        path_base="/osgpool/halld/random_triggers/"
+                
+                if Style=="Random":
+                        path_base=path_base+RANDBGTAG+"/"
+                else:
+                        path_base=BGFOLD[4:]
+                
+                formattedRUNNUM=""
+                for i in range(len(str(RUNNUM)),6):
+                        formattedRUNNUM+="0"
+
+                formattedRUNNUM=formattedRUNNUM+str(RUNNUM)
+                path_base=path_base+"run"+formattedRUNNUM+"_random.hddm"
+                print path_base
+                realpath=os.path.realpath(path_base)
+
+                if not os.path.isfile(realpath):
+                        print "can't find"
+                        return -1
+
+                queryrand="SELECT Num_Events FROM Randoms WHERE Style=\""+Style+"\" && Tag=\""+RANDBGTAG+"\""+" && Run_Number="+str(RUNNUM)+" && Path=\""+str(realpath)+"\""
+                #print queryrand
+                dbcursor.execute(queryrand)
+                matches = dbcursor.fetchall()
+                #print matches
+                if len(matches) == 0:
+                        print "Attempting to scan and tag this random trigger file"
+                        
+
+                        Size=os.stat(realpath).st_size
+                        Count=CountFile(realpath)
+                        #print Count
+                        addquery="INSERT INTO Randoms (Style,Tag,Path,Size,Num_Events,Run_Number) VALUES (\""+str(Style)+"\",\""+str(RANDBGTAG)+"\",\""+str(realpath) +"\",\""+str(Size)+"\","+str(Count)+","+str(RUNNUM)+")"
+                        #print addquery
+                        dbcursor.execute(addquery)
+                        dbcnx.commit()
+                        return Count
+                elif len(matches) == 1:
+                        print matches[0][0]
+                        return matches[0][0]
+                else:
+                        print "AMBIGUOUS!"
+                        return -1
+        except Exception as e:
+                print(e)
+                pass
+
+
+        return -1
+
+def CountFile(file):
+        return sum(1 for r in hddm_s.istream(file))
+
 if __name__ == "__main__":
    main(sys.argv[1:])

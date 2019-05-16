@@ -111,11 +111,23 @@ shift
 export eBEAM_CURRENT=$1
 shift
 export EXPERIMENT=$1
+shift
+export RANDOM_TRIG_NUM_EVT=$1
 
 export USER_BC=`which bc`
 export USER_PYTHON=`which python`
 export USER_STAT=`which stat`
 
+export XRD_RANDOMS_URL=root://nod25.phys.uconn.edu/Gluex/rawdata
+export MAKE_MC_USING_XROOTD=0
+if [[ -f /usr/lib64/libXrdPosixPreload.so ]]; then
+	export MAKE_MC_USING_XROOTD=1
+	export LD_PRELOAD=/usr/lib64/libXrdPosixPreload.so
+	con_test=`xrdfs $XRD_RANDOMS_URL ls`
+	if [[ "$con_test" == "" ]]; then
+		export MAKE_MC_USING_XROOTD=0
+	fi
+fi
 
 if [[ "$BATCHSYS" == "OSG" && "$BATCHRUN"=="1" ]]; then
 export USER_BC='/usr/bin/bc'
@@ -373,6 +385,7 @@ echo ""
 echo "=======SOFTWARE USED======="
 echo "MCwrapper version v"$MCWRAPPER_VERSION
 echo "MCwrapper location" $MCWRAPPER_CENTRAL
+echo "Streaming via xrootd? "$MAKE_MC_USING_XROOTD "Event Count: "$RANDOM_TRIG_NUM_EVT
 echo "BC "$USER_BC
 echo "python "$USER_PYTHON
 echo `which $GENERATOR`
@@ -521,7 +534,7 @@ if [[ "$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" == 
 			fi
 			#set bkglocstring="/w/halld-scifs1a/home/tbritton/converted.hddm"
 		    
-		    if [[ ! -f $bkglocstring ]]; then
+		    if [[ ! -f $bkglocstring && $MAKE_MC_USING_XROOTD == 0 ]]; then
 			echo "something went wrong with initialization"
 			echo "Could not find mix-in file "$bkglocstring
 			exit
@@ -1098,21 +1111,34 @@ if [[ "$GENR" != "0" ]]; then
 		mcsmear_return_code=$?
 	elif [[ "$BKGFOLDSTR" == "DEFAULT" || "$BKGFOLDSTR" == "Random" ]]; then
 		rm -f count.py
-	   echo "import hddm_s" > count.py
-	   echo "print(sum(1 for r in hddm_s.istream('$bkglocstring')))" >> count.py
-	   totalnum=$( $USER_PYTHON count.py )
-	   rm count.py
+		if [[ $RANDOM_TRIG_NUM_EVT == -1 ]]; then
+	   		echo "import hddm_s" > count.py
+	   		echo "print(sum(1 for r in hddm_s.istream('$bkglocstring')))" >> count.py
+	   		totalnum=$( $USER_PYTHON count.py )
+	   		rm count.py
+	   else
+			totalnum=$RANDOM_TRIG_NUM_EVT
+	   fi
 		fold_skip_num=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
 		echo "skipping: "$fold_skip_num
-		echo "mcsmear "$MCSMEAR_Flags " -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
-		mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
+		if [[ $MAKE_MC_USING_XROOTD == 0 ]]; then
+			echo "mcsmear "$MCSMEAR_Flags " -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
+			mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
+		else
+			echo "mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME_geant$GEANTVER_smeared.hddm $STANDARD_NAME_geant$GEANTVER.hddm $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm:1+$fold_skip_num"
+            mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $XRD_RANDOMS_URL/random_triggers//$RANDBGTAG/run$formatted_runNumber\_random.hddm\:1\+$fold_skip_num
+		fi
 		mcsmear_return_code=$?
 	elif [[ "$bkgloc_pre" == "loc:" ]]; then
 		rm -f count.py
+		if [[ $RANDOM_TRIG_NUM_EVT == -1 ]]; then
 	   echo "import hddm_s" > count.py
 	   echo "print(sum(1 for r in hddm_s.istream('$bkglocstring')))" >> count.py
 	   totalnum=`$USER_PYTHON count.py`
 	   rm count.py
+	   else
+			totalnum=$RANDOM_TRIG_NUM_EVT
+	   fi
 		fold_skip_num=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
 		echo "mcsmear "$MCSMEAR_Flags " -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
 		mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
