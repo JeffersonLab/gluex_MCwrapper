@@ -123,9 +123,11 @@ export MAKE_MC_USING_XROOTD=0
 if [[ -f /usr/lib64/libXrdPosixPreload.so ]]; then
 	export MAKE_MC_USING_XROOTD=1
 	export LD_PRELOAD=/usr/lib64/libXrdPosixPreload.so
-	con_test=`xrdfs $XRD_RANDOMS_URL ls`
-	if [[ "$con_test" == "" ]]; then
-		export MAKE_MC_USING_XROOTD=0
+	if [[ "$BATCHSYS" != "OSG" ]]; then
+		con_test=`xrdfs $XRD_RANDOMS_URL ls`
+		if [[ "$con_test" == "" ]]; then
+			export MAKE_MC_USING_XROOTD=0
+		fi
 	fi
 fi
 
