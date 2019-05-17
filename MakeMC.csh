@@ -129,12 +129,12 @@ setenv MAKE_MC_USING_XROOTD 0
 if ( -f /usr/lib64/libXrdPosixPreload.so ) then
 	setenv MAKE_MC_USING_XROOTD 1
 	setenv LD_PRELOAD /usr/lib64/libXrdPosixPreload.so
-	if ( "$BATCHSYS" != "OSG" ) then
-		set con_test=`xrdfs $XRD_RANDOMS_URL ls`
-		if ( "$con_test" == "" ) then
-			setenv MAKE_MC_USING_XROOTD 0
-		endif
+
+	set con_test=`xrdfs $XRD_RANDOMS_URL ls`
+	if ( "$con_test" == "" ) then
+		setenv MAKE_MC_USING_XROOTD 0
 	endif
+
 endif
 
 #necessary to run swif, uses local directory if swif=0 is used
