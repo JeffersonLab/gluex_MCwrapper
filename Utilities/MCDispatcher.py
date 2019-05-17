@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import MySQLdb
 import sys
 import datetime
@@ -9,6 +9,9 @@ from subprocess import call
 from subprocess import Popen, PIPE
 import socket
 import pprint
+import smtplib                                                                                                                                                                          
+from email.message import EmailMessage
+
 
 
 dbhost = "hallddb.jlab.org"
@@ -45,7 +48,21 @@ def DeclareAllComplete():
     curs.execute(query)
     rows=curs.fetchall()
     for proj in rows:
-        subprocess.call("echo 'Your Project ID "+str(proj['ID'])+" has been declared completed.  Outstanding jobs have been recalled. Output may be found here:\n"+proj['OutputLocation']+"' | mail -s 'GlueX MC Request #"+str(proj['ID'])+" Completed' "+str(proj['Email']),shell=True)
+        msg = EmailMessage()
+        msg.set_content('Your Project ID '+str(proj['ID'])+' has been declared completed.  Outstanding jobs have been recalled. Output may be found here:\n'+proj['OutputLocation'])
+
+        # me == the sender's email address                                                                                                                                                                                 
+        # you == the recipient's email address                                                                                                                                                                             
+        msg['Subject'] = 'GlueX MC Request #'+str(proj['ID'])+' Declared Completed'
+        msg['From'] = 'MCwrapper-bot'
+        msg['To'] = str(proj['Email'])
+
+        # Send the message via our own SMTP server.                                                                                                                                                                        
+        s = smtplib.SMTP('localhost')
+        s.send_message(msg)
+        s.quit()
+
+        #subprocess.call("echo 'Your Project ID "+str(proj['ID'])+" has been declared completed.  Outstanding jobs have been recalled. Output may be found here:\n"+proj['OutputLocation']+"' | mail -s 'GlueX MC Request #"+str(proj['ID'])+" Completed' "+str(proj['Email']),shell=True)
         updatequery="UPDATE Project SET Completed_Time=NOW(),Notified=1 where ID="+str(proj["ID"])
         curs.execute(updatequery)
         conn.commit()
@@ -55,7 +72,21 @@ def CancelAll():
     curs.execute(query)
     rows=curs.fetchall()
     for proj in rows:
-        subprocess.call("echo 'Your Project ID "+str(proj['ID'])+" has been canceled.  Outstanding jobs have been recalled."+"' | mail -s 'GlueX MC Request #"+str(proj['ID'])+" Canceled' "+str(proj['Email']),shell=True)
+        msg = EmailMessage()
+        msg.set_content('Your Project ID '+str(proj['ID'])+' has been canceled.  Outstanding jobs have been recalled.')
+
+        # me == the sender's email address                                                                                                                                                                                 
+        # you == the recipient's email address                                                                                                                                                                             
+        msg['Subject'] = 'GlueX MC Request #'+str(proj['ID'])+' Cancelled'
+        msg['From'] = 'MCwrapper-bot'
+        msg['To'] = str(proj['Email'])
+
+        # Send the message via our own SMTP server.                                                                                                                                                                        
+        s = smtplib.SMTP('localhost')
+        s.send_message(msg)
+        s.quit()
+
+        #subprocess.call("echo 'Your Project ID "+str(proj['ID'])+" has been canceled.  Outstanding jobs have been recalled."+"' | mail -s 'GlueX MC Request #"+str(proj['ID'])+" Canceled' "+str(proj['Email']),shell=True)
         sql = "DELETE FROM Attempts where Job_ID in ( SELECT ID FROM Jobs WHERE Project_ID="+str(proj['ID'])+" );"
 
         sql2 = "DELETE FROM Jobs WHERE Project_ID="+str(proj['ID'])+";"
@@ -77,46 +108,64 @@ def AutoLaunch():
     DeclareAllComplete()
     RetryAllJobs()
 
-    query = "SELECT ID,Email,VersionSet,Tested,UName FROM Project WHERE (Tested = 0 || Tested=1) && Dispatched_Time is NULL ORDER BY (SELECT Priority from Users where name=UName) DESC;"
+    query = "SELECT ID,Email,VersionSet,Tested,UName FROM Project WHERE (Tested = 0) && Dispatched_Time is NULL ORDER BY (SELECT Priority from Users where name=UName) DESC;"
     #print query
     curs.execute(query) 
     rows=curs.fetchall()
     #print rows
     #print len(rows)
     for row in rows:
-        commands_to_call="source /group/halld/Software/build_scripts/gluex_env_boot_jlab.sh;"
-        commands_to_call+="gxclean;"
-        #subprocess.call("source /group/halld/Software/build_scripts/gluex_env_boot_jlab.sh;",shell=True)                                                                                                          
-        #subprocess.call("gxclean",shell=True)                                                                                                                                                                     
-        commands_to_call+="source /group/halld/Software/build_scripts/gluex_env_jlab.sh /group/halld/www/halldweb/html/dist/"+str(row["VersionSet"])+";"
-        commands_to_call+="export MCWRAPPER_CENTRAL=/osgpool/halld/tbritton/gluex_MCwrapper/;"
-        commands_to_call+="export PATH=/apps/bin:${PATH};"
-        subprocess.call(commands_to_call,shell=True)
 
         status=[]
         status.append(-1)
         status.append(-1)
         if(row['Tested'] !=1):
-            status=TestProject(row['ID'])
+            status=TestProject(row['ID'],str(row["VersionSet"]))
         else:
             status[0]=0
             status[1]=0
-
+            status[2]=0
         #print "STATUS IS"
         #print status[0]
-        #print status[1]
+        print("JUST TESTED")
         if(status[1]!=-1):
             #print "TEST success"
             #EMAIL SUCCESS AND DISPATCH
+            print("YAY TESTED")
             subprocess.call("/osgpool/halld/tbritton/gluex_MCwrapper/Utilities/MCDispatcher.py dispatch -rlim -sys OSG "+str(row['ID']),shell=True)
         else:
+            print("BOO TESTED")
             #EMAIL FAIL AND LOG
-            print "echo 'Your Project ID "+str(row['ID'])+" failed the to properly test.  The log information is reproduced below:\n\n\n"+status[0]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+str(row['Email'])
-            subprocess.call("echo 'Your Project ID "+str(row['ID'])+" failed the test.  Please correct this issue by following the link: "+"https://halldweb.jlab.org/gluex_sim/SubmitSim.html?prefill="+str(row['ID'])+"&mod=1" +" .  Do NOT resubmit this request.  Write tbritton@jlab.org for additional assistance\n\n The log information is reproduced below:\n\n\n"+status[0]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+str(row['Email']),shell=True)
+            #print("echo 'Your Project ID "+str(row['ID'])+" failed the to properly test.  The log information is reproduced below:\n\n\n"+status[0]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+str(row['Email']))
+            try:
+                print("MAILING\n")
+                msg = EmailMessage()
+
+                msg.set_content('Your Project ID '+str(row['ID'])+' failed the test.  Please correct this issue by following the link: '+'https://halldweb.jlab.org/gluex_sim/SubmitSim.html?prefill='+str(row['ID'])+'&mod=1'+'.  Do NOT resubmit this request.  Write tbritton@jlab.org for additional assistance\n\n The log information is reproduced below:\n\n\n'+str(status[0])+'\n\n\nErrors:\n\n\n'+str(status[2]))
+                print("SET CONTENT")
+                msg['Subject'] = 'Project ID #'+str(row['ID'])+' Failed to test properly'
+                print("SET SUB")
+                msg['From'] = str('MCwrapper-bot')
+                print("SET FROM")
+
+                msg['To'] = str(row['Email'])
+                print("SET SUB TO FROM")
+                # Send the message via our own SMTP server.                                                                                                                                                                        
+                s = smtplib.SMTP('localhost')
+                print(msg)
+                print("SENDING")
+                s.send_message(msg)
+                s.quit()            
+                #subprocess.call("echo 'Your Project ID "+str(row['ID'])+" failed the test.  Please correct this issue by following the link: "+"https://halldweb.jlab.org/gluex_sim/SubmitSim.html?prefill="+str(row['ID'])+"&mod=1" +" .  Do NOT resubmit this request.  Write tbritton@jlab.org for additional assistance\n\n The log information is reproduced below:\n\n\n"+status[0]+"\n\n\n"+status[2]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+str(row['Email']),shell=True)
+            except:
+                print("UH OH MAILING")
+                log = open("/osgpool/halld/tbritton/"+str(row['ID'])+".err", "w+")
+                log.write("this was broke: \n" + str(status[2]))
+                log.write("this was broke: \n" + str(status[0]))
+                log.close()
+            
             #subprocess.call("echo 'Your Project ID "+str(row['ID'])+" failed the test.  Please correct this issue and do NOT resubmit this request.  Write tbritton@jlab.org for assistance or if you are ready for a retest.\n\n The log information is reproduced below:\n\n\n"+status[0]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+"tbritton@jlab.org",shell=True)
             #print status[0]
-            
-
 
 
 def ListUnDispatched():
@@ -145,7 +194,7 @@ def RetryAllJobs(rlim=False):
     curs.execute(query) 
     rows=curs.fetchall()
     for row in rows:
-        print "Retrying Project "+str(row["ID"])
+        print("Retrying Project "+str(row["ID"]))
         RetryJobsFromProject(row["ID"],not rlim)
 
 def RemoveAllJobs():
@@ -155,7 +204,7 @@ def RemoveAllJobs():
     i=0
     for row in rows:
         if(row["BatchSystem"]=="OSG"):
-            print row["BatchJobID"]
+            print(row["BatchJobID"])
 
 
 def RetryJobsFromProject(ID, countLim):
@@ -182,13 +231,13 @@ def RetryJobsFromProject(ID, countLim):
                     countq="SELECT Count(Job_ID) from Attempts where Job_ID="+str(row["Job_ID"])
                     curs.execute(countq)
                     count=curs.fetchall()
-                    if int(count[0]["Count(Job_ID)"]) > 5 :
+                    if int(count[0]["Count(Job_ID)"]) > 15 :
                         j=j+1
                         continue
                 RetryJob(row["Job_ID"])
                 i=i+1
-    print "retried "+str(i)+" Jobs"
-    print str(j)+" jobs over restart limit of 5"
+    print("retried "+str(i)+" Jobs")
+    print(str(j)+" jobs over restart limit of 15")
 
 #def DoMissingJobs(ID,SYS):
 #    query="SELECT ID FROM Jobs where ID NOT IN (SELECT Job_ID FROM Attempts) && IsActive=1 && Project_ID="+str(ID)+";"
@@ -235,7 +284,7 @@ def RetryJob(ID):
     if(rows[0]["BatchSystem"] == "SWIF"):
         splitL=len(proj[0]["OutputLocation"].split("/"))
         command = "swif retry-jobs -workflow "+proj[0]["OutputLocation"].split("/")[splitL-2]+" "+rows[0]["BatchJobID"]
-        print command
+        print(command)
         status = subprocess.call(command, shell=True)
     elif(rows[0]["BatchSystem"] == "OSG"):
         #print "OSG JOB FOUND"
@@ -298,10 +347,27 @@ def CheckGenConfig(order):
 
     return "True"
 
+def source(script, update=True):
+    """                                                                                                                                                                                                            
+    http://pythonwise.blogspot.fr/2010/04/sourcing-shell-script.html (Miki Tebeka)                                                                                                                                 
+    http://stackoverflow.com/questions/3503719/#comment28061110_3505826 (ahal)                                                                                                                                     
+    """
+    import subprocess
+    import os
+    proc = subprocess.Popen(
+        ['bash', '-c', 'set -a && source {} && env -0'.format(script)],
+        stdout=subprocess.PIPE, shell=False)
+    output, err = proc.communicate()
+    output = output.decode('utf8')
+    env = dict((line.split("=", 1) for line in output.split('\x00') if line))
+    if update:
+        os.environ.update(env)
+    return env
 
-def TestProject(ID,commands_to_call=""):
+
+def TestProject(ID,versionSet,commands_to_call=""):
     subprocess.call("rm -f MCDispatched.config", shell=True)
-    print "TESTING PROJECT "+str(ID)
+    print("TESTING PROJECT "+str(ID))
     query = "SELECT * FROM Project WHERE ID="+str(ID)
     curs.execute(query) 
     rows=curs.fetchall()
@@ -341,14 +407,19 @@ def TestProject(ID,commands_to_call=""):
     command="$MCWRAPPER_CENTRAL/gluex_MC.py MCDispatched.config "+str(RunNumber)+" "+str(10)+" per_file=250000 base_file_number=0"+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=0"
     print(command)
     STATUS=-1
-   # print (command+command2).split(" ")
-    p = Popen(commands_to_call+command, stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True)
+    # print (command+command2).split(" ")
+    my_env=None
+    if(versionSet != ""):
+        my_env=source("/group/halld/Software/build_scripts/gluex_env_jlab.sh /group/halld/www/halldweb/html/dist/"+versionSet)
+        my_env["MCWRAPPER_CENTRAL"]="/osgpool/halld/tbritton/gluex_MCwrapper/"
+
+    p = Popen(commands_to_call+command, env=my_env ,stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True)
     #print p
     #print "p defined"
     output, errors = p.communicate()
     
     #print [p.returncode,errors,output]
-    output=output.replace('\\n', '\n')
+    output=str(output).replace('\\n', '\n')
     
     STATUS=output.find("Successfully completed")
     
@@ -359,21 +430,21 @@ def TestProject(ID,commands_to_call=""):
         conn.commit()
         if(newLoc != "True"):
             updateOrderquery="UPDATE Project SET Generator_Config=\""+newLoc+"\" WHERE ID="+str(ID)+";"
-            print updateOrderquery
+            print(updateOrderquery)
             curs.execute(updateOrderquery)
             conn.commit()
         
-        print bcolors.OKGREEN+"TEST SUCCEEDED"+bcolors.ENDC
-        print "rm -rf "+order["OutputLocation"]
+        print(bcolors.OKGREEN+"TEST SUCCEEDED"+bcolors.ENDC)
+        print("rm -rf "+order["OutputLocation"])
         #status = subprocess.call("rm -rf "+order["OutputLocation"],shell=True)
     else:
         updatequery="UPDATE Project SET Tested=-1"+" WHERE ID="+str(ID)+";"
         curs.execute(updatequery)
         conn.commit()
         
-        print bcolors.FAIL+"TEST FAILED"+bcolors.ENDC
-        print "rm -rf "+order["OutputLocation"]
-    return [output,STATUS]
+        print(bcolors.FAIL+"TEST FAILED"+bcolors.ENDC)
+        print("rm -rf "+order["OutputLocation"])
+    return [output,STATUS,errors]
 
 def DispatchToInteractive(ID,order,PERCENT):
     subprocess.call("rm -f MCDispatched.config", shell=True)
@@ -432,7 +503,7 @@ def DispatchToInteractive(ID,order,PERCENT):
         print(command)
         status = subprocess.call(command, shell=True)
     else:
-        print "All jobs submitted for this order"
+        print("All jobs submitted for this order")
 
 def DispatchToSWIF(ID,order,PERCENT):
     status = subprocess.call("cp $MCWRAPPER_CENTRAL/examples/SWIFShell.config ./MCDispatched.config", shell=True)
@@ -491,8 +562,15 @@ def DispatchToSWIF(ID,order,PERCENT):
         print(command)
         status = subprocess.call(command, shell=True)
     else:
-        print "All jobs submitted for this order"
+        print("All jobs submitted for this order")
 
+def WriteConfig(ID):
+    query = "SELECT * FROM Project WHERE ID="+str(ID)
+    curs.execute(query) 
+    rows=curs.fetchall()
+
+    status = subprocess.call("cp $MCWRAPPER_CENTRAL/examples/SWIFShell.config ./MCDispatched.config", shell=True)
+    WritePayloadConfig(rows[0],"True")
 
 def WritePayloadConfig(order,foundConfig):
     
@@ -598,7 +676,7 @@ def main(argv):
     #print(argv)
 
     if(os.path.isfile("/osgpool/halld/tbritton/.ALLSTOP")==True):
-        print "ALL STOP DETECTED"
+        print("ALL STOP DETECTED")
         exit(1)
 
     numprocesses_running=subprocess.check_output(["echo `ps all -u tbritton | grep MCDispatcher.py | grep -v grep | wc -l`"], shell=True)
@@ -653,7 +731,7 @@ def main(argv):
         elif MODE == "VIEW":
             ListUnDispatched()
         elif MODE == "TEST":
-            TestProject(ID)
+            TestProject(ID,"")
         elif MODE == "RETRYJOB":
             RetryJob(ID)
         elif MODE == "RETRYJOBS":
@@ -667,8 +745,10 @@ def main(argv):
             AutoLaunch()
         elif MODE == "REMOVEJOBS":
             RemoveAllJobs()
+        elif MODE == "WRITECONFIG":
+            WriteConfig(ID)
         else:
-            print "MODE NOT FOUND"
+            print("MODE NOT FOUND")
 
         
     conn.close()

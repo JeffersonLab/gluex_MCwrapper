@@ -111,11 +111,24 @@ shift
 export eBEAM_CURRENT=$1
 shift
 export EXPERIMENT=$1
+shift
+export RANDOM_TRIG_NUM_EVT=$1
 
 export USER_BC=`which bc`
 export USER_PYTHON=`which python`
 export USER_STAT=`which stat`
 
+export XRD_RANDOMS_URL=root://nod25.phys.uconn.edu/Gluex/rawdata
+export MAKE_MC_USING_XROOTD=0
+if [[ -f /usr/lib64/libXrdPosixPreload.so ]]; then
+	export MAKE_MC_USING_XROOTD=1
+	export LD_PRELOAD=/usr/lib64/libXrdPosixPreload.so
+	
+	con_test=`xrdfs $XRD_RANDOMS_URL ls`
+	if [[ "$con_test" == "" ]]; then
+		export MAKE_MC_USING_XROOTD=0
+	fi
+fi
 
 if [[ "$BATCHSYS" == "OSG" && "$BATCHRUN"=="1" ]]; then
 export USER_BC='/usr/bin/bc'
@@ -130,8 +143,6 @@ if [[ "$BATCHRUN" != "0" ]]; then
     # ENVIRONMENT
     echo $ENVIRONMENT
 
-    
-    
     echo pwd=$PWD
     mkdir -p $OUTDIR
     mkdir -p $OUTDIR/log
@@ -151,7 +162,7 @@ fi
 
 cd $RUNNING_DIR/${RUN_NUMBER}_${FILE_NUMBER}
 
-if [[ "$ccdbSQLITEPATH" != "no_sqlite" && "$ccdbSQLITEPATH" != "batch_default" ]]; then
+if [[ "$ccdbSQLITEPATH" != "no_sqlite" && "$ccdbSQLITEPATH" != "batch_default" && "$ccdbSQLITEPATH" != "jlab_batch_default" ]]; then
 	if [[ `$USER_STAT --file-system --format=%T $PWD` == "lustre" ]]; then
 		echo "Attempting to use sqlite on a lustre file system. This does not work.  Try running on a different file system!"
 		exit 1
@@ -162,6 +173,16 @@ if [[ "$ccdbSQLITEPATH" != "no_sqlite" && "$ccdbSQLITEPATH" != "batch_default" ]
 elif [[ "$ccdbSQLITEPATH" == "batch_default" ]]; then
     export CCDB_CONNECTION=sqlite:////group/halld/www/halldweb/html/dist/ccdb.sqlite
     export JANA_CALIB_URL=${CCDB_CONNECTION}
+elif [[ "$ccdbSQLITEPATH" == "jlab_batch_default" ]]; then
+		ccdb_jlab_sqlite_path=`echo $((1 + RANDOM % 100))`
+		if ( -f /work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite ) then
+			export CCDB_CONNECTION=sqlite:////work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite
+		else
+			export CCDB_CONNECTION=mysql://ccdb_user@hallddb.jlab.org/ccdb
+		fi
+
+    export JANA_CALIB_URL=${CCDB_CONNECTION}
+
 fi
 
 if [[ "$rcdbSQLITEPATH" != "no_sqlite" && "$rcdbSQLITEPATH" != "batch_default" ]]; then
@@ -365,6 +386,7 @@ echo ""
 echo "=======SOFTWARE USED======="
 echo "MCwrapper version v"$MCWRAPPER_VERSION
 echo "MCwrapper location" $MCWRAPPER_CENTRAL
+echo "Streaming via xrootd? "$MAKE_MC_USING_XROOTD "Event Count: "$RANDOM_TRIG_NUM_EVT
 echo "BC "$USER_BC
 echo "python "$USER_PYTHON
 echo `which $GENERATOR`
@@ -505,12 +527,15 @@ if [[ "$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" == 
 			    if [[ "$BATCHSYS" == "OSG" && $BATCHRUN != 0 ]]; then
 					bkglocstring="/srv""/run$formatted_runNumber""_random.hddm"
 				else
-		    		bkglocstring="/cache/halld/gluex_simulations/random_triggers/"$RANDBGTAG"/run"$formatted_runNumber"_random.hddm"
+		    		bkglocstring="/work/halld/random_triggers/"$RANDBGTAG"/run"$formatted_runNumber"_random.hddm"
+					if [[ `hostname` == 'scosg16.jlab.org' ]]; then
+						bkglocstring="/osgpool/halld/random_triggers/"$RANDBGTAG"/run"$formatted_runNumber"_random.hddm"
+					fi
 				fi
 			fi
 			#set bkglocstring="/w/halld-scifs1a/home/tbritton/converted.hddm"
 		    
-		    if [[ ! -f $bkglocstring ]]; then
+		    if [[ ! -f $bkglocstring && $MAKE_MC_USING_XROOTD == 0 ]]; then
 			echo "something went wrong with initialization"
 			echo "Could not find mix-in file "$bkglocstring
 			exit
@@ -559,10 +584,10 @@ if [[ "$GENR" != "0" ]]; then
 			echo $CONFIG_FILE "not found"
 			exit 1
 		else
-			if [[ `grep KINE $CONFIG_FILE | awk '{print $2}' ` < 100 && ` grep KINE $CONFIG_FILE | wc -w` > 3 ]]; then
+			if [[ `grep "^[^c]" | grep KINE $CONFIG_FILE | awk '{print $2}' ` < 100 && `grep "^[^c]" | grep KINE $CONFIG_FILE | wc -w` > 3 ]]; then
 				echo "ERROR THETA AND PHI APPEAR TO BE SET BUT WILL BE IGNORED.  PLEASE REMOVE THESE SETTINGS FROM:"$CONFIG_FILE" AND RESUBMIT."
 				exit 1
-			elif [[ `grep KINE $CONFIG_FILE | awk '{print $2}' ` > 100 && ` grep KINE $CONFIG_FILE | wc -w` < 8 ]]; then
+			elif [[ `grep "^[^c]" | grep KINE $CONFIG_FILE | awk '{print $2}' ` > 100 && `grep "^[^c]" | grep KINE $CONFIG_FILE | wc -w` < 8 ]]; then
 				echo "ERROR THETA AND PHI DON'T APPEAR TO BE SET BUT ARE GOING TO BE USED. PLEASE ADD THESE SETTINGS FROM: "$CONFIG_FILE" AND RESUBMIT."
 				exit 1
 			fi
@@ -1087,21 +1112,34 @@ if [[ "$GENR" != "0" ]]; then
 		mcsmear_return_code=$?
 	elif [[ "$BKGFOLDSTR" == "DEFAULT" || "$BKGFOLDSTR" == "Random" ]]; then
 		rm -f count.py
-	   echo "import hddm_s" > count.py
-	   echo "print(sum(1 for r in hddm_s.istream('$bkglocstring')))" >> count.py
-	   totalnum=$( $USER_PYTHON count.py )
-	   rm count.py
+		if [[ $RANDOM_TRIG_NUM_EVT == -1 ]]; then
+	   		echo "import hddm_s" > count.py
+	   		echo "print(sum(1 for r in hddm_s.istream('$bkglocstring')))" >> count.py
+	   		totalnum=$( $USER_PYTHON count.py )
+	   		rm count.py
+	   else
+			totalnum=$RANDOM_TRIG_NUM_EVT
+	   fi
 		fold_skip_num=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
 		echo "skipping: "$fold_skip_num
-		echo "mcsmear "$MCSMEAR_Flags " -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
-		mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
+		if [[ $MAKE_MC_USING_XROOTD == 0 ]]; then
+			echo "mcsmear "$MCSMEAR_Flags " -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
+			mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
+		else
+			echo "mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm:1+$fold_skip_num"
+            mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $XRD_RANDOMS_URL/random_triggers//$RANDBGTAG/run$formatted_runNumber\_random.hddm\:1\+$fold_skip_num
+		fi
 		mcsmear_return_code=$?
 	elif [[ "$bkgloc_pre" == "loc:" ]]; then
 		rm -f count.py
+		if [[ $RANDOM_TRIG_NUM_EVT == -1 ]]; then
 	   echo "import hddm_s" > count.py
 	   echo "print(sum(1 for r in hddm_s.istream('$bkglocstring')))" >> count.py
 	   totalnum=`$USER_PYTHON count.py`
 	   rm count.py
+	   else
+			totalnum=$RANDOM_TRIG_NUM_EVT
+	   fi
 		fold_skip_num=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
 		echo "mcsmear "$MCSMEAR_Flags " -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
 		mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
@@ -1272,7 +1310,7 @@ fi
 		done
 	fi
 
-
+rm -rf .hdds_tmp_*
 rm -rf ccdb.sqlite
 rm -rf rcdb.sqlite
 

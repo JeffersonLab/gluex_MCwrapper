@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 ##########################################################################################################################
 #
 # 2017/03 Thomas Britton
@@ -39,6 +39,8 @@ import json
 import time
 from datetime import timedelta
 from datetime import datetime
+import smtplib
+from email.message import EmailMessage
 
 dbhost = "hallddb.jlab.org"
 dbuser = 'mcuser'
@@ -49,7 +51,7 @@ try:
         dbcnx=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
         dbcursor=dbcnx.cursor(MySQLdb.cursors.DictCursor)
 except:
-        print "WARNING: CANNOT CONNECT TO DATABASE.  JOBS WILL NOT BE CONTROLLED OR MONITORED"
+        print("WARNING: CANNOT CONNECT TO DATABASE.  JOBS WILL NOT BE CONTROLLED OR MONITORED")
         pass
 
 def checkProjectsForCompletion():
@@ -60,14 +62,23 @@ def checkProjectsForCompletion():
     outdir_root="/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/"
 
     for proj in OutstandingProjects:
-        #print proj['ID']
+        print(proj['ID'])
         locparts=proj['OutputLocation'].split("/")
 
         print("~~~~~~~~~~~~~~~~~~")
+        files=[]
+        dirs=[]
         #print locparts[len(locparts)-2]
-        filesToMove = sum([len(files) for r, d, files in os.walk(outdir_root+locparts[len(locparts)-2])])
+        for r, dirs, files in os.walk(outdir_root+locparts[len(locparts)-2]) : 
+            files = [f for f in files if not f[0] == '.']
+            dirs[:] = [d for d in dirs if not d[0] == '.']
+
+        print(len(files))
+        print(dirs)
+
+        filesToMove = len(files) #sum([len(files) for r, d, files in os.walk(outdir_root+locparts[len(locparts)-2])])
         #print cpt
-        print filesToMove
+        print(filesToMove)
         
         TOTCompletedQuery ="SELECT DISTINCT ID From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1 && ID in (SELECT DISTINCT Job_ID FROM Attempts WHERE ExitCode = 0 && (Status ='4' || Status='success')  && ExitCode IS NOT NULL);" 
         dbcursor.execute(TOTCompletedQuery)
@@ -76,33 +87,50 @@ def checkProjectsForCompletion():
         TOTJobs="SELECT ID From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1;"
         dbcursor.execute(TOTJobs)
         AllActiveJobs=dbcursor.fetchall()
-        print "====================="
-        print proj['ID']
-        print len(fulfilledJobs)
-        print len(AllActiveJobs)
-        
+        print("=====================")
+        print(proj['ID'])
+        print(proj['OutputLocation'])
+        print(len(fulfilledJobs))
+        print(len(AllActiveJobs))
+        print("TO MOVE: "+str(filesToMove))
         if(len(fulfilledJobs)==len(AllActiveJobs) and len(AllActiveJobs) != 0 and filesToMove ==0):
             print("DONE")
 
             getFinalCompleteTime="SELECT MAX(Completed_Time) FROM Attempts WHERE Job_ID IN (SELECT ID FROM Jobs WHERE Project_ID="+str(proj['ID'])+");"
-            #print getFinalCompleteTime
+            print(getFinalCompleteTime)
             dbcursor.execute(getFinalCompleteTime)
             finalTimeRes=dbcursor.fetchall()
             #print "============"
             #print finalTimeRes[0]["MAX(Completed_Time)"]
             updateProjectstatus="UPDATE Project SET Completed_Time="+"'"+str(finalTimeRes[0]["MAX(Completed_Time)"])+"'"+ " WHERE ID="+str(proj['ID'])+";"
-            print updateProjectstatus
+            print(updateProjectstatus)
             #print "============"
             dbcursor.execute(updateProjectstatus)
             dbcnx.commit()
 
             #print "echo 'Your Project ID "+str(proj['ID'])+" has been completed.  Output may be found:\n"+proj['OutputLocation']+"' | mail -s 'GlueX MC Request #"+str(proj['ID'])+" Completed' "+str(proj['Email'])
-            subprocess.call("echo 'Your Project ID "+str(proj['ID'])+" has been completed.  Output may be found here:\n"+proj['OutputLocation']+"' | mail -s 'GlueX MC Request #"+str(proj['ID'])+" Completed' "+str(proj['Email']),shell=True)
+            msg = EmailMessage()
+            msg.set_content('Your Project ID '+str(proj['ID'])+' has been completed.  Output may be found here:\n'+str(proj['OutputLocation']))
+
+            # me == the sender's email address                                                                                                                                                                                 
+            # you == the recipient's email address                                                                                                                                                                             
+            msg['Subject'] = 'GlueX MC Request #'+str(proj['ID'])+' Completed'
+            msg['From'] = 'MCwrapper-bot'
+            msg['To'] = str(proj['Email'])
+
+            # Send the message via our own SMTP server.                                                                                                                                                                        
+            s = smtplib.SMTP('localhost')
+            s.send_message(msg)
+            s.quit()
+            #subprocess.call("echo 'Your Project ID "+str(proj['ID'])+" has been completed.  Output may be found here:\n"+proj['OutputLocation']+"' | mail -s 'GlueX MC Request #"+str(proj['ID'], "utf-8")+" Completed' "+str(proj['Email'], "utf-8"),shell=True)
             sql_notified = "UPDATE Project Set Notified=1 WHERE ID="+str(proj['ID'])
             dbcursor.execute(sql_notified)
             dbcnx.commit()
         else:
+            #print("ELSE")
+            #print(proj['ID'])
             updateProjectstatus="UPDATE Project SET Completed_Time=NULL WHERE ID="+str(proj['ID'])+";"
+            #print(updateProjectstatus)
             dbcursor.execute(updateProjectstatus)
             dbcnx.commit()
 
@@ -130,7 +158,7 @@ def checkSWIF():
             statuscommand="/site/bin/swif status -workflow "+str(wkflowname)+" -jobs -display json"
             #print statuscommand
             jsonOutputstr=subprocess.check_output(statuscommand.split(" "))
-            ReturnedJobs=json.loads(jsonOutputstr)
+            ReturnedJobs=json.loads(str(jsonOutputstr, "utf-8"))
             #print "*******************"
             #print ReturnedJobs
             #print "======================"
@@ -139,13 +167,13 @@ def checkSWIF():
                 #NON RUNNING DISPATCHED JOBS ARE A SPECIAL CASE
                 if int(job["num_attempts"]) == 0:
                     #print "truncated update of attempt pre dispatch"
-                    updatejobstatus="UPDATE Attempts SET Status=\""+str(job["status"])+"\"" +" WHERE BatchJobID="+str(job["id"])
+                    updatejobstatus="UPDATE Attempts SET Status=\""+str(job["status"], "utf-8")+"\"" +" WHERE BatchJobID="+str(job["id"], "utf-8")
                     #print updatejobstatus
                     dbcursor.execute(updatejobstatus)
                     dbcnx.commit()
                 else:
                     #print "Update all the attempts"
-                    LoggedSWIFAttemps_query="SELECT ID from Attempts where BatchJobID="+str(job["id"])+" ORDER BY ID"
+                    LoggedSWIFAttemps_query="SELECT ID from Attempts where BatchJobID="+str(job["id"], "utf-8")+" ORDER BY ID"
                     dbcursor.execute(LoggedSWIFAttemps_query)
                     LoggedSWIFAttemps=dbcursor.fetchall()
                     loggedindex=0
@@ -184,14 +212,14 @@ def checkSWIF():
                         if(attempt["auger_cpu_sec"]):
                             CpuTime=timedelta(seconds=attempt["auger_cpu_sec"])
                         if attempt["auger_vmem_kb"]:
-                            RAMUsed=str(float(attempt["auger_vmem_kb"])/1000.)
+                            RAMUsed=str(float(attempt["auger_vmem_kb"])/1000., "utf-8")
 
                         #print RAMUsed
                         #print "|||||||||||||||||||||"
                         #SOME VODOO IF RETRY JOBS HAPPENED OUTSIDE OF THE DB
                         if loggedindex == len(LoggedSWIFAttemps):
                             #print "FOUND AN ATTEMPT EXTERNALLY CREATED"
-                            GetLinkToJob_query="SELECT Job_ID FROM Attempts WHERE BatchJobID="+str(job["id"])
+                            GetLinkToJob_query="SELECT Job_ID FROM Attempts WHERE BatchJobID="+str(job["id"], "utf-8")
                             #print GetLinkToJob_query
                             dbcursor.execute(GetLinkToJob_query)
                             LinkToJob=dbcursor.fetchall()
@@ -208,12 +236,12 @@ def checkSWIF():
                             
                             #print datetime.fromtimestamp(submitTime/float(1000))
                             
-                            addFoundAttempt="INSERT INTO Attempts (Job_ID,Creation_Time,BatchSystem,BatchJobID, ThreadsRequested, RAMRequested,Start_Time) VALUES (%s,'%s','SWIF',%s,%s,%s,'%s')" % (LinkToJob[0]["Job_ID"],datetime.fromtimestamp(submitTime/float(1000)),attempt["job_id"],attempt["cpu_cores"], "'"+str(float(attempt["ram_bytes"])/float(1000000000))+"GB"+"'",Start_Time)
+                            addFoundAttempt="INSERT INTO Attempts (Job_ID,Creation_Time,BatchSystem,BatchJobID, ThreadsRequested, RAMRequested,Start_Time) VALUES (%s,'%s','SWIF',%s,%s,%s,'%s')" % (LinkToJob[0]["Job_ID"],datetime.fromtimestamp(submitTime/float(1000)),attempt["job_id"],attempt["cpu_cores"], "'"+str(float(attempt["ram_bytes"])/float(1000000000), "utf-8")+"GB"+"'",Start_Time)
                             #print addFoundAttempt
                             dbcursor.execute(addFoundAttempt)
                             dbcnx.commit()
 
-                            LoggedSWIFAttemps_query="SELECT ID from Attempts where BatchJobID="+str(job["id"])+" ORDER BY ID"
+                            LoggedSWIFAttemps_query="SELECT ID from Attempts where BatchJobID="+str(job["id"], "utf-8")+" ORDER BY ID"
                             dbcursor.execute(LoggedSWIFAttemps_query)
                             LoggedSWIFAttemps=dbcursor.fetchall()
                             #print len(LoggedSWIFAttemps)
@@ -228,12 +256,12 @@ def checkSWIF():
                         #print str(ExitCode)
                         #UPDATE THE SATUS
                         #print Completed_Time
-                        updatejobstatus="UPDATE Attempts SET Status=\""+str(job["status"])+"\", ExitCode="+str(ExitCode)+", RunningLocation="+"'"+str(attempt["auger_node"])+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", Start_Time="+"'"+str(Start_Time)+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUsed+"'"+" WHERE BatchJobID="+str(job["id"])+" && ID="+str(LoggedSWIFAttemps[loggedindex]["ID"])
+                        updatejobstatus="UPDATE Attempts SET Status=\""+str(job["status"], "utf-8")+"\", ExitCode="+str(ExitCode, "utf-8")+", RunningLocation="+"'"+str(attempt["auger_node"], "utf-8")+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", Start_Time="+"'"+str(Start_Time, "utf-8")+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUsed+"'"+" WHERE BatchJobID="+str(job["id"], "utf-8")+" && ID="+str(LoggedSWIFAttemps[loggedindex]["ID"], "utf-8")
                         if Completed_Time != 'NULL':
                                 #print "COMPLETED_TIME"
-                                updatejobstatus="UPDATE Attempts SET Status=\""+str(job["status"])+"\", ExitCode="+str(ExitCode)+", Completed_Time='"+str(datetime.fromtimestamp(float(attempt["auger_ts_complete"])/float(1000)))+"'"+", RunningLocation="+"'"+str(attempt["auger_node"])+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", Start_Time="+"'"+str(Start_Time)+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUsed+"'"+" WHERE BatchJobID="+str(job["id"])+" && ID="+str(LoggedSWIFAttemps[loggedindex]["ID"])
+                                updatejobstatus="UPDATE Attempts SET Status=\""+str(job["status"], "utf-8")+"\", ExitCode="+str(ExitCode, "utf-8")+", Completed_Time='"+str(datetime.fromtimestamp(float(attempt["auger_ts_complete"])/float(1000)), "utf-8")+"'"+", RunningLocation="+"'"+str(attempt["auger_node"], "utf-8")+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", Start_Time="+"'"+str(Start_Time, "utf-8")+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUsed+"'"+" WHERE BatchJobID="+str(job["id"], "utf-8")+" && ID="+str(LoggedSWIFAttemps[loggedindex]["ID"], "utf-8")
                        
-
+                                
                         #print updatejobstatus
                         dbcursor.execute(updatejobstatus)
                         dbcnx.commit()
@@ -241,7 +269,6 @@ def checkSWIF():
 
 
 def UpdateOutputSize():
-
     getUntotaled="SELECT ID FROM Project WHERE Completed_Time IS NULL && Is_Dispatched != '0';"
     #print querygetLoc
     dbcursor.execute(getUntotaled)
@@ -261,7 +288,7 @@ def UpdateOutputSize():
 
         try:
             statuscommand="du -sh --exclude \".*\" --total "+location
-            #print statuscommand
+            print(statuscommand)
             totalSizeStr=subprocess.check_output([statuscommand], shell=True)
             #print "==============="
             #print totalSizeStr.split("\n")[1].split("total")[0]
@@ -275,31 +302,32 @@ def UpdateOutputSize():
 
 def checkOSG():
 
-        queryosgjobs="SELECT * from Attempts WHERE BatchSystem='OSG' && Status !='4' && Status !='3' && Status!= '6';"
+        queryosgjobs="SELECT * from Attempts WHERE BatchSystem='OSG' && Status !='4' && Status !='3' && Status!= '6' && Status != '5' ;"
         #print queryosgjobs
         dbcursor.execute(queryosgjobs)
         Alljobs = dbcursor.fetchall()
         count=0
-        print "UPDATING "+str(len(Alljobs))
+        print("UPDATING "+str(len(Alljobs)))
         for job in Alljobs:
             #print job
             count+=1
-            print count
+            print(count)
             statuscommand="condor_q "+str(job["BatchJobID"])+" -json"
-            print statuscommand
+            print(statuscommand)
             jsonOutputstr=subprocess.check_output(statuscommand.split(" "))
             #print "================"
-            #print jsonOutputstr
+            #print(jsonOutputstr)
             #print "================"
-            if( jsonOutputstr != ""):
-                JSON_jobar=json.loads(jsonOutputstr)
-                #print JSON_jobar[0]
+            if( str(jsonOutputstr, "utf-8") != ""):
+                #print("JSONING")
+                JSON_jobar=json.loads(str(jsonOutputstr, "utf-8"))
+                #print(JSON_jobar[0])
                 if JSON_jobar == []:
                     continue
                 JSON_job=JSON_jobar[0]
                 #print JSON_job
                 ExitCode="NULL"
-                #print JSON_job["JobStatus"]
+                #print(JSON_job["JobStatus"])
                 if (JSON_job["JobStatus"]!=3 and "ExitCode" in JSON_job):
                     ExitCode=str(JSON_job["ExitCode"])
                     #print ExitCode
@@ -331,10 +359,10 @@ def checkOSG():
                 if JOB_STATUS == 5:
                     missingF=True
                     for f in JSON_job["TransferInput"].split(","):
-                        if "_random" in f:
-                            #print f
+                        if "_random.hddm" in f:
+                            print(f)
                             missingF=os.path.isfile(f)
-                            #print missingF
+                            print(missingF)
                     if missingF == False:
                         #print "set to 6"
                         JOB_STATUS=6
@@ -349,7 +377,7 @@ def checkOSG():
                     ipstr=ipstr.split("#")[0]
                     ipstr=ipstr[1:-1].split(":")[0]
                     RunIP=ipstr
-
+                #print("UPDATE")
                 updatejobstatus="UPDATE Attempts SET Status=\""+str(JOB_STATUS)+"\", ExitCode="+ExitCode+", Start_Time="+"'"+str(datetime.fromtimestamp(float(Start_Time)))+"'"+", RunningLocation="+"'"+str(REMOTE_HOST)+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+", RunIP='"+str(RunIP)+"' WHERE BatchJobID='"+str(job["BatchJobID"])+"';"
                 if Completed_Time != 'NULL':
                     updatejobstatus="UPDATE Attempts SET Status=\""+str(JOB_STATUS)+"\", ExitCode="+ExitCode+", Completed_Time='"+str(datetime.fromtimestamp(float(Completed_Time)))+"'"+", Start_Time="+"'"+str(datetime.fromtimestamp(float(Start_Time)))+"'"+", RunningLocation="+"'"+str(REMOTE_HOST)+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+", RunIP='"+str(RunIP)+"' WHERE BatchJobID='"+str(job["BatchJobID"])+"';"
@@ -361,13 +389,13 @@ def checkOSG():
             else:
                 #print "looking up history"
                 historystatuscommand="condor_history -limit 1 "+str(job["BatchJobID"])+" -json"
-                print historystatuscommand
+                print(historystatuscommand)
                 jsonOutputstr=subprocess.check_output(historystatuscommand.split(" "))
                 #print "================"
-                #print jsonOutputstr
+                #print(jsonOutputstr)
                 #print "================"
-                if( jsonOutputstr != ""):
-                    JSON_jobar=json.loads(jsonOutputstr)
+                if( str(jsonOutputstr, "utf-8") != ""):
+                    JSON_jobar=json.loads(str(jsonOutputstr, "utf-8"))
                     #print JSON_jobar[0]
                     if JSON_jobar == []:
                         continue
@@ -405,7 +433,7 @@ def checkOSG():
                                 missingF=os.path.isfile(f)
                         if missingF == False:
                             JOB_STATUS=6
-
+                    
                     RunIP="NULL"
                     if "LastPublicClaimId" in JSON_job:
                         ipstr=str(JSON_job["LastPublicClaimId"])
@@ -413,10 +441,16 @@ def checkOSG():
                         ipstr=ipstr[1:-1].split(":")[0]
                         RunIP=ipstr
 
-                    updatejobstatus="UPDATE Attempts SET Status=\""+str(JOB_STATUS)+"\", ExitCode="+ExitCode+", Start_Time="+"'"+str(datetime.fromtimestamp(float(Start_Time)))+"'"+", RunningLocation="+"'"+str(JSON_job["LastRemoteHost"])+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+", RunIP='"+str(RunIP)+"' WHERE BatchJobID='"+str(job["BatchJobID"])+"';"
-                   
+                    LastRemoteHost="NULL"
+                    if "LastRemoteHost" in JSON_job:
+                        LastRemoteHost=JSON_job["LastRemoteHost"]
+
+                    
+                    #print LastRemoteHost
+                    updatejobstatus="UPDATE Attempts SET Status=\""+str(JOB_STATUS)+"\", ExitCode="+str(ExitCode)+", Start_Time="+"'"+str(datetime.fromtimestamp(float(Start_Time)))+"'"+", RunningLocation="+"'"+str(LastRemoteHost)+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+", RunIP='"+str(RunIP)+"' WHERE BatchJobID='"+str(job["BatchJobID"])+"';"
+                    
                     if Completed_Time != 'NULL':
-                        updatejobstatus="UPDATE Attempts SET Status=\""+str(JOB_STATUS)+"\", ExitCode="+ExitCode+", Start_Time="+"'"+str(datetime.fromtimestamp(float(Start_Time)))+"'"+", Completed_Time='"+str(datetime.fromtimestamp(float(Completed_Time)))+"'"+", RunningLocation="+"'"+str(JSON_job["LastRemoteHost"])+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+", RunIP='"+str(RunIP)+"' WHERE BatchJobID='"+str(job["BatchJobID"])+"';"                    
+                        updatejobstatus="UPDATE Attempts SET Status=\""+str(JOB_STATUS)+"\", ExitCode="+str(ExitCode)+", Start_Time="+"'"+str(datetime.fromtimestamp(float(Start_Time)))+"'"+", Completed_Time='"+str(datetime.fromtimestamp(float(Completed_Time)))+"'"+", RunningLocation="+"'"+str(LastRemoteHost)+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+", RunIP='"+str(RunIP)+"' WHERE BatchJobID='"+str(job["BatchJobID"])+"';"                    
 
                     #print updatejobstatus
                     dbcursor.execute(updatejobstatus)
@@ -429,29 +463,32 @@ def main(argv):
         numOverRide=False
 
         if(len(argv) !=0):
-		    numOverRide=True
+            numOverRide=True
         
         numprocesses_running=subprocess.check_output(["echo `ps all -u tbritton | grep MCOverlord.py | grep -v grep | wc -l`"], shell=True)
 
-        print int(numprocesses_running)
+        print(int(numprocesses_running))
         if(int(numprocesses_running) <2 or numOverRide):
-            dbcursor.execute("INSERT INTO MCOverlord (Host,StartTime,Status) VALUES ('"+str(socket.gethostname())+"', NOW(), 'Running' )")
-            dbcnx.commit()
-            queryoverlords="SELECT MAX(ID) FROM MCOverlord;"
-            dbcursor.execute(queryoverlords)
-            lastid = dbcursor.fetchall()
-            #print lastid
-            try:
-                checkSWIF()
-                checkOSG()
-                UpdateOutputSize()
-                checkProjectsForCompletion()
-                dbcursor.execute("UPDATE MCOverlord SET EndTime=NOW(), Status=\"Success\" where ID="+str(lastid[0]["MAX(ID)"]))
+            while(1):
+                dbcursor.execute("INSERT INTO MCOverlord (Host,StartTime,Status) VALUES ('"+str(socket.gethostname())+"', NOW(), 'Running' )")
                 dbcnx.commit()
-            except:
-                dbcursor.execute("UPDATE MCOverlord SET Status=\"Fail\" where ID="+str(lastid[0]["MAX(ID)"]))
-                dbcnx.commit()
-                pass
+                queryoverlords="SELECT MAX(ID) FROM MCOverlord;"
+                dbcursor.execute(queryoverlords)
+                lastid = dbcursor.fetchall()
+                #print lastid
+                try:
+                    checkSWIF()
+                    checkOSG()
+                    UpdateOutputSize()
+                    checkProjectsForCompletion()
+                    dbcursor.execute("UPDATE MCOverlord SET EndTime=NOW(), Status=\"Success\" where ID="+str(lastid[0]["MAX(ID)"]))
+                    dbcnx.commit()
+                except Exception as e:
+                    print("exception")
+                    print(e)
+                    dbcursor.execute("UPDATE MCOverlord SET Status=\"Fail\" where ID="+str(lastid[0]["MAX(ID)"]))
+                    dbcnx.commit()
+                    pass
 
 
         dbcnx.close()
