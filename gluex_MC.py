@@ -1166,7 +1166,7 @@ def GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,RUNNUM):
                 #print BGFOLD[0:3]
                 if BGFOLD[0:3] == "loc":
                         Style="loc"
-                
+
                 path_base="/work/halld/random_triggers/"
 
                 if socket.gethostname() == "scosg16.jlab.org":
@@ -1187,7 +1187,7 @@ def GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,RUNNUM):
                 realpath=os.path.realpath(path_base)
 
                 if not os.path.isfile(realpath):
-                        print "can't find"
+                        print "can't find file to scan."
                         return -1
 
                 queryrand="SELECT Num_Events FROM Randoms WHERE Style=\""+Style+"\" && Tag=\""+RANDBGTAG+"\""+" && Run_Number="+str(RUNNUM)+" && Path=\""+str(realpath)+"\""
