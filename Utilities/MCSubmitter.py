@@ -31,9 +31,9 @@ class bcolors:
     UNDERLINE = '\033[4m'
 
 
-def WritePayloadConfig(order,foundConfig):
+def WritePayloadConfig(order,foundConfig,batch_system):
     
-    MCconfig_file= open("MCDispatched.config","a")
+    MCconfig_file= open("MCSubDispatched.config","a")
     MCconfig_file.write("PROJECT="+str(order["Exp"])+"\n")
 
     if str(order["Exp"]) == "CPP":
@@ -58,16 +58,23 @@ def WritePayloadConfig(order,foundConfig):
         MCconfig_file.write("COHERENT_PEAK="+str(order["CoherentPeak"])+"\n")
 
     if str(order["Generator"]) == "file:":
-        if foundConfig == "True":
+        if batch_system == "OSG":
             MCconfig_file.write("GENERATOR="+str(order["Generator"])+"/"+str(order["Generator_Config"])+"\n")
-        else:
-            MCconfig_file.write("GENERATOR="+str(order["Generator"])+"/"+foundConfig+"\n")
+        elif batch_system == "SWIF":
+            location=order["Generator_Config"].replace("/osgpool/halld/tbritton/","/work/halld/tbritton/")
+            scp_order="scp "+str(order["Generator_Config"])+" ifarm:"+location
+            subprocess.call(scp_order.split(" "),shell=True)
+            MCconfig_file.write("GENERATOR="+str(order["Generator"])+"/"+str(location)+"\n")
     else:
         MCconfig_file.write("GENERATOR="+str(order["Generator"])+"\n")
-        if foundConfig=="True":
+        if batch_system == "OSG":
             MCconfig_file.write("GENERATOR_CONFIG="+str(order["Generator_Config"])+"\n")
-        else:
-            MCconfig_file.write("GENERATOR_CONFIG="+foundConfig+"\n")
+        elif batch_system == "SWIF":
+            location=order["Generator_Config"].replace("/osgpool/halld/tbritton/","/work/halld/tbritton/")
+            scp_order="scp "+str(order["Generator_Config"])+" ifarm:"+location
+            subprocess.call(scp_order.split(" "),shell=True)
+            MCconfig_file.write("GENERATOR_CONFIG="+str(location)+"\n")
+    
 
     MCconfig_file.write("GEANT_VERSION="+str(order["GeantVersion"])+"\n")
     MCconfig_file.write("NOSECONDARIES="+str(abs(order["GeantSecondaries"]-1))+"\n")
@@ -75,7 +82,10 @@ def WritePayloadConfig(order,foundConfig):
     splitLoc=str(order["OutputLocation"]).split("/")
     outputstring="/".join(splitLoc[7:-1])
     #order["OutputLocation"]).split("/")[7]
-    MCconfig_file.write("DATA_OUTPUT_BASE_DIR=/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/"+str(outputstring)+"\n")
+    if batch_system == "OSG":
+        MCconfig_file.write("DATA_OUTPUT_BASE_DIR=/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/"+str(outputstring)+"\n")
+    elif batch_system == "SWIF":
+        MCconfig_file.write("DATA_OUTPUT_BASE_DIR=/cache/halld/halld-scratch/REQUESTED_MC/"+str(outputstring)+"\n")
     #print "FOUND CONFIG="+foundConfig
 
     if(order["RCDBQuery"] != ""):
@@ -90,7 +100,13 @@ def WritePayloadConfig(order,foundConfig):
             janaplugins+="\n"
         jana_config_file.write(janaplugins)
         jana_config_file.close()
-        MCconfig_file.write("CUSTOM_PLUGINS=file:/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config\n")
+
+        if batch_system == "OSG":
+            MCconfig_file.write("CUSTOM_PLUGINS=file:/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config\n")
+        elif batch_system == "SWIF":
+            scp_jana = "scp "+"/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config ifarm:"+"/work/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config"
+            MCconfig_file.write("CUSTOM_PLUGINS=file:/work/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config\n")
+
 
     
     MCconfig_file.write("ENVIRONMENT_FILE=/group/halld/www/halldweb/html/dist/"+str(order["VersionSet"])+"\n")
@@ -125,14 +141,23 @@ def SubmitList(SubList,job_IDs_submitted):
         if proj[0]["SaveReconstruction"]==1:
             cleanrecon=0
 
-        status = subprocess.call("cp /osgpool/halld/tbritton/gluex_MCwrapper/examples/OSGShell.config ./MCDispatched.config", shell=True)
-        WritePayloadConfig(proj[0],"True")
+        system_to_run_on=decideSystem()
 
-        command="/osgpool/halld/tbritton/gluex_MCwrapper/gluex_MC.py MCDispatched.config "+str(RunNumber)+" "+str(row["NumEvts"])+" per_file=20000 base_file_number="+str(row["FileNumber"])+" generate="+str(proj[0]["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(proj[0]["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(proj[0]["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(proj[0]["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid=-"+str(row['ID'])+" logdir=/osgpool/halld/tbritton/REQUESTEDMC_LOGS/"+proj[0]["OutputLocation"].split("/")[7]+" batch=1 submitter=1"
+        if system_to_run_on == "OSG":
+            status = subprocess.call("cp /osgpool/halld/tbritton/gluex_MCwrapper/examples/OSGShell.config ./MCSubDispatched.config", shell=True)
+        elif system_to_run_on == "SWIF":
+            status = subprocess.call("cp /osgpool/halld/tbritton/gluex_MCwrapper/examples/SWIFShell.config ./MCSubDispatched.config", shell=True)
+
+        WritePayloadConfig(proj[0],"True",system_to_run_on)
+
+        command="/osgpool/halld/tbritton/gluex_MCwrapper/gluex_MC.py MCSubDispatched.config "+str(RunNumber)+" "+str(row["NumEvts"])+" per_file=20000 base_file_number="+str(row["FileNumber"])+" generate="+str(proj[0]["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(proj[0]["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(proj[0]["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(proj[0]["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid=-"+str(row['ID'])+" logdir=/osgpool/halld/tbritton/REQUESTEDMC_LOGS/"+proj[0]["OutputLocation"].split("/")[7]+" batch=1 submitter=1"
         print command
         status = subprocess.call(command, shell=True)
 
         job_IDs_submitted.append(row['ID'])
+
+def decideSystem():
+    return "OSG"
 
 def main(argv):
     #print(argv)

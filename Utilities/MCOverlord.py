@@ -167,13 +167,13 @@ def checkSWIF():
                 #NON RUNNING DISPATCHED JOBS ARE A SPECIAL CASE
                 if int(job["num_attempts"]) == 0:
                     #print "truncated update of attempt pre dispatch"
-                    updatejobstatus="UPDATE Attempts SET Status=\""+str(job["status"], "utf-8")+"\"" +" WHERE BatchJobID="+str(job["id"], "utf-8")
+                    updatejobstatus="UPDATE Attempts SET Status=\""+str(job["status"])+"\"" +" WHERE BatchJobID="+str(job["id"])
                     #print updatejobstatus
                     dbcursor.execute(updatejobstatus)
                     dbcnx.commit()
                 else:
                     #print "Update all the attempts"
-                    LoggedSWIFAttemps_query="SELECT ID from Attempts where BatchJobID="+str(job["id"], "utf-8")+" ORDER BY ID"
+                    LoggedSWIFAttemps_query="SELECT ID from Attempts where BatchJobID="+str(job["id"])+" ORDER BY ID"
                     dbcursor.execute(LoggedSWIFAttemps_query)
                     LoggedSWIFAttemps=dbcursor.fetchall()
                     loggedindex=0

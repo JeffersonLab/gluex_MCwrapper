@@ -44,7 +44,7 @@ try:
 except:
         pass
 
-MCWRAPPER_VERSION="2.2.0"
+MCWRAPPER_VERSION="2.2.1"
 MCWRAPPER_DATE="05/17/19"
 
 def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID):
@@ -64,7 +64,7 @@ def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,N
         # project/track
         add_command += " -project " + PROJECT + " -track " + TRACK
         # resources
-        add_command += " -cores " + NCORES + " -disk " + DISK + " -ram " + RAM + " -time " + TIMELIMIT + " -os " + OS
+        add_command += "-create -cores " + NCORES + " -disk " + DISK + " -ram " + RAM + " -time " + TIMELIMIT + " -os " + OS
         # stdout
         add_command += " -stdout " + DATA_OUTPUT_BASE_DIR + "/log/" + str(RUNNO) + "_stdout." + STUBNAME + ".out"
         # stderr
@@ -92,6 +92,7 @@ def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,N
         SWIF_ID_NUM="-1"
 
         if( int(PROJECT_ID) <=0 ):
+                #print(add_command)
                 jobSubout=subprocess.check_output(add_command.split(" "))
                 print jobSubout
                 idnumline=jobSubout.split("\n")[0].strip().split("=")
@@ -978,7 +979,7 @@ def main(argv):
                                 print len(MYJOB) 
                         if len(MYJOB) == 0:
                                 if BATCHSYS.upper()=="SWIF":
-                                        status = subprocess.call("swif create "+WORKFLOW,shell=True)
+                                        #status = subprocess.call("swif create "+WORKFLOW,shell=True)
                                         swif_add_job(WORKFLOW, RUNNUM, BASEFILENUM,str(indir),COMMAND_dict,VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID)
                                 elif BATCHSYS.upper()=="QSUB":
                                         qsub_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, RAM, QUEUENAME, LOG_DIR, PROJECT_ID )
@@ -1082,7 +1083,7 @@ def main(argv):
                                                         print len(MYJOB) 
                                                 if len(MYJOB) == 0:
                                                         if BATCHSYS.upper()=="SWIF":
-                                                                status = subprocess.call("swif create "+WORKFLOW,shell=True)
+                                                                #status = subprocess.call("swif create "+WORKFLOW,shell=True)
                                                                 swif_add_job(WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1,str(indir),COMMAND_dict,VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID)
                                                         elif BATCHSYS.upper()=="QSUB":
                                                                 qsub_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, RAM, QUEUENAME, LOG_DIR, PROJECT_ID )
@@ -1131,7 +1132,7 @@ def main(argv):
                                                 print len(MYJOB) 
                                         if len(MYJOB) == 0:
                                                 if BATCHSYS.upper()=="SWIF":
-                                                        status = subprocess.call("swif create "+WORKFLOW,shell=True)
+                                                        #status = subprocess.call("swif create "+WORKFLOW,shell=True)
                                                         swif_add_job(WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1,str(indir),COMMAND_dict,VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID)
                                                 elif BATCHSYS.upper()=="QSUB":
                                                         qsub_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, RAM, QUEUENAME, LOG_DIR, PROJECT_ID )

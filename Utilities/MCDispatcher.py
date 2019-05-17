@@ -127,14 +127,14 @@ def AutoLaunch():
             status[2]=0
         #print "STATUS IS"
         #print status[0]
-        print("JUST TESTED")
+        #print("JUST TESTED")
         if(status[1]!=-1):
             #print "TEST success"
             #EMAIL SUCCESS AND DISPATCH
-            print("YAY TESTED")
+            #print("YAY TESTED")
             subprocess.call("/osgpool/halld/tbritton/gluex_MCwrapper/Utilities/MCDispatcher.py dispatch -rlim -sys OSG "+str(row['ID']),shell=True)
         else:
-            print("BOO TESTED")
+            #print("BOO TESTED")
             #EMAIL FAIL AND LOG
             #print("echo 'Your Project ID "+str(row['ID'])+" failed the to properly test.  The log information is reproduced below:\n\n\n"+status[0]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+str(row['Email']))
             try:
@@ -644,7 +644,6 @@ def DispatchToOSG(ID,order,PERCENT):
     RunNumber=str(order["RunNumLow"])
     if order["RunNumLow"] != order["RunNumHigh"] :
         RunNumber = RunNumber + "-" + str(order["RunNumHigh"])
-
 
     cleangen=1
     if order["SaveGeneration"]==1:
