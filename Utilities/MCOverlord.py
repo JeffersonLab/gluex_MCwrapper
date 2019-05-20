@@ -80,7 +80,7 @@ def checkProjectsForCompletion():
         #print cpt
         print(filesToMove)
         
-        TOTCompletedQuery ="SELECT DISTINCT ID From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1 && ID in (SELECT DISTINCT Job_ID FROM Attempts WHERE ExitCode = 0 && (Status ='4' || Status='success')  && ExitCode IS NOT NULL);" 
+        TOTCompletedQuery ="SELECT DISTINCT ID From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1 && ID in (SELECT DISTINCT Job_ID FROM Attempts WHERE ExitCode = 0 && (Status ='4' || Status='succeeded')  && ExitCode IS NOT NULL);" 
         dbcursor.execute(TOTCompletedQuery)
         fulfilledJobs=dbcursor.fetchall()
 

@@ -145,7 +145,7 @@ def SubmitList(SubList,job_IDs_submitted):
         if proj[0]["SaveReconstruction"]==1:
             cleanrecon=0
 
-        system_to_run_on=decideSystem()
+        system_to_run_on=decideSystem(row)
 
         if system_to_run_on == "OSG":
             status = subprocess.call("cp /osgpool/halld/tbritton/gluex_MCwrapper/examples/OSGShell.config ./MCSubDispatched.config", shell=True)
@@ -160,8 +160,11 @@ def SubmitList(SubList,job_IDs_submitted):
 
         job_IDs_submitted.append(row['ID'])
 
-def decideSystem():
-    return "OSG"
+def decideSystem(row):
+    if str(row['Project_ID']) == "538":
+        return "SWIF"
+    else:
+        return "OSG"
 
 def main(argv):
     #print(argv)
