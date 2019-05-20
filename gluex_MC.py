@@ -969,7 +969,7 @@ def main(argv):
 
         if str(IS_SUBMITTER) == "1":
                 if BGFOLD == "Random" or BGFOLD=="DEFAULT" or BGFOLD[0:3] == "loc":
-                        RANDOM_NUM_EVT=GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,runs[0])
+                        RANDOM_NUM_EVT=GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,RUNNUM)
                         COMMAND_dict['num_rand_trigs']=str(RANDOM_NUM_EVT)
 
                 if BATCHRUN == 0 or BATCHSYS.upper()=="NULL":
