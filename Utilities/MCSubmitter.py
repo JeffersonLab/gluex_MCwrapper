@@ -41,7 +41,7 @@ def WritePayloadConfig(order,foundConfig,batch_system):
         MCconfig_file.write("FLUX_TO_GEN=cobrems"+"\n")
 
     splitlist=order["OutputLocation"].split("/")
-    MCconfig_file.write("WORKFLOW_NAME="+splitlist[len(splitlist)-2]+"\n")
+    MCconfig_file.write("WORKFLOW_NAME="+str(order["ID"])+"_"+splitlist[len(splitlist)-2]+"\n")
     MCconfig_file.write(order["Config_Stub"]+"\n")
     MinE=str(order["GenMinE"])
     if len(MinE) > 5:
@@ -61,20 +61,23 @@ def WritePayloadConfig(order,foundConfig,batch_system):
         if batch_system == "OSG":
             MCconfig_file.write("GENERATOR="+str(order["Generator"])+"/"+str(order["Generator_Config"])+"\n")
         elif batch_system == "SWIF":
-            location=order["Generator_Config"].replace("/osgpool/halld/tbritton/","/work/halld/tbritton/")
+            location=order["Generator_Config"].replace("/osgpool/halld/tbritton/","/work/halld/home/tbritton/")
             scp_order="scp "+str(order["Generator_Config"])+" ifarm:"+location
-            subprocess.call(scp_order.split(" "),shell=True)
+            print("COPYING GENERATOR file")
+            print(scp_order)
+            subprocess.call(scp_order,shell=True)
             MCconfig_file.write("GENERATOR="+str(order["Generator"])+"/"+str(location)+"\n")
     else:
         MCconfig_file.write("GENERATOR="+str(order["Generator"])+"\n")
         if batch_system == "OSG":
             MCconfig_file.write("GENERATOR_CONFIG="+str(order["Generator_Config"])+"\n")
         elif batch_system == "SWIF":
-            location=order["Generator_Config"].replace("/osgpool/halld/tbritton/","/work/halld/tbritton/")
+            location=order["Generator_Config"].replace("/osgpool/halld/tbritton/","/work/halld/home/tbritton/")
             scp_order="scp "+str(order["Generator_Config"])+" ifarm:"+location
-            subprocess.call(scp_order.split(" "),shell=True)
+            print("COPYING GENERATOR CONFIG")
+            print(scp_order)
+            subprocess.call(scp_order,shell=True)
             MCconfig_file.write("GENERATOR_CONFIG="+str(location)+"\n")
-    
 
     MCconfig_file.write("GEANT_VERSION="+str(order["GeantVersion"])+"\n")
     MCconfig_file.write("NOSECONDARIES="+str(abs(order["GeantSecondaries"]-1))+"\n")
@@ -105,6 +108,7 @@ def WritePayloadConfig(order,foundConfig,batch_system):
             MCconfig_file.write("CUSTOM_PLUGINS=file:/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config\n")
         elif batch_system == "SWIF":
             scp_jana = "scp "+"/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config ifarm:"+"/work/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config"
+            subprocess.call(scp_jana,shell=True)
             MCconfig_file.write("CUSTOM_PLUGINS=file:/work/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config\n")
 
 
@@ -150,7 +154,7 @@ def SubmitList(SubList,job_IDs_submitted):
 
         WritePayloadConfig(proj[0],"True",system_to_run_on)
 
-        command="/osgpool/halld/tbritton/gluex_MCwrapper/gluex_MC.py MCSubDispatched.config "+str(RunNumber)+" "+str(row["NumEvts"])+" per_file=20000 base_file_number="+str(row["FileNumber"])+" generate="+str(proj[0]["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(proj[0]["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(proj[0]["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(proj[0]["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid=-"+str(row['ID'])+" logdir=/osgpool/halld/tbritton/REQUESTEDMC_LOGS/"+proj[0]["OutputLocation"].split("/")[7]+" batch=1 submitter=1"
+        command="/osgpool/halld/tbritton/gluex_MCwrapper/gluex_MC.py MCSubDispatched.config "+str(RunNumber)+" "+str(row["NumEvts"])+" per_file=20000 base_file_number="+str(row["FileNumber"])+" generate="+str(proj[0]["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(proj[0]["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(proj[0]["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(proj[0]["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid=-"+str(row['ID'])+" logdir=/osgpool/halld/tbritton/REQUESTEDMC_LOGS/"+proj[0]["OutputLocation"].split("/")[7]+" batch=2 submitter=1"
         print command
         status = subprocess.call(command, shell=True)
 
