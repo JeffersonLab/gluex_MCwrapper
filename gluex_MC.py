@@ -863,18 +863,15 @@ def main(argv):
         #print(username)
         #exit
 
-        if (BATCHSYS.upper() =="SWIF" and int(BATCHRUN) != 0):
-                # CREATE WORKFLOW IF IT DOESN'T ALREADY EXIST
-	        WORKFLOW_LIST = subprocess.check_output(["swif", "list"])
-	        if WORKFLOW not in WORKFLOW_LIST:
-                        status = subprocess.call(["swif", "create", "-workflow", WORKFLOW])
-
         #calculate files needed to gen
         FILES_TO_GEN=EVTS/PERFILE
         REMAINING_GEN=EVTS%PERFILE
 
         indir=os.environ.get('MCWRAPPER_CENTRAL')
         
+        if IS_SUBMITTER == 1 and BATCHSYS.upper() == "SWIF":
+                indir="/work/halld2/home/tbritton/GlueX_Software/gluex_MCwrapper/"
+
         script_to_use = "/MakeMC.csh"
         
         loginSHELL=environ['SHELL'].split("/")
