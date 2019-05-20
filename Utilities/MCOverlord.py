@@ -155,7 +155,7 @@ def checkSWIF():
             ProjID=workflow["ID"]
             projIDs.append(ProjID)
             #statuscommand="swif status -workflow "+str("pim_g3_1_70_v2_20180718011203pm")+" -jobs -display json"
-            statuscommand="/site/bin/swif status -workflow "+str(wkflowname)+" -jobs -display json"
+            statuscommand="/site/bin/swif status -workflow "+str(ProjID)+"_"+str(wkflowname)+" -jobs -display json"
             #print statuscommand
             jsonOutputstr=subprocess.check_output(statuscommand.split(" "))
             ReturnedJobs=json.loads(str(jsonOutputstr, "utf-8"))
