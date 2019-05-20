@@ -869,7 +869,7 @@ def main(argv):
 
         indir=os.environ.get('MCWRAPPER_CENTRAL')
         
-        if IS_SUBMITTER == 1 and BATCHSYS.upper() == "SWIF":
+        if str(IS_SUBMITTER) == "1" and BATCHSYS.upper() == "SWIF":
                 indir="/work/halld2/home/tbritton/GlueX_Software/gluex_MCwrapper/"
 
         script_to_use = "/MakeMC.csh"
