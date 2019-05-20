@@ -45,7 +45,7 @@ except:
         pass
 
 MCWRAPPER_VERSION="2.2.1"
-MCWRAPPER_DATE="05/17/19"
+MCWRAPPER_DATE="05/20/19"
 
 def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID):
         # PREPARE NAMES
@@ -968,6 +968,10 @@ def main(argv):
         
 
         if str(IS_SUBMITTER) == "1":
+                if BGFOLD == "Random" or BGFOLD=="DEFAULT" or BGFOLD[0:3] == "loc":
+                        RANDOM_NUM_EVT=GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,runs[0])
+                        COMMAND_dict['num_rand_trigs']=str(RANDOM_NUM_EVT)
+
                 if BATCHRUN == 0 or BATCHSYS.upper()=="NULL":
                         os.system(str(indir)+" "+COMMAND)
                 else:
