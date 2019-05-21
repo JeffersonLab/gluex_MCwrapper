@@ -147,14 +147,15 @@ def SubmitList(SubList,job_IDs_submitted):
 
         system_to_run_on=decideSystem(row)
 
+        MCWRAPPER_BOT_HOME="/u/group/halld/gluex_MCwrapper/"
         if system_to_run_on == "OSG":
-            status = subprocess.call("cp /osgpool/halld/tbritton/gluex_MCwrapper/examples/OSGShell.config ./MCSubDispatched.config", shell=True)
+            status = subprocess.call("cp "+MCWRAPPER_BOT_HOME+"/examples/OSGShell.config ./MCSubDispatched.config", shell=True)
         elif system_to_run_on == "SWIF":
-            status = subprocess.call("cp /osgpool/halld/tbritton/gluex_MCwrapper/examples/SWIFShell.config ./MCSubDispatched.config", shell=True)
+            status = subprocess.call("cp "+MCWRAPPER_BOT_HOME+"examples/SWIFShell.config ./MCSubDispatched.config", shell=True)
 
         WritePayloadConfig(proj[0],"True",system_to_run_on)
 
-        command="/osgpool/halld/tbritton/gluex_MCwrapper/gluex_MC.py MCSubDispatched.config "+str(RunNumber)+" "+str(row["NumEvts"])+" per_file=20000 base_file_number="+str(row["FileNumber"])+" generate="+str(proj[0]["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(proj[0]["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(proj[0]["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(proj[0]["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid=-"+str(row['ID'])+" logdir=/osgpool/halld/tbritton/REQUESTEDMC_LOGS/"+proj[0]["OutputLocation"].split("/")[7]+" batch=2 submitter=1"
+        command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCSubDispatched.config "+str(RunNumber)+" "+str(row["NumEvts"])+" per_file=20000 base_file_number="+str(row["FileNumber"])+" generate="+str(proj[0]["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(proj[0]["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(proj[0]["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(proj[0]["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid=-"+str(row['ID'])+" logdir=/osgpool/halld/tbritton/REQUESTEDMC_LOGS/"+proj[0]["OutputLocation"].split("/")[7]+" batch=2 submitter=1"
         print command
         status = subprocess.call(command, shell=True)
 

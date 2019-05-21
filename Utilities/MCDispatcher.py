@@ -13,7 +13,7 @@ import smtplib
 from email.message import EmailMessage
 
 
-
+MCWRAPPER_BOT_HOME="/u/group/halld/gluex_MCwrapper/"
 dbhost = "hallddb.jlab.org"
 dbuser = 'mcuser'
 dbpass = ''
@@ -132,7 +132,7 @@ def AutoLaunch():
             #print "TEST success"
             #EMAIL SUCCESS AND DISPATCH
             #print("YAY TESTED")
-            subprocess.call("/osgpool/halld/tbritton/gluex_MCwrapper/Utilities/MCDispatcher.py dispatch -rlim -sys OSG "+str(row['ID']),shell=True)
+            subprocess.call(MCWRAPPER_BOT_HOME+"/Utilities/MCDispatcher.py dispatch -rlim -sys OSG "+str(row['ID']),shell=True)
         else:
             #print("BOO TESTED")
             #EMAIL FAIL AND LOG
@@ -411,7 +411,7 @@ def TestProject(ID,versionSet,commands_to_call=""):
     my_env=None
     if(versionSet != ""):
         my_env=source("/group/halld/Software/build_scripts/gluex_env_jlab.sh /group/halld/www/halldweb/html/dist/"+versionSet)
-        my_env["MCWRAPPER_CENTRAL"]="/osgpool/halld/tbritton/gluex_MCwrapper/"
+        my_env["MCWRAPPER_CENTRAL"]=MCWRAPPER_BOT_HOME
 
     p = Popen(commands_to_call+command, env=my_env ,stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True)
     #print p
