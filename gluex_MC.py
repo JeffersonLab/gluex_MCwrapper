@@ -869,8 +869,9 @@ def main(argv):
 
         indir=os.environ.get('MCWRAPPER_CENTRAL')
         
-        if str(IS_SUBMITTER) == "1" and BATCHSYS.upper() == "SWIF":
-                indir="/work/halld2/home/tbritton/GlueX_Software/gluex_MCwrapper/"
+        #MCWRAPPER_BOT_HOME now group.  Making the below OBSOLETE as the above line now is valid in all cases
+        #if str(IS_SUBMITTER) == "1" and BATCHSYS.upper() == "SWIF":
+        #        indir="/work/halld2/home/tbritton/GlueX_Software/gluex_MCwrapper/"
 
         script_to_use = "/MakeMC.csh"
         

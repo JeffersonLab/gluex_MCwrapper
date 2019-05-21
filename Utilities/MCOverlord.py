@@ -168,7 +168,7 @@ def checkSWIF():
                 if int(job["num_attempts"]) == 0:
                     #print "truncated update of attempt pre dispatch"
                     updatejobstatus="UPDATE Attempts SET Status=\""+str(job["status"])+"\"" +" WHERE BatchJobID="+str(job["id"])
-                    #print updatejobstatus
+                    print(updatejobstatus)
                     dbcursor.execute(updatejobstatus)
                     dbcnx.commit()
                 else:
@@ -186,13 +186,13 @@ def checkSWIF():
                         Start_Time=datetime.fromtimestamp(float(0.0)/float(1000))
                         RAMUsed="0"
                         ExitCode=0
-                        #print attempt
+                        #print(attempt)
                         #print "||||||||||||||||||||"
-                        #print attempt["exitcode"]
+                        #print(attempt["exitcode"])
                         #if not attempt["exitcode"]:
                         #    continue
-
-                        if attempt["exitcode"] or job["status"]=="succeeded":
+                        #print("EXIT CODE")
+                        if "exitcode" in attempt or job["status"]=="succeeded":
                             ExitCode=attempt["exitcode"]
                         else:
                             ExitCode=-1
@@ -203,19 +203,20 @@ def checkSWIF():
                         if(job["status"]=="problem" or job["status"]=="succeeded") and attempt["auger_ts_complete"] is not None:
                             Completed_Time=attempt["auger_ts_complete"]
                             #print datetime.fromtimestamp(float(attempt["auger_ts_complete"])/float(1000))
-
-                        if(attempt["auger_wall_sec"]):
+                        #print("TIMES")
+                        #print(attempt["auger_wall_sec"])
+                        if("auger_wall_sec" in attempt):
                             WallTime=timedelta(seconds=attempt["auger_wall_sec"])
-                        if(attempt["auger_ts_active"]):
+                        if("auger_ts_active" in attempt):
                             Start_Time=datetime.fromtimestamp(float(attempt["auger_ts_active"])/float(1000))
                             
-                        if(attempt["auger_cpu_sec"]):
+                        if("auger_cpu_sec" in attempt):
                             CpuTime=timedelta(seconds=attempt["auger_cpu_sec"])
-                        if attempt["auger_vmem_kb"]:
+                        if "auger_vmem_kb" in attempt:
                             RAMUsed=str(float(attempt["auger_vmem_kb"])/1000.)
 
                         #print RAMUsed
-                        #print "|||||||||||||||||||||"
+                        #print("|||||||||||||||||||||")
                         #SOME VODOO IF RETRY JOBS HAPPENED OUTSIDE OF THE DB
                         if loggedindex == len(LoggedSWIFAttemps):
                             #print "FOUND AN ATTEMPT EXTERNALLY CREATED"

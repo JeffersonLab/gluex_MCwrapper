@@ -95,6 +95,7 @@ def WritePayloadConfig(order,foundConfig,batch_system):
         MCconfig_file.write("RCDB_QUERY="+order["RCDBQuery"]+"\n")
 
     if(order["ReactionLines"] != ""):
+
         jana_config_file=open("/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config","w")
         janaplugins="PLUGINS danarest,monitoring_hists,mcthrown_tree"
         if(order["ReactionLines"]):
@@ -104,12 +105,14 @@ def WritePayloadConfig(order,foundConfig,batch_system):
         jana_config_file.write(janaplugins)
         jana_config_file.close()
 
+
         if batch_system == "OSG":
             MCconfig_file.write("CUSTOM_PLUGINS=file:/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config\n")
         elif batch_system == "SWIF":
-            scp_jana = "scp "+"/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config ifarm:"+"/work/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config"
+            scp_jana = "scp "+"/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config ifarm:"+"/work/halld/home/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config"
+            print(scp_jana)
             subprocess.call(scp_jana,shell=True)
-            MCconfig_file.write("CUSTOM_PLUGINS=file:/work/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config\n")
+            MCconfig_file.write("CUSTOM_PLUGINS=file:/work/halld/home/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config\n")
 
 
     
@@ -162,7 +165,7 @@ def SubmitList(SubList,job_IDs_submitted):
         job_IDs_submitted.append(row['ID'])
 
 def decideSystem(row):
-    if str(row['Project_ID']) == "538":
+    if str(row['Project_ID']) == "544":
         return "SWIF"
     else:
         return "OSG"
