@@ -165,10 +165,28 @@ def SubmitList(SubList,job_IDs_submitted):
         job_IDs_submitted.append(row['ID'])
 
 def decideSystem(row):
-    if str(row['Project_ID']) == "544":
+    command="condor_q | grep tbritton"
+    jobSubout=subprocess.check_output(command,shell=True)
+    
+    condor_q_vals=jobSubout.split()
+    print("Running")
+    running=condor_q_vals[6]
+    print(running)
+    print("Idle")
+    idle=condor_q_vals[7]
+    print(idle)
+    print("SUM")
+    osg_sum=int(running)+int(idle)
+    osg_ratio=float(idle)/float(running)
+    print(osg_sum)
+    print(osg_ratio)
+    if osg_sum > 3000 and osg_ratio > 2:
+        print("SWIF")
         return "SWIF"
     else:
+        print("OSG")
         return "OSG"
+
 
 def main(argv):
     #print(argv)
