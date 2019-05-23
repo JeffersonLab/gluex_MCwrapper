@@ -54,6 +54,9 @@ def WritePayloadConfig(order,foundConfig,batch_system):
     MCconfig_file.write("GEN_MIN_ENERGY="+MinE+"\n")
     MCconfig_file.write("GEN_MAX_ENERGY="+MaxE+"\n")
 
+    if str(order["GenFlux"]) == "cobrems":
+        MCconfig_file.write("FLUX_TO_GEN=cobrems"+"\n")
+
     if order["CoherentPeak"] is not None :
         MCconfig_file.write("COHERENT_PEAK="+str(order["CoherentPeak"])+"\n")
 
@@ -168,14 +171,33 @@ def decideSystem(row):
     command="condor_q | grep tbritton"
     jobSubout=subprocess.check_output(command,shell=True)
     
-    condor_q_vals=jobSubout.split()
+    print(jobSubout)
+
+    rows=jobSubout.split("\n")
+    rows=rows[:-1]
+    print(rows)
+    running=0.
+    idle=0.
+    print(len(rows))
+    for row in rows:
+        condor_q_vals=row.split()
+        if(len(condor_q_vals) <5):
+            continue
+        print(str(condor_q_vals[6])+"  |  "+str(condor_q_vals[7]))
+        if(str(condor_q_vals[6]) != "_"):
+            running=running+int(condor_q_vals[6])
+            print("running: "+str(running))
+       
+        if(condor_q_vals[7] != "_"):
+            idle=idle+int(condor_q_vals[7])
+            print("idle: "+str(idle))
+
     print("Running")
-    running=condor_q_vals[6]
     print(running)
     print("Idle")
-    idle=condor_q_vals[7]
     print(idle)
     print("SUM")
+
     osg_sum=int(running)+int(idle)
     osg_ratio=float(idle)/float(running)
     print(osg_sum)

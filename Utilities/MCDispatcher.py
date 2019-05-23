@@ -595,6 +595,9 @@ def WritePayloadConfig(order,foundConfig):
     MCconfig_file.write("GEN_MIN_ENERGY="+MinE+"\n")
     MCconfig_file.write("GEN_MAX_ENERGY="+MaxE+"\n")
 
+    if str(order["GenFlux"]) == "cobrems":
+        MCconfig_file.write("FLUX_TO_GEN=cobrems"+"\n")
+
     if order["CoherentPeak"] is not None :
         MCconfig_file.write("COHERENT_PEAK="+str(order["CoherentPeak"])+"\n")
 

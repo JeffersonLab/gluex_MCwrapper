@@ -340,6 +340,9 @@ else
 	endif
 endif
 
+if ( "$polarization_angle" == "-1.0" ) then
+		set POL_TO_GEN=0
+endif
 # PRINT INPUTS
 echo "Job started: " `date`
 echo "Simulating the Experiment: " $EXPERIMENT

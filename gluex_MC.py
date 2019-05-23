@@ -64,7 +64,7 @@ def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,N
         # project/track
         add_command += " -project " + PROJECT + " -track " + TRACK
         # resources
-        add_command += " -create -slurm -cores " + NCORES + " -disk " + DISK + " -ram " + RAM + " -time " + TIMELIMIT + " -os " + OS
+        add_command += " -create -pbs -cores " + NCORES + " -disk " + DISK + " -ram " + RAM + " -time " + TIMELIMIT + " -os " + OS
         # stdout
         add_command += " -stdout " + DATA_OUTPUT_BASE_DIR + "/log/" + str(RUNNO) + "_stdout." + STUBNAME + ".out"
         # stderr
@@ -319,6 +319,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DAT
         f.write("output      = "+LOG_DIR+"/log/"+"out_"+JOBNAME+".log\n")
         f.write("log = "+LOG_DIR+"/log/"+"OSG_"+JOBNAME+".log\n")
         f.write("initialdir = "+RUNNING_DIR+"\n")
+        f.write("request_memory = 4GB"+"\n")
         #f.write("transfer_input_files = "+ENVFILE+"\n")
         f.write("transfer_input_files = "+indir+", "+ENVFILE+additional_passins+"\n")
         f.write("transfer_output_files = "+str(RUNNUM)+"_"+str(FILENUM)+"\n")
@@ -868,10 +869,6 @@ def main(argv):
         REMAINING_GEN=EVTS%PERFILE
 
         indir=os.environ.get('MCWRAPPER_CENTRAL')
-        
-        #MCWRAPPER_BOT_HOME now group.  Making the below OBSOLETE as the above line now is valid in all cases
-        #if str(IS_SUBMITTER) == "1" and BATCHSYS.upper() == "SWIF":
-        #        indir="/work/halld2/home/tbritton/GlueX_Software/gluex_MCwrapper/"
 
         script_to_use = "/MakeMC.csh"
         

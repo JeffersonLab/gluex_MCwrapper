@@ -344,6 +344,9 @@ else
 
 fi
 
+if [[ "$polarization_angle" == "-1.0" ]]; then
+		POL_TO_GEN=0
+fi
 # PRINT INPUTS
 echo "Job started: " `date`
 echo "Simulating the Experiment: " $EXPERIMENT
@@ -605,7 +608,6 @@ if [[ "$GENR" != "0" ]]; then
     	fi
 
 	fi
-
 
 	echo "PolarizationAngle $polarization_angle" > beam.config
 	echo "PhotonBeamLowEnergy $GEN_MIN_ENERGY" >> beam.config
