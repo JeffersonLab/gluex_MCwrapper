@@ -231,13 +231,13 @@ def RetryJobsFromProject(ID, countLim):
                     countq="SELECT Count(Job_ID) from Attempts where Job_ID="+str(row["Job_ID"])
                     curs.execute(countq)
                     count=curs.fetchall()
-                    if int(count[0]["Count(Job_ID)"]) > 15 :
+                    if int(count[0]["Count(Job_ID)"]) > 5 :
                         j=j+1
                         continue
                 RetryJob(row["Job_ID"])
                 i=i+1
     print("retried "+str(i)+" Jobs")
-    print(str(j)+" jobs over restart limit of 15")
+    print(str(j)+" jobs over restart limit of 5")
 
 #def DoMissingJobs(ID,SYS):
 #    query="SELECT ID FROM Jobs where ID NOT IN (SELECT Job_ID FROM Attempts) && IsActive=1 && Project_ID="+str(ID)+";"
@@ -280,6 +280,23 @@ def RetryJob(ID):
     cleanrecon=1
     if proj[0]["SaveReconstruction"]==1:
         cleanrecon=0
+
+    bkg_parts=proj[0]["BKG"].split(":")
+    if bkg_parts[0] == "Random":
+        formatted_runnum="%06d" % job[0]["RunNumber"]
+        path_to_check="/osgpool/halld/random_triggers/"+str(bkg_parts[1])+"/run"+str(formatted_runnum)+"_random.hddm"
+        print(path_to_check)
+        if not os.path.isfile(path_to_check):
+            jobdeactivate="UPDATE Jobs Set IsActive=0 where ID="+str(job[0]["ID"])
+            print(jobdeactivate)
+            curs.execute(jobdeactivate)
+            conn.commit()
+            status_six="UPDATE Attempts Set Status=\"6\" where Job_ID="+str(job[0]["ID"])
+            print(status_six)
+            curs.execute(status_six)
+            conn.commit()
+            return
+
 
     if(rows[0]["BatchSystem"] == "SWIF"):
         splitL=len(proj[0]["OutputLocation"].split("/"))

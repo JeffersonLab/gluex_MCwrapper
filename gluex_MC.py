@@ -45,7 +45,7 @@ except:
         pass
 
 MCWRAPPER_VERSION="2.2.1"
-MCWRAPPER_DATE="05/21/19"
+MCWRAPPER_DATE="05/23/19"
 
 def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID):
         # PREPARE NAMES
@@ -92,7 +92,7 @@ def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,N
         SWIF_ID_NUM="-1"
 
         if( int(PROJECT_ID) <=0 ):
-                #print(add_command)
+                print(add_command)
                 jobSubout=subprocess.check_output(add_command.split(" "))
                 print jobSubout
                 idnumline=jobSubout.split("\n")[0].strip().split("=")
