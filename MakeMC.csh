@@ -1108,8 +1108,8 @@ if ( "$GENR" != "0" ) then
 
 	    if ( "$BKGFOLDSTR" == "BeamPhotons" || "$BKGFOLDSTR" == "None" || "$BKGFOLDSTR" == "TagOnly" ) then
 			echo "running MCsmear without folding in random background"
-			echo mcsmear $MCSMEAR_Flags -PTHREAD_TIMOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3600 -o$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' $STANDARD_NAME'_geant'$GEANTVER'.hddm'
-			mcsmear $MCSMEAR_Flags -PTHREAD_TIMOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3600 -o$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' $STANDARD_NAME'_geant'$GEANTVER'.hddm'
+			echo mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3600 -o$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' $STANDARD_NAME'_geant'$GEANTVER'.hddm'
+			mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3600 -o$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' $STANDARD_NAME'_geant'$GEANTVER'.hddm'
 			set mcsmear_return_code=$status
 	    else if ( "$BKGFOLDSTR" == "DEFAULT" || "$BKGFOLDSTR" == "Random" ) then
 			rm -f count.py
@@ -1127,11 +1127,11 @@ if ( "$GENR" != "0" ) then
 			
 			
 			if ( $MAKE_MC_USING_XROOTD == 0 ) then
-				echo "mcsmear "$MCSMEAR_Flags" -PTHREAD_TIMOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3600 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
-				mcsmear $MCSMEAR_Flags -PTHREAD_TIMOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3600 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
+				echo "mcsmear "$MCSMEAR_Flags" -PTHREAD_TIMEOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3600 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
+				mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3600 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
 			else
-				echo "mcsmear $MCSMEAR_Flags -PTHREAD_TIMOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3600 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm:1+$fold_skip_num"
-				mcsmear $MCSMEAR_Flags -PTHREAD_TIMOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3600 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm\:1\+$fold_skip_num
+				echo "mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3600 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm:1+$fold_skip_num"
+				mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3600 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm\:1\+$fold_skip_num
 			endif
 			set mcsmear_return_code=$status
 		else if ( "$bkgloc_pre" == "loc:" ) then
@@ -1146,14 +1146,14 @@ if ( "$GENR" != "0" ) then
 			endif
 			set fold_skip_num=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
 			
-			echo "mcsmear "$MCSMEAR_Flags" -PTHREAD_TIMOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3600 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
-			mcsmear $MCSMEAR_Flags -PTHREAD_TIMOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3600 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
+			echo "mcsmear "$MCSMEAR_Flags" -PTHREAD_TIMEOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3600 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
+			mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3600 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
 			set mcsmear_return_code=$status
 	    
 			else
 			#trust the user and use their string
-			echo 'mcsmear '$MCSMEAR_Flags' -PTHREAD_TIMOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3600 -o'$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm'' '$STANDARD_NAME'_geant'$GEANTVER'.hddm'' '$BKGFOLDSTR
-			mcsmear $MCSMEAR_Flags -PTHREAD_TIMOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3600 -o$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' $STANDARD_NAME'_geant'$GEANTVER'.hddm' $BKGFOLDSTR
+			echo 'mcsmear '$MCSMEAR_Flags' -PTHREAD_TIMEOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3600 -o'$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm'' '$STANDARD_NAME'_geant'$GEANTVER'.hddm'' '$BKGFOLDSTR
+			mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3600 -o$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' $STANDARD_NAME'_geant'$GEANTVER'.hddm' $BKGFOLDSTR
 			set mcsmear_return_code=$status
 	    
 			endif
