@@ -234,7 +234,7 @@ def main(argv):
         lastid = curs.fetchall()
         try:    
             while more_sub and int_i<1000:
-                lrows=[]
+                rows=[]
                 int_i+=1
                 print "============================================================="
                 query = "SELECT UName,RunNumber,FileNumber,Tested,NumEvts,BKG,Notified,Jobs.ID,Project_ID,Priority,IsActive from Jobs,Project,Users where Tested=1 && Notified is NULL && IsActive=1 && Jobs.ID not in (Select Job_ID from Attempts) and Project_ID = Project.ID and Uname = name order by Priority desc limit "+str(Block_size)
@@ -244,27 +244,27 @@ def main(argv):
                 print query
                 curs.execute(query) 
                 rows=curs.fetchall()
-                lrows=list(rows)
-                print("length of rows: "+str(len(lrows)))
+                #lrows=list(rows)
+                print("length of rows: "+str(len(rows)))
 
-                for row in lrows:
-                    bkg_parts=row["BKG"].split(":")
-                    if bkg_parts[0] == "Random":
-                        formatted_runnum="%06d" % row["RunNumber"]
-                        path_to_check="/osgpool/halld/random_triggers/"+str(bkg_parts[1])+"/run"+str(formatted_runnum)+"_random.hddm"
-                        if not os.path.isfile(path_to_check):
-                            jobdeactivate="UPDATE Jobs Set IsActive=0 where ID="+str(row["Jobs.ID"])
-                            print(jobdeactivate)
-                            curs.execute(jobdeactivate)
-                            conn.commit()
-                            lrows.remove(row)
+                #for row in lrows:
+                #    bkg_parts=row["BKG"].split(":")
+                #    if bkg_parts[0] == "Random":
+                #        formatted_runnum="%06d" % row["RunNumber"]
+                #        path_to_check="/osgpool/halld/random_triggers/"+str(bkg_parts[1])+"/run"+str(formatted_runnum)+"_random.hddm"
+                #        if not os.path.isfile(path_to_check):
+                #            jobdeactivate="UPDATE Jobs Set IsActive=0 where ID="+str(row["Jobs.ID"])
+                #            print(jobdeactivate)
+                #            curs.execute(jobdeactivate)
+                #            conn.commit()
+                #            lrows.remove(row)
 
-                if(len(lrows)==0):
+                if(len(rows)==0):
                     more_sub=False
                     break
 
 
-                SubmitList(lrows,job_IDs_submitted)
+                SubmitList(rows,job_IDs_submitted)
                 #Must do the following commit even through gluex_MC.py does one.  Else the above query is cached and does not update properly
                 conn.commit()
             curs.execute("UPDATE MCSubmitter SET EndTime=NOW(), Status=\"Success\" where ID="+str(lastid[0]["MAX(ID)"]))

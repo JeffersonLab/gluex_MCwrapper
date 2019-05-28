@@ -319,7 +319,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DAT
         f.write("output      = "+LOG_DIR+"/log/"+"out_"+JOBNAME+".log\n")
         f.write("log = "+LOG_DIR+"/log/"+"OSG_"+JOBNAME+".log\n")
         f.write("initialdir = "+RUNNING_DIR+"\n")
-        f.write("request_memory = 4GB"+"\n")
+        f.write("request_memory = 2.0GB"+"\n")
         #f.write("transfer_input_files = "+ENVFILE+"\n")
         f.write("transfer_input_files = "+indir+", "+ENVFILE+additional_passins+"\n")
         f.write("transfer_output_files = "+str(RUNNUM)+"_"+str(FILENUM)+"\n")

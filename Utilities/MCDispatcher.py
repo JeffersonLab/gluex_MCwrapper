@@ -281,26 +281,27 @@ def RetryJob(ID):
     if proj[0]["SaveReconstruction"]==1:
         cleanrecon=0
 
-    bkg_parts=proj[0]["BKG"].split(":")
-    if bkg_parts[0] == "Random":
-        formatted_runnum="%06d" % job[0]["RunNumber"]
-        path_to_check="/osgpool/halld/random_triggers/"+str(bkg_parts[1])+"/run"+str(formatted_runnum)+"_random.hddm"
-        print(path_to_check)
-        if not os.path.isfile(path_to_check):
-            jobdeactivate="UPDATE Jobs Set IsActive=0 where ID="+str(job[0]["ID"])
-            print(jobdeactivate)
-            curs.execute(jobdeactivate)
-            conn.commit()
-            status_six="UPDATE Attempts Set Status=\"6\" where Job_ID="+str(job[0]["ID"])
-            print(status_six)
-            curs.execute(status_six)
-            conn.commit()
-            return
+    #bkg_parts=proj[0]["BKG"].split(":")
+    #if bkg_parts[0] == "Random":
+    #    formatted_runnum="%06d" % job[0]["RunNumber"]
+    #    path_to_check="/osgpool/halld/random_triggers/"+str(bkg_parts[1])+"/run"+str(formatted_runnum)+"_random.hddm"
+    #    print(path_to_check)
+    #    if not os.path.isfile(path_to_check):
+    #        jobdeactivate="UPDATE Jobs Set IsActive=0 where ID="+str(job[0]["ID"])
+    #        print(jobdeactivate)
+    #        curs.execute(jobdeactivate)
+    #        conn.commit()
+    #        status_six="UPDATE Attempts Set Status=\"6\" where Job_ID="+str(job[0]["ID"])
+    #        print(status_six)
+    #        curs.execute(status_six)
+    #        conn.commit()
+    #        return
 
 
     if(rows[0]["BatchSystem"] == "SWIF"):
         splitL=len(proj[0]["OutputLocation"].split("/"))
-        command = "swif retry-jobs -workflow "+proj[0]["OutputLocation"].split("/")[splitL-2]+" "+rows[0]["BatchJobID"]
+        command = "swif retry-jobs -workflow "+"proj"+str(proj[0]["ID"])+"_"+proj[0]["OutputLocation"].split("/")[splitL-2]+" "+rows[0]["BatchJobID"]
+        #proj548_gen_amp_L1520_errval_20190522055719am
         print(command)
         status = subprocess.call(command, shell=True)
     elif(rows[0]["BatchSystem"] == "OSG"):

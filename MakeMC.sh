@@ -521,18 +521,22 @@ if [[ "$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" == 
 			if [[ "$bkgloc_pre" == "loc:" ]]; then
 			rand_bkg_loc=`echo $BKGFOLDSTR | cut -c 5-`
  		   		if [[ "$BATCHSYS" == "OSG" && $BATCHRUN != 0 ]]; then
-					if [[ "$MAKE_MC_USING_XROOTD" == "0" ]]; then
+				    if [[ "$MAKE_MC_USING_XROOTD" == "0" ]]; then
 						bkglocstring="/srv""/run$formatted_runNumber""_random.hddm"
-					else
-						bkglocstring="$XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm"
-					fi
+				    else
+						bkglocstring="$XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber""_random.hddm"
+				    fi
 				else
 			    	bkglocstring=$rand_bkg_loc"/run$formatted_runNumber""_random.hddm"
 			    fi
 			else
 		    #bkglocstring="/cache/halld/""$runperiod""/sim/random_triggers/""run$formatted_runNumber""_random.hddm"
 			    if [[ "$BATCHSYS" == "OSG" && $BATCHRUN != 0 ]]; then
+				if [[ "$MAKE_MC_USING_XROOTD" == "0" ]]; then
 					bkglocstring="/srv""/run$formatted_runNumber""_random.hddm"
+				    else
+					bkglocstring="$XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber""_random.hddm"
+				    fi
 				else
 		    		bkglocstring="/work/halld/random_triggers/"$RANDBGTAG"/run"$formatted_runNumber"_random.hddm"
 					if [[ `hostname` == 'scosg16.jlab.org' ]]; then
@@ -542,7 +546,7 @@ if [[ "$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" == 
 			fi
 			#set bkglocstring="/w/halld-scifs1a/home/tbritton/converted.hddm"
 		    
-		    if [[ ! -f $bkglocstring ]]; then
+		    if [[ ! -f $bkglocstring && "$MAKE_MC_USING_XROOTD" == "0" ]]; then
 			echo "something went wrong with initialization"
 			echo "Could not find mix-in file "$bkglocstring
 			exit 1000
@@ -1114,7 +1118,7 @@ if [[ "$GENR" != "0" ]]; then
 	   
 	if [[ "$BKGFOLDSTR" == "BeamPhotons" || "$BKGFOLDSTR" == "None" || "$BKGFOLDSTR" == "TagOnly" ]]; then
 		echo "running MCsmear without folding in random background"
-		mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' $STANDARD_NAME'_geant'$GEANTVER'.hddm'
+		mcsmear $MCSMEAR_Flags -PTHREAD_TIMOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3600 -o$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' $STANDARD_NAME'_geant'$GEANTVER'.hddm'
 		mcsmear_return_code=$?
 	elif [[ "$BKGFOLDSTR" == "DEFAULT" || "$BKGFOLDSTR" == "Random" ]]; then
 		rm -f count.py
@@ -1129,11 +1133,11 @@ if [[ "$GENR" != "0" ]]; then
 		fold_skip_num=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
 		echo "skipping: "$fold_skip_num
 		if [[ $MAKE_MC_USING_XROOTD == 0 ]]; then
-			echo "mcsmear "$MCSMEAR_Flags " -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
-			mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
+			echo "mcsmear "$MCSMEAR_Flags " -PTHREAD_TIMOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3600 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
+			mcsmear $MCSMEAR_Flags -PTHREAD_TIMOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3600 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
 		else
-			echo "mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm:1+$fold_skip_num"
-            mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $XRD_RANDOMS_URL/random_triggers//$RANDBGTAG/run$formatted_runNumber\_random.hddm\:1\+$fold_skip_num
+			echo "mcsmear $MCSMEAR_Flags -PTHREAD_TIMOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3600 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm:1+$fold_skip_num"
+            mcsmear $MCSMEAR_Flags -PTHREAD_TIMOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3600 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $XRD_RANDOMS_URL/random_triggers//$RANDBGTAG/run$formatted_runNumber\_random.hddm\:1\+$fold_skip_num
 		fi
 		mcsmear_return_code=$?
 	elif [[ "$bkgloc_pre" == "loc:" ]]; then
@@ -1147,13 +1151,13 @@ if [[ "$GENR" != "0" ]]; then
 			totalnum=$RANDOM_TRIG_NUM_EVT
 	   fi
 		fold_skip_num=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
-		echo "mcsmear "$MCSMEAR_Flags " -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
-		mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
+		echo "mcsmear "$MCSMEAR_Flags " -PTHREAD_TIMOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3600 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
+		mcsmear $MCSMEAR_Flags -PTHREAD_TIMOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3600 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
 		mcsmear_return_code=$?
 	else
 	    #trust the user and use their string
-	    echo 'mcsmear -PTHREAD_TIMEOUT=500 -o'$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm'' '$STANDARD_NAME'_geant'$GEANTVER'.hddm'' '$BKGFOLDSTR
-	    mcsmear -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' $STANDARD_NAME'_geant'$GEANTVER'.hddm' $BKGFOLDSTR
+	    echo 'mcsmear -PTHREAD_TIMOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3600 -o'$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm'' '$STANDARD_NAME'_geant'$GEANTVER'.hddm'' '$BKGFOLDSTR
+	    mcsmear -PTHREAD_TIMOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3600 -o$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' $STANDARD_NAME'_geant'$GEANTVER'.hddm' $BKGFOLDSTR
 		mcsmear_return_code=$?
 	fi
 	
