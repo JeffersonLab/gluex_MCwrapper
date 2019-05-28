@@ -214,11 +214,13 @@ def RetryJobsFromProject(ID, countLim):
    
     i=0
     j=0
+    SWIF_retry_IDs=[]
     for row in rows:
 
         if (row["BatchSystem"]=="SWIF"):
-            if((row["Status"] == "succeeded" and row["ExitCode"] != 0) or row["Status"]=="problems"):
-                RetryJob(row["Job_ID"])
+            if((row["Status"] == "succeeded" and row["ExitCode"] != 0) or row["Status"]=="problem"):
+                SWIF_retry_IDs.append(row["BatchJobID"])
+                #RetryJob(row["Job_ID"])
                 i=i+1
         elif (row["BatchSystem"]=="OSG"):
             #print "=========================="
@@ -236,6 +238,16 @@ def RetryJobsFromProject(ID, countLim):
                         continue
                 RetryJob(row["Job_ID"])
                 i=i+1
+        
+        #print(SWIF_retry_IDs)
+    if(len(SWIF_retry_IDs)!=0):
+        queryproj = "SELECT * FROM Project WHERE ID="+str(ID)
+        curs.execute(queryproj) 
+        proj=curs.fetchall()
+        splitL=len(proj[0]["OutputLocation"].split("/"))
+        retry_swif_command="swif retry-jobs -workflow "+"proj"+str(ID)+"_"+proj[0]["OutputLocation"].split("/")[splitL-2]+" "+" ".join(SWIF_retry_IDs)
+        print(retry_swif_command)
+        status = subprocess.call(retry_swif_command, shell=True)
     print("retried "+str(i)+" Jobs")
     print(str(j)+" jobs over restart limit of 5")
 
