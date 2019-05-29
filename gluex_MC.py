@@ -209,7 +209,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DAT
 
         indir_parts=indir.split("/")
         script_to_use=indir_parts[len(indir_parts)-1]
-
+        print(script_to_use)
         ENVFILE_parts=ENVFILE.split("/")
         envfile_to_source="/srv/"+ENVFILE_parts[len(ENVFILE_parts)-1]
 

@@ -118,14 +118,30 @@ export USER_BC=`which bc`
 export USER_PYTHON=`which python`
 export USER_STAT=`which stat`
 
+
+length_count=$((`echo $RUN_NUMBER | wc -c` - 1))
+
+formatted_runNumber=""
+while [ $length_count -lt 6 ]; do
+    formatted_runNumber="0""$formatted_runNumber"
+    length_count=$(($length_count + 1))
+done
+
+formatted_runNumber=$formatted_runNumber$RUN_NUMBER
+flength_count=$((`echo $FILE_NUMBER | wc -c` - 1))
+
 export XRD_RANDOMS_URL=root://nod25.phys.uconn.edu/Gluex/rawdata
 export MAKE_MC_USING_XROOTD=0
+ls /usr/lib64/libXrdPosixPreload.so
 if [[ -f /usr/lib64/libXrdPosixPreload.so ]]; then
 	export MAKE_MC_USING_XROOTD=1
 	export LD_PRELOAD=/usr/lib64/libXrdPosixPreload.so
-	
+	echo "I have the share object needed for xrootd!"
 	con_test=`xrdfs $XRD_RANDOMS_URL ls`
 	if [[ "$con_test" == "" ]]; then
+		echo "Connection test failed.  Disabling xrootd...."
+		#echo "attempting to copy the needed file from an alternate source..."
+		#rsync scosg16.jlab.org:/osgpool/halld/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm ./
 		export MAKE_MC_USING_XROOTD=0
 	fi
 fi
@@ -389,6 +405,7 @@ echo ""
 echo "=======SOFTWARE USED======="
 echo "MCwrapper version v"$MCWRAPPER_VERSION
 echo "MCwrapper location" $MCWRAPPER_CENTRAL
+echo "LDPRELOAD: " $LD_PRELOAD
 echo "Streaming via xrootd? "$MAKE_MC_USING_XROOTD "Event Count: "$RANDOM_TRIG_NUM_EVT
 echo "BC "$USER_BC
 echo "python "$USER_PYTHON
@@ -428,16 +445,6 @@ else
     cp $CUSTOM_GCONTROL ./temp_Gcontrol.in
 fi
 
-length_count=$((`echo $RUN_NUMBER | wc -c` - 1))
-
-formatted_runNumber=""
-while [ $length_count -lt 6 ]; do
-    formatted_runNumber="0""$formatted_runNumber"
-    length_count=$(($length_count + 1))
-done
-
-formatted_runNumber=$formatted_runNumber$RUN_NUMBER
-flength_count=$((`echo $FILE_NUMBER | wc -c` - 1))
 
 formatted_fileNumber=""
 while [ $flength_count -lt 3 ]; do

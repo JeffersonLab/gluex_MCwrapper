@@ -207,7 +207,7 @@ def decideSystem(row):
         return "SWIF"
     else:
         print("OSG")
-        return "OSG"
+        return "SWIF"
 
 
 def main(argv):

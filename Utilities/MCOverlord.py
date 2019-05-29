@@ -187,17 +187,20 @@ def checkSWIF():
                         RAMUsed="0"
                         ExitCode=0
                         #print(attempt)
-                        #print "||||||||||||||||||||"
+                        #print("||||||||||||||||||||")
                         #print(attempt["exitcode"])
                         #if not attempt["exitcode"]:
                         #    continue
                         #print("EXIT CODE")
+                        #print('exitcode' in attempt)
+                        #print(job["status"])
                         if "exitcode" in attempt or job["status"]=="succeeded":
-                            ExitCode=attempt["exitcode"]
+                            if "exitcode" in attempt:
+                                ExitCode=attempt["exitcode"]
                         else:
                             ExitCode=-1
                         
-                  
+                        print("exit code done")
                         Completed_Time='NULL'
 
                         if(job["status"]=="problem" or job["status"]=="succeeded") and "auger_ts_complete" in attempt:
@@ -507,7 +510,7 @@ def main(argv):
                     print(e)
                     dbcursor.execute("UPDATE MCOverlord SET Status=\"Fail\" where ID="+str(lastid[0]["MAX(ID)"]))
                     dbcnx.commit()
-                    pass
+                    break
 
 
         dbcnx.close()
