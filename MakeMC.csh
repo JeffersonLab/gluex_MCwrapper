@@ -6,16 +6,20 @@ setenv BATCHRUN $1
 shift
 setenv ENVIRONMENT $1 
 shift
+
 if ( "$BATCHRUN" != "0" ) then
 
-set xmltest=`echo $ENVIRONMENT | rev | cut -c -4 | rev`
-if ( "$xmltest" == ".xml" ) then
-source /group/halld/Software/build_scripts/gluex_env_jlab.csh $ENVIRONMENT
-else
-source $ENVIRONMENT
-endif
+	set xmltest=`echo $ENVIRONMENT | rev | cut -c -4 | rev`
+	if ( "$xmltest" == ".xml" ) then
+		source /group/halld/Software/build_scripts/gluex_env_jlab.csh $ENVIRONMENT
+	else
+		source $ENVIRONMENT
+	endif
 
 endif
+
+setenv ANAENVIRONMENT $1 
+shift
 setenv CONFIG_FILE $1
 shift
 setenv OUTDIR $1
@@ -119,6 +123,15 @@ setenv USER_BC `which bc`
 setenv USER_PYTHON `which python`
 setenv USER_STAT `which stat`
 
+@ length_count=`echo $RUN_NUMBER | wc -c` - 1
+
+set formatted_runNumber=""
+while ( $length_count < 6 )
+    set formatted_runNumber="0""$formatted_runNumber"
+    @ length_count=$length_count + 1
+end
+set formatted_runNumber=$formatted_runNumber$RUN_NUMBER
+
 if ( "$BATCHSYS" == "OSG" && "$BATCHRUN" == "1" ) then
 setenv USER_BC '/usr/bin/bc'
 setenv USER_STAT '/usr/bin/stat'
@@ -132,6 +145,9 @@ if ( -f /usr/lib64/libXrdPosixPreload.so ) then
 	echo "I have the share object needed for xrootd!"
 	set con_test=`xrdfs $XRD_RANDOMS_URL ls`
 	if ( "$con_test" == "" ) then
+		echo "Connection test failed.  Disabling xrootd...."
+		#echo "attempting to copy the needed file from an alternate source..."
+		#rsync scosg16.jlab.org:/osgpool/halld/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm ./
 		setenv MAKE_MC_USING_XROOTD 0
 	endif
 
@@ -353,6 +369,7 @@ echo "Containing: " $EVT_TO_GEN"/""$PER_FILE"" events"
 echo "Running location:" $RUNNING_DIR
 echo "Output location: "$OUTDIR
 echo "Environment file: " $ENVIRONMENT
+echo "Analysis Environment file: " $ANAENVIRONMENT
 echo "Context: "$JANA_CALIB_CONTEXT
 echo "Reconstruction calibtime: "$RECON_CALIBTIME
 echo "Run Number: "$RUN_NUMBER
@@ -425,14 +442,7 @@ else
     cp $CUSTOM_GCONTROL ./temp_Gcontrol.in
 endif
 
-@ length_count=`echo $RUN_NUMBER | wc -c` - 1
 
-set formatted_runNumber=""
-while ( $length_count < 6 )
-    set formatted_runNumber="0""$formatted_runNumber"
-    @ length_count=$length_count + 1
-end
-set formatted_runNumber=$formatted_runNumber$RUN_NUMBER
 
 @ flength_count=`echo $FILE_NUMBER | wc -c` - 1
 
@@ -1105,10 +1115,10 @@ if ( "$GENR" != "0" ) then
 		endif
 
 		echo "RUNNING MCSMEAR"
-
+		
 	    if ( "$BKGFOLDSTR" == "BeamPhotons" || "$BKGFOLDSTR" == "None" || "$BKGFOLDSTR" == "TagOnly" ) then
 			echo "running MCsmear without folding in random background"
-			echo mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' $STANDARD_NAME'_geant'$GEANTVER'.hddm'
+			echo 'mcsmear' $MCSMEAR_Flags' -PTHREAD_TIMEOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=500 -o'$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' $STANDARD_NAME'_geant'$GEANTVER'.hddm'
 			mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' $STANDARD_NAME'_geant'$GEANTVER'.hddm'
 			set mcsmear_return_code=$status
 	    else if ( "$BKGFOLDSTR" == "DEFAULT" || "$BKGFOLDSTR" == "Random" ) then

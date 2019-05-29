@@ -15,6 +15,9 @@ source $ENVIRONMENT
 fi
 
 fi
+
+export ANAENVIRONMENT=$1
+shift
 export CONFIG_FILE=$1
 shift
 export OUTDIR=$1
@@ -373,6 +376,7 @@ echo "Containing: " $EVT_TO_GEN"/""$PER_FILE"" events"
 echo "Running location:" $RUNNING_DIR
 echo "Output location: "$OUTDIR
 echo "Environment file: " $ENVIRONMENT
+echo "Analysis Environment file: " $ANAENVIRONMENT
 echo "Context: "$JANA_CALIB_CONTEXT
 echo "Reconstruction calibtime: "$RECON_CALIBTIME
 echo "Run Number: "$RUN_NUMBER
