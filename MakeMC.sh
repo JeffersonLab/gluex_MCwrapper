@@ -499,8 +499,6 @@ if [[ ! -d "$OUTDIR/root/" ]]; then
 fi
 
 
-
-
 bkglocstring=""
 bkgloc_pre=`echo $BKGFOLDSTR | cut -c 1-4`
 if [[ "$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" == "Random" ]]; then
@@ -1229,12 +1227,18 @@ fi
 					reconwholecontext="variation=$VERSION calibtime=$RECON_CALIBTIME"
 					export JANA_CALIB_CONTEXT="$reconwholecontext"
 			fi
-
+			reaction_filter=""
 			if [[ "$recon_pre" == "file" ]]; then
 				echo "using config file: "$jana_config_file
 				hd_root $file_to_recon --config=jana_config.cfg -PNTHREADS=$NUMTHREADS $additional_hdroot
 				hd_root_return_code=$?
-				rm jana_config.cfg
+				reaction_filter=`grep ReactionFilter jana_config.cfg`
+				#file_options = `tail jana_config.cfg -n+2` # get everything from line 2 on.  Lines counting starts with 1
+				#echo "Reaction Filter: "$reaction_filter
+				#echo "STATUS: " $hd_root_return_code
+				if [[ "$reaction_filter" == "" || "$ANAENVIRONMENT" == "no_Analysis_env" ]]; then
+					rm jana_config.cfg
+				fi
 			else
 		
 			declare -a pluginlist=("danarest" "monitoring_hists" "mcthrown_tree")
@@ -1268,7 +1272,34 @@ fi
 		if [[ -f dana_rest.hddm ]]; then
                     mv dana_rest.hddm dana_rest_$STANDARD_NAME.hddm
         fi
+		if [[ "$ANAENVIRONMENT" != "no_Analysis_env" && "$reaction_filter" != "" ]]; then
+			echo "new env setup"
+			xmltest2=`echo $ANAENVIRONMENT | rev | cut -c -4 | rev`
+			if [[ "$xmltest2" == ".xml" ]]; then
+				source /group/halld/Software/build_scripts/gluex_env_jlab.sh $ANAENVIRONMENT
+			else
+				source $ANAENVIRONMENT
+			fi
+			echo "EMULATING ANALYSIS LAUNCH"
+			echo "changed software to:  "`which hd_root`
+			echo "PLUGINS ReactionFilter" > ana_jana.cfg
+			tail jana_config.cfg -n+2 >> ana_jana.cfg
 
+			cat ana_jana.cfg
+
+			hd_root dana_rest_$STANDARD_NAME.hddm --config=ana_jana.cfg -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500
+			anahd_root_return_code=$?
+
+			if [[ $anahd_root_return_code != 0 ]]; then
+			echo
+			echo
+			echo "Something went wrong with ana_hd_root"
+			echo "Status code: "$anahd_root_return_code
+			exit $anahd_root_return_code
+			fi
+			rm jana_config.cfg
+			rm ana_jana.cfg
+		fi
 
 		if [[ "$CLEANGEANT" == "1" && "$GEANT" == "1" ]]; then
 		    rm $STANDARD_NAME'_geant'$GEANTVER'.hddm'
@@ -1276,7 +1307,7 @@ fi
 		    rm -f geant.hbook
 		    rm -f hdgeant.rz
 		    if [[ "$PWD" != "$MCWRAPPER_CENTRAL" ]]; then
-			rm temp_Gcontrol.in	
+			rm temp_Gcontrol.in
 		    fi
 		    
 		fi

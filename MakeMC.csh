@@ -1177,28 +1177,28 @@ if ( "$GENR" != "0" ) then
 
 	    #run reconstruction
 	    if ( "$CLEANGENR" == "1" ) then
-			rm beam.config
-			if ( "$GENERATOR" == "genr8" ) then
-		   		rm *.ascii
-			else if ( "$GENERATOR" == "bggen" || "$GENERATOR" == "bggen_jpsi" || "$GENERATOR" == "bggen_phi_ee" ) then
+				rm beam.config
+				if ( "$GENERATOR" == "genr8" ) then
+		  		rm *.ascii
+				else if ( "$GENERATOR" == "bggen" || "$GENERATOR" == "bggen_jpsi" || "$GENERATOR" == "bggen_phi_ee" ) then
 		   		rm particle.dat
 		   		rm pythia.dat
 		   		rm pythia-geant.map
-				rm bggen.his
-				rm -f bggen.nt
+					rm bggen.his
+					rm -f bggen.nt
 		   		unlink fort.15
-			else if ( "$GENERATOR" == "gen_ee_hb" ) then
-				rm CFFs_DD_Feb2012.dat 
-				rm ee.ascii
-				rm cobrems.root
-				rm tcs_gen.root
-			endif	
-			if ( "$GENERATOR" != "particle_gun" && "$gen_pre" != "file" ) then	
-				rm $STANDARD_NAME.hddm
-			endif
-			if ( "$gen_pre" == "file" ) then	
-				rm $STANDARD_NAME.hddm
-			endif
+				else if ( "$GENERATOR" == "gen_ee_hb" ) then
+					rm CFFs_DD_Feb2012.dat 
+					rm ee.ascii
+					rm cobrems.root
+					rm tcs_gen.root
+				endif	
+				if ( "$GENERATOR" != "particle_gun" && "$gen_pre" != "file" ) then	
+					rm $STANDARD_NAME.hddm
+				endif
+				if ( "$gen_pre" == "file" ) then	
+					rm $STANDARD_NAME.hddm
+				endif
 	    endif
 	    
 		if ( ! -f ./$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' ) then
@@ -1209,40 +1209,48 @@ if ( "$GENR" != "0" ) then
     
 endif
 	    if ( "$RECON" != "0" ) then
-			echo "RUNNING RECONSTRUCTION"
-			set file_to_recon=$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm'
+				echo "RUNNING RECONSTRUCTION"
+				set file_to_recon=$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm'
 
-			if ("$GENR" == "0" && "$GEANT" == "0" && "$SMEAR" == "0" ) then
-				set file_to_recon="$CONFIG_FILE"
-			endif
+				if ("$GENR" == "0" && "$GEANT" == "0" && "$SMEAR" == "0" ) then
+					set file_to_recon="$CONFIG_FILE"
+				endif
 
-			set additional_hdroot=""
-			if ( "$EXPERIMENT" == "CPP" ) then
-				set additional_hdroot="-PKALMAN:ADD_VERTEX_POINT=1"
-			endif
+				set additional_hdroot=""
+				if ( "$EXPERIMENT" == "CPP" ) then
+					set additional_hdroot="-PKALMAN:ADD_VERTEX_POINT=1"
+				endif
 
-			if ( "$RECON_CALIBTIME" != "notime" ) then
-				set reconwholecontext = "variation=$VERSION calibtime=$RECON_CALIBTIME"
-				setenv JANA_CALIB_CONTEXT "$reconwholecontext"
-			endif
-			if ( "$recon_pre" == "file" ) then
+				if ( "$RECON_CALIBTIME" != "notime" ) then
+					set reconwholecontext = "variation=$VERSION calibtime=$RECON_CALIBTIME"
+					setenv JANA_CALIB_CONTEXT "$reconwholecontext"
+				endif
+				set reaction_filter=""
+				#set file_options=""
+				if ( "$recon_pre" == "file" ) then
 		   		echo "using config file: "$jana_config_file
-				
+					
 		   		hd_root $file_to_recon --config=jana_config.cfg -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 $additional_hdroot
-				set hd_root_return_code=$status
-				#echo "STATUS: " $hd_root_return_code
-				rm jana_config.cfg
-			else
+					set hd_root_return_code=$status
+
+					set reaction_filter = `grep ReactionFilter jana_config.cfg`
+					#set file_options = `tail jana_config.cfg -n+2` # get everything from line 2 on.  Lines counting starts with 1
+					echo "Reaction Filter: "$reaction_filter
+					#echo "STATUS: " $hd_root_return_code
+					if ( "$reaction_filter" == "" || "$ANAENVIRONMENT" == "no_Analysis_env" ) then
+						rm jana_config.cfg
+					endif
+				else
 				
 		   		set pluginlist=("danarest" "monitoring_hists" "mcthrown_tree" )
 
 		   		if ( "$CUSTOM_PLUGINS" != "None" ) then
-					set pluginlist=( "$pluginlist" "$CUSTOM_PLUGINS" )
+						set pluginlist=( "$pluginlist" "$CUSTOM_PLUGINS" )
 		   		endif	
 		   		set PluginStr=""
 	       
 		   		foreach plugin ($pluginlist)
-					set PluginStr="$PluginStr""$plugin"","
+						set PluginStr="$PluginStr""$plugin"","
 		   		end
 		
 		   		set PluginStr=`echo $PluginStr | sed -r 's/.{1}$//'`
@@ -1251,93 +1259,124 @@ endif
 		   		hd_root $file_to_recon -PPLUGINS=$PluginStr -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 $additional_hdroot
 		    	set hd_root_return_code=$status
 				
-			endif
+				endif
 			
-			if ( $hd_root_return_code != 0 ) then
-				echo
-				echo
-				echo "Something went wrong with hd_root"
-				echo "Status code: "$hd_root_return_code
-				exit $hd_root_return_code
-			endif
+				if ( $hd_root_return_code != 0 ) then
+					echo
+					echo
+					echo "Something went wrong with hd_root"
+					echo "Status code: "$hd_root_return_code
+					exit $hd_root_return_code
+				endif
 
-			if ( -f dana_rest.hddm ) then
-				mv dana_rest.hddm dana_rest_$STANDARD_NAME.hddm
-			endif
+				if ( -f dana_rest.hddm ) then
+					mv dana_rest.hddm dana_rest_$STANDARD_NAME.hddm
+				endif
 
-			if ( "$CLEANGEANT" == "1" && "$GEANT" == "1" ) then
+				if ( "$ANAENVIRONMENT" != "no_Analysis_env" && "$reaction_filter" != "" ) then
+					echo "new env setup"
+					set xmltest2=`echo $ANAENVIRONMENT | rev | cut -c -4 | rev`
+					if ( "$xmltest2" == ".xml" ) then
+						source /group/halld/Software/build_scripts/gluex_env_jlab.csh $ANAENVIRONMENT
+					else
+						source $ANAENVIRONMENT
+					endif
+					echo "EMULATING ANALYSIS LAUNCH"
+					echo "changed software to:  "`which hd_root`
+					echo "PLUGINS ReactionFilter" > ana_jana.cfg
+					tail jana_config.cfg -n+2 >> ana_jana.cfg
+
+					cat ana_jana.cfg
+
+					hd_root dana_rest_$STANDARD_NAME.hddm --config=ana_jana.cfg -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500
+					set anahd_root_return_code=$status
+
+					if ( $anahd_root_return_code != 0 ) then
+					echo
+					echo
+					echo "Something went wrong with ana_hd_root"
+					echo "Status code: "$anahd_root_return_code
+					exit $anahd_root_return_code
+					endif
+
+					rm jana_config.cfg
+					rm ana_jana.cfg
+
+				endif
+
+				if ( "$CLEANGEANT" == "1" && "$GEANT" == "1" ) then
 		   		rm $STANDARD_NAME'_geant'$GEANTVER'.hddm'
 		   		rm control.in
 		   		rm -f geant.hbook
 		   		rm -f hdgeant.rz
 		   		if ( "$PWD" != "$MCWRAPPER_CENTRAL" ) then
-					rm temp_Gcontrol.in	
+						rm temp_Gcontrol.in	
 		   		endif
-			endif
+				endif
 		
-			if ( "$CLEANSMEAR" == "1" && "$SMEAR" == "1" ) then
+				if ( "$CLEANSMEAR" == "1" && "$SMEAR" == "1" ) then
 		   		rm $STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm'
 		   		rm -rf smear.root
-			endif
-		
-			if ( "$CLEANRECON" == "1" ) then
-		   		rm dana_rest*
-			endif
-		
-			set rootfiles=`ls *.root`
-			set filename_root=""
-
-			foreach rootfile ($rootfiles)
-	    		set filename_root=`echo $rootfile | sed -r 's/.{5}$//'`
-				set filetomv="$rootfile"
-				set filecheck=`echo $current_files | grep -c $filetomv`
-
-				if ( "$filecheck" == "0" ) then
-					mv $filetomv $filename_root\_$STANDARD_NAME.root
-					echo $filename_root\_$STANDARD_NAME.root
-					set hdroot_test=`echo $filename_root\_$STANDARD_NAME.root | grep hd_root_`
-					set thrown_test=`echo $filename_root\_$STANDARD_NAME.root | grep tree_thrown`
-					set gen_test=`echo $filename_root\_$STANDARD_NAME.root | grep gen_`
-					set reaction_test=`echo $filename_root\_$STANDARD_NAME.root | grep tree_`
-					#echo hdroot_test = $hdroot_test
-					if ($hdroot_test !~ "") then
-						echo "hdroot"
-						if ( ! -d "$OUTDIR/root/monitoring_hists/" ) then
-							#echo "DNE"
-							#echo "$OUTDIR/root/monitoring_hists/"
-    						mkdir $OUTDIR/root/monitoring_hists/
-						endif
-						mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/monitoring_hists
-					else if ($thrown_test !~ "") then
-						echo "thrown"
-						if ( ! -d "$OUTDIR/root/thrown/" ) then
-							#echo "DNE"
-							#echo "$OUTDIR/root/monitoring_hists/"
-    						mkdir $OUTDIR/root/thrown/
-						endif
-						mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/thrown
-					else if ($reaction_test !~ "") then
-						echo "reaction"
-						if ( ! -d "$OUTDIR/root/trees/" ) then
-							#echo "DNE"
-							#echo "$OUTDIR/root/monitoring_hists/"
-    						mkdir $OUTDIR/root/trees/
-						endif
-						mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/trees
-					else if ($gen_test !~ "") then
-						echo "gen"
-						if ( ! -d "$OUTDIR/root/generator/" ) then
-							#echo "DNE"
-							#echo "$OUTDIR/root/monitoring_hists/"
-    						mkdir $OUTDIR/root/generator/
-						endif
-						mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/generator
-					else
-						mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/
-					endif
-		   			
 				endif
-			end
+		
+				if ( "$CLEANRECON" == "1" ) then
+		   		rm dana_rest*
+				endif
+		
+				set rootfiles=`ls *.root`
+				set filename_root=""
+
+				foreach rootfile ($rootfiles)
+	    		set filename_root=`echo $rootfile | sed -r 's/.{5}$//'`
+					set filetomv="$rootfile"
+					set filecheck=`echo $current_files | grep -c $filetomv`
+
+					if ( "$filecheck" == "0" ) then
+						mv $filetomv $filename_root\_$STANDARD_NAME.root
+						echo $filename_root\_$STANDARD_NAME.root
+						set hdroot_test=`echo $filename_root\_$STANDARD_NAME.root | grep hd_root_`
+						set thrown_test=`echo $filename_root\_$STANDARD_NAME.root | grep tree_thrown`
+						set gen_test=`echo $filename_root\_$STANDARD_NAME.root | grep gen_`
+						set reaction_test=`echo $filename_root\_$STANDARD_NAME.root | grep tree_`
+						#echo hdroot_test = $hdroot_test
+						if ($hdroot_test !~ "") then
+							echo "hdroot"
+							if ( ! -d "$OUTDIR/root/monitoring_hists/" ) then
+								#echo "DNE"
+								#echo "$OUTDIR/root/monitoring_hists/"
+    						mkdir $OUTDIR/root/monitoring_hists/
+							endif
+							mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/monitoring_hists
+						else if ($thrown_test !~ "") then
+							echo "thrown"
+							if ( ! -d "$OUTDIR/root/thrown/" ) then
+								#echo "DNE"
+								#echo "$OUTDIR/root/monitoring_hists/"
+    						mkdir $OUTDIR/root/thrown/
+							endif
+							mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/thrown
+						else if ($reaction_test !~ "") then
+							echo "reaction"
+							if ( ! -d "$OUTDIR/root/trees/" ) then
+								#echo "DNE"
+								#echo "$OUTDIR/root/monitoring_hists/"
+    						mkdir $OUTDIR/root/trees/
+							endif
+							mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/trees
+						else if ($gen_test !~ "") then
+							echo "gen"
+							if ( ! -d "$OUTDIR/root/generator/" ) then
+								#echo "DNE"
+								#echo "$OUTDIR/root/monitoring_hists/"
+    						mkdir $OUTDIR/root/generator/
+							endif
+							mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/generator
+						else
+							mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/
+						endif
+		   			
+					endif
+				end
 	    endif
 	
 
