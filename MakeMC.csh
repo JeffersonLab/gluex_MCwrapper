@@ -144,7 +144,8 @@ if ( -f /usr/lib64/libXrdPosixPreload.so ) then
 	setenv LD_PRELOAD /usr/lib64/libXrdPosixPreload.so
 	echo "I have the share object needed for xrootd!"
 	#set con_test=`ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm`
-	if ( ! -f $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm ) then
+	echo `ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1`
+	if ( `ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1` != "r" ) then
 		echo "Connection test failed.  Disabling xrootd...."
 		#echo "attempting to copy the needed file from an alternate source..."
 		#rsync scosg16.jlab.org:/osgpool/halld/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm ./

@@ -236,6 +236,7 @@ def RetryJobsFromProject(ID, countLim):
                     if int(count[0]["Count(Job_ID)"]) > 15 :
                         j=j+1
                         continue
+                    
                     if row["Status"] == "-1":
                         response=os.system("ping -c 1 nod25.phys.uconn.edu")
                         if response != 0:
@@ -678,6 +679,11 @@ def WritePayloadConfig(order,foundConfig):
 
     
     MCconfig_file.write("ENVIRONMENT_FILE=/group/halld/www/halldweb/html/dist/"+str(order["VersionSet"])+"\n")
+    print("ADD ANAVER TO PAYLOAD?")
+    print(str(order["ANAVersionSet"]))
+    if(order["ANAVersionSet"] != None and order["ANAVersionSet"] != "None" ):
+        print("ADDING ANNAVER")
+        MCconfig_file.write("ANA_ENVIRONMENT_FILE=/group/halld/www/halldweb/html/dist/"+str(order["ANAVersionSet"])+"\n")
     MCconfig_file.close()
 
 def DispatchToOSG(ID,order,PERCENT):

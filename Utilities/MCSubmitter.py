@@ -120,6 +120,8 @@ def WritePayloadConfig(order,foundConfig,batch_system):
 
     
     MCconfig_file.write("ENVIRONMENT_FILE=/group/halld/www/halldweb/html/dist/"+str(order["VersionSet"])+"\n")
+    if(order["ANAVersionSet"] != None and order["ANAVersionSet"] != "None" ):
+        MCconfig_file.write("ANA_ENVIRONMENT_FILE=/group/halld/www/halldweb/html/dist/"+str(order["ANAVersionSet"])+"\n")
     MCconfig_file.close()
 
 def SubmitList(SubList,job_IDs_submitted):
