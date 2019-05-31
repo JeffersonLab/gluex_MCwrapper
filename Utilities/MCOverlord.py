@@ -378,19 +378,33 @@ def checkOSG():
                         dbcursor.execute(deactivate_Job)
                         dbcnx.commit()
 
-                #if ExitCode == "1000":
-                #    missingF=False
-                #    for f in JSON_job["TransferInput"].split(","):
-                #        if "_random.hddm" in f:
-                #            print(f)
-                #            missingF=os.path.isfile(f)
-                #            print(missingF)
-                #    if missingF == True:
-                #        #print "set to 6"
-                #        JOB_STATUS=6
-                #        deactivate_Job="UPDATE Jobs set IsActive=0 where ID="+str(job["Job_ID"])+";"
-                #        dbcursor.execute(deactivate_Job)
-                #        dbcnx.commit()
+                if ExitCode == 232 or ExitCode == 1000:
+                    getrunNum="SELECT RunNumber, Project_ID from Jobs where ID="+str(job["Job_ID"])
+                    dbcursor.execute(getrunNum)
+                    thisJOB = dbcursor.fetchall()
+                    if len(thisJOB) == 1:
+                        thisJOB_RunNumber=thisJOB[0]["RunNumber"]
+                        getBKG="SELECT BKG from Project where ID="+str(thisJOB[0]["Project_ID"])
+                        dbcursor.execute(getBKG)
+                        thisJOB_BKG = dbcursor.fetchall()
+                        if len(thisJOB_BKG) == 1:
+                            attempt_BKG=thisJOB_BKG[0]["BKG"]
+                            attempt_BKG_parts=attempt_BKG.split[":"]
+                            if len(attempt_BKG_parts) != 1:
+                                if os.path.isfile("/osgpool/halld/random_triggers/"+str(attempt_BKG_parts[1])+"/run"+str(thisJOB_RunNumber).zfill(6)+"_random.hddm"):
+                                    response=os.system("ping -c 1 nod25.phys.uconn.edu")
+                                    if response != 0:
+                                        JOB_STATUS=-1 #hold until host comes back
+                                    else:
+                                        JOB_STATUS=7 #globus needs doing
+
+                                else:
+                                    JOB_STATUS=6
+                                    deactivate_Job="UPDATE Jobs set IsActive=0 where ID="+str(job["Job_ID"])+";"
+                                    dbcursor.execute(deactivate_Job)
+                                    dbcnx.commit()
+                
+                        
 
                 
                 RunIP="NULL"

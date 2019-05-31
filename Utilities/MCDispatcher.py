@@ -228,14 +228,24 @@ def RetryJobsFromProject(ID, countLim):
             #print row["Status"]
             #print row["ExitCode"]
             #print "=========================="
-            if (row["Status"] == "4" and row["ExitCode"] != 0) or row["Status"] == "3" or row["Status"]=="5":
+            if (row["Status"] == "4" and row["ExitCode"] != 0) or row["Status"] == "3" or row["Status"]=="5" or row["Status"]=="-1":
                 if ( countLim ):
                     countq="SELECT Count(Job_ID) from Attempts where Job_ID="+str(row["Job_ID"])
                     curs.execute(countq)
                     count=curs.fetchall()
-                    if int(count[0]["Count(Job_ID)"]) > 5 :
+                    if int(count[0]["Count(Job_ID)"]) > 15 :
                         j=j+1
                         continue
+                    if row["Status"] == "-1":
+                        response=os.system("ping -c 1 nod25.phys.uconn.edu")
+                        if response != 0:
+                            continue #waiting for node to come back
+                        else:
+                            #update Status and retry
+                            statusUpdate="Update Attempts Set Status=\"4\" WHERE ID ="+str(row["ID"])
+                            curs.execute(statusUpdate)
+                            conn.commit()
+                            
                 RetryJob(row["Job_ID"])
                 i=i+1
         
@@ -249,7 +259,7 @@ def RetryJobsFromProject(ID, countLim):
         print(retry_swif_command)
         status = subprocess.call(retry_swif_command, shell=True)
     print("retried "+str(i)+" Jobs")
-    print(str(j)+" jobs over restart limit of 5")
+    print(str(j)+" jobs over restart limit of 15")
 
 #def DoMissingJobs(ID,SYS):
 #    query="SELECT ID FROM Jobs where ID NOT IN (SELECT Job_ID FROM Attempts) && IsActive=1 && Project_ID="+str(ID)+";"
