@@ -143,10 +143,14 @@ if [[ -f /usr/lib64/libXrdPosixPreload.so ]]; then
 	#con_test=`ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | grep "cannot access"`
 	echo `ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1`
 	if [[ `ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1` != "r" ]]; then
-		echo "Connection test failed.  Disabling xrootd...."
+		echo "UConn Connection test failed. FAlling back to JLAB...."
 		#echo "attempting to copy the needed file from an alternate source..."
 		#rsync scosg16.jlab.org:/osgpool/halld/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm ./
-		export MAKE_MC_USING_XROOTD=0
+		export XRD_RANDOMS_URL=root://scosg16.jlab.org:1094/osgpool/halld/
+		if [[ `ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1` != "r" ]]; then
+			echo "Cannot connect to the file.  Disabling xrootd...."
+			export MAKE_MC_USING_XROOTD=0
+		fi
 	fi
 fi
 
