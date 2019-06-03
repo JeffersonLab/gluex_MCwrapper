@@ -1,5 +1,5 @@
 <?php
-$servername = "hallddb";
+$servername = "hallddb-ext";
 $username = "mcreader";
 $password = "";
 $dbname = "gluex_mc";

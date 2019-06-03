@@ -442,31 +442,38 @@ def checkOSG():
                         if missingF == False:
                             JOB_STATUS=6
 
-                    if ExitCode == 232 or ExitCode == 1000:
+                    if str(ExitCode) == "232" or str(ExitCode) == "1000":
                         print("EXIT CODE 232 DETECTED")
                         getrunNum="SELECT RunNumber, Project_ID from Jobs where ID="+str(job["Job_ID"])
                         dbcursor.execute(getrunNum)
                         thisJOB = dbcursor.fetchall()
-                        print(len(thisJOB))
+                        #print(len(thisJOB))
                         if len(thisJOB) == 1:
                             thisJOB_RunNumber=thisJOB[0]["RunNumber"]
                             getBKG="SELECT BKG from Project where ID="+str(thisJOB[0]["Project_ID"])
                             dbcursor.execute(getBKG)
                             thisJOB_BKG = dbcursor.fetchall()
+                            #print(len(thisJOB_BKG))
                             if len(thisJOB_BKG) == 1:
+                                print(thisJOB_BKG)
                                 attempt_BKG=thisJOB_BKG[0]["BKG"]
-                                attempt_BKG_parts=attempt_BKG.split[":"]
+                                #print(attempt_BKG)
+                                #print("SPLITTING")
+                                attempt_BKG_parts=attempt_BKG.split(":")
+                                print(len(attempt_BKG_parts))
                                 if len(attempt_BKG_parts) != 1:
                                     if os.path.isfile("/osgpool/halld/random_triggers/"+str(attempt_BKG_parts[1])+"/run"+str(thisJOB_RunNumber).zfill(6)+"_random.hddm"):
                                         response=os.system("ping -c 1 nod25.phys.uconn.edu")
+                                        print("PING RESPONSE:"+str(response))
                                         if response != 0:
                                             print("-1 job stat")
                                             JOB_STATUS=-1 #hold until host comes back
                                         else:
                                             print("7 job stat")
-                                            JOB_STATUS=7 #globus needs doing
+                                            JOB_STATUS=7 #globus needs doing?
 
                                     else:
+                                        print("6 job stat")
                                         JOB_STATUS=6
                                         deactivate_Job="UPDATE Jobs set IsActive=0 where ID="+str(job["Job_ID"])+";"
                                         dbcursor.execute(deactivate_Job)

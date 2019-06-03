@@ -1,5 +1,5 @@
 <?php
-$servername = "hallddb";
+$servername = "hallddb-ext";
 $username = "mcreader";
 $password = "";
 $dbname = "gluex_mc";
@@ -38,6 +38,19 @@ if ($Dresult->num_rows > 0) {
     }
 }
 $data["MCDrone"]=$Drone_data;
+
+$mcsubmit_query = "SELECT * FROM MCSubmitter ORDER BY ID DESC LIMIT 5;";
+
+$Dresult = $conn->query($mcsubmit_query);
+$Submit_data=array();
+if ($Dresult->num_rows > 0) {
+// output data of each row
+    while($Drow = $Dresult->fetch_assoc()) {
+        $Submit_data[]=$Drow;
+     //echo "id: " . $row["id"]. " - Run: " . $row["run"]. "<br>";
+    }
+}
+$data["MCSubmitter"]=$Submit_data;
 
 $mcmover_query = "SELECT * FROM MCMover ORDER BY ID DESC LIMIT 5;";
 

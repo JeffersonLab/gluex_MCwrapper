@@ -4,7 +4,7 @@
 function NotifyComplete()
 {
     $servername = "hallddb.jlab.org";
-    $username = "mcreader";
+    $username = "mcuser";
     if ($_SERVER['PHP_AUTH_USER'] == "tbritton")
     {
         $username = "mcuser";
@@ -128,7 +128,112 @@ function RetestProject()
      return "READY TO RESTEST PROJECT";
 }
 
-if ($_SERVER['PHP_AUTH_USER'] == "tbritton")
+function RecallProject()
+{
+    $servername = "hallddb.jlab.org";
+    $username = "mcuser";
+    $password = "";
+    $dbname = "gluex_mc";
+    $conn = mysqli_connect($servername, $username, $password, $dbname);
+// Check connection
+    if (!$conn) {
+    die("Connection failed: " . mysqli_connect_error());
+    }
+
+    //echo "<br> InTestReset()<br>";
+    $sql = "UPDATE Project Set Tested=2 WHERE ID=" . $_GET["projID"];
+    //echo $sql . "<br>";
+
+    $result = $conn->query($sql);
+    //echo "here";
+    //echo $result;
+    $conn->commit();
+
+     $conn->close();
+     return "FLAGGING PROJECT FOR RECALL";
+}
+function DeclareComplete()
+{
+    $servername = "hallddb.jlab.org";
+    $username = "mcuser";
+    $password = "";
+    $dbname = "gluex_mc";
+    $conn = mysqli_connect($servername, $username, $password, $dbname);
+// Check connection
+    if (!$conn) {
+    die("Connection failed: " . mysqli_connect_error());
+    }
+
+    //echo "<br> InTestReset()<br>";
+    $sql = "UPDATE Project Set Tested=4 WHERE ID=" . $_GET["projID"];
+    //echo $sql . "<br>";
+
+    $result = $conn->query($sql);
+    //echo "here";
+    //echo $result;
+    $conn->commit();
+
+    $conn->close();
+    return "Declaring Project complete even with uncompleted jobs";
+}
+
+function CancelProject()
+{
+    $servername = "hallddb.jlab.org";
+    $username = "mcuser";
+    $password = "";
+    $dbname = "gluex_mc";
+    $conn = mysqli_connect($servername, $username, $password, $dbname);
+// Check connection
+    if (!$conn) {
+    die("Connection failed: " . mysqli_connect_error());
+    }
+
+    $compSQL="SELECT COUNT(ID) from Attempts where Status='4' && ExitCode=0 && Job_ID in (SELECT ID FROM Jobs where Project_ID=". $_GET["projID"] .");";
+
+    $result = $conn->query($compSQL);
+    $row = $result->fetch_assoc();
+  
+    if($row["COUNT(ID)"] != 0)
+    {
+        $conn->close();
+        return "Cannot cancel as the project has some completed jobs.  Either 'recall' the project to effectively pause the project.  Or declare it completed";
+    }
+
+
+
+    //echo "<br> InTestReset()<br>";
+    $sql = "UPDATE Project Set Tested=3 WHERE ID=" . $_GET["projID"];
+    //echo $sql . "<br>";
+
+    $result = $conn->query($sql);
+    //echo "here";
+    //echo $result;
+    $conn->commit();
+
+
+    $conn->close();
+    return "Recalling jobs and deleting project";
+}
+
+$servername = "hallddb-ext.jlab.org";
+$username = "mcreader";
+$password = "";
+$dbname = "gluex_mc";
+$rconn = mysqli_connect($servername, $username, $password, $dbname);
+$fsql = "SELECT name from Users where Foreman=1;";
+$fresult = $rconn->query($fsql);
+
+$foremen=[];
+
+while ($frow = $fresult->fetch_assoc()) {
+    #echo($frow["name"]);
+    $foremen[]=$frow["name"];
+}
+#print_r($fresult->fetch);
+$rconn->close();
+
+if (in_array($_SERVER['PHP_AUTH_USER'],$foremen,TRUE))
 {   $out="";
     if($_GET["Mode"] == 'NotifyComplete')
     {
@@ -136,14 +241,27 @@ if ($_SERVER['PHP_AUTH_USER'] == "tbritton")
     }
     else if($_GET["Mode"]=="FullReset")
     {
-        FullProjectReset();
+        $out=FullProjectReset();
     }
     else if($_GET["Mode"]=="ReTest")
     {
-        RetestProject();
+        $out=RetestProject();
+    }
+    else if($_GET["Mode"]=="Recall")
+    {
+        $out=RecallProject();
+    }
+    else if($_GET["Mode"]=="DeclareComplete")
+    {
+        $out=DeclareComplete();
+    }
+    else if($_GET["Mode"]=="Cancel")
+    {
+        $out=CancelProject();
     }
 
 }
+
 echo $out;
 return $out;
 ?>

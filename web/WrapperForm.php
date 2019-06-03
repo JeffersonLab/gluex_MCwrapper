@@ -1,5 +1,5 @@
 <?php
-header('Location: http://' . $_SERVER['HTTP_HOST'] . '/gluex_sim/thanks.html', true, 303);
+
 function UpdateProject($conn)
 {
     $coherent=NULL;
@@ -23,7 +23,15 @@ function UpdateProject($conn)
     if($_GET["rcdbq"] != "")
     {
         $rcdb_query=$_GET["rcdbq"];
+        $rcdb_query=str_replace("&&","and",$rcdb_query);
     }
+
+    $anaVerSet=NULL;
+
+if($_GET["ANAVersionSet"] != "")
+{
+    $anaVerSet=$_GET["ANAVersionSet"];
+}
 
 if($_GET["cohPos"] != "")
 {
@@ -109,17 +117,17 @@ $sql = "Update Project SET RunNumLow=?, RunNumHigh=? "
        . " ,SaveGeneration=?, RunGeant=?, SaveGeant=?, RunSmear=?, SaveSmear=? "
        . ", RunReconstruction=?, SaveReconstruction=?, Generator=?, Generator_Config=? "
        . ", BKG=?, Comments=?, GenMinE=?, GenMaxE=?,GeantSecondaries=?,VersionSet=?,ReactionLines=? "
-       . ", RCDBQuery=?, CoherentPeak=?, Tested=0"
+       . ", RCDBQuery=?, CoherentPeak=?, Tested=0, GenFlux=?,ANAVersionSet=?"
        . " WHERE ID=?";
        
 $stmt = $conn->prepare($sql);
 
-$stmt->bind_param("iiiiiiiiiiiissssddisssdi", $runlow, $runhigh, 
+$stmt->bind_param("iiiiiiiiiiiissssddisssdssi", $runlow, $runhigh, 
 $_GET["numevents"], $_GET["Geantver"], $rungen,
 $savegen, $rungeant, $savegeant, $runsmear, $savesmear,
 $runrecon, $saverecon, $_GET["generator"], $_GET["generator_config"],
 $bkg, $_GET["addreq"], $_GET["GenMinE"], $_GET["GenMaxE"], $geant_secondaries,$_GET["versionSet"],$_GET["ReactionLines"],
-$rcdb_query, $coherent,
+$rcdb_query, $coherent,$_GET["Genflux"],$anaVerSet,
 $_GET["prefill"]);
 
 if ($stmt->execute() === TRUE) {
@@ -161,6 +169,14 @@ $rcdb_query="";
 if($_GET["rcdbq"] != "")
 {
     $rcdb_query=$_GET["rcdbq"];
+    $rcdb_query=str_replace("&&","and",$rcdb_query);
+}
+
+$anaVerSet=NULL;
+
+if( $_GET["ANAVersionSet"] != "" )
+{
+    $anaVerSet=$_GET["ANAVersionSet"];
 }
 
 $coherent=NULL;
@@ -213,7 +229,7 @@ if ( $_GET["SaveRecon"] != "")
 
 
 $msg = $_GET["username"] . ", I received your request for Monte Carlo on " . $dateNOW . " at " . $timeNOW . "\n";
-
+#echo $msg;
 $addrange="";
 $runlow = $_GET["runnumber"];
 $runhigh = $runlow;
@@ -258,11 +274,7 @@ if ( $_GET["randomtag"] != "" && $_GET["bkg"] != "loc" )
 #$configstub = $configstub . "BKG=" . $bkg . "\n";
 
 #$msg = $msg . $configstub;
-
-
-
-
-
+#echo "CONNECTING";
 $userquery = "SELECT * FROM Users where name=\"" . $_SERVER['PHP_AUTH_USER'] . "\"";
 $userres = $conn->query($userquery);
 $urow = $userres->fetch_assoc();
@@ -280,18 +292,18 @@ $sql = "INSERT INTO Project (Submitter, Email, Exp, Is_Dispatched, RunNumLow, Ru
        . " NumEvents, GeantVersion, OutputLocation, Submit_Time, RunGeneration, "
        . " SaveGeneration, RunGeant, SaveGeant, RunSmear, SaveSmear, "
        . " RunReconstruction, SaveReconstruction, Generator, Generator_Config, Config_Stub, "
-       . " BKG, Comments, GenMinE, GenMaxE,GeantSecondaries,VersionSet,UName,UIp,ReactionLines,RCDBQuery, CoherentPeak, wc)" 
+       . " BKG, Comments, GenMinE, GenMaxE,GeantSecondaries,VersionSet,UName,UIp,ReactionLines,RCDBQuery, CoherentPeak, wc,GenFlux,ANAVersionSet)" 
        . " VALUES (?, ?,?,'0', ?, ?, "
        . " ?, ?, ?, now(), ?, "
        . " ?, ?, ?, ?, ?, "
        . " ?, ?, ?, ?, ?, "
-       . " ?, ?,?,?,?,?,?,?,?,?,?,?) ";
+       . " ?, ?,?,?,?,?,?,?,?,?,?,?,?,?) ";
 $stmt = $conn->prepare($sql);
 
-$stmt->bind_param("sssiiiisiiiiiiiisssssddisssssdd", $_GET["username"], $_GET["useremail"], $_GET["exp"],$runlow, $runhigh, $_GET["numevents"], 
+$stmt->bind_param("sssiiiisiiiiiiiisssssddisssssddss", $_GET["username"], $_GET["useremail"], $_GET["exp"],$runlow, $runhigh, $_GET["numevents"], 
                   $_GET["Geantver"], $fullOutput, $rungen, $savegen, $rungeant, 
                   $savegeant, $runsmear, $savesmear, $runrecon, $saverecon, 
-                  $_GET["generator"], $_GET["generator_config"], $configstub, $bkg, $_GET["addreq"], $_GET["GenMinE"], $_GET["GenMaxE"],$geant_secondaries,$_GET["versionSet"],$_SERVER['PHP_AUTH_USER'],$_SERVER['REMOTE_ADDR'],$_GET["ReactionLines"],$rcdb_query,$coherent,$_GET["spend"]);
+                  $_GET["generator"], $_GET["generator_config"], $configstub, $bkg, $_GET["addreq"], $_GET["GenMinE"], $_GET["GenMaxE"],$geant_secondaries,$_GET["versionSet"],$_SERVER['PHP_AUTH_USER'],$_SERVER['REMOTE_ADDR'],$_GET["ReactionLines"],$rcdb_query,$coherent,$_GET["spend"],$_GET["Genflux"],$anaVerSet);
 
   //echo $sql;
 //echo "<br>";
@@ -339,7 +351,8 @@ mail("tbritton@jlab.org," . $_GET["useremail"],"MC Request #" . $row["MAX(ID)"] 
 $conn->close();
 }
 }
-
+#echo "343";
+#echo "<br>";
 $servername = "hallddb.jlab.org";
 $username = "mcuser";
 $password = "";
@@ -351,10 +364,11 @@ $conn = new mysqli($servername, $username, $password, $dbname);
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 } 
-
+#echo "356";
 if( $_GET["mod"] == 0 || $_GET["prefill"] == -1 || $_GET["mod"] == 2)
 {
-    
+    #echo "here";
+    header('Location: http://' . $_SERVER['HTTP_HOST'] . '/gluex_sim/thanks.html', true, 303);
     InsertProject($conn);
 }
 else
@@ -369,9 +383,12 @@ else
     {
         
         UpdateProject($conn);
+        
+        header('Location: http://' . $_SERVER['HTTP_HOST'] . '/gluex_sim/thanks_update.html', true, 303);
     }
     else
     {
+        header('Location: http://' . $_SERVER['HTTP_HOST'] . '/gluex_sim/no_update.html', true, 303);
         echo "You are not autorized to update the form as you are not the owner or the project has already been launched";
     }
 }
