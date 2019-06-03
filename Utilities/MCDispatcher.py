@@ -13,7 +13,7 @@ import smtplib
 from email.message import EmailMessage
 
 
-
+MCWRAPPER_BOT_HOME="/u/group/halld/gluex_MCwrapper/"
 dbhost = "hallddb.jlab.org"
 dbuser = 'mcuser'
 dbpass = ''
@@ -127,14 +127,14 @@ def AutoLaunch():
             status[2]=0
         #print "STATUS IS"
         #print status[0]
-        print("JUST TESTED")
+        #print("JUST TESTED")
         if(status[1]!=-1):
             #print "TEST success"
             #EMAIL SUCCESS AND DISPATCH
-            print("YAY TESTED")
-            subprocess.call("/osgpool/halld/tbritton/gluex_MCwrapper/Utilities/MCDispatcher.py dispatch -rlim -sys OSG "+str(row['ID']),shell=True)
+            #print("YAY TESTED")
+            subprocess.call(MCWRAPPER_BOT_HOME+"/Utilities/MCDispatcher.py dispatch -rlim -sys OSG "+str(row['ID']),shell=True)
         else:
-            print("BOO TESTED")
+            #print("BOO TESTED")
             #EMAIL FAIL AND LOG
             #print("echo 'Your Project ID "+str(row['ID'])+" failed the to properly test.  The log information is reproduced below:\n\n\n"+status[0]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+str(row['Email']))
             try:
@@ -214,11 +214,13 @@ def RetryJobsFromProject(ID, countLim):
    
     i=0
     j=0
+    SWIF_retry_IDs=[]
     for row in rows:
 
         if (row["BatchSystem"]=="SWIF"):
-            if((row["Status"] == "succeeded" and row["ExitCode"] != 0) or row["Status"]=="problems"):
-                RetryJob(row["Job_ID"])
+            if((row["Status"] == "succeeded" and row["ExitCode"] != 0) or row["Status"]=="problem"):
+                SWIF_retry_IDs.append(row["BatchJobID"])
+                #RetryJob(row["Job_ID"])
                 i=i+1
         elif (row["BatchSystem"]=="OSG"):
             #print "=========================="
@@ -226,7 +228,7 @@ def RetryJobsFromProject(ID, countLim):
             #print row["Status"]
             #print row["ExitCode"]
             #print "=========================="
-            if (row["Status"] == "4" and row["ExitCode"] != 0) or row["Status"] == "3" or row["Status"]=="5":
+            if (row["Status"] == "4" and row["ExitCode"] != 0) or row["Status"] == "3" or row["Status"]=="5" or row["Status"]=="-1":
                 if ( countLim ):
                     countq="SELECT Count(Job_ID) from Attempts where Job_ID="+str(row["Job_ID"])
                     curs.execute(countq)
@@ -234,8 +236,29 @@ def RetryJobsFromProject(ID, countLim):
                     if int(count[0]["Count(Job_ID)"]) > 15 :
                         j=j+1
                         continue
+                    
+                    if row["Status"] == "-1":
+                        response=os.system("ping -c 1 nod25.phys.uconn.edu")
+                        if response != 0:
+                            continue #waiting for node to come back
+                        else:
+                            #update Status and retry
+                            statusUpdate="Update Attempts Set Status=\"4\" WHERE ID ="+str(row["ID"])
+                            curs.execute(statusUpdate)
+                            conn.commit()
+                            
                 RetryJob(row["Job_ID"])
                 i=i+1
+        
+        #print(SWIF_retry_IDs)
+    if(len(SWIF_retry_IDs)!=0):
+        queryproj = "SELECT * FROM Project WHERE ID="+str(ID)
+        curs.execute(queryproj) 
+        proj=curs.fetchall()
+        splitL=len(proj[0]["OutputLocation"].split("/"))
+        retry_swif_command="swif retry-jobs -workflow "+"proj"+str(ID)+"_"+proj[0]["OutputLocation"].split("/")[splitL-2]+" "+" ".join(SWIF_retry_IDs)
+        print(retry_swif_command)
+        status = subprocess.call(retry_swif_command, shell=True)
     print("retried "+str(i)+" Jobs")
     print(str(j)+" jobs over restart limit of 15")
 
@@ -281,16 +304,34 @@ def RetryJob(ID):
     if proj[0]["SaveReconstruction"]==1:
         cleanrecon=0
 
+    #bkg_parts=proj[0]["BKG"].split(":")
+    #if bkg_parts[0] == "Random":
+    #    formatted_runnum="%06d" % job[0]["RunNumber"]
+    #    path_to_check="/osgpool/halld/random_triggers/"+str(bkg_parts[1])+"/run"+str(formatted_runnum)+"_random.hddm"
+    #    print(path_to_check)
+    #    if not os.path.isfile(path_to_check):
+    #        jobdeactivate="UPDATE Jobs Set IsActive=0 where ID="+str(job[0]["ID"])
+    #        print(jobdeactivate)
+    #        curs.execute(jobdeactivate)
+    #        conn.commit()
+    #        status_six="UPDATE Attempts Set Status=\"6\" where Job_ID="+str(job[0]["ID"])
+    #        print(status_six)
+    #        curs.execute(status_six)
+    #        conn.commit()
+    #        return
+
+
     if(rows[0]["BatchSystem"] == "SWIF"):
         splitL=len(proj[0]["OutputLocation"].split("/"))
-        command = "swif retry-jobs -workflow "+proj[0]["OutputLocation"].split("/")[splitL-2]+" "+rows[0]["BatchJobID"]
+        command = "swif retry-jobs -workflow "+"proj"+str(proj[0]["ID"])+"_"+proj[0]["OutputLocation"].split("/")[splitL-2]+" "+rows[0]["BatchJobID"]
+        #proj548_gen_amp_L1520_errval_20190522055719am
         print(command)
         status = subprocess.call(command, shell=True)
     elif(rows[0]["BatchSystem"] == "OSG"):
         #print "OSG JOB FOUND"
-        status = subprocess.call("cp $MCWRAPPER_CENTRAL/examples/OSGShell.config ./MCDispatched.config", shell=True)
+        status = subprocess.call("cp "+MCWRAPPER_BOT_HOME+"/examples/OSGShell.config ./MCDispatched.config", shell=True)
         WritePayloadConfig(proj[0],"True")
-        command="$MCWRAPPER_CENTRAL/gluex_MC.py MCDispatched.config "+str(job[0]["RunNumber"])+" "+str(job[0]["NumEvts"])+" per_file=50000 base_file_number="+str(job[0]["FileNumber"])+" generate="+str(proj[0]["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(proj[0]["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(proj[0]["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(proj[0]["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid=-"+str(ID)+" batch=1"
+        command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched.config "+str(job[0]["RunNumber"])+" "+str(job[0]["NumEvts"])+" per_file=50000 base_file_number="+str(job[0]["FileNumber"])+" generate="+str(proj[0]["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(proj[0]["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(proj[0]["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(proj[0]["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid=-"+str(ID)+" batch=1"
         print(command)
         status = subprocess.call(command, shell=True)
 
@@ -404,14 +445,14 @@ def TestProject(ID,versionSet,commands_to_call=""):
     if order["SaveReconstruction"]==1:
         cleanrecon=0
 
-    command="$MCWRAPPER_CENTRAL/gluex_MC.py MCDispatched.config "+str(RunNumber)+" "+str(10)+" per_file=250000 base_file_number=0"+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=0"
+    command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched.config "+str(RunNumber)+" "+str(10)+" per_file=250000 base_file_number=0"+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=0"
     print(command)
     STATUS=-1
     # print (command+command2).split(" ")
     my_env=None
     if(versionSet != ""):
         my_env=source("/group/halld/Software/build_scripts/gluex_env_jlab.sh /group/halld/www/halldweb/html/dist/"+versionSet)
-        my_env["MCWRAPPER_CENTRAL"]="/osgpool/halld/tbritton/gluex_MCwrapper/"
+        my_env["MCWRAPPER_CENTRAL"]=MCWRAPPER_BOT_HOME
 
     p = Popen(commands_to_call+command, env=my_env ,stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True)
     #print p
@@ -499,14 +540,14 @@ def DispatchToInteractive(ID,order,PERCENT):
         #print updatequery
         curs.execute(updatequery)
         conn.commit()
-        command="$MCWRAPPER_CENTRAL/gluex_MC.py MCDispatched.config "+str(RunNumber)+" "+str(NumEventsToProduce)+" per_file=250000 base_file_number="+str(FileNumber_NewJob)+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=0"
+        command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched.config "+str(RunNumber)+" "+str(NumEventsToProduce)+" per_file=250000 base_file_number="+str(FileNumber_NewJob)+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=0"
         print(command)
         status = subprocess.call(command, shell=True)
     else:
         print("All jobs submitted for this order")
 
 def DispatchToSWIF(ID,order,PERCENT):
-    status = subprocess.call("cp $MCWRAPPER_CENTRAL/examples/SWIFShell.config ./MCDispatched.config", shell=True)
+    status = subprocess.call("cp "+MCWRAPPER_BOT_HOME+"/examples/SWIFShell.config ./MCDispatched.config", shell=True)
     WritePayloadConfig(order,"True")
     RunNumber=str(order["RunNumLow"])
     if order["RunNumLow"] != order["RunNumHigh"] :
@@ -558,7 +599,7 @@ def DispatchToSWIF(ID,order,PERCENT):
         #print updatequery
         curs.execute(updatequery)
         conn.commit()
-        command="$MCWRAPPER_CENTRAL/gluex_MC.py MCDispatched.config "+str(RunNumber)+" "+str(NumEventsToProduce)+" per_file=50000 base_file_number="+str(FileNumber_NewJob)+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=2"
+        command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched.config "+str(RunNumber)+" "+str(NumEventsToProduce)+" per_file=50000 base_file_number="+str(FileNumber_NewJob)+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=2"
         print(command)
         status = subprocess.call(command, shell=True)
     else:
@@ -569,7 +610,7 @@ def WriteConfig(ID):
     curs.execute(query) 
     rows=curs.fetchall()
 
-    status = subprocess.call("cp $MCWRAPPER_CENTRAL/examples/SWIFShell.config ./MCDispatched.config", shell=True)
+    status = subprocess.call("cp "+MCWRAPPER_BOT_HOME+"/examples/SWIFShell.config ./MCDispatched.config", shell=True)
     WritePayloadConfig(rows[0],"True")
 
 def WritePayloadConfig(order,foundConfig):
@@ -594,6 +635,9 @@ def WritePayloadConfig(order,foundConfig):
         MaxE = MaxE[:-cutnum]
     MCconfig_file.write("GEN_MIN_ENERGY="+MinE+"\n")
     MCconfig_file.write("GEN_MAX_ENERGY="+MaxE+"\n")
+
+    if str(order["GenFlux"]) == "cobrems":
+        MCconfig_file.write("FLUX_TO_GEN=cobrems"+"\n")
 
     if order["CoherentPeak"] is not None :
         MCconfig_file.write("COHERENT_PEAK="+str(order["CoherentPeak"])+"\n")
@@ -635,16 +679,20 @@ def WritePayloadConfig(order,foundConfig):
 
     
     MCconfig_file.write("ENVIRONMENT_FILE=/group/halld/www/halldweb/html/dist/"+str(order["VersionSet"])+"\n")
+    print("ADD ANAVER TO PAYLOAD?")
+    print(str(order["ANAVersionSet"]))
+    if(order["ANAVersionSet"] != None and order["ANAVersionSet"] != "None" ):
+        print("ADDING ANNAVER")
+        MCconfig_file.write("ANA_ENVIRONMENT_FILE=/group/halld/www/halldweb/html/dist/"+str(order["ANAVersionSet"])+"\n")
     MCconfig_file.close()
 
 def DispatchToOSG(ID,order,PERCENT):
-    status = subprocess.call("cp $MCWRAPPER_CENTRAL/examples/OSGShell.config ./MCDispatched.config", shell=True)
+    status = subprocess.call("cp "+MCWRAPPER_BOT_HOME+"/examples/OSGShell.config ./MCDispatched.config", shell=True)
     WritePayloadConfig(order,"True")
 
     RunNumber=str(order["RunNumLow"])
     if order["RunNumLow"] != order["RunNumHigh"] :
         RunNumber = RunNumber + "-" + str(order["RunNumHigh"])
-
 
     cleangen=1
     if order["SaveGeneration"]==1:
@@ -667,7 +715,7 @@ def DispatchToOSG(ID,order,PERCENT):
     #print updatequery
     curs.execute(updatequery)
     conn.commit()
-    command="$MCWRAPPER_CENTRAL/gluex_MC.py MCDispatched.config "+str(RunNumber)+" "+str(order["NumEvents"])+" per_file=20000 base_file_number="+str(0)+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" logdir=/osgpool/halld/tbritton/REQUESTEDMC_LOGS/"+order["OutputLocation"].split("/")[7]+" batch=1"
+    command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched.config "+str(RunNumber)+" "+str(order["NumEvents"])+" per_file=20000 base_file_number="+str(0)+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" logdir=/osgpool/halld/tbritton/REQUESTEDMC_LOGS/"+order["OutputLocation"].split("/")[7]+" batch=1"
     print(command)
     status = subprocess.call(command, shell=True)
     

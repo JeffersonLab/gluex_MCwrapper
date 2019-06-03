@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <head>
-    <title>MCwrapper Records by Thomas Britton</title>
+    <title>Active MC Dashboard by Thomas Britton</title>
 </head>
 
 <link rel="stylesheet" type="text/css" href="./css/animations.css"/>
@@ -13,11 +13,14 @@
 <!--<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>-->
 <link rel="stylesheet" type="text/css" href="./css/datatables.css"/>
 <script type="text/javascript" src="../data_monitoring/js_utilities/datatables.min.js"></script>
+<script type="text/javascript" src="./js/fnFindCellRowIndexes.js"></script>
+<script src="./js/dataTables.fixedHeader.min.js"></script>
 <script src="js/three.min.js"></script>
-<script src="js/globe/globe.js"></script>
+<!-- <script src="js/globe/globe.js"></script>-->
 
 
 <script>
+var jobsTableInterval;
 var result=[];
         var ipTable= [];
         var subIPs=[];
@@ -31,7 +34,8 @@ var result=[];
         var JobsDataSet=[];
         var JobsColumnDefs=[];
         var globe;
-    
+        var selected_Project=-1;
+
         var Attemptsresult= [];
         var AttemptsTable;
         var AttemptsDataSet=[];
@@ -40,16 +44,18 @@ var result=[];
         var return_code="";
         var foreman=false;
         var locX,locY;
+
+        var MakeProjectTable_lock=true;
         var news_lock=false;
     
     
         setInterval(function (){
             newsource="https://scicomp.jlab.org/ganglia/graph.php?r=hour&z=xlarge&c=Scicomp+Misc&h=scosg16.jlab.org&jr=&js=&v=102&m=TotalRunningJobs&vl=jobs?"+Date.now()
-            document.getElementById('condor_running').src=newsource
+//            document.getElementById('condor_running').src=newsource
             newsource_idle="https://scicomp.jlab.org/ganglia/graph.php?r=hour&z=xlarge&c=Scicomp+Misc&h=scosg16.jlab.org&jr=&js=&v=0&m=TotalIdleJobs&vl=jobs?"+Date.now()
-            document.getElementById('condor_idle').src=newsource_idle
-        },5000)
-
+//            document.getElementById('condor_idle').src=newsource_idle
+        },10000)
+        
         setInterval(function(){
             if(!news_lock)
                 return
@@ -59,121 +65,12 @@ var result=[];
             
         },5000)
 
-        $(document).ready(function(){GetNews();QueryDatabase();}); 
-
-
-
-        function GetNews()
-  {
-    
-        if (window.XMLHttpRequest) {
-            // code for IE7+, Firefox, Chrome, Opera, Safari
-            xmlhttp = new XMLHttpRequest();
-        } else {
-            // code for IE6, IE5
-            xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
-        }
-        xmlhttp.onreadystatechange = function() {
-            if (this.readyState == 4 && this.status == 200) {
-                //console.log(this.responseText)
-                if(this.responseText != "")
-                {
-                    newsList=JSON.parse(this.responseText);
-                    MakeNews(newsList);
-
-                }
-                
-            }
-        };
+        setInterval(function (){
+            GetHeartbeats();
+        },1000)
         
-         
-        //console.log("mchb.php");
-        xmlhttp.open("GET","getNews.php",true);
-        xmlhttp.send();
-  }
-  function MakeNews(newsList)
-  {
-    if(document.getElementById("newsstand").children.length==0 && newsList.length !=0 )
-    {
-        console.log(newsList)
-        var newsanchor=document.getElementById("newsstand")
-        var tickerDiv= document.createElement("DIV")
-        tickerDiv.id="tickerDIV"
-        tickerDiv.className="news-ticker"
+        $(document).ready(function(){checkForeman();GetNews();QueryDatabase();GetHeartbeats();}); 
 
-        var tickerTexts= document.createElement("DIV")
-        tickerTexts.id="tickerTexts"
-        tickerTexts.className="ticker"
-
-        var tickerHolder= document.createElement("SPAN")
-        tickerHolder.id="tickerHolder"
-        tickerHolder.className="ticker-holder"
-
-        tickerTexts.appendChild(tickerHolder);
-        tickerDiv.appendChild(tickerTexts)
-        newsanchor.appendChild(tickerDiv)
-
-        for(var i=0; i< newsList.length;i++)
-        {
-            var CSPAN=document.createElement("SPAN");
-            CSPAN.id="newsSpan_"+toString(i);
-            CSPAN.innerHTML="<strong>"+newsList[i].header+"</strong>:   "+newsList[i].text+"               </span>";
-            tickerHolder.appendChild(CSPAN)
-
-        }
-
-        try {
-        var ticker_holder = $('.ticker-holder').get(0);
-        var ticker_text = $('.ticker').get(0);
-        var ticker_pos = ticker_text.parentNode.offsetWidth;
-
-        var ticker_data = $(ticker_holder).html();
-        $(ticker_text).parent().html('<marquee id="marquee" scrollamount="10" scrolldelay="">' + ticker_data + '</marquee>');
-
-        $('.news-ticker').hover(
-
-        function() {
-            $('marquee', this).get(0).stop();
-        }, function() {
-            $('marquee', this).get(0).start();
-        });
-
-
-    }
-    catch (o) {}
-
-    }
-    else if( document.getElementById("newsstand").children.length!=0 && newsList.length !=0)
-    {
-        //UPDATE
-        //delete children and repopulate
-        var myNode = document.getElementById("marquee");
-        while (myNode.firstChild) {
-            myNode.removeChild(myNode.firstChild);
-        }
-        
-        for(var i=0; i< newsList.length;i++)
-        {
-            var CSPAN=document.createElement("SPAN");
-            CSPAN.id="newsSpan_"+toString(i);
-            CSPAN.innerHTML="<strong>"+newsList[i].header+"</strong>:   "+newsList[i].text+"               </span>";
-            myNode.appendChild(CSPAN)
-
-        }
-
-    }
-    else if( document.getElementById("newsstand").children.length!=0 && newsList.length ==0)
-    {
-        //DESTROY
-        //console.log("EXISTS")
-        var myNode = document.getElementById("newsstand");
-        while (myNode.firstChild) {
-            myNode.removeChild(myNode.firstChild);
-        }
-    }
-    news_lock=!news_lock
-  }
-    
     document.addEventListener("mousemove",function (e){locX=e.clientX;locY=e.clientY;})
 
 
@@ -181,18 +78,31 @@ var result=[];
 
         if(foreman)
         {
-    e.preventDefault();
-    console.log(e.pageX + "," + e.pageY);
-    $("#cntnr").css("left",e.clientX);
-    $("#cntnr").css("top",e.clientY);
-    locX=e.clientX;
-    locY=e.clientY;
- // $("#cntnr").hide(100); 
-    mouseOverObject=document.elementFromPoint(locX,locY)
+            e.preventDefault();
+            console.log(e.pageX + "," + e.pageY);
+            $("#cntnr").css("left",e.clientX);
+            $("#cntnr").css("top",e.clientY);
+            locX=e.clientX;
+            locY=e.clientY;
+        // $("#cntnr").hide(100); 
+            mouseOverObject=document.elementFromPoint(locX,locY)
 
-    $("#cntnr").fadeIn(200,startFocusOut());
+            $("#cntnr").fadeIn(200,startFocusOut());
        //DoMenu(e.pageX,e.pageY);
 
+        }
+        else
+        {
+            e.preventDefault();
+            console.log(e.pageX + "," + e.pageY);
+            $("#ucntnr").css("left",e.clientX);
+            $("#ucntnr").css("top",e.clientY);
+            locX=e.clientX;
+            locY=e.clientY;
+        // $("#cntnr").hide(100); 
+            mouseOverObject=document.elementFromPoint(locX,locY)
+
+            $("#ucntnr").fadeIn(200,startFocusOut());
         }
 });
 
@@ -265,7 +175,7 @@ var result=[];
         
         toRet.push(countedsubIPs[i].lat)
         toRet.push(countedsubIPs[i].long)
-        toRet.push(3*countedsubIPs[i].count/denom)
+        toRet.push(2*countedsubIPs[i].count/denom)
         
         
 
@@ -280,6 +190,7 @@ function SetRunGlobe()
    { 
     
     var rglobe3d = document.getElementById("globe");
+    
     globe.renderer.dispose()
     disposeHierarchy (globe.points, disposeNode);
     disposeHierarchy (globe, disposeNode);
@@ -358,15 +269,151 @@ function SetRunGlobe()
 
 function startFocusOut(){
   $(document).on("click",function(){
-  $("#cntnr").hide();        
+  $("#cntnr").hide(); 
+  $("#ucntnr").hide(); 
   $(document).off("click");
   });
 }
+
+function getTimestampFromDate(date_str)
+{
+    var s = date_str;
+    var a = s.split(/[^0-9]/);
+    
+    var d=new Date (a[0],a[1]-1,a[2],a[3],a[4],a[5] );
+    return d.getTime()
+}
+
+function GetHeartbeats()
+  {
+    
+        if (window.XMLHttpRequest) {
+            // code for IE7+, Firefox, Chrome, Opera, Safari
+            xmlhttp = new XMLHttpRequest();
+        } else {
+            // code for IE6, IE5
+            xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+        }
+        xmlhttp.onreadystatechange = function() {
+            if (this.readyState == 4 && this.status == 200) {
+                //console.log(this.responseText)
+                if(this.responseText != "")
+                {
+                    hist_table=JSON.parse(this.responseText);
+                    //console.log("HB TABLE");
+                    //console.log(hist_table)
+
+                    StatusLight("MCOverlord-hb",hist_table.MCOverlord,2);
+
+                    //Do DRONE
+                    StatusLight("MCDrone-hb",hist_table.MCDrone,1);
+                    StatusLight("MCSubmitter-hb",hist_table.MCSubmitter,1);
+                    
+                    //DO MOVER
+                    StatusLight("MCMover-hb",hist_table.MCMover,2);
+                    
+
+                }
+                
+            }
+        };
+        
+         
+        //console.log("mchb.php");
+        xmlhttp.open("GET","mchb.php",true);
+        xmlhttp.send();
+  }
+
+function StatusLight(light_name,poll_table,cron_freq)
+{
+    var LED=document.getElementById(light_name);
+    if(!LED || poll_table.length==0)
+    {
+        return;
+    }
+    //DO MOVER
+    Running=0;
+    Now=Date.now();
+    Recent=false;
+    for(var i=0;i<poll_table.length;i++)
+    {
+
+        //console.log(hist_table.MCOverlord[i].StartTime)
+        //console.log(Date.parse(hist_table.MCOverlord[i].StartTime))
+        if(poll_table[i].Status=="Success" || poll_table[i].Status=="Running" )
+        {
+            Running+=1;
+        }
+
+                        
+    }
+    if(Now-getTimestampFromDate(poll_table[0].StartTime)<2*cron_freq*60*1000 || poll_table[0].Status=="Running")
+        Recent=true;
+
+
+    if(poll_table[0].Status=="Running")
+    {
+        if(LED.className != "led-blink-green" )
+            { LED.className="led-blink-green"}
+        else
+            {LED.className="led-green" }
+    }
+    else if(Recent && Running == 5)
+    {
+        LED.className="led-green";
+    }
+    else if(Recent==false)
+    {
+        LED.className="led-red"
+    }
+    else{
+        if(poll_table[0].Status=="Running" && LED.className != "led-blink-green")
+        {
+            LED.className="led-blink-green"
+        }
+        else if(hist_table.MCMover[0].Status!="Running")
+        {
+            LED.className="led-red-blinking"
+        }
+    }
+}
+
+
+function checkForeman()
+{
+    if (window.XMLHttpRequest) {
+            // code for IE7+, Firefox, Chrome, Opera, Safari
+            xmlhttp = new XMLHttpRequest();
+        } else {
+            // code for IE6, IE5
+            xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+        }
+        xmlhttp.onreadystatechange = function() {
+            if (this.readyState == 4 && this.status == 200) {
+                //console.log(this.responseText)
+                if(this.responseText != "")
+                {
+                
+                foreman=parseInt(this.responseText);
+
+                }
+                
+            }
+        };
+        
+         
+
+        console.log("foreman.php");
+        xmlhttp.open("GET","foreman.php",true);
+        xmlhttp.send();
+}
+
 function QueryDatabase()
   {
-    $('#AttemptsTable').empty();
-    $('#JobsTable').empty();
       
+        $('#AttemptsTable').empty();
+        $('#JobsTable').empty();
+
         if (window.XMLHttpRequest) {
             // code for IE7+, Firefox, Chrome, Opera, Safari
             xmlhttp = new XMLHttpRequest();
@@ -381,10 +428,6 @@ function QueryDatabase()
                 if(this.responseText != "")
                 {
                 result=JSON.parse(this.responseText);
-                return_code=result[0]["return_code"];
-                if(return_code=="coh328nm9d9odhu5tgio48i")
-                    foreman=true;
-                //result.shift();
 
                 result_to_use=result;
 
@@ -413,8 +456,8 @@ function QueryDatabase()
         
          
 
-        console.log("dat_mon_sql.php?Table=Project");
-        xmlhttp.open("GET","dat_mon_sql.php?Table=Project",true);
+        //console.log("dat_mon_sql.php?Table=ProjectF");
+        xmlhttp.open("GET","dat_mon_sql.php?Table=ProjectF",true);
         xmlhttp.send();
   }
   function DecodeGeos()
@@ -435,7 +478,7 @@ function QueryDatabase()
                 {
                     ipTable=JSON.parse(this.responseText);
                     console.log(ipTable)
-                    SetSceneGlobe();
+//                    SetSceneGlobe();
                     
                 }
                 
@@ -467,11 +510,6 @@ function QueryDatabase()
                 {
                 result=JSON.parse(this.responseText);
                 console.log(result)
-                return_code=result[0]["return_code"];
-                if(return_code=="coh328nm9d9odhu5tgio48i")
-                    foreman=true;
-                //result.shift();
-
                 result_to_use=result;
 
                 runIPs=[]
@@ -489,7 +527,7 @@ function QueryDatabase()
                 //console.log(result)
                 
                 //DecodeGeos();
-                SetRunGlobe();
+//                SetRunGlobe();
                
 
                 }
@@ -499,7 +537,7 @@ function QueryDatabase()
         
          
 
-        console.log("dat_mon_sql.php?Table=RunMap&projID="+projID);
+        //console.log("dat_mon_sql.php?Table=RunMap&projID="+projID);
         xmlhttp.open("GET","dat_mon_sql.php?Table=RunMap&projID="+projID,true);
         xmlhttp.send();
   }
@@ -519,68 +557,60 @@ function QueryDatabase()
 
     if(table=="Project")
     {
-        MakeProjectTable(qresult);
+        MakeProjectTable();
     }
-    else if( table == "Jobs")
+    /*else if( table == "Jobs")
     {
         MakeJobsTable(qresult);
-    }
+    }*/
   }
 
-  function MakeProjectTable(resultArray)
-  {
-    $('#ProjTable').empty();
-      ProjDataSet=[];
-      ProjColumnDefs=[];
 
-      if(resultArray.length > 0)
-      {
+function MakeProjectTable()
+{
 
-        for (var key in resultArray[0]) {
-            if( key == "Config_Stub" || key=="Submitter" || key =="Comments" || key=="Notified" || key=="UName" || key=="UIp" || key=="wc")
-                continue;
-
-
-            ProjColumnDefs.push({title: key});
-            }
-        
-            for (i = 0; i < resultArray.length; i++) {
-                
-                var dataRow=[];
-                for (var key in resultArray[i]) {
-
-                    if( key == "Config_Stub" || key=="Submitter" || key =="Comments" || key=="Notified" || key=="UName" || key=="UIp")
-                        continue;
-
-                    if ( key == "ReactionLines" && resultArray[i][key] )
-                    {
-                        
-                        dataRow.push((resultArray[i][key]).substring(0,12));
-                    }
-                    else
-                    {
-                    dataRow.push(resultArray[i][key]);
-                    }
-                }
-                
-                    ProjDataSet.push(dataRow);
-                }
-        
-               if ( $.fn.dataTable.isDataTable( '#ProjTable' ) ) {
-                ProjTable = $('#ProjTable').DataTable();
-                ProjTable.destroy();
-                $('#ProjTable').empty();
-                }
-                ProjTable=$('#ProjTable').DataTable({data: ProjDataSet , columns: ProjColumnDefs, "order":[[0,"desc"]]});
-                //$('#ProjTable').addClass('run-slideInLeft');
-                
-
-                $('#ProjTable').dataTable().on('click','td',function (e){DisplayJobs(e,this);DisplayAttempts(e,this)});
-                //ColorCells();
-   
-
-        }
+    ProjTable = $('#ProjTable').DataTable( {
+        order: [[1,"asc"]],
+      ajax: "./MakeTables.php?Table=ProjectF&lock="+MakeProjectTable_lock,
+      stateSave: false,
+      "aLengthMenu": [[2, 10, 25, 50, 100, -1], [2, 10, 25, 50, 100,"All"]],
+      columns: [
+        { title: "Progress %" , data: "Progress" },
+        { title: "ID" , data: "ID" },
+        { title: "Email" , data: "Email" },
+        { title: "Submit_Time" , data: "Submit_Time" },
+        { title: "Status" , data: "Tested" },
+        { title: "Is_Dispatched" , data: "Is_Dispatched" },
+        { title: "Dispatched_Time" , data: "Dispatched_Time" },
+        { title: "Completed_Time" , data: "Completed_Time" },
+        { title: "RunNumLow" , data: "RunNumLow" },
+        { title: "RunNumHigh" , data: "RunNumHigh" },
+        { title: "NumEvents" , data: "NumEvents" },
+        { title: "Generator" , data: "Generator" },
+        { title: "BKG" , data: "BKG" },
+        { title: "OutputLocation" , data: "OutputLocation" },
+        { title: "RCDBQuery" , data: "RCDBQuery" },
+        { title: "VersionSet" , data: "VersionSet" }
+      ]
+  } );
+  $('#ProjTable').dataTable().on('click','td',function (e){DisplayJobs(e,this);DisplayAttempts(e,this)});
+  Ani=true;
+   if(Ani)
+       $('#ProjTable').addClass("do-SlideInLeft");
+   else
+       $('#ProjTable').removeClass("do-SlideInLeft");
+  setInterval( function () {
+    if(!MakeProjectTable_lock)
+    {
+        return;
+    }
+    MakeProjectTable_lock=!MakeProjectTable_lock;
+    ProjTable.ajax.reload(function(){MakeProjectTable_lock=!MakeProjectTable_lock}, false);  // The second param, false, ensures that if the user is on a page, it doesn't go back to page 1 upon reload
+  }, 1000 );
+    
 }
+
+
 
 function MakeJobsTablenew(projID)
   {
@@ -613,12 +643,16 @@ function MakeJobsTablenew(projID)
       else
       {
         if ($.fn.dataTable.isDataTable( '#JobsTable' )) {
-          $('#JobsTable').DataTable().destroy();
+          console.log("line 643 destroy");
+          console.log("line 645 " + JSON.stringify($('#JobsTable tbody')));
+          $('#JobsTable').DataTable().clear().destroy();
+          $('#JobsTable tbody').empty();
         }
       }
 
   jobsTable = $('#JobsTable').DataTable( {
       ajax: "./MakeTables.php?Table=Jobs&projID=" + projID,
+      stateSave: false,
       columns: [
         { title: "ID" , data: "ID" },
         { title: "Project_ID" , data: "Project_ID" },
@@ -629,12 +663,76 @@ function MakeJobsTablenew(projID)
         { title: "IsActive" , data: "IsActive" }
       ]
   } );
-  setInterval( function () {
+  if (jobsTableInterval != null) {
+    clearInterval(jobsTableInterval);
+  }
+  jobsTableInterval = setInterval( function () {
+    console.log("line 666 loading jobs table");
     jobsTable.ajax.reload(null, false);  // The second param, false, ensures that if the user is on a page, it doesn't go back to page 1 upon reload
+  }, 2000 );
+}
+function MakeAttemptsTable(projID)
+  {
+      thetable=document.getElementById("AttemptsTable");
+    if(!thetable)
+      {
+          /*<div class="container" id="JobsContainer" >
+        
+        <font size="32" color="white">Jobs</font>*/
+    
+          var attTableCont=document.createElement("DIV")
+          var attTable=document.createElement("table")
+        
+          attTableCont.className="container table";
+          attTableCont.id="AttemptsContainer";
+
+           attTable.id="AttemptsTable";
+           attTable.className="dataTable addtable table"
+           var textnode=document.createTextNode("Attempts");
+           textnode.className="table-header"
+           var header=document.createElement("h1");
+           attTableCont.appendChild(document.createElement("hr"))
+           header.append(textnode)
+           attTableCont.appendChild(header);
+           attTableCont.appendChild(document.createElement("br"));
+           
+           attTableCont.appendChild( attTable);
+          document.getElementById("tableBlock").appendChild( attTableCont);
+      }
+      else
+      {
+        if ($.fn.dataTable.isDataTable( '#AttemptsTable' )) {
+          $('#AttemptsTable').DataTable().destroy();
+        }
+      }
+
+  attemptsTable = $('#AttemptsTable').DataTable( {
+      ajax: "./MakeTables.php?Table=Attempts&projID=" + projID,
+      stateSave: false,
+      columns: [
+        { title: "ID" , data: "ID" },
+        { title: "Job_ID" , data: "Job_ID" },
+        { title: "Creation_Time" , data: "Creation_Time" },
+        { title: "Start_Time" , data: "Start_Time" },
+        { title: "Completed_Time" , data: "Completed_Time" },
+        { title: "BatchSystem" , data: "BatchSystem" },
+        { title: "BatchJobID" , data: "BatchJobID" },
+        { title: "Status" , data: "Status" },
+        { title: "ExitCode" , data: "ExitCode" },
+        { title: "WallTime" , data: "WallTime" },
+        { title: "CPUTime" , data: "CPUTime" },
+        { title: "RAMUsed" , data: "RAMUsed" },
+        { title: "RunningLocation" , data: "RunningLocation" },
+        { title: "RunIP" , data: "RunIP" }
+      ]
+  } );
+  setInterval( function () {
+    attemptsTable.ajax.reload(null, false);  // The second param, false, ensures that if the user is on a page, it doesn't go back to page 1 upon reload
   }, 30000 );
+  QueryDatabaseRunIP(projID);
 }
 
-function MakeAttemptsTable(resultArray,projID)
+function MakeAttemptsTableold(resultArray,projID)
   {
     
       AttemptsDataSet=[];
@@ -739,9 +837,10 @@ function MakeAttemptsTable(resultArray,projID)
       }
 
     else if ( $.fn.dataTable.isDataTable( '#JobsTable' ) ) {
+            console.log("line 830 destroy");
                 JobsTable = $('#JobsTable').DataTable();
                 JobsTable.destroy();
-                $('#JobsTable').empty();
+                $('#JobsTable tbody').empty();
                 }
       JobsDataSet=[];
       JobsColumnDefs=[];
@@ -766,9 +865,10 @@ function MakeAttemptsTable(resultArray,projID)
             }
         
                if ( $.fn.dataTable.isDataTable( '#JobsTable' ) ) {
+                console.log("line 858 destroy");
                 JobsTable = $('#JobsTable').DataTable();
                 JobsTable.destroy();
-                $('#JobsTable').empty();
+                $('#JobsTable tbody').empty();
                 }
                 JobsTable=$('#JobsTable').DataTable({data: JobsDataSet , columns: JobsColumnDefs});
                 $('#JobsTable').addClass('run-slideInRight');
@@ -780,8 +880,8 @@ function MakeAttemptsTable(resultArray,projID)
 
 function DisplayJobs(e,obj)
 {
-    var projID=obj.parentNode.childNodes[0].innerHTML;
-
+    var projID=obj.parentNode.childNodes[1].innerHTML;
+    selected_Project=parseInt(projID);
     
         if (window.XMLHttpRequest) {
             // code for IE7+, Firefox, Chrome, Opera, Safari
@@ -797,9 +897,9 @@ function DisplayJobs(e,obj)
                 if(this.responseText != "")
                 {
                 result=JSON.parse(this.responseText);
-                //result.shift();
 
                 result_to_use=result;
+                //MakeJobsTable(result_to_use)
                 MakeJobsTablenew(projID)
                 //ColorCells();
                 }
@@ -807,14 +907,15 @@ function DisplayJobs(e,obj)
             }
         };
         
-        console.log("dat_mon_sql.php?Table=Jobs\&projID="+projID);
+       // console.log("dat_mon_sql.php?Table=Jobs\&projID="+projID);
         xmlhttp.open("GET","dat_mon_sql.php?Table=Jobs\&projID="+projID,true);
         xmlhttp.send();
 
 }
 function DisplayAttempts(e,obj)
 {
-    var projID=obj.parentNode.childNodes[0].innerHTML;
+    console.log("Attempts")
+    var projID=obj.parentNode.childNodes[1].innerHTML;
 
     
         if (window.XMLHttpRequest) {
@@ -831,17 +932,16 @@ function DisplayAttempts(e,obj)
                 if(this.responseText != "")
                 {
                 result=JSON.parse(this.responseText);
-                //result.shift();
                 console.log(result);
                 result_to_use=result;
-                MakeAttemptsTable(result_to_use,projID)
+                MakeAttemptsTable(projID)
                 //ColorCells();
                 }
                 
             }
         };
         
-        console.log("dat_mon_sql.php?Table=Attempts\&projID="+projID);
+        //console.log("dat_mon_sql.php?Table=Attempts\&projID="+projID);
         xmlhttp.open("GET","dat_mon_sql.php?Table=Attempts\&projID="+projID,true);
         xmlhttp.send();
 }
@@ -853,7 +953,7 @@ function DoMenu(action)
             console.log(obj)
             if(obj.parentNode.childNodes[0].nodeName == "TD")
             {
-                var projID=obj.parentNode.childNodes[0].innerHTML;
+                var projID=obj.parentNode.childNodes[1].innerHTML;
                 
                 if (window.XMLHttpRequest) {
             // code for IE7+, Firefox, Chrome, Opera, Safari
@@ -880,47 +980,38 @@ function DoMenu(action)
         xmlhttp.send();
             }
     }
-}
-function ColorCells()
-{
-    if(ProjTable)
+    else
     {
-    for(var r=0;r<ProjTable.rows()[0].length;r++)
-        {
-            for(var c=0;c<ProjTable.columns()[0].length;c++)
+        var obj= mouseOverObject;
+            console.log(obj)
+            if(obj.parentNode.childNodes[0].nodeName == "TD")
             {
+                var projID=obj.parentNode.childNodes[1].innerHTML;
                 
-                    var thisCell=ProjTable.cell(r,c);
-                    
-                        $(thisCell).addClass('blackbkg')
-            }
-        }
-    }
-    if(JobsTable)
-    {
-    for(var r=0;r<JobsTable.rows()[0].length;r++)
-        {
-            for(var c=0;c<JobsTable.columns()[0].length;c++)
-            {
+                if (window.XMLHttpRequest) {
+            // code for IE7+, Firefox, Chrome, Opera, Safari
+                    xmlhttp = new XMLHttpRequest();
+                 } else {
+            // code for IE6, IE5
+                    xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+                    }
+                    xmlhttp.onreadystatechange = function() {
+                    if (this.readyState == 4 && this.status == 200) {
                 
-                    var thisCell=JobsTable.cell(r,c);
-                    
-                        $(JobsTable).addClass('blackbkg')
-            }
-        }
-    }
-    if(AttemptsTable)
-    {
-    for(var r=0;r<AttemptsTable.rows()[0].length;r++)
-        {
-            for(var c=0;c<AttemptsTable.columns()[0].length;c++)
-            {
+                console.log(this.responseText)
+                if(this.responseText != "")
+                {
+                alert(this.responseText);
                 
-                    var thisCell=AttemptsTable.cell(r,c);
-                    
-                        $(AttemptsTable).addClass('blackbkg')
+                }
+                
             }
-        }
+        };
+        
+        console.log("user_util.php?Mode="+action+"\&projID="+projID)
+        xmlhttp.open("GET","user_util.php?Mode="+action+"\&projID="+projID,true);
+        xmlhttp.send();
+            }       
     }
 }
 function disposeNode (node)
@@ -962,9 +1053,7 @@ function disposeNode (node)
         }
     }
 }   // disposeNode
-function sleep (time) {
-  return new Promise((resolve) => setTimeout(resolve, time));
-}
+
 function disposeHierarchy (node, callback)
 {
     if(node)
@@ -983,88 +1072,154 @@ function disposeHierarchy (node, callback)
         }
     }
 }
+function GetNews()
+  {
+    
+        if (window.XMLHttpRequest) {
+            // code for IE7+, Firefox, Chrome, Opera, Safari
+            xmlhttp = new XMLHttpRequest();
+        } else {
+            // code for IE6, IE5
+            xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+        }
+        xmlhttp.onreadystatechange = function() {
+            if (this.readyState == 4 && this.status == 200) {
+                //console.log(this.responseText)
+                if(this.responseText != "")
+                {
+                    newsList=JSON.parse(this.responseText);
+                    MakeNews(newsList);
+
+                }
+                
+            }
+        };
+        
+         
+        //console.log("mchb.php");
+        xmlhttp.open("GET","getNews.php",true);
+        xmlhttp.send();
+  }
+  function MakeNews(newsList)
+  {
+    if(document.getElementById("newsstand").children.length==0 && newsList.length !=0 )
+    {
+        console.log(newsList)
+        var newsanchor=document.getElementById("newsstand")
+        var tickerDiv= document.createElement("DIV")
+        tickerDiv.id="tickerDIV"
+        tickerDiv.className="news-ticker"
+
+        var tickerTexts= document.createElement("DIV")
+        tickerTexts.id="tickerTexts"
+        tickerTexts.className="ticker"
+
+        var tickerHolder= document.createElement("SPAN")
+        tickerHolder.id="tickerHolder"
+        tickerHolder.className="ticker-holder"
+
+        tickerTexts.appendChild(tickerHolder);
+        tickerDiv.appendChild(tickerTexts)
+        newsanchor.appendChild(tickerDiv)
+
+        for(var i=0; i< newsList.length;i++)
+        {
+            var CSPAN=document.createElement("SPAN");
+            CSPAN.id="newsSpan_"+toString(i);
+            CSPAN.innerHTML="<strong>"+newsList[i].header+"</strong>:   "+newsList[i].text+"               </span>";
+            tickerHolder.appendChild(CSPAN)
+
+        }
+
+        try {
+        var ticker_holder = $('.ticker-holder').get(0);
+        var ticker_text = $('.ticker').get(0);
+        var ticker_pos = ticker_text.parentNode.offsetWidth;
+
+        var ticker_data = $(ticker_holder).html();
+        $(ticker_text).parent().html('<marquee id="marquee" scrollamount="10" scrolldelay="">' + ticker_data + '</marquee>');
+
+        $('.news-ticker').hover(
+
+        function() {
+            $('marquee', this).get(0).stop();
+        }, function() {
+            $('marquee', this).get(0).start();
+        });
+
+
+    }
+    catch (o) {}
+
+    }
+    else if( document.getElementById("newsstand").children.length!=0 && newsList.length !=0)
+    {
+        //UPDATE
+        //delete children and repopulate
+        
+        var myNode = document.getElementById("marquee");
+        while (myNode.firstChild) {
+            myNode.removeChild(myNode.firstChild);
+        }
+        
+        for(var i=0; i< newsList.length;i++)
+        {
+            var CSPAN=document.createElement("SPAN");
+            CSPAN.id="newsSpan_"+toString(i);
+            CSPAN.innerHTML="<strong>"+newsList[i].header+"</strong>:   "+newsList[i].text+"               </span>";
+            myNode.appendChild(CSPAN)
+
+        }
+
+    }
+    else if( document.getElementById("newsstand").children.length!=0 && newsList.length ==0)
+    {
+        //DESTROY
+        //console.log("EXISTS")
+        var myNode = document.getElementById("newsstand");
+        while (myNode.firstChild) {
+            myNode.removeChild(myNode.firstChild);
+        }
+    }
+    news_lock=!news_lock
+  }
     </script>
 <body style="background-color:black" >
-        <div id="newsstand">
-            </div>
-        <div class="header-block">
-        <div class="header-menu">
-                <nav role="navigation">
-                        <div id="menuToggle">
-                          <!--
-                          A fake / hidden checkbox is used as click reciever,
-                          so you can use the :checked selector on it.
-                          -->
-                          <input type="checkbox" />
-                          
-                          <!--
-                          Some spans to act as a hamburger.
-                          
-                          They are acting like a real hamburger,
-                          not that McDonalds stuff.
-                          -->
-                          <span></span>
-                          <span></span>
-                          <span></span>
-                          
-                          <!--
-                          Too bad the menu has to be inside of the button
-                          but hey, it's pure CSS magic.
-                          -->
-                          <ul id="menu">
-                            <a href="https://halldweb.jlab.org/gluex_sim/SubmitSim.html"><li>Submit Form</li></a>
-                            <a href="https://halldweb.jlab.org/gluex_sim/Dashboard.html"><li>Dashboard</li></a>
-                            <a href="https://github.com/JeffersonLab/gluex_MCwrapper"><li>Github Repository</li></a>
-                            <a href="mailto: tbritton@jlab.org"><li>Contact Me</li></a>
-                          </ul>
-                        </div>
-                      </nav>
-        </div>
-        <div class="header-info">
-                <div id="globe" width="1250">
-        
-                    </div>
-                    <div id="graphs">
-                    
-                    <img class="graph" src="https://scicomp.jlab.org/ganglia/graph.php?r=hour&z=xlarge&c=Scicomp+Misc&h=scosg16.jlab.org&jr=&js=&v=102&m=TotalRunningJobs&vl=jobs" id="condor_running"/>
-                    
-                    <img class="graph" src="https://scicomp.jlab.org/ganglia/graph.php?r=hour&z=xlarge&c=Scicomp+Misc&h=scosg16.jlab.org&jr=&js=&v=0&m=TotalIdleJobs&vl=jobs" id="condor_idle"/>
-                    
-                    </div>
-        
-        </div>
-        
-        <div class="header-hb">
-            <div>
-            <img id="logo" src="./whitelogo.png" class="logo"  alt="logo" width="125" height="160" align="right">
-            </div>
-            <div>
-            
-                </div>
-        </div>
-        </div>
-        <div class="table-block" id="tableBlock">
-        
-            <div class="container table" id="ProjContainer" >
-                   <font size="32" color="white"> Projects  </font> <input type="button" onClick="QueryDatabase()" value="Refresh tables">  
-                   <table cellpadding="0" cellspacing="0" border="1" class="dataTable table" id="ProjTable">
-               
-                   </table>
-            </div>
-        
-        </div>
-        <div id='cntnr'>
-            <ul id='items'>
-              <li onclick="DoMenu('NotifyComplete')"><font color="black">Notify Complete</font></li>
-              <li onclick="DoMenu('ReTest')"><font color="black">Retest Project</font></li>
-            </ul>
-            <hr/>
-            <ul id='items'>
-                <li onclick="DoMenu('FullReset')"><font color="black">Full Project Reset</font></li>
-            </ul>
-            
-            
-        
-        </div>
-        </body>
-        </html>
+<div id="newsstand">
+</div>
+
+<div class="table-block" id="tableBlock">
+
+    <div class="container table" id="ProjContainer" >
+           <font size="32" color="white"> Projects  </font> 
+           <table cellpadding="0" cellspacing="0" border="1" class="dataTable table" id="ProjTable">
+       
+           </table>
+    </div>
+
+</div>
+<div id='cntnr'>
+    <ul id='items'>
+      <li onclick="DoMenu('NotifyComplete')"><font color="black">Notify Complete</font></li>
+      <li onclick="DoMenu('ReTest')"><font color="black">Retest Project</font></li>
+      <li onclick="DoMenu('Recall')"><font color="black">Recall Project</font></li>
+      <li onclick="DoMenu('DeclareComplete')"><font color="black">Declare Project Complete</font></li>
+    </ul>
+    <hr/>
+    <ul id='items'>
+        <li onclick="DoMenu('Cancel')"><font color="black">Cancel Project</font></li>
+        <li onclick="DoMenu('FullReset')"><font color="black">Full Project Reset</font></li>
+    </ul>
+    
+    
+
+</div>
+<div id='ucntnr'>
+        <ul id='uitems'>
+          <li onclick="DoMenu('Recall')"><font color="black">Recall Project</font></li>
+          <li onclick="DoMenu('Cancel')"><font color="black">Cancel Project</font></li>
+          <li onclick="DoMenu('DeclareComplete')"><font color="black">Declare Project Complete</font></li>
+        </ul>
+    </div>
+</body>
+</html>

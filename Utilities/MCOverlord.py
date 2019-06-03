@@ -80,7 +80,7 @@ def checkProjectsForCompletion():
         #print cpt
         print(filesToMove)
         
-        TOTCompletedQuery ="SELECT DISTINCT ID From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1 && ID in (SELECT DISTINCT Job_ID FROM Attempts WHERE ExitCode = 0 && (Status ='4' || Status='success')  && ExitCode IS NOT NULL);" 
+        TOTCompletedQuery ="SELECT DISTINCT ID From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1 && ID in (SELECT DISTINCT Job_ID FROM Attempts WHERE ExitCode = 0 && (Status ='4' || Status='succeeded')  && ExitCode IS NOT NULL);" 
         dbcursor.execute(TOTCompletedQuery)
         fulfilledJobs=dbcursor.fetchall()
 
@@ -155,8 +155,8 @@ def checkSWIF():
             ProjID=workflow["ID"]
             projIDs.append(ProjID)
             #statuscommand="swif status -workflow "+str("pim_g3_1_70_v2_20180718011203pm")+" -jobs -display json"
-            statuscommand="/site/bin/swif status -workflow "+str(wkflowname)+" -jobs -display json"
-            #print statuscommand
+            statuscommand="/site/bin/swif status -workflow proj"+str(ProjID)+"_"+str(wkflowname)+" -jobs -display json"
+            print(statuscommand)
             jsonOutputstr=subprocess.check_output(statuscommand.split(" "))
             ReturnedJobs=json.loads(str(jsonOutputstr, "utf-8"))
             #print "*******************"
@@ -167,13 +167,13 @@ def checkSWIF():
                 #NON RUNNING DISPATCHED JOBS ARE A SPECIAL CASE
                 if int(job["num_attempts"]) == 0:
                     #print "truncated update of attempt pre dispatch"
-                    updatejobstatus="UPDATE Attempts SET Status=\""+str(job["status"], "utf-8")+"\"" +" WHERE BatchJobID="+str(job["id"], "utf-8")
-                    #print updatejobstatus
+                    updatejobstatus="UPDATE Attempts SET Status=\""+str(job["status"])+"\"" +" WHERE BatchJobID="+str(job["id"])
+                    print(updatejobstatus)
                     dbcursor.execute(updatejobstatus)
                     dbcnx.commit()
                 else:
                     #print "Update all the attempts"
-                    LoggedSWIFAttemps_query="SELECT ID from Attempts where BatchJobID="+str(job["id"], "utf-8")+" ORDER BY ID"
+                    LoggedSWIFAttemps_query="SELECT ID from Attempts where BatchJobID="+str(job["id"])+" ORDER BY ID"
                     dbcursor.execute(LoggedSWIFAttemps_query)
                     LoggedSWIFAttemps=dbcursor.fetchall()
                     loggedindex=0
@@ -186,40 +186,44 @@ def checkSWIF():
                         Start_Time=datetime.fromtimestamp(float(0.0)/float(1000))
                         RAMUsed="0"
                         ExitCode=0
-                        #print attempt
-                        #print "||||||||||||||||||||"
-                        #print attempt["exitcode"]
+                        #print(attempt)
+                        #print("||||||||||||||||||||")
+                        #print(attempt["exitcode"])
                         #if not attempt["exitcode"]:
                         #    continue
-
-                        if attempt["exitcode"] or job["status"]=="succeeded":
-                            ExitCode=attempt["exitcode"]
+                        #print("EXIT CODE")
+                        #print('exitcode' in attempt)
+                        #print(job["status"])
+                        if "exitcode" in attempt or job["status"]=="succeeded":
+                            if "exitcode" in attempt:
+                                ExitCode=attempt["exitcode"]
                         else:
                             ExitCode=-1
                         
-                  
+                        print("exit code done")
                         Completed_Time='NULL'
 
-                        if(job["status"]=="problem" or job["status"]=="succeeded") and attempt["auger_ts_complete"] is not None:
+                        if(job["status"]=="problem" or job["status"]=="succeeded") and "auger_ts_complete" in attempt:
                             Completed_Time=attempt["auger_ts_complete"]
                             #print datetime.fromtimestamp(float(attempt["auger_ts_complete"])/float(1000))
-
-                        if(attempt["auger_wall_sec"]):
+                        #print("TIMES")
+                        #print(attempt["auger_wall_sec"])
+                        if("auger_wall_sec" in attempt):
                             WallTime=timedelta(seconds=attempt["auger_wall_sec"])
-                        if(attempt["auger_ts_active"]):
+                        if("auger_ts_active" in attempt):
                             Start_Time=datetime.fromtimestamp(float(attempt["auger_ts_active"])/float(1000))
                             
-                        if(attempt["auger_cpu_sec"]):
+                        if("auger_cpu_sec" in attempt):
                             CpuTime=timedelta(seconds=attempt["auger_cpu_sec"])
-                        if attempt["auger_vmem_kb"]:
-                            RAMUsed=str(float(attempt["auger_vmem_kb"])/1000., "utf-8")
+                        if "auger_vmem_kb" in attempt:
+                            RAMUsed=str(float(attempt["auger_vmem_kb"])/1000.)
 
                         #print RAMUsed
-                        #print "|||||||||||||||||||||"
+                        #print("|||||||||||||||||||||")
                         #SOME VODOO IF RETRY JOBS HAPPENED OUTSIDE OF THE DB
                         if loggedindex == len(LoggedSWIFAttemps):
                             #print "FOUND AN ATTEMPT EXTERNALLY CREATED"
-                            GetLinkToJob_query="SELECT Job_ID FROM Attempts WHERE BatchJobID="+str(job["id"], "utf-8")
+                            GetLinkToJob_query="SELECT Job_ID FROM Attempts WHERE BatchJobID="+str(job["id"])
                             #print GetLinkToJob_query
                             dbcursor.execute(GetLinkToJob_query)
                             LinkToJob=dbcursor.fetchall()
@@ -236,30 +240,34 @@ def checkSWIF():
                             
                             #print datetime.fromtimestamp(submitTime/float(1000))
                             
-                            addFoundAttempt="INSERT INTO Attempts (Job_ID,Creation_Time,BatchSystem,BatchJobID, ThreadsRequested, RAMRequested,Start_Time) VALUES (%s,'%s','SWIF',%s,%s,%s,'%s')" % (LinkToJob[0]["Job_ID"],datetime.fromtimestamp(submitTime/float(1000)),attempt["job_id"],attempt["cpu_cores"], "'"+str(float(attempt["ram_bytes"])/float(1000000000), "utf-8")+"GB"+"'",Start_Time)
+                            addFoundAttempt="INSERT INTO Attempts (Job_ID,Creation_Time,BatchSystem,BatchJobID, ThreadsRequested, RAMRequested,Start_Time) VALUES (%s,'%s','SWIF',%s,%s,%s,'%s')" % (LinkToJob[0]["Job_ID"],datetime.fromtimestamp(submitTime/float(1000)),attempt["job_id"],attempt["cpu_cores"], "'"+str(float(attempt["ram_bytes"])/float(1000000000))+"GB"+"'",Start_Time)
                             #print addFoundAttempt
                             dbcursor.execute(addFoundAttempt)
                             dbcnx.commit()
 
-                            LoggedSWIFAttemps_query="SELECT ID from Attempts where BatchJobID="+str(job["id"], "utf-8")+" ORDER BY ID"
+                            LoggedSWIFAttemps_query="SELECT ID from Attempts where BatchJobID="+str(job["id"])+" ORDER BY ID"
                             dbcursor.execute(LoggedSWIFAttemps_query)
                             LoggedSWIFAttemps=dbcursor.fetchall()
                             #print len(LoggedSWIFAttemps)
 
                         #print "UPDATING ATTEMPT"
                         #print (attempt["auger_ts_complete"])
-                        if attempt["auger_ts_complete"] is None:
+                        if not "auger_ts_complete" in attempt:
                             Completed_Time='NULL'
 
-                        if attempt["exitcode"] is None:
+                        if not "exitcode" in attempt:
                             ExitCode='NULL'
                         #print str(ExitCode)
                         #UPDATE THE SATUS
                         #print Completed_Time
-                        updatejobstatus="UPDATE Attempts SET Status=\""+str(job["status"], "utf-8")+"\", ExitCode="+str(ExitCode, "utf-8")+", RunningLocation="+"'"+str(attempt["auger_node"], "utf-8")+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", Start_Time="+"'"+str(Start_Time, "utf-8")+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUsed+"'"+" WHERE BatchJobID="+str(job["id"], "utf-8")+" && ID="+str(LoggedSWIFAttemps[loggedindex]["ID"], "utf-8")
+                        running_location='NULL'
+                        if "auger_node" in attempt:
+                            running_location=attempt["auger_node"]
+
+                        updatejobstatus="UPDATE Attempts SET Status=\""+str(job["status"])+"\", ExitCode="+str(ExitCode)+", RunningLocation="+"'"+str(running_location)+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", Start_Time="+"'"+str(Start_Time)+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUsed+"'"+" WHERE BatchJobID="+str(job["id"])+" && ID="+str(LoggedSWIFAttemps[loggedindex]["ID"])
                         if Completed_Time != 'NULL':
                                 #print "COMPLETED_TIME"
-                                updatejobstatus="UPDATE Attempts SET Status=\""+str(job["status"], "utf-8")+"\", ExitCode="+str(ExitCode, "utf-8")+", Completed_Time='"+str(datetime.fromtimestamp(float(attempt["auger_ts_complete"])/float(1000)), "utf-8")+"'"+", RunningLocation="+"'"+str(attempt["auger_node"], "utf-8")+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", Start_Time="+"'"+str(Start_Time, "utf-8")+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUsed+"'"+" WHERE BatchJobID="+str(job["id"], "utf-8")+" && ID="+str(LoggedSWIFAttemps[loggedindex]["ID"], "utf-8")
+                                updatejobstatus="UPDATE Attempts SET Status=\""+str(job["status"])+"\", ExitCode="+str(ExitCode)+", Completed_Time='"+str(datetime.fromtimestamp(float(attempt["auger_ts_complete"])/float(1000)))+"'"+", RunningLocation="+"'"+str(running_location)+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", Start_Time="+"'"+str(Start_Time)+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUsed+"'"+" WHERE BatchJobID="+str(job["id"])+" && ID="+str(LoggedSWIFAttemps[loggedindex]["ID"])
                        
                                 
                         #print updatejobstatus
@@ -370,7 +378,7 @@ def checkOSG():
                         dbcursor.execute(deactivate_Job)
                         dbcnx.commit()
 
-                
+
                 RunIP="NULL"
                 if "LastPublicClaimId" in JSON_job:
                     ipstr=str(JSON_job["LastPublicClaimId"])
@@ -433,7 +441,43 @@ def checkOSG():
                                 missingF=os.path.isfile(f)
                         if missingF == False:
                             JOB_STATUS=6
-                    
+
+                    if str(ExitCode) == "232" or str(ExitCode) == "1000":
+                        print("EXIT CODE 232 DETECTED")
+                        getrunNum="SELECT RunNumber, Project_ID from Jobs where ID="+str(job["Job_ID"])
+                        dbcursor.execute(getrunNum)
+                        thisJOB = dbcursor.fetchall()
+                        #print(len(thisJOB))
+                        if len(thisJOB) == 1:
+                            thisJOB_RunNumber=thisJOB[0]["RunNumber"]
+                            getBKG="SELECT BKG from Project where ID="+str(thisJOB[0]["Project_ID"])
+                            dbcursor.execute(getBKG)
+                            thisJOB_BKG = dbcursor.fetchall()
+                            #print(len(thisJOB_BKG))
+                            if len(thisJOB_BKG) == 1:
+                                print(thisJOB_BKG)
+                                attempt_BKG=thisJOB_BKG[0]["BKG"]
+                                #print(attempt_BKG)
+                                #print("SPLITTING")
+                                attempt_BKG_parts=attempt_BKG.split(":")
+                                print(len(attempt_BKG_parts))
+                                if len(attempt_BKG_parts) != 1:
+                                    if os.path.isfile("/osgpool/halld/random_triggers/"+str(attempt_BKG_parts[1])+"/run"+str(thisJOB_RunNumber).zfill(6)+"_random.hddm"):
+                                        response=os.system("ping -c 1 nod25.phys.uconn.edu")
+                                        print("PING RESPONSE:"+str(response))
+                                        if response != 0:
+                                            print("-1 job stat")
+                                            JOB_STATUS=-1 #hold until host comes back
+                                        else:
+                                            print("7 job stat")
+                                            JOB_STATUS=7 #globus needs doing?
+
+                                    else:
+                                        print("6 job stat")
+                                        JOB_STATUS=6
+                                        deactivate_Job="UPDATE Jobs set IsActive=0 where ID="+str(job["Job_ID"])+";"
+                                        dbcursor.execute(deactivate_Job)
+                                        dbcnx.commit()
                     RunIP="NULL"
                     if "LastPublicClaimId" in JSON_job:
                         ipstr=str(JSON_job["LastPublicClaimId"])
@@ -488,7 +532,7 @@ def main(argv):
                     print(e)
                     dbcursor.execute("UPDATE MCOverlord SET Status=\"Fail\" where ID="+str(lastid[0]["MAX(ID)"]))
                     dbcnx.commit()
-                    pass
+                    break
 
 
         dbcnx.close()

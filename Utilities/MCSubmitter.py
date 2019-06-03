@@ -31,9 +31,9 @@ class bcolors:
     UNDERLINE = '\033[4m'
 
 
-def WritePayloadConfig(order,foundConfig):
+def WritePayloadConfig(order,foundConfig,batch_system):
     
-    MCconfig_file= open("MCDispatched.config","a")
+    MCconfig_file= open("MCSubDispatched.config","a")
     MCconfig_file.write("PROJECT="+str(order["Exp"])+"\n")
 
     if str(order["Exp"]) == "CPP":
@@ -41,7 +41,7 @@ def WritePayloadConfig(order,foundConfig):
         MCconfig_file.write("FLUX_TO_GEN=cobrems"+"\n")
 
     splitlist=order["OutputLocation"].split("/")
-    MCconfig_file.write("WORKFLOW_NAME="+splitlist[len(splitlist)-2]+"\n")
+    MCconfig_file.write("WORKFLOW_NAME=proj"+str(order["ID"])+"_"+splitlist[len(splitlist)-2]+"\n")
     MCconfig_file.write(order["Config_Stub"]+"\n")
     MinE=str(order["GenMinE"])
     if len(MinE) > 5:
@@ -54,20 +54,33 @@ def WritePayloadConfig(order,foundConfig):
     MCconfig_file.write("GEN_MIN_ENERGY="+MinE+"\n")
     MCconfig_file.write("GEN_MAX_ENERGY="+MaxE+"\n")
 
+    if str(order["GenFlux"]) == "cobrems":
+        MCconfig_file.write("FLUX_TO_GEN=cobrems"+"\n")
+
     if order["CoherentPeak"] is not None :
         MCconfig_file.write("COHERENT_PEAK="+str(order["CoherentPeak"])+"\n")
 
     if str(order["Generator"]) == "file:":
-        if foundConfig == "True":
+        if batch_system == "OSG":
             MCconfig_file.write("GENERATOR="+str(order["Generator"])+"/"+str(order["Generator_Config"])+"\n")
-        else:
-            MCconfig_file.write("GENERATOR="+str(order["Generator"])+"/"+foundConfig+"\n")
+        elif batch_system == "SWIF":
+            location=order["Generator_Config"].replace("/osgpool/halld/tbritton/","/work/halld/home/tbritton/")
+            scp_order="scp "+str(order["Generator_Config"])+" ifarm:"+location
+            print("COPYING GENERATOR file")
+            print(scp_order)
+            subprocess.call(scp_order,shell=True)
+            MCconfig_file.write("GENERATOR="+str(order["Generator"])+"/"+str(location)+"\n")
     else:
         MCconfig_file.write("GENERATOR="+str(order["Generator"])+"\n")
-        if foundConfig=="True":
+        if batch_system == "OSG":
             MCconfig_file.write("GENERATOR_CONFIG="+str(order["Generator_Config"])+"\n")
-        else:
-            MCconfig_file.write("GENERATOR_CONFIG="+foundConfig+"\n")
+        elif batch_system == "SWIF":
+            location=order["Generator_Config"].replace("/osgpool/halld/tbritton/","/work/halld/home/tbritton/")
+            scp_order="scp "+str(order["Generator_Config"])+" ifarm:"+location
+            print("COPYING GENERATOR CONFIG")
+            print(scp_order)
+            subprocess.call(scp_order,shell=True)
+            MCconfig_file.write("GENERATOR_CONFIG="+str(location)+"\n")
 
     MCconfig_file.write("GEANT_VERSION="+str(order["GeantVersion"])+"\n")
     MCconfig_file.write("NOSECONDARIES="+str(abs(order["GeantSecondaries"]-1))+"\n")
@@ -75,13 +88,17 @@ def WritePayloadConfig(order,foundConfig):
     splitLoc=str(order["OutputLocation"]).split("/")
     outputstring="/".join(splitLoc[7:-1])
     #order["OutputLocation"]).split("/")[7]
-    MCconfig_file.write("DATA_OUTPUT_BASE_DIR=/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/"+str(outputstring)+"\n")
+    if batch_system == "OSG":
+        MCconfig_file.write("DATA_OUTPUT_BASE_DIR=/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/"+str(outputstring)+"\n")
+    elif batch_system == "SWIF":
+        MCconfig_file.write("DATA_OUTPUT_BASE_DIR=/cache/halld/halld-scratch/REQUESTED_MC/"+str(outputstring)+"\n")
     #print "FOUND CONFIG="+foundConfig
 
     if(order["RCDBQuery"] != ""):
         MCconfig_file.write("RCDB_QUERY="+order["RCDBQuery"]+"\n")
 
     if(order["ReactionLines"] != ""):
+
         jana_config_file=open("/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config","w")
         janaplugins="PLUGINS danarest,monitoring_hists,mcthrown_tree"
         if(order["ReactionLines"]):
@@ -90,10 +107,20 @@ def WritePayloadConfig(order,foundConfig):
             janaplugins+="\n"
         jana_config_file.write(janaplugins)
         jana_config_file.close()
-        MCconfig_file.write("CUSTOM_PLUGINS=file:/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config\n")
 
-    
+
+        if batch_system == "OSG":
+            MCconfig_file.write("CUSTOM_PLUGINS=file:/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config\n")
+        elif batch_system == "SWIF":
+            scp_jana = "scp "+"/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config ifarm:"+"/work/halld/home/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config"
+            print(scp_jana)
+            subprocess.call(scp_jana,shell=True)
+            MCconfig_file.write("CUSTOM_PLUGINS=file:/work/halld/home/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config\n")
+
+
     MCconfig_file.write("ENVIRONMENT_FILE=/group/halld/www/halldweb/html/dist/"+str(order["VersionSet"])+"\n")
+    if(order["ANAVersionSet"] != None and order["ANAVersionSet"] != "None" ):
+        MCconfig_file.write("ANA_ENVIRONMENT_FILE=/group/halld/www/halldweb/html/dist/"+str(order["ANAVersionSet"])+"\n")
     MCconfig_file.close()
 
 def SubmitList(SubList,job_IDs_submitted):
@@ -125,14 +152,64 @@ def SubmitList(SubList,job_IDs_submitted):
         if proj[0]["SaveReconstruction"]==1:
             cleanrecon=0
 
-        status = subprocess.call("cp /osgpool/halld/tbritton/gluex_MCwrapper/examples/OSGShell.config ./MCDispatched.config", shell=True)
-        WritePayloadConfig(proj[0],"True")
+        system_to_run_on=decideSystem(row)
 
-        command="/osgpool/halld/tbritton/gluex_MCwrapper/gluex_MC.py MCDispatched.config "+str(RunNumber)+" "+str(row["NumEvts"])+" per_file=20000 base_file_number="+str(row["FileNumber"])+" generate="+str(proj[0]["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(proj[0]["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(proj[0]["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(proj[0]["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid=-"+str(row['ID'])+" logdir=/osgpool/halld/tbritton/REQUESTEDMC_LOGS/"+proj[0]["OutputLocation"].split("/")[7]+" batch=1 submitter=1"
+        MCWRAPPER_BOT_HOME="/u/group/halld/gluex_MCwrapper/"
+        if system_to_run_on == "OSG":
+            status = subprocess.call("cp "+MCWRAPPER_BOT_HOME+"/examples/OSGShell.config ./MCSubDispatched.config", shell=True)
+        elif system_to_run_on == "SWIF":
+            status = subprocess.call("cp "+MCWRAPPER_BOT_HOME+"examples/SWIFShell.config ./MCSubDispatched.config", shell=True)
+
+        WritePayloadConfig(proj[0],"True",system_to_run_on)
+
+        command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCSubDispatched.config "+str(RunNumber)+" "+str(row["NumEvts"])+" per_file=20000 base_file_number="+str(row["FileNumber"])+" generate="+str(proj[0]["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(proj[0]["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(proj[0]["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(proj[0]["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid=-"+str(row['ID'])+" logdir=/osgpool/halld/tbritton/REQUESTEDMC_LOGS/"+proj[0]["OutputLocation"].split("/")[7]+" batch=2 submitter=1"
         print command
         status = subprocess.call(command, shell=True)
 
         job_IDs_submitted.append(row['ID'])
+
+def decideSystem(row):
+    command="condor_q | grep tbritton"
+    jobSubout=subprocess.check_output(command,shell=True)
+    
+    print(jobSubout)
+
+    rows=jobSubout.split("\n")
+    rows=rows[:-1]
+    print(rows)
+    running=0.
+    idle=0.
+    print(len(rows))
+    for row in rows:
+        condor_q_vals=row.split()
+        if(len(condor_q_vals) <5):
+            continue
+        print(str(condor_q_vals[6])+"  |  "+str(condor_q_vals[7]))
+        if(str(condor_q_vals[6]) != "_"):
+            running=running+int(condor_q_vals[6])
+            print("running: "+str(running))
+       
+        if(condor_q_vals[7] != "_"):
+            idle=idle+int(condor_q_vals[7])
+            print("idle: "+str(idle))
+
+    print("Running")
+    print(running)
+    print("Idle")
+    print(idle)
+    print("SUM")
+
+    osg_sum=int(running)+int(idle)
+    osg_ratio=float(idle)/float(running)
+    print(osg_sum)
+    print(osg_ratio)
+    if osg_sum > 3000 and osg_ratio > 2.0:
+        print("SWIF")
+        return "SWIF"
+    else:
+        print("OSG")
+        return "OSG"
+
 
 def main(argv):
     #print(argv)
@@ -161,19 +238,32 @@ def main(argv):
                 rows=[]
                 int_i+=1
                 print "============================================================="
-                query = "SELECT UName,RunNumber,FileNumber,Tested,NumEvts,Notified,Jobs.ID,Project_ID,Priority,IsActive from Jobs,Project,Users where Tested=1 && Notified is NULL && IsActive=1 && Jobs.ID not in (Select Job_ID from Attempts) and Project_ID = Project.ID and Uname = name order by Priority desc limit "+str(Block_size)
+                query = "SELECT UName,RunNumber,FileNumber,Tested,NumEvts,BKG,Notified,Jobs.ID,Project_ID,Priority,IsActive from Jobs,Project,Users where Tested=1 && Notified is NULL && IsActive=1 && Jobs.ID not in (Select Job_ID from Attempts) and Project_ID = Project.ID and Uname = name order by Priority desc limit "+str(Block_size)
                 if(Block_size==1):
-                    query = "SELECT UName,RunNumber,FileNumber,Tested,NumEvts,Notified,Jobs.ID,Project_ID,Priority from Jobs,Project,Users where Tested=1 && Notified is NULL && Jobs.ID not in (Select Job_ID from Attempts) and Project_ID = Project.ID and Uname = name order by Priority desc"
+                    query = "SELECT UName,RunNumber,FileNumber,Tested,NumEvts,BKG,Notified,Jobs.ID,Project_ID,Priority from Jobs,Project,Users where Tested=1 && Notified is NULL && Jobs.ID not in (Select Job_ID from Attempts) and Project_ID = Project.ID and Uname = name order by Priority desc"
 
                 print query
                 curs.execute(query) 
                 rows=curs.fetchall()
-
+                #lrows=list(rows)
                 print("length of rows: "+str(len(rows)))
+
+                #for row in lrows:
+                #    bkg_parts=row["BKG"].split(":")
+                #    if bkg_parts[0] == "Random":
+                #        formatted_runnum="%06d" % row["RunNumber"]
+                #        path_to_check="/osgpool/halld/random_triggers/"+str(bkg_parts[1])+"/run"+str(formatted_runnum)+"_random.hddm"
+                #        if not os.path.isfile(path_to_check):
+                #            jobdeactivate="UPDATE Jobs Set IsActive=0 where ID="+str(row["Jobs.ID"])
+                #            print(jobdeactivate)
+                #            curs.execute(jobdeactivate)
+                #            conn.commit()
+                #            lrows.remove(row)
 
                 if(len(rows)==0):
                     more_sub=False
                     break
+
 
                 SubmitList(rows,job_IDs_submitted)
                 #Must do the following commit even through gluex_MC.py does one.  Else the above query is cached and does not update properly

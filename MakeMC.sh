@@ -15,6 +15,9 @@ source $ENVIRONMENT
 fi
 
 fi
+
+export ANAENVIRONMENT=$1
+shift
 export CONFIG_FILE=$1
 shift
 export OUTDIR=$1
@@ -118,14 +121,31 @@ export USER_BC=`which bc`
 export USER_PYTHON=`which python`
 export USER_STAT=`which stat`
 
+
+length_count=$((`echo $RUN_NUMBER | wc -c` - 1))
+
+formatted_runNumber=""
+while [ $length_count -lt 6 ]; do
+    formatted_runNumber="0""$formatted_runNumber"
+    length_count=$(($length_count + 1))
+done
+
+formatted_runNumber=$formatted_runNumber$RUN_NUMBER
+flength_count=$((`echo $FILE_NUMBER | wc -c` - 1))
+
 export XRD_RANDOMS_URL=root://nod25.phys.uconn.edu/Gluex/rawdata
 export MAKE_MC_USING_XROOTD=0
+#ls /usr/lib64/libXrdPosixPreload.so
 if [[ -f /usr/lib64/libXrdPosixPreload.so ]]; then
 	export MAKE_MC_USING_XROOTD=1
 	export LD_PRELOAD=/usr/lib64/libXrdPosixPreload.so
-	
-	con_test=`xrdfs $XRD_RANDOMS_URL ls`
-	if [[ "$con_test" == "" ]]; then
+	echo "I have the share object needed for xrootd!"
+	#con_test=`ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | grep "cannot access"`
+	echo `ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1`
+	if [[ `ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1` != "r" ]]; then
+		echo "Connection test failed.  Disabling xrootd...."
+		#echo "attempting to copy the needed file from an alternate source..."
+		#rsync scosg16.jlab.org:/osgpool/halld/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm ./
 		export MAKE_MC_USING_XROOTD=0
 	fi
 fi
@@ -303,7 +323,6 @@ if [[ "$VERSION" != "mc" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_workfest
 	exit 1
 fi
 
-
 beam_on_current=`rcnd $RUN_NUMBER beam_on_current | awk '{print $1}'`
 
 if [[ $beam_on_current == "" ]]; then
@@ -312,7 +331,7 @@ beam_on_current=`rcnd $RUN_NUMBER beam_current | awk '{print $1}'`
 fi
 
 beam_on_current=`echo "$beam_on_current / 1000." | $USER_BC -l`
-
+echo "$eBEAM_CURRENT"
 if [[ "$eBEAM_CURRENT" != "rcdb" ]]; then
 beam_on_current=$eBEAM_CURRENT
 fi
@@ -344,6 +363,9 @@ else
 
 fi
 
+if [[ "$polarization_angle" == "-1.0" ]]; then
+		POL_TO_GEN=0
+fi
 # PRINT INPUTS
 echo "Job started: " `date`
 echo "Simulating the Experiment: " $EXPERIMENT
@@ -354,6 +376,7 @@ echo "Containing: " $EVT_TO_GEN"/""$PER_FILE"" events"
 echo "Running location:" $RUNNING_DIR
 echo "Output location: "$OUTDIR
 echo "Environment file: " $ENVIRONMENT
+echo "Analysis Environment file: " $ANAENVIRONMENT
 echo "Context: "$JANA_CALIB_CONTEXT
 echo "Reconstruction calibtime: "$RECON_CALIBTIME
 echo "Run Number: "$RUN_NUMBER
@@ -386,6 +409,7 @@ echo ""
 echo "=======SOFTWARE USED======="
 echo "MCwrapper version v"$MCWRAPPER_VERSION
 echo "MCwrapper location" $MCWRAPPER_CENTRAL
+echo "LDPRELOAD: " $LD_PRELOAD
 echo "Streaming via xrootd? "$MAKE_MC_USING_XROOTD "Event Count: "$RANDOM_TRIG_NUM_EVT
 echo "BC "$USER_BC
 echo "python "$USER_PYTHON
@@ -425,16 +449,6 @@ else
     cp $CUSTOM_GCONTROL ./temp_Gcontrol.in
 fi
 
-length_count=$((`echo $RUN_NUMBER | wc -c` - 1))
-
-formatted_runNumber=""
-while [ $length_count -lt 6 ]; do
-    formatted_runNumber="0""$formatted_runNumber"
-    length_count=$(($length_count + 1))
-done
-
-formatted_runNumber=$formatted_runNumber$RUN_NUMBER
-flength_count=$((`echo $FILE_NUMBER | wc -c` - 1))
 
 formatted_fileNumber=""
 while [ $flength_count -lt 3 ]; do
@@ -485,8 +499,6 @@ if [[ ! -d "$OUTDIR/root/" ]]; then
 fi
 
 
-
-
 bkglocstring=""
 bkgloc_pre=`echo $BKGFOLDSTR | cut -c 1-4`
 if [[ "$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" == "Random" ]]; then
@@ -517,15 +529,23 @@ if [[ "$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" == 
 
 			if [[ "$bkgloc_pre" == "loc:" ]]; then
 			rand_bkg_loc=`echo $BKGFOLDSTR | cut -c 5-`
- 		   	if [[ "$BATCHSYS" == "OSG" && $BATCHRUN != 0 ]]; then
-					bkglocstring="/srv""/run$formatted_runNumber""_random.hddm"
+ 		   		if [[ "$BATCHSYS" == "OSG" && $BATCHRUN != 0 ]]; then
+				    if [[ "$MAKE_MC_USING_XROOTD" == "0" ]]; then
+						bkglocstring="/srv""/run$formatted_runNumber""_random.hddm"
+				    else
+						bkglocstring="$XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber""_random.hddm"
+				    fi
 				else
 			    	bkglocstring=$rand_bkg_loc"/run$formatted_runNumber""_random.hddm"
 			    fi
 			else
 		    #bkglocstring="/cache/halld/""$runperiod""/sim/random_triggers/""run$formatted_runNumber""_random.hddm"
 			    if [[ "$BATCHSYS" == "OSG" && $BATCHRUN != 0 ]]; then
+				if [[ "$MAKE_MC_USING_XROOTD" == "0" ]]; then
 					bkglocstring="/srv""/run$formatted_runNumber""_random.hddm"
+				    else
+					bkglocstring="$XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber""_random.hddm"
+				    fi
 				else
 		    		bkglocstring="/work/halld/random_triggers/"$RANDBGTAG"/run"$formatted_runNumber"_random.hddm"
 					if [[ `hostname` == 'scosg16.jlab.org' ]]; then
@@ -535,10 +555,10 @@ if [[ "$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" == 
 			fi
 			#set bkglocstring="/w/halld-scifs1a/home/tbritton/converted.hddm"
 		    
-		    if [[ ! -f $bkglocstring && $MAKE_MC_USING_XROOTD == 0 ]]; then
+		    if [[ ! -f $bkglocstring && "$MAKE_MC_USING_XROOTD" == "0" ]]; then
 			echo "something went wrong with initialization"
 			echo "Could not find mix-in file "$bkglocstring
-			exit
+			exit 1000
 		    fi
 fi
 
@@ -605,7 +625,6 @@ if [[ "$GENR" != "0" ]]; then
     	fi
 
 	fi
-
 
 	echo "PolarizationAngle $polarization_angle" > beam.config
 	echo "PhotonBeamLowEnergy $GEN_MIN_ENERGY" >> beam.config
@@ -1108,7 +1127,7 @@ if [[ "$GENR" != "0" ]]; then
 	   
 	if [[ "$BKGFOLDSTR" == "BeamPhotons" || "$BKGFOLDSTR" == "None" || "$BKGFOLDSTR" == "TagOnly" ]]; then
 		echo "running MCsmear without folding in random background"
-		mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' $STANDARD_NAME'_geant'$GEANTVER'.hddm'
+		mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3000 -o$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' $STANDARD_NAME'_geant'$GEANTVER'.hddm'
 		mcsmear_return_code=$?
 	elif [[ "$BKGFOLDSTR" == "DEFAULT" || "$BKGFOLDSTR" == "Random" ]]; then
 		rm -f count.py
@@ -1123,11 +1142,11 @@ if [[ "$GENR" != "0" ]]; then
 		fold_skip_num=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
 		echo "skipping: "$fold_skip_num
 		if [[ $MAKE_MC_USING_XROOTD == 0 ]]; then
-			echo "mcsmear "$MCSMEAR_Flags " -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
-			mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
+			echo "mcsmear "$MCSMEAR_Flags " -PTHREAD_TIMEOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3000 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
+			mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3000 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
 		else
-			echo "mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm:1+$fold_skip_num"
-            mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $XRD_RANDOMS_URL/random_triggers//$RANDBGTAG/run$formatted_runNumber\_random.hddm\:1\+$fold_skip_num
+			echo "mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3000 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm:1+$fold_skip_num"
+            mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3000 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $XRD_RANDOMS_URL/random_triggers//$RANDBGTAG/run$formatted_runNumber\_random.hddm\:1\+$fold_skip_num
 		fi
 		mcsmear_return_code=$?
 	elif [[ "$bkgloc_pre" == "loc:" ]]; then
@@ -1141,13 +1160,13 @@ if [[ "$GENR" != "0" ]]; then
 			totalnum=$RANDOM_TRIG_NUM_EVT
 	   fi
 		fold_skip_num=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
-		echo "mcsmear "$MCSMEAR_Flags " -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
-		mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
+		echo "mcsmear "$MCSMEAR_Flags " -PTHREAD_TIMEOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3000 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
+		mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3000 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
 		mcsmear_return_code=$?
 	else
 	    #trust the user and use their string
-	    echo 'mcsmear -PTHREAD_TIMEOUT=500 -o'$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm'' '$STANDARD_NAME'_geant'$GEANTVER'.hddm'' '$BKGFOLDSTR
-	    mcsmear -PTHREAD_TIMEOUT=500 -o$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' $STANDARD_NAME'_geant'$GEANTVER'.hddm' $BKGFOLDSTR
+	    echo 'mcsmear -PTHREAD_TIMEOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3000 -o'$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm'' '$STANDARD_NAME'_geant'$GEANTVER'.hddm'' '$BKGFOLDSTR
+	    mcsmear -PTHREAD_TIMEOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3000 -o$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' $STANDARD_NAME'_geant'$GEANTVER'.hddm' $BKGFOLDSTR
 		mcsmear_return_code=$?
 	fi
 	
@@ -1208,12 +1227,18 @@ fi
 					reconwholecontext="variation=$VERSION calibtime=$RECON_CALIBTIME"
 					export JANA_CALIB_CONTEXT="$reconwholecontext"
 			fi
-
+			reaction_filter=""
 			if [[ "$recon_pre" == "file" ]]; then
 				echo "using config file: "$jana_config_file
 				hd_root $file_to_recon --config=jana_config.cfg -PNTHREADS=$NUMTHREADS $additional_hdroot
 				hd_root_return_code=$?
-				rm jana_config.cfg
+				reaction_filter=`grep ReactionFilter jana_config.cfg`
+				#file_options = `tail jana_config.cfg -n+2` # get everything from line 2 on.  Lines counting starts with 1
+				#echo "Reaction Filter: "$reaction_filter
+				#echo "STATUS: " $hd_root_return_code
+				if [[ "$reaction_filter" == "" || "$ANAENVIRONMENT" == "no_Analysis_env" ]]; then
+					rm jana_config.cfg
+				fi
 			else
 		
 			declare -a pluginlist=("danarest" "monitoring_hists" "mcthrown_tree")
@@ -1247,7 +1272,34 @@ fi
 		if [[ -f dana_rest.hddm ]]; then
                     mv dana_rest.hddm dana_rest_$STANDARD_NAME.hddm
         fi
+		if [[ "$ANAENVIRONMENT" != "no_Analysis_env" && "$reaction_filter" != "" ]]; then
+			echo "new env setup"
+			xmltest2=`echo $ANAENVIRONMENT | rev | cut -c -4 | rev`
+			if [[ "$xmltest2" == ".xml" ]]; then
+				source /group/halld/Software/build_scripts/gluex_env_jlab.sh $ANAENVIRONMENT
+			else
+				source $ANAENVIRONMENT
+			fi
+			echo "EMULATING ANALYSIS LAUNCH"
+			echo "changed software to:  "`which hd_root`
+			echo "PLUGINS ReactionFilter" > ana_jana.cfg
+			tail jana_config.cfg -n+2 >> ana_jana.cfg
 
+			cat ana_jana.cfg
+
+			hd_root dana_rest_$STANDARD_NAME.hddm --config=ana_jana.cfg -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500
+			anahd_root_return_code=$?
+
+			if [[ $anahd_root_return_code != 0 ]]; then
+			echo
+			echo
+			echo "Something went wrong with ana_hd_root"
+			echo "Status code: "$anahd_root_return_code
+			exit $anahd_root_return_code
+			fi
+			rm jana_config.cfg
+			rm ana_jana.cfg
+		fi
 
 		if [[ "$CLEANGEANT" == "1" && "$GEANT" == "1" ]]; then
 		    rm $STANDARD_NAME'_geant'$GEANTVER'.hddm'
@@ -1255,7 +1307,7 @@ fi
 		    rm -f geant.hbook
 		    rm -f hdgeant.rz
 		    if [[ "$PWD" != "$MCWRAPPER_CENTRAL" ]]; then
-			rm temp_Gcontrol.in	
+			rm temp_Gcontrol.in
 		    fi
 		    
 		fi

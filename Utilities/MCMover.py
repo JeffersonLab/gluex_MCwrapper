@@ -53,8 +53,9 @@ except:
         pass
 
 def DroneDo():
-    retcode=subprocess.check_output(["/osgpool/halld/tbritton/gluex_MCwrapper/Utilities/MCMover.csh"],shell=True)
-    print retcode
+        MCWRAPPER_BOT_HOME="/u/group/halld/gluex_MCwrapper/"
+        retcode=subprocess.check_output([MCWRAPPER_BOT_HOME+"/Utilities/MCMover.csh"],shell=True)
+        print retcode
 
 
 
@@ -63,7 +64,7 @@ def main(argv):
         numOverRide=False
 
         if(len(argv) !=0):
-		    numOverRide=True
+                numOverRide=True
         
         numprocesses_running=subprocess.check_output(["echo `ps all -u tbritton | grep MCMover.py | grep -v grep | wc -l`"], shell=True)
 

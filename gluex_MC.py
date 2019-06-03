@@ -44,8 +44,8 @@ try:
 except:
         pass
 
-MCWRAPPER_VERSION="2.2.0"
-MCWRAPPER_DATE="05/17/19"
+MCWRAPPER_VERSION="2.2.1"
+MCWRAPPER_DATE="05/31/19"
 
 def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID):
         # PREPARE NAMES
@@ -64,7 +64,7 @@ def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,N
         # project/track
         add_command += " -project " + PROJECT + " -track " + TRACK
         # resources
-        add_command += " -cores " + NCORES + " -disk " + DISK + " -ram " + RAM + " -time " + TIMELIMIT + " -os " + OS
+        add_command += " -create -slurm -cores " + NCORES + " -disk " + DISK + " -ram " + RAM + " -time " + TIMELIMIT + " -os " + OS
         # stdout
         add_command += " -stdout " + DATA_OUTPUT_BASE_DIR + "/log/" + str(RUNNO) + "_stdout." + STUBNAME + ".out"
         # stderr
@@ -92,6 +92,7 @@ def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,N
         SWIF_ID_NUM="-1"
 
         if( int(PROJECT_ID) <=0 ):
+                print(add_command)
                 jobSubout=subprocess.check_output(add_command.split(" "))
                 print jobSubout
                 idnumline=jobSubout.split("\n")[0].strip().split("=")
@@ -200,7 +201,7 @@ def  condor_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, 
                 recordAttempt(abs(int(PROJECT_ID)),RUNNO,FILENO,"Condor",SWIF_ID_NUM,COMMAND['num_events'],NCORES,"UnSet")
 
 
-def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID ):
+def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID ):
         STUBNAME = str(RUNNUM) + "_" + str(FILENUM)
         JOBNAME = WORKFLOW + "_" + STUBNAME
 
@@ -208,11 +209,14 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DAT
 
         indir_parts=indir.split("/")
         script_to_use=indir_parts[len(indir_parts)-1]
-
+        print(script_to_use)
         ENVFILE_parts=ENVFILE.split("/")
         envfile_to_source="/srv/"+ENVFILE_parts[len(ENVFILE_parts)-1]
 
-        
+        ANAENVFILE_parts=ANAENVFILE.split("/")
+        if(len(ANAENVFILE_parts) != 1):
+                anaenvfile_to_source="/srv/"+ANAENVFILE_parts[len(ANAENVFILE_parts)-1]
+
         COMMAND_parts=COMMAND#COMMAND.split(" ")
 
         COMMAND_parts['environment_file']=envfile_to_source
@@ -221,6 +225,10 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DAT
         COMMAND_parts['running_directory']="./"
 
         additional_passins=""
+        if COMMAND_parts['ana_environment_file'] != "no_Analysis_env":
+                #print filegen_parts
+                additional_passins+=COMMAND_parts['ana_environment_file']+", "
+                COMMAND_parts['ana_environment_file']=anaenvfile_to_source
         if COMMAND_parts['generator_config'][:5] == "file:":
                 gen_config_parts=COMMAND_parts['generator_config'].split("/")
                 gen_config_to_use=gen_config_parts[len(gen_config_parts)-1]
@@ -318,6 +326,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DAT
         f.write("output      = "+LOG_DIR+"/log/"+"out_"+JOBNAME+".log\n")
         f.write("log = "+LOG_DIR+"/log/"+"OSG_"+JOBNAME+".log\n")
         f.write("initialdir = "+RUNNING_DIR+"\n")
+        f.write("request_memory = 2.0GB"+"\n")
         #f.write("transfer_input_files = "+ENVFILE+"\n")
         f.write("transfer_input_files = "+indir+", "+ENVFILE+additional_passins+"\n")
         f.write("transfer_output_files = "+str(RUNNUM)+"_"+str(FILENUM)+"\n")
@@ -372,7 +381,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DAT
                 print "A NEW ATTEMPT"
                 recordAttempt(abs(int(PROJECT_ID)),RUNNUM,FILENUM,"OSG",SWIF_ID_NUM,COMMAND['num_events'],NCORES,"Unset")
 
-def JSUB_add_job(VERBOSE, WORKFLOW, PROJECT,TRACK, RUNNUM, FILENUM, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID):
+def JSUB_add_job(VERBOSE, WORKFLOW, PROJECT,TRACK, RUNNUM, FILENUM, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID):
         STUBNAME = str(RUNNUM) + "_" + str(FILENUM)
         JOBNAME = WORKFLOW + "_" + STUBNAME
 
@@ -392,7 +401,7 @@ def JSUB_add_job(VERBOSE, WORKFLOW, PROJECT,TRACK, RUNNUM, FILENUM, indir, COMMA
         
         exit(1)
 
-def  SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID ):
+def  SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID ):
         STUBNAME = str(RUNNUM) + "_" + str(FILENUM)
         JOBNAME = WORKFLOW + "_" + STUBNAME
 
@@ -475,7 +484,7 @@ def recordAttempt(JOB_ID,RUNNO,FILENO,BatchSYS,BatchJobID, NUMEVTS,NCORES, RAM):
         dbcnx.commit()
 
 def getCommandString(COMMAND):
-        return COMMAND['batchrun']+" "+COMMAND['environment_file']+" "+COMMAND['generator_config']+" "+COMMAND['output_directory']+" "+COMMAND['run_number']+" "+COMMAND['file_number']+" "+COMMAND['num_events']+" "+COMMAND['jana_calib_context']+" "+COMMAND['jana_calibtime']+" "+COMMAND['do_gen']+" "+COMMAND['do_geant']+" "+COMMAND['do_mcsmear']+" "+COMMAND['do_recon']+" "+COMMAND['clean_gen']+" "+COMMAND['clean_geant']+" "+COMMAND['clean_mcsmear']+" "+COMMAND['clean_recon']+" "+COMMAND['batch_system']+" "+COMMAND['num_cores']+" "+COMMAND['generator']+" "+COMMAND['geant_version']+" "+COMMAND['background_to_include']+" "+COMMAND['custom_Gcontrol']+" "+COMMAND['eBeam_energy']+" "+COMMAND['coherent_peak']+" "+COMMAND['min_generator_energy']+" "+COMMAND['max_generator_energy']+" "+COMMAND['custom_tag_string']+" "+COMMAND['custom_plugins']+" "+COMMAND['events_per_file']+" "+COMMAND['running_directory']+" "+COMMAND['ccdb_sqlite_path']+" "+COMMAND['rcdb_sqlite_path']+" "+COMMAND['background_tagger_only']+" "+COMMAND['radiator_thickness']+" "+COMMAND['background_rate']+" "+COMMAND['random_background_tag']+" "+COMMAND['recon_calibtime']+" "+COMMAND['no_geant_secondaries']+" "+COMMAND['mcwrapper_version']+" "+COMMAND['no_bcal_sipm_saturation']+" "+COMMAND['flux_to_generate']+" "+COMMAND['flux_histogram']+" "+COMMAND['polarization_to_generate']+" "+COMMAND['polarization_histogram']+" "+COMMAND['eBeam_current']+" "+COMMAND['experiment']+" "+COMMAND['num_rand_trigs']
+        return COMMAND['batchrun']+" "+COMMAND['environment_file']+" "+COMMAND['ana_environment_file']+" "+COMMAND['generator_config']+" "+COMMAND['output_directory']+" "+COMMAND['run_number']+" "+COMMAND['file_number']+" "+COMMAND['num_events']+" "+COMMAND['jana_calib_context']+" "+COMMAND['jana_calibtime']+" "+COMMAND['do_gen']+" "+COMMAND['do_geant']+" "+COMMAND['do_mcsmear']+" "+COMMAND['do_recon']+" "+COMMAND['clean_gen']+" "+COMMAND['clean_geant']+" "+COMMAND['clean_mcsmear']+" "+COMMAND['clean_recon']+" "+COMMAND['batch_system']+" "+COMMAND['num_cores']+" "+COMMAND['generator']+" "+COMMAND['geant_version']+" "+COMMAND['background_to_include']+" "+COMMAND['custom_Gcontrol']+" "+COMMAND['eBeam_energy']+" "+COMMAND['coherent_peak']+" "+COMMAND['min_generator_energy']+" "+COMMAND['max_generator_energy']+" "+COMMAND['custom_tag_string']+" "+COMMAND['custom_plugins']+" "+COMMAND['events_per_file']+" "+COMMAND['running_directory']+" "+COMMAND['ccdb_sqlite_path']+" "+COMMAND['rcdb_sqlite_path']+" "+COMMAND['background_tagger_only']+" "+COMMAND['radiator_thickness']+" "+COMMAND['background_rate']+" "+COMMAND['random_background_tag']+" "+COMMAND['recon_calibtime']+" "+COMMAND['no_geant_secondaries']+" "+COMMAND['mcwrapper_version']+" "+COMMAND['no_bcal_sipm_saturation']+" "+COMMAND['flux_to_generate']+" "+COMMAND['flux_histogram']+" "+COMMAND['polarization_to_generate']+" "+COMMAND['polarization_histogram']+" "+COMMAND['eBeam_current']+" "+COMMAND['experiment']+" "+COMMAND['num_rand_trigs']
 
 def showhelp():
         helpstring= "variation=%s where %s is a valid jana_calib_context variation string (default is \"mc\")\n"
@@ -531,8 +540,9 @@ def main(argv):
         DATA_OUTPUT_BASE_DIR    = "UNKNOWN_LOCATION"#your desired output location
         RCDB_QUERY=""
        
-        ENVFILE = "my-environment-file"#change this to your own environment file
-        
+        ENVFILE = "my-environment-file" #change this to your own environment file
+        ANAENVFILE = "no_Analysis_env"
+
         GENERATOR = "genr8"
         GENCONFIG = "NA"
 
@@ -651,6 +661,8 @@ def main(argv):
                         DATA_OUTPUT_BASE_DIR=rm_comments[0].strip()
                 elif str(parts[0]).upper()=="ENVIRONMENT_FILE" :
                         ENVFILE=rm_comments[0].strip()
+                elif str(parts[0]).upper()=="ANA_ENVIRONMENT_FILE" :
+                        ANAENVFILE=rm_comments[0].strip()
                 elif str(parts[0]).upper()=="GENERATOR" :
                         GENERATOR=rm_comments[0].strip()
                 elif str(parts[0]).upper()=="GEANT_VERSION" :
@@ -862,18 +874,12 @@ def main(argv):
         #print(username)
         #exit
 
-        if (BATCHSYS.upper() =="SWIF" and int(BATCHRUN) != 0):
-                # CREATE WORKFLOW IF IT DOESN'T ALREADY EXIST
-	        WORKFLOW_LIST = subprocess.check_output(["swif", "list"])
-	        if WORKFLOW not in WORKFLOW_LIST:
-                        status = subprocess.call(["swif", "create", "-workflow", WORKFLOW])
-
         #calculate files needed to gen
         FILES_TO_GEN=EVTS/PERFILE
         REMAINING_GEN=EVTS%PERFILE
 
         indir=os.environ.get('MCWRAPPER_CENTRAL')
-        
+
         script_to_use = "/MakeMC.csh"
         
         loginSHELL=environ['SHELL'].split("/")
@@ -918,6 +924,7 @@ def main(argv):
 
         COMMAND_dict={'batchrun':str(BATCHRUN)}
         COMMAND_dict['environment_file']=ENVFILE
+        COMMAND_dict['ana_environment_file']=ANAENVFILE
         COMMAND_dict['generator_config']=GENCONFIG
         COMMAND_dict['output_directory']=str(outdir)
         COMMAND_dict['run_number']=str(RUNNUM)
@@ -967,6 +974,10 @@ def main(argv):
         
 
         if str(IS_SUBMITTER) == "1":
+                if BGFOLD == "Random" or BGFOLD=="DEFAULT" or BGFOLD[0:3] == "loc":
+                        RANDOM_NUM_EVT=GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,RUNNUM)
+                        COMMAND_dict['num_rand_trigs']=str(RANDOM_NUM_EVT)
+
                 if BATCHRUN == 0 or BATCHSYS.upper()=="NULL":
                         os.system(str(indir)+" "+COMMAND)
                 else:
@@ -978,18 +989,20 @@ def main(argv):
                                 print len(MYJOB) 
                         if len(MYJOB) == 0:
                                 if BATCHSYS.upper()=="SWIF":
-                                        status = subprocess.call("swif create "+WORKFLOW,shell=True)
+                                        #status = subprocess.call("swif create "+WORKFLOW,shell=True)
                                         swif_add_job(WORKFLOW, RUNNUM, BASEFILENUM,str(indir),COMMAND_dict,VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID)
+                                        swifrun = "swif run "+WORKFLOW
+                                        subprocess.call(swifrun.split(" "))
                                 elif BATCHSYS.upper()=="QSUB":
                                         qsub_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, RAM, QUEUENAME, LOG_DIR, PROJECT_ID )
                                 elif BATCHSYS.upper()=="CONDOR":
                                         condor_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, PROJECT_ID )
                                 elif BATCHSYS.upper()=="OSG":
-                                        OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
+                                        OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
                                 elif BATCHSYS.upper()=="SLURM":
-                                        SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
+                                        SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
                                 elif BATCHSYS.upper()=="JSLURM":
-                                        JSUB_add_job(VERBOSE, WORKFLOW, PROJECT, TRACK, RUNNUM, BASEFILENUM, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
+                                        JSUB_add_job(VERBOSE, WORKFLOW, PROJECT, TRACK, RUNNUM, BASEFILENUM, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
         else:
                 if len(RunType) != 1 :
                         event_sum=0.
@@ -1082,18 +1095,18 @@ def main(argv):
                                                         print len(MYJOB) 
                                                 if len(MYJOB) == 0:
                                                         if BATCHSYS.upper()=="SWIF":
-                                                                status = subprocess.call("swif create "+WORKFLOW,shell=True)
+                                                                #status = subprocess.call("swif create "+WORKFLOW,shell=True)
                                                                 swif_add_job(WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1,str(indir),COMMAND_dict,VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID)
                                                         elif BATCHSYS.upper()=="QSUB":
                                                                 qsub_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, RAM, QUEUENAME, LOG_DIR, PROJECT_ID )
                                                         elif BATCHSYS.upper()=="CONDOR":
                                                                 condor_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, PROJECT_ID )
                                                         elif BATCHSYS.upper()=="OSG":
-                                                                OSG_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID)
+                                                                OSG_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID)
                                                         elif BATCHSYS.upper()=="SLURM":
-                                                                SLURM_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
+                                                                SLURM_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
                                                         elif BATCHSYS.upper()=="JSLURM":
-                                                                JSUB_add_job(VERBOSE, WORKFLOW, PROJECT, TRACK, runs[0], BASEFILENUM+FILENUM_this_run+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
+                                                                JSUB_add_job(VERBOSE, WORKFLOW, PROJECT, TRACK, runs[0], BASEFILENUM+FILENUM_this_run+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
                 
                 else:
                         if FILES_TO_GEN >= 500 and ( ccdbSQLITEPATH == "no_sqlite" or rcdbSQLITEPATH == "no_sqlite"):
@@ -1131,18 +1144,18 @@ def main(argv):
                                                 print len(MYJOB) 
                                         if len(MYJOB) == 0:
                                                 if BATCHSYS.upper()=="SWIF":
-                                                        status = subprocess.call("swif create "+WORKFLOW,shell=True)
+                                                        #status = subprocess.call("swif create "+WORKFLOW,shell=True)
                                                         swif_add_job(WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1,str(indir),COMMAND_dict,VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID)
                                                 elif BATCHSYS.upper()=="QSUB":
                                                         qsub_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, RAM, QUEUENAME, LOG_DIR, PROJECT_ID )
                                                 elif BATCHSYS.upper()=="CONDOR":
                                                         condor_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, PROJECT_ID )
                                                 elif BATCHSYS.upper()=="OSG":
-                                                        OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
+                                                        OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
                                                 elif BATCHSYS.upper()=="SLURM":
-                                                        SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
+                                                        SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
                                                 elif BATCHSYS.upper()=="JSLURM":
-                                                        JSUB_add_job(VERBOSE, WORKFLOW, PROJECT, TRACK, RUNNUM, BASEFILENUM+FILENUM+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
+                                                        JSUB_add_job(VERBOSE, WORKFLOW, PROJECT, TRACK, RUNNUM, BASEFILENUM+FILENUM+-1, indir, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
 
                                         
                 if BATCHRUN == 1 and BATCHSYS.upper() == "SWIF":
