@@ -45,7 +45,7 @@ except:
         pass
 
 MCWRAPPER_VERSION="2.2.2"
-MCWRAPPER_DATE="06/03/19"
+MCWRAPPER_DATE="06/05/19"
 
 def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID):
         # PREPARE NAMES
@@ -527,8 +527,9 @@ def main(argv):
         EVTS = int(args[2])
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+        #BANNER
         print( "*********************************")
-        print( "Welcome to v"+str(MCWRAPPER_VERSION)+" of the MCwrapper")
+        print( "Welcome to v"+str(MCWRAPPER_VERSION)+" of MCwrapper")
         print( "Thomas Britton "+str(MCWRAPPER_DATE))
         print( "*********************************")
 
@@ -863,7 +864,7 @@ def main(argv):
         name_breakdown=GENCONFIG.split("/")
         CHANNEL = name_breakdown[len(name_breakdown)-1].split(".")[0]
 
-        #print a line indicating SWIF or Local run
+        #print a line indicating Batch or Local run
         if BATCHRUN == 0 or BATCHSYS=="NULL":
                 print( "Locally simulating "+args[2]+" "+CHANNEL+" Events")
         else:
@@ -878,12 +879,12 @@ def main(argv):
         FILES_TO_GEN=EVTS/PERFILE
         REMAINING_GEN=EVTS%PERFILE
 
+        #DETECT LOGIN SHELL AND PICK THE RIGHT SCRIPT TO RUN
         indir=os.environ.get('MCWRAPPER_CENTRAL')
 
         script_to_use = "/MakeMC.csh"
         
         loginSHELL=environ['SHELL'].split("/")
-
 
         if loginSHELL[len(loginSHELL)-1]=="bash" or ( BATCHSYS.upper() == "OSG" and int(BATCHRUN) != 0) or SHELL_TO_USE=="bash" :
                 script_to_use = "/MakeMC.sh"

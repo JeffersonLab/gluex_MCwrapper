@@ -316,6 +316,9 @@ def checkOSG():
         Alljobs = dbcursor.fetchall()
         count=0
         print("UPDATING "+str(len(Alljobs)))
+
+        if ( len(Alljobs) == 0 ):
+            time.sleep(60)
         for job in Alljobs:
             #print job
             count+=1

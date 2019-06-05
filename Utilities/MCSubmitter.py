@@ -200,6 +200,8 @@ def decideSystem(row):
     print("SUM")
 
     osg_sum=int(running)+int(idle)
+    if(running==0):
+        running=1
     osg_ratio=float(idle)/float(running)
     print(osg_sum)
     print(osg_ratio)
@@ -270,7 +272,9 @@ def main(argv):
                 conn.commit()
             curs.execute("UPDATE MCSubmitter SET EndTime=NOW(), Status=\"Success\" where ID="+str(lastid[0]["MAX(ID)"]))
             conn.commit()
-        except:
+        except Exception as e:
+            print("exception")
+            print(e)
             curs.execute("UPDATE MCSubmitter SET Status=\"Fail\" where ID="+str(lastid[0]["MAX(ID)"]))
             conn.commit()
             pass
