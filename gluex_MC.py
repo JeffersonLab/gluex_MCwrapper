@@ -44,8 +44,8 @@ try:
 except:
         pass
 
-MCWRAPPER_VERSION="2.2.2"
-MCWRAPPER_DATE="06/05/19"
+MCWRAPPER_VERSION="2.3.0"
+MCWRAPPER_DATE="06/07/19"
 
 def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID):
         # PREPARE NAMES
@@ -64,7 +64,7 @@ def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,N
         # project/track
         add_command += " -project " + PROJECT + " -track " + TRACK
         # resources
-        add_command += " -create -slurm -cores " + NCORES + " -disk " + DISK + " -ram " + RAM + " -time " + TIMELIMIT + " -os " + OS
+        add_command += " -create -cores " + NCORES + " -disk " + DISK + " -ram " + RAM + " -time " + TIMELIMIT + " -os " + OS
         # stdout
         add_command += " -stdout " + DATA_OUTPUT_BASE_DIR + "/log/" + str(RUNNO) + "_stdout." + STUBNAME + ".out"
         # stderr
@@ -307,7 +307,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DAT
         #
         #modified_COMMAND=modified_COMMAND[:-1]
 
-        f=open('MCOSG.submit','w')
+        f=open('MCOSG_'+str(PROJECT_ID)+'.submit','w')
         f.write("universe = vanilla"+"\n")
         f.write("Executable = "+os.environ.get('MCWRAPPER_CENTRAL')+"/osg-container.sh"+"\n") 
         #f.write("Arguments  = "+indir+" "+COMMAND+"\n")
@@ -337,7 +337,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DAT
         
         JOBNAME=JOBNAME.replace(".","p")
 
-        add_command="condor_submit -name "+JOBNAME+" MCOSG.submit"
+        add_command="condor_submit -name "+JOBNAME+" MCOSG_"+str(PROJECT_ID)+".submit"
         if add_command.find(';')!=-1 or add_command.find('&')!=-1 :#THIS CHECK HELPS PROTEXT AGAINST A POTENTIAL HACK VIA CONFIG FILES
                 print( "Nice try.....you cannot use ; or &")
                 exit(1)
@@ -368,7 +368,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, indir, COMMAND, NCORES, DAT
                                 f=open("/osgpool/halld/tbritton/.ALLSTOP","x")
                                 exit(1)
 
-                #status = subprocess.call("rm MCOSG.submit", shell=True)
+                status = subprocess.call('MCOSG_'+str(PROJECT_ID)+'.submit', shell=True)
         
                 #print "DECIDING IF FIRST JOB"
                 #print PROJECT_ID

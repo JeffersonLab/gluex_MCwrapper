@@ -41,6 +41,8 @@ from datetime import timedelta
 from datetime import datetime
 import smtplib
 from email.message import EmailMessage
+from multiprocessing import Process
+import random
 
 dbhost = "hallddb.jlab.org"
 dbuser = 'mcuser'
@@ -308,23 +310,25 @@ def UpdateOutputSize():
             pass
         
 
-def checkOSG():
-
-        queryosgjobs="SELECT * from Attempts WHERE BatchSystem='OSG' && Status !='4' && Status !='3' && Status!= '6' && Status != '5' ;"
-        #print queryosgjobs
-        dbcursor.execute(queryosgjobs)
-        Alljobs = dbcursor.fetchall()
+def checkOSG(Jobs_List):
+        dbcnxOSG=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
+        dbcursorOSG=dbcnxOSG.cursor(MySQLdb.cursors.DictCursor)
+        Alljobs=Jobs_List
         count=0
-        print("UPDATING "+str(len(Alljobs)))
+        #print("UPDATING "+str(len(Alljobs)))
 
         if ( len(Alljobs) == 0 ):
+            #print(str(os.getpid())+" SLEEP")
             time.sleep(60)
         for job in Alljobs:
             #print job
             count+=1
-            print(count)
+            #print(str(os.getpid())+" condor_q")
+            #print(count)
+            if(count%(int(len(Jobs_List)/10))==0):
+                print(str(os.getpid())+" : "+str(count))
             statuscommand="condor_q "+str(job["BatchJobID"])+" -json"
-            print(statuscommand)
+            #print(statuscommand)
             jsonOutputstr=subprocess.check_output(statuscommand.split(" "))
             #print "================"
             #print(jsonOutputstr)
@@ -343,6 +347,10 @@ def checkOSG():
                     ExitCode=str(JSON_job["ExitCode"])
                     #print ExitCode
 
+                if (JSON_job["JobStatus"] == 2):
+                    ExitCode="NULL"
+
+            
                 Completed_Time='NULL'
 
                 if(JSON_job["JobStatus"] >= 3 and "JobFinishedHookDone" in JSON_job):
@@ -378,8 +386,8 @@ def checkOSG():
                         #print "set to 6"
                         JOB_STATUS=6
                         deactivate_Job="UPDATE Jobs set IsActive=0 where ID="+str(job["Job_ID"])+";"
-                        dbcursor.execute(deactivate_Job)
-                        dbcnx.commit()
+                        dbcursorOSG.execute(deactivate_Job)
+                        dbcnxOSG.commit()
 
 
                 RunIP="NULL"
@@ -395,12 +403,13 @@ def checkOSG():
 
 
                 #print updatejobstatus
-                dbcursor.execute(updatejobstatus)
-                dbcnx.commit()
+                dbcursorOSG.execute(updatejobstatus)
+                dbcnxOSG.commit()
             else:
                 #print "looking up history"
+                #print(str(os.getpid())+" condor_history")
                 historystatuscommand="condor_history -limit 1 "+str(job["BatchJobID"])+" -json"
-                print(historystatuscommand)
+                #print(historystatuscommand)
                 jsonOutputstr=subprocess.check_output(historystatuscommand.split(" "))
                 #print "================"
                 #print(jsonOutputstr)
@@ -432,6 +441,7 @@ def checkOSG():
 
 
                     JOB_STATUS=JSON_job["JobStatus"]
+                    
                     HELDREASON=0
 
                     if "HoldReasonCode" in JSON_job:
@@ -448,14 +458,14 @@ def checkOSG():
                     if str(ExitCode) == "232" or str(ExitCode) == "1000":
                         print("EXIT CODE 232 DETECTED")
                         getrunNum="SELECT RunNumber, Project_ID from Jobs where ID="+str(job["Job_ID"])
-                        dbcursor.execute(getrunNum)
-                        thisJOB = dbcursor.fetchall()
+                        dbcursorOSG.execute(getrunNum)
+                        thisJOB = dbcursorOSG.fetchall()
                         #print(len(thisJOB))
                         if len(thisJOB) == 1:
                             thisJOB_RunNumber=thisJOB[0]["RunNumber"]
                             getBKG="SELECT BKG from Project where ID="+str(thisJOB[0]["Project_ID"])
-                            dbcursor.execute(getBKG)
-                            thisJOB_BKG = dbcursor.fetchall()
+                            dbcursorOSG.execute(getBKG)
+                            thisJOB_BKG = dbcursorOSG.fetchall()
                             #print(len(thisJOB_BKG))
                             if len(thisJOB_BKG) == 1:
                                 print(thisJOB_BKG)
@@ -465,7 +475,9 @@ def checkOSG():
                                 attempt_BKG_parts=attempt_BKG.split(":")
                                 print(len(attempt_BKG_parts))
                                 if len(attempt_BKG_parts) != 1:
-                                    if os.path.isfile("/osgpool/halld/random_triggers/"+str(attempt_BKG_parts[1])+"/run"+str(thisJOB_RunNumber).zfill(6)+"_random.hddm"):
+                                    locally_found=os.path.isfile("/osgpool/halld/random_triggers/"+str(attempt_BKG_parts[1])+"/run"+str(thisJOB_RunNumber).zfill(6)+"_random.hddm")
+                                    if locally_found:
+                                        print("found file locally: "+str("/osgpool/halld/random_triggers/"+str(attempt_BKG_parts[1])+"/run"+str(thisJOB_RunNumber).zfill(6)+"_random.hddm"))
                                         response=os.system("ping -c 1 nod25.phys.uconn.edu")
                                         print("PING RESPONSE:"+str(response))
                                         if response != 0:
@@ -474,13 +486,17 @@ def checkOSG():
                                         else:
                                             print("7 job stat")
                                             JOB_STATUS=7 #globus needs doing?
+                                            
+                                            if(locally_found):
+                                                JOB_STATUS=4
+                                                ExitCode=-232
 
                                     else:
                                         print("6 job stat")
                                         JOB_STATUS=6
                                         deactivate_Job="UPDATE Jobs set IsActive=0 where ID="+str(job["Job_ID"])+";"
-                                        dbcursor.execute(deactivate_Job)
-                                        dbcnx.commit()
+                                        dbcursorOSG.execute(deactivate_Job)
+                                        dbcnxOSG.commit()
                     RunIP="NULL"
                     if "LastPublicClaimId" in JSON_job:
                         ipstr=str(JSON_job["LastPublicClaimId"])
@@ -500,13 +516,32 @@ def checkOSG():
                         updatejobstatus="UPDATE Attempts SET Status=\""+str(JOB_STATUS)+"\", ExitCode="+str(ExitCode)+", Start_Time="+"'"+str(datetime.fromtimestamp(float(Start_Time)))+"'"+", Completed_Time='"+str(datetime.fromtimestamp(float(Completed_Time)))+"'"+", RunningLocation="+"'"+str(LastRemoteHost)+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+", RunIP='"+str(RunIP)+"' WHERE BatchJobID='"+str(job["BatchJobID"])+"';"                    
 
                     #print updatejobstatus
-                    dbcursor.execute(updatejobstatus)
-                    dbcnx.commit()
+                    dbcursorOSG.execute(updatejobstatus)
+                    dbcnxOSG.commit()
+        time.sleep(random.randint(1,5))
+        print("FINISHED CHECKING OSG")
+
 
 ########################################################## MAIN ##########################################################
-        
+def array_split(lst,n):
+    to_return=[]
+    for i in range(0,n):
+        to_return.append([])
+    
+    for count, ele in enumerate(lst):
+        #print(ele)
+        index=count%n
+        #print(index)
+        to_return[index].append(ele)
+
+    #print(count)
+    #print(len(to_return))
+
+    return to_return
+
 def main(argv):
 
+        spawnNum=20
         numOverRide=False
 
         if(len(argv) !=0):
@@ -524,8 +559,33 @@ def main(argv):
                 lastid = dbcursor.fetchall()
                 #print lastid
                 try:
+                    queryosgjobs="SELECT * from Attempts WHERE BatchSystem='OSG' && Status !='4' && Status !='3' && Status!= '6' && Status != '5';"
+                    #print queryosgjobs
+                    dbcursor.execute(queryosgjobs)
+                    Alljobs = dbcursor.fetchall()
+                    Monitoring_assignments=array_split(Alljobs,spawnNum)
+                    spawns=[]
+                    for i in range(0,spawnNum):
+                        print("block "+str(i))
+                        print(len(Monitoring_assignments[i]))
+                        p=Process(target=checkOSG,args=(Monitoring_assignments[i],))
+                        p.daemon = True
+                        spawns.append(p)
+                        
+                        #p.join()
+                        
+                    for i in range(0,len(spawns)):
+                        #print("join "+str(i))
+                        spawns[i].start()
+                        
+                    #time.sleep(2)
+                    for i in range(0,len(spawns)):
+                        if spawns[i].is_alive():
+                            #print("join "+str(i))
+                            spawns[i].join()
+                    
+                    print("CHECKING SWIF ON THE MAIN")
                     checkSWIF()
-                    checkOSG()
                     UpdateOutputSize()
                     checkProjectsForCompletion()
                     dbcursor.execute("UPDATE MCOverlord SET EndTime=NOW(), Status=\"Success\" where ID="+str(lastid[0]["MAX(ID)"]))
@@ -533,8 +593,8 @@ def main(argv):
                 except Exception as e:
                     print("exception")
                     print(e)
-                    dbcursor.execute("UPDATE MCOverlord SET Status=\"Fail\" where ID="+str(lastid[0]["MAX(ID)"]))
-                    dbcnx.commit()
+                    #dbcursor.execute("UPDATE MCOverlord SET Status=\"Fail\" where ID="+str(lastid[0]["MAX(ID)"]))
+                    #dbcnx.commit()
                     break
 
 
