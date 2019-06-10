@@ -140,8 +140,8 @@ def checkProjectsForCompletion():
 def checkSWIF(WKflows_to_check):
         #print "CHECKING SWIF JOBS"
         #queryswifjobs="SELECT OutputLocation,ID,NumEvents,Completed_Time FROM Project WHERE ID IN (SELECT Project_ID FROM Jobs WHERE IsActive=1 && ID IN (SELECT Job_ID FROM Attempts WHERE BatchSystem= 'SWIF') )"
-        
-       
+        dbcnxSWIF=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
+        dbcursorSWIF=dbcnxSWIF.cursor(MySQLdb.cursors.DictCursor)
         
         AllWkFlows=WKflows_to_check
         #LOOP OVER SWIF WORKFLOWS
@@ -169,13 +169,13 @@ def checkSWIF(WKflows_to_check):
                     #print "truncated update of attempt pre dispatch"
                     updatejobstatus="UPDATE Attempts SET Status=\""+str(job["status"])+"\"" +" WHERE BatchJobID="+str(job["id"])
                     print(updatejobstatus)
-                    dbcursor.execute(updatejobstatus)
-                    dbcnx.commit()
+                    dbcursorSWIF.execute(updatejobstatus)
+                    dbcnxSWIF.commit()
                 else:
                     #print "Update all the attempts"
                     LoggedSWIFAttemps_query="SELECT ID from Attempts where BatchJobID="+str(job["id"])+" ORDER BY ID"
-                    dbcursor.execute(LoggedSWIFAttemps_query)
-                    LoggedSWIFAttemps=dbcursor.fetchall()
+                    dbcursorSWIF.execute(LoggedSWIFAttemps_query)
+                    LoggedSWIFAttemps=dbcursorSWIF.fetchall()
                     loggedindex=0
                     #LOOP OVER ALL ATTEMPTS OF A JOBS
                     for attempt in job["attempts"]:
@@ -225,8 +225,8 @@ def checkSWIF(WKflows_to_check):
                             #print "FOUND AN ATTEMPT EXTERNALLY CREATED"
                             GetLinkToJob_query="SELECT Job_ID FROM Attempts WHERE BatchJobID="+str(job["id"])
                             #print GetLinkToJob_query
-                            dbcursor.execute(GetLinkToJob_query)
-                            LinkToJob=dbcursor.fetchall()
+                            dbcursorSWIF.execute(GetLinkToJob_query)
+                            LinkToJob=dbcursorSWIF.fetchall()
 
                             if(len(LinkToJob)==0):
                                 continue
@@ -242,12 +242,12 @@ def checkSWIF(WKflows_to_check):
                             
                             addFoundAttempt="INSERT INTO Attempts (Job_ID,Creation_Time,BatchSystem,BatchJobID, ThreadsRequested, RAMRequested,Start_Time) VALUES (%s,'%s','SWIF',%s,%s,%s,'%s')" % (LinkToJob[0]["Job_ID"],datetime.fromtimestamp(submitTime/float(1000)),attempt["job_id"],attempt["cpu_cores"], "'"+str(float(attempt["ram_bytes"])/float(1000000000))+"GB"+"'",Start_Time)
                             #print addFoundAttempt
-                            dbcursor.execute(addFoundAttempt)
-                            dbcnx.commit()
+                            dbcursorSWIF.execute(addFoundAttempt)
+                            dbcnxSWIF.commit()
 
                             LoggedSWIFAttemps_query="SELECT ID from Attempts where BatchJobID="+str(job["id"])+" ORDER BY ID"
-                            dbcursor.execute(LoggedSWIFAttemps_query)
-                            LoggedSWIFAttemps=dbcursor.fetchall()
+                            dbcursorSWIF.execute(LoggedSWIFAttemps_query)
+                            LoggedSWIFAttemps=dbcursorSWIF.fetchall()
                             #print len(LoggedSWIFAttemps)
 
                         #print "UPDATING ATTEMPT"
@@ -271,8 +271,8 @@ def checkSWIF(WKflows_to_check):
                        
                                 
                         #print updatejobstatus
-                        dbcursor.execute(updatejobstatus)
-                        dbcnx.commit()
+                        dbcursorSWIF.execute(updatejobstatus)
+                        dbcnxSWIF.commit()
                         loggedindex+=1
 
 
@@ -582,7 +582,7 @@ def main(argv):
                             #print("join "+str(i))
                             spawns[i].join()
                     
-                    print("CHECKING SWIF ON THE MAIN")
+                    print("CHECKING SWIF")
                     queryswifjobs="SELECT * FROM Project WHERE ID IN (SELECT Project_ID FROM Jobs WHERE IsActive=1 && ID IN (SELECT DISTINCT Job_ID FROM Attempts WHERE BatchSystem= 'SWIF' && Status!='succeeded') )"
                     dbcursor.execute(queryswifjobs)
                     AllWkFlows = dbcursor.fetchall()
@@ -591,7 +591,7 @@ def main(argv):
                     spawns=[]
                     for i in range(0,len(AllWkFlows)):
                         print("swif block "+str(i))
-                        print(len(Monitoring_assignments[i]))
+                        #print(len(Monitoring_assignments[i]))
                         p=Process(target=checkSWIF,args=(SWIFMonitoring_assignments[i],))
                         p.daemon = True
                         spawns.append(p)
