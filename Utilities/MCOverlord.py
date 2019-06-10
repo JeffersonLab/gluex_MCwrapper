@@ -137,15 +137,13 @@ def checkProjectsForCompletion():
             dbcnx.commit()
 
 
-def checkSWIF():
+def checkSWIF(WKflows_to_check):
         #print "CHECKING SWIF JOBS"
         #queryswifjobs="SELECT OutputLocation,ID,NumEvents,Completed_Time FROM Project WHERE ID IN (SELECT Project_ID FROM Jobs WHERE IsActive=1 && ID IN (SELECT Job_ID FROM Attempts WHERE BatchSystem= 'SWIF') )"
-        queryswifjobs="SELECT * FROM Project WHERE ID IN (SELECT Project_ID FROM Jobs WHERE IsActive=1 && ID IN (SELECT DISTINCT Job_ID FROM Attempts WHERE BatchSystem= 'SWIF' && Status!='succeeded') )"
-        dbcursor.execute(queryswifjobs)
-        AllWkFlows = dbcursor.fetchall()
+        
        
         
-
+        AllWkFlows=WKflows_to_check
         #LOOP OVER SWIF WORKFLOWS
         #print "================================="
         #print AllWkFlows
@@ -202,7 +200,7 @@ def checkSWIF():
                         else:
                             ExitCode=-1
                         
-                        print("exit code done")
+                       # print("exit code done")
                         Completed_Time='NULL'
 
                         if(job["status"]=="problem" or job["status"]=="succeeded") and "auger_ts_complete" in attempt:
@@ -237,7 +235,7 @@ def checkSWIF():
                             #print LinkToJob
                             submitTime=0.0
                             #print attempt["auger_ts_submitted"]
-                            if attempt["auger_ts_submitted"]:
+                            if "auger_ts_submitted" in attempt:
                                 submitTime=float(attempt["auger_ts_submitted"])
                             
                             #print datetime.fromtimestamp(submitTime/float(1000))
@@ -585,7 +583,33 @@ def main(argv):
                             spawns[i].join()
                     
                     print("CHECKING SWIF ON THE MAIN")
-                    checkSWIF()
+                    queryswifjobs="SELECT * FROM Project WHERE ID IN (SELECT Project_ID FROM Jobs WHERE IsActive=1 && ID IN (SELECT DISTINCT Job_ID FROM Attempts WHERE BatchSystem= 'SWIF' && Status!='succeeded') )"
+                    dbcursor.execute(queryswifjobs)
+                    AllWkFlows = dbcursor.fetchall()
+
+                    SWIFMonitoring_assignments=array_split(AllWkFlows,len(AllWkFlows))
+                    spawns=[]
+                    for i in range(0,len(AllWkFlows)):
+                        print("swif block "+str(i))
+                        print(len(Monitoring_assignments[i]))
+                        p=Process(target=checkSWIF,args=(SWIFMonitoring_assignments[i],))
+                        p.daemon = True
+                        spawns.append(p)
+                        
+                        #p.join()
+                        
+                    for i in range(0,len(spawns)):
+                        #print("join "+str(i))
+                        spawns[i].start()
+                        
+                    #time.sleep(2)
+                    for i in range(0,len(spawns)):
+                        if spawns[i].is_alive():
+                            #print("join "+str(i))
+                            spawns[i].join()
+
+                    #checkSWIF()
+                    print("CHECKING GLOBALS ON MAIN")
                     UpdateOutputSize()
                     checkProjectsForCompletion()
                     dbcursor.execute("UPDATE MCOverlord SET EndTime=NOW(), Status=\"Success\" where ID="+str(lastid[0]["MAX(ID)"]))

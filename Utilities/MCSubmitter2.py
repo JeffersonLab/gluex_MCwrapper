@@ -31,9 +31,9 @@ class bcolors:
     UNDERLINE = '\033[4m'
 
 
-def WritePayloadConfig(order,foundConfig,batch_system):
+def WritePayloadConfig(order,foundConfig,batch_system,MCconfig):
     
-    MCconfig_file= open("MCSubDispatched.config","a")
+    MCconfig_file= open(MCconfig,"a")
     MCconfig_file.write("PROJECT="+str(order["Exp"])+"\n")
 
     if str(order["Exp"]) == "CPP":
@@ -156,17 +156,19 @@ def SubmitList(SubList,job_IDs_submitted):
 
         MCWRAPPER_BOT_HOME="/u/group/halld/gluex_MCwrapper/"
         if system_to_run_on == "OSG":
-            status = subprocess.call("cp "+MCWRAPPER_BOT_HOME+"/examples/OSGShell.config ./MCSubDispatched.config", shell=True)
+            status = subprocess.call("cp "+MCWRAPPER_BOT_HOME+"/examples/OSGShell.config ./MCSub_"+str(row['ID'])+".config", shell=True)
         elif system_to_run_on == "SWIF":
-            status = subprocess.call("cp "+MCWRAPPER_BOT_HOME+"examples/SWIFShell.config ./MCSubDispatched.config", shell=True)
+            status = subprocess.call("cp "+MCWRAPPER_BOT_HOME+"examples/SWIFShell.config ./MCSub_"+str(row['ID'])+".config", shell=True)
 
-        WritePayloadConfig(proj[0],"True",system_to_run_on)
+        WritePayloadConfig(proj[0],"True",system_to_run_on,"MCSub_"+str(row['ID'])+".config")
 
-        command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCSubDispatched.config "+str(RunNumber)+" "+str(row["NumEvts"])+" per_file=20000 base_file_number="+str(row["FileNumber"])+" generate="+str(proj[0]["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(proj[0]["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(proj[0]["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(proj[0]["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid=-"+str(row['ID'])+" logdir=/osgpool/halld/tbritton/REQUESTEDMC_LOGS/"+proj[0]["OutputLocation"].split("/")[7]+" batch=2 submitter=1"
+        command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCSub_"+str(row['ID'])+".config "+str(RunNumber)+" "+str(row["NumEvts"])+" per_file=20000 base_file_number="+str(row["FileNumber"])+" generate="+str(proj[0]["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(proj[0]["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(proj[0]["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(proj[0]["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid=-"+str(row['ID'])+" logdir=/osgpool/halld/tbritton/REQUESTEDMC_LOGS/"+proj[0]["OutputLocation"].split("/")[7]+" batch=2 submitter=1"
         print command
         status = subprocess.call(command, shell=True)
 
         job_IDs_submitted.append(row['ID'])
+    #Must do the following commit even through gluex_MC.py does one.  Else the above query is cached and does not update properly
+    conn.commit()
 
 def decideSystem(row):
     command="condor_q | grep tbritton"
@@ -205,7 +207,6 @@ def decideSystem(row):
     osg_ratio=float(idle)/float(running)
     print(osg_sum)
     print(osg_ratio)
-    
     if osg_sum > 3000 and osg_ratio > 2.0:
         print("SWIF")
         return "SWIF"
@@ -213,13 +214,31 @@ def decideSystem(row):
         print("OSG")
         return "OSG"
 
+def array_split(lst,n):
+    to_return=[]
+    for i in range(0,n):
+        to_return.append([])
+    
+    count=0
+    for ele in lst:
+        #print(ele)
+        index=count%n
+        #print(index)
+        to_return[index].append(ele)
+        count=count+1
+
+    #print(count)
+    #print(len(to_return))
+
+    return to_return
 
 def main(argv):
     #print(argv)
 
-    Block_size=10
+    Block_size=1
     int_i=0
     more_sub=True
+    spawn_number=4
     rows=[]
     if(os.path.isfile("/osgpool/halld/tbritton/.ALLSTOP")==True):
         print "ALL STOP DETECTED"
@@ -250,27 +269,34 @@ def main(argv):
                 rows=curs.fetchall()
                 #lrows=list(rows)
                 print("length of rows: "+str(len(rows)))
-
-                #for row in lrows:
-                #    bkg_parts=row["BKG"].split(":")
-                #    if bkg_parts[0] == "Random":
-                #        formatted_runnum="%06d" % row["RunNumber"]
-                #        path_to_check="/osgpool/halld/random_triggers/"+str(bkg_parts[1])+"/run"+str(formatted_runnum)+"_random.hddm"
-                #        if not os.path.isfile(path_to_check):
-                #            jobdeactivate="UPDATE Jobs Set IsActive=0 where ID="+str(row["Jobs.ID"])
-                #            print(jobdeactivate)
-                #            curs.execute(jobdeactivate)
-                #            conn.commit()
-                #            lrows.remove(row)
-
                 if(len(rows)==0):
                     more_sub=False
                     break
 
+                submit_assignments=array_split(rows,spawn_number)
 
-                SubmitList(rows,job_IDs_submitted)
-                #Must do the following commit even through gluex_MC.py does one.  Else the above query is cached and does not update properly
-                conn.commit()
+                spawns=[]
+                for i in range(0,spawnNum):
+                    print("block "+str(i))
+                    print(len(submit_assignments[i]))
+                    p=Process(target=SubmitList,args=(submit_assignments[i],job_IDs_submitted,))
+                    spawns.append(p)
+                    p.daemon = True
+                    #p.start()
+                    #p.join()
+                    
+                for i in range(0,len(spawns)):
+                    #print("join "+str(i))
+                    spawns[i].start()
+                        
+                #time.sleep(2)
+                for i in range(0,len(spawns)):
+                    if spawns[i].is_alive():
+                        #print("join "+str(i))
+                        spawns[i].join()
+
+                #SubmitList(rows,job_IDs_submitted)
+                
             curs.execute("UPDATE MCSubmitter SET EndTime=NOW(), Status=\"Success\" where ID="+str(lastid[0]["MAX(ID)"]))
             conn.commit()
         except Exception as e:
