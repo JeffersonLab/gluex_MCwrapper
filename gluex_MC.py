@@ -993,6 +993,8 @@ def main(argv):
         COMMAND_dict['num_rand_trigs']=str(RANDOM_NUM_EVT)
         
 
+        #The submitter grabs a single unattempted job and submits it.  Always a single runnumber
+        # 
         if str(IS_SUBMITTER) == "1":
                 if BGFOLD == "Random" or BGFOLD=="DEFAULT" or BGFOLD[0:3] == "loc":
                         RANDOM_NUM_EVT=GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,RUNNUM)
@@ -1024,7 +1026,7 @@ def main(argv):
                                 elif BATCHSYS.upper()=="JSLURM":
                                         JSUB_add_job(VERBOSE, WORKFLOW, PROJECT, TRACK, RUNNUM, BASEFILENUM, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
         else:
-                if len(RunType) != 1 :
+                if len(RunType) != 1 : #RUN RANGE GIVEN
                         event_sum=0.
                         #Make python rcdb calls to form the vector
                         db = rcdb.RCDBProvider("mysql://rcdb@hallddb.jlab.org/rcdb")

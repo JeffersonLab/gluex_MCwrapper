@@ -1292,7 +1292,7 @@ endif
 
 					cat ana_jana.cfg
 
-					hd_root dana_rest_$STANDARD_NAME.hddm --config=ana_jana.cfg -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500
+					hd_root dana_rest_$STANDARD_NAME.hddm --config=ana_jana.cfg -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 -o hd_root_ana_$STANDARD_NAME.root
 					set anahd_root_return_code=$status
 
 					if ( $anahd_root_return_code != 0 ) then

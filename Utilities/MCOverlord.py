@@ -323,7 +323,7 @@ def checkOSG(Jobs_List):
             count+=1
             #print(str(os.getpid())+" condor_q")
             #print(count)
-            if(count%(int(len(Jobs_List)/10))==0):
+            if(count%(int(len(Jobs_List)/4))==0):
                 print(str(os.getpid())+" : "+str(count))
             statuscommand="condor_q "+str(job["BatchJobID"])+" -json"
             #print(statuscommand)
