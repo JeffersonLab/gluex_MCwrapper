@@ -269,8 +269,7 @@ def checkSWIF(WKflows_to_check):
                                 #print "COMPLETED_TIME"
                                 updatejobstatus="UPDATE Attempts SET Status=\""+str(job["status"])+"\", ExitCode="+str(ExitCode)+", Completed_Time='"+str(datetime.fromtimestamp(float(attempt["auger_ts_complete"])/float(1000)))+"'"+", RunningLocation="+"'"+str(running_location)+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", Start_Time="+"'"+str(Start_Time)+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUsed+"'"+" WHERE BatchJobID="+str(job["id"])+" && ID="+str(LoggedSWIFAttemps[loggedindex]["ID"])
                        
-                                
-                        #print updatejobstatus
+
                         dbcursorSWIF.execute(updatejobstatus)
                         dbcnxSWIF.commit()
                         loggedindex+=1
@@ -313,9 +312,11 @@ def checkOSG(Jobs_List):
         dbcursorOSG=dbcnxOSG.cursor(MySQLdb.cursors.DictCursor)
         Alljobs=Jobs_List
         count=0
+        updateRate=.25
         #print("UPDATING "+str(len(Alljobs)))
 
         if ( len(Alljobs) == 0 ):
+            return
             #print(str(os.getpid())+" SLEEP")
             time.sleep(60)
         for job in Alljobs:
@@ -323,7 +324,10 @@ def checkOSG(Jobs_List):
             count+=1
             #print(str(os.getpid())+" condor_q")
             #print(count)
-            if(count%(int(len(Jobs_List)/4))==0):
+            modulo=int(len(Jobs_List)*updateRate)
+            if modulo ==0:
+                modulo=10
+            if(count%(modulo)==0):
                 print(str(os.getpid())+" : "+str(count))
             statuscommand="condor_q "+str(job["BatchJobID"])+" -json"
             #print(statuscommand)
@@ -582,33 +586,34 @@ def main(argv):
                             #print("join "+str(i))
                             spawns[i].join()
                     
-                    print("CHECKING SWIF")
-                    queryswifjobs="SELECT * FROM Project WHERE ID IN (SELECT Project_ID FROM Jobs WHERE IsActive=1 && ID IN (SELECT DISTINCT Job_ID FROM Attempts WHERE BatchSystem= 'SWIF' && Status!='succeeded') )"
+                    #SWIF CHECK MUST BE SINGLE THREADED FOR NOW DUE TO THE VODOO NOT BEING THREAD SAFE
+                    print("CHECKING SWIF ON MAIN")
+                    queryswifjobs="SELECT * FROM Project WHERE ID IN (SELECT Project_ID FROM Jobs WHERE IsActive=1 && ID IN (SELECT DISTINCT Job_ID FROM Attempts WHERE BatchSystem= 'SWIF' && (Status!='succeeded' || Status is NULL)) )"
                     dbcursor.execute(queryswifjobs)
                     AllWkFlows = dbcursor.fetchall()
-
-                    SWIFMonitoring_assignments=array_split(AllWkFlows,len(AllWkFlows))
-                    spawns=[]
-                    for i in range(0,len(AllWkFlows)):
-                        print("swif block "+str(i))
-                        #print(len(Monitoring_assignments[i]))
-                        p=Process(target=checkSWIF,args=(SWIFMonitoring_assignments[i],))
-                        p.daemon = True
-                        spawns.append(p)
-                        
-                        #p.join()
-                        
-                    for i in range(0,len(spawns)):
-                        #print("join "+str(i))
-                        spawns[i].start()
-                        
-                    #time.sleep(2)
-                    for i in range(0,len(spawns)):
-                        if spawns[i].is_alive():
-                            #print("join "+str(i))
-                            spawns[i].join()
-
-                    #checkSWIF()
+                    #print(AllWkFlows)
+                    #SWIFMonitoring_assignments=array_split(AllWkFlows,1)
+                    #spawns=[]
+                    #for i in range(0,1):
+                    #    print("swif block "+str(i))
+                    #    #print(len(Monitoring_assignments[i]))
+                    #    p=Process(target=checkSWIF,args=(SWIFMonitoring_assignments[i],))
+                    #    p.daemon = True
+                    #    spawns.append(p)
+                    #    
+                    #    #p.join()
+                    #    
+                    #for i in range(0,len(spawns)):
+                    #    #print("join "+str(i))
+                    #    spawns[i].start()
+                    #    
+                    ##time.sleep(2)
+                    #for i in range(0,len(spawns)):
+                    #    if spawns[i].is_alive():
+                    #        #print("join "+str(i))
+                    #        spawns[i].join()
+                    if(numprocesses_running<2): #INSURE OVERRIDE NEVER CAUSES THE VODOO TO CAUSE A RACE CONDITION
+                        checkSWIF(AllWkFlows)
                     print("CHECKING GLOBALS ON MAIN")
                     UpdateOutputSize()
                     checkProjectsForCompletion()
