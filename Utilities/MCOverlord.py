@@ -411,7 +411,7 @@ def checkOSG(Jobs_List):
                 #print "looking up history"
                 #print(str(os.getpid())+" condor_history")
                 historystatuscommand="condor_history -limit 1 "+str(job["BatchJobID"])+" -json"
-                #print(historystatuscommand)
+                print(historystatuscommand)
                 jsonOutputstr=subprocess.check_output(historystatuscommand.split(" "))
                 #print "================"
                 #print(jsonOutputstr)
@@ -585,12 +585,15 @@ def main(argv):
                         if spawns[i].is_alive():
                             #print("join "+str(i))
                             spawns[i].join()
+
+                    if(numOverRide == False): #INSURE OVERRIDE NEVER CAUSES THE VODOO TO CAUSE A RACE CONDITION
+                        print("CHECKING SWIF ON MAIN")
+                        queryswifjobs="SELECT * FROM Project WHERE ID IN (SELECT Project_ID FROM Jobs WHERE IsActive=1 && ID IN (SELECT DISTINCT Job_ID FROM Attempts WHERE BatchSystem= 'SWIF' && (Status!='succeeded' || Status is NULL)) )"
+                        dbcursor.execute(queryswifjobs)
+                        AllWkFlows = dbcursor.fetchall()
+                        checkSWIF(AllWkFlows)
+                        #SWIF CHECK MUST BE SINGLE THREADED FOR NOW DUE TO THE VODOO NOT BEING THREAD SAFE
                     
-                    #SWIF CHECK MUST BE SINGLE THREADED FOR NOW DUE TO THE VODOO NOT BEING THREAD SAFE
-                    print("CHECKING SWIF ON MAIN")
-                    queryswifjobs="SELECT * FROM Project WHERE ID IN (SELECT Project_ID FROM Jobs WHERE IsActive=1 && ID IN (SELECT DISTINCT Job_ID FROM Attempts WHERE BatchSystem= 'SWIF' && (Status!='succeeded' || Status is NULL)) )"
-                    dbcursor.execute(queryswifjobs)
-                    AllWkFlows = dbcursor.fetchall()
                     #print(AllWkFlows)
                     #SWIFMonitoring_assignments=array_split(AllWkFlows,1)
                     #spawns=[]
@@ -612,8 +615,7 @@ def main(argv):
                     #    if spawns[i].is_alive():
                     #        #print("join "+str(i))
                     #        spawns[i].join()
-                    if(numprocesses_running<2): #INSURE OVERRIDE NEVER CAUSES THE VODOO TO CAUSE A RACE CONDITION
-                        checkSWIF(AllWkFlows)
+                    
                     print("CHECKING GLOBALS ON MAIN")
                     UpdateOutputSize()
                     checkProjectsForCompletion()

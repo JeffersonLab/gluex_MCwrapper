@@ -1284,6 +1284,43 @@ fi
 			else
 				source $ANAENVIRONMENT
 			fi
+
+if [[ "$ccdbSQLITEPATH" != "no_sqlite" && "$ccdbSQLITEPATH" != "batch_default" && "$ccdbSQLITEPATH" != "jlab_batch_default" ]]; then
+	if [[ `$USER_STAT --file-system --format=%T $PWD` == "lustre" ]]; then
+		echo "Attempting to use sqlite on a lustre file system. This does not work.  Try running on a different file system!"
+		exit 1
+	fi
+    cp $ccdbSQLITEPATH ./ccdb.sqlite
+    export CCDB_CONNECTION=sqlite:///$PWD/ccdb.sqlite
+    export JANA_CALIB_URL=$CCDB_CONNECTION
+elif [[ "$ccdbSQLITEPATH" == "batch_default" ]]; then
+    export CCDB_CONNECTION=sqlite:////group/halld/www/halldweb/html/dist/ccdb.sqlite
+    export JANA_CALIB_URL=${CCDB_CONNECTION}
+elif [[ "$ccdbSQLITEPATH" == "jlab_batch_default" ]]; then
+		ccdb_jlab_sqlite_path=`echo $((1 + RANDOM % 100))`
+		if ( -f /work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite ) then
+			export CCDB_CONNECTION=sqlite:////work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite
+		else
+			export CCDB_CONNECTION=mysql://ccdb_user@hallddb.jlab.org/ccdb
+		fi
+
+    export JANA_CALIB_URL=${CCDB_CONNECTION}
+
+fi
+
+if [[ "$rcdbSQLITEPATH" != "no_sqlite" && "$rcdbSQLITEPATH" != "batch_default" ]]; then
+	if [[ `$USER_STAT --file-system --format=%T $PWD` == "lustre" ]]; then
+		echo "Attempting to use sqlite on a lustre file system. This does not work.  Try running on a different file system!"
+		exit 1
+	fi
+    cp $rcdbSQLITEPATH ./rcdb.sqlite
+    export RCDB_CONNECTION=sqlite:///$PWD/rcdb.sqlite
+elif [[ "$rcdbSQLITEPATH" == "batch_default" ]]; then
+	#echo "keeping the RCDB on mysql now"
+    export RCDB_CONNECTION=sqlite:////group/halld/www/halldweb/html/dist/rcdb.sqlite
+fi
+
+
 			echo "EMULATING ANALYSIS LAUNCH"
 			echo "changed software to:  "`which hd_root`
 			echo "PLUGINS ReactionFilter" > ana_jana.cfg
