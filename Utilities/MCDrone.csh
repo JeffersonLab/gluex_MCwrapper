@@ -4,7 +4,7 @@ if [[ -f /osgpool/halld/tbritton/.ALLSTOP ]]; then
 fi
 
 if [[ `ps all -u tbritton | grep MCDrone.csh | grep -v grep | wc -l` == 2 ]]; then
-    cd /volatile/halld/home/tbritton/
+    cd /tmp/ #/volatile/halld/home/tbritton/
     source /osgpool/halld/tbritton/local_setup.sh
     export PATH=/apps/bin:${PATH};
     export PATH=/site/bin:${PATH};

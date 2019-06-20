@@ -164,6 +164,13 @@ def checkSWIF(WKflows_to_check):
             #print "======================"
             #LOOP OVER ALL JOBS IN WORKFLOW
             for job in ReturnedJobs["jobs"]:
+                check_query="SELECT Job_ID,Status,ExitCode from Attempts WHERE BatchJobID="+str(job["id"])
+                dbcursor.execute(check_query)
+                recordedJobStatus = dbcursor.fetchall()
+                print(recordedJobStatus)
+                if( (recordedJobStatus[0]["Status"]=="succeeded" and recordedJobStatus[0]["ExitCode"]==0) or recordedJobStatus[0]["Status"]==6 ):
+                    print("continuing")
+                    continue
                 #NON RUNNING DISPATCHED JOBS ARE A SPECIAL CASE
                 if int(job["num_attempts"]) == 0:
                     #print "truncated update of attempt pre dispatch"
@@ -200,6 +207,9 @@ def checkSWIF(WKflows_to_check):
                         else:
                             ExitCode=-1
                         
+                        if(job["status"]=="succeeded"):
+                            print("SUCCESS")
+
                        # print("exit code done")
                         Completed_Time='NULL'
 
@@ -222,7 +232,7 @@ def checkSWIF(WKflows_to_check):
                         #print("|||||||||||||||||||||")
                         #SOME VODOO IF RETRY JOBS HAPPENED OUTSIDE OF THE DB
                         if loggedindex == len(LoggedSWIFAttemps):
-                            #print "FOUND AN ATTEMPT EXTERNALLY CREATED"
+                            print("FOUND AN ATTEMPT EXTERNALLY CREATED")
                             GetLinkToJob_query="SELECT Job_ID FROM Attempts WHERE BatchJobID="+str(job["id"])
                             #print GetLinkToJob_query
                             dbcursorSWIF.execute(GetLinkToJob_query)
@@ -260,6 +270,41 @@ def checkSWIF(WKflows_to_check):
                         #print str(ExitCode)
                         #UPDATE THE SATUS
                         #print Completed_Time
+                        if str(ExitCode) == "232" or str(ExitCode) == "1000":
+                            print("EXIT CODE 232 DETECTED")
+                            getrunNum="SELECT RunNumber, Project_ID from Jobs where ID="+str(recordedJobStatus[0]["Job_ID"])
+                            dbcursorSWIF.execute(getrunNum)
+                            thisJOB = dbcursorSWIF.fetchall()
+                            #print(len(thisJOB))
+                            if len(thisJOB) == 1:
+                                thisJOB_RunNumber=thisJOB[0]["RunNumber"]
+                                getBKG="SELECT BKG from Project where ID="+str(thisJOB[0]["Project_ID"])
+                                dbcursorSWIF.execute(getBKG)
+                                thisJOB_BKG = dbcursorSWIF.fetchall()
+                                #print(len(thisJOB_BKG))
+                                if len(thisJOB_BKG) == 1:
+                                    print(thisJOB_BKG)
+                                    attempt_BKG=thisJOB_BKG[0]["BKG"]
+                                    #print(attempt_BKG)
+                                    #print("SPLITTING")
+                                    attempt_BKG_parts=attempt_BKG.split(":")
+                                    print(len(attempt_BKG_parts))
+                                    if len(attempt_BKG_parts) != 1:
+                                        locally_found=os.path.isfile("/osgpool/halld/random_triggers/"+str(attempt_BKG_parts[1])+"/run"+str(thisJOB_RunNumber).zfill(6)+"_random.hddm")
+                                        if locally_found:
+                                            print("found file locally: "+str("/osgpool/halld/random_triggers/"+str(attempt_BKG_parts[1])+"/run"+str(thisJOB_RunNumber).zfill(6)+"_random.hddm"))
+
+                                            if(locally_found):
+                                                JOB_STATUS="problem"
+                                                ExitCode=-232
+
+                                        else:
+                                            print("6 job stat")
+                                            JOB_STATUS=6
+                                            deactivate_Job="UPDATE Jobs set IsActive=0 where ID="+str(recordedJobStatus[0]["Job_ID"])+";"
+                                            dbcursorSWIF.execute(deactivate_Job)
+                                            dbcnxSWIF.commit()
+
                         running_location='NULL'
                         if "auger_node" in attempt:
                             running_location=attempt["auger_node"]
@@ -318,7 +363,7 @@ def checkOSG(Jobs_List):
         if ( len(Alljobs) == 0 ):
             return
             #print(str(os.getpid())+" SLEEP")
-            time.sleep(60)
+            #time.sleep(60)
         for job in Alljobs:
             #print job
             count+=1
@@ -351,8 +396,8 @@ def checkOSG(Jobs_List):
 
                 if (JSON_job["JobStatus"] == 2):
                     ExitCode="NULL"
+                    
 
-            
                 Completed_Time='NULL'
 
                 if(JSON_job["JobStatus"] >= 3 and "JobFinishedHookDone" in JSON_job):
@@ -499,6 +544,28 @@ def checkOSG(Jobs_List):
                                         deactivate_Job="UPDATE Jobs set IsActive=0 where ID="+str(job["Job_ID"])+";"
                                         dbcursorOSG.execute(deactivate_Job)
                                         dbcnxOSG.commit()
+                    
+                    failedProgram="NULL"
+                    
+                    if ( str(ExitCode) != "0" and str(ExitCode) != "NULL"):
+                        #print("CRASHED")
+                        std_out_loc=str(JSON_job["Out"])
+                        if( not os.path.isfile(std_out_loc)):
+                            std_out_loc="/cache/halld/halld-scratch/REQUESTED_MC/"+std_out_loc.split("REQUESTEDMC_OUTPUT")[1]
+                        #print(std_out_loc)
+                        with open(std_out_loc) as stdoutF:
+                            for num,line in enumerate(stdoutF,1):
+                                if "Something went wrong with" in line:
+                                    #print(line)
+                                    splitl=line.strip().split(" ")
+                                    #print(splitl[len(splitl)-1])
+                                    failedProgram=splitl[len(splitl)-1]
+                                    
+                        
+                    failedProgram=failedProgram.replace("(","\(")
+                    failedProgram=failedProgram.replace(")","\)")    
+                        
+
                     RunIP="NULL"
                     if "LastPublicClaimId" in JSON_job:
                         ipstr=str(JSON_job["LastPublicClaimId"])
@@ -512,14 +579,20 @@ def checkOSG(Jobs_List):
 
                     
                     #print LastRemoteHost
-                    updatejobstatus="UPDATE Attempts SET Status=\""+str(JOB_STATUS)+"\", ExitCode="+str(ExitCode)+", Start_Time="+"'"+str(datetime.fromtimestamp(float(Start_Time)))+"'"+", RunningLocation="+"'"+str(LastRemoteHost)+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+", RunIP='"+str(RunIP)+"' WHERE BatchJobID='"+str(job["BatchJobID"])+"';"
+                    updatejobstatus="UPDATE Attempts SET Status=\""+str(JOB_STATUS)+"\", ExitCode="+str(ExitCode)+", Start_Time="+"'"+str(datetime.fromtimestamp(float(Start_Time)))+"'"+", RunningLocation="+"'"+str(LastRemoteHost)+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+", RunIP='"+str(RunIP)+"'"
                     
                     if Completed_Time != 'NULL':
-                        updatejobstatus="UPDATE Attempts SET Status=\""+str(JOB_STATUS)+"\", ExitCode="+str(ExitCode)+", Start_Time="+"'"+str(datetime.fromtimestamp(float(Start_Time)))+"'"+", Completed_Time='"+str(datetime.fromtimestamp(float(Completed_Time)))+"'"+", RunningLocation="+"'"+str(LastRemoteHost)+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+", RunIP='"+str(RunIP)+"' WHERE BatchJobID='"+str(job["BatchJobID"])+"';"                    
+                        updatejobstatus="UPDATE Attempts SET Status=\""+str(JOB_STATUS)+"\", ExitCode="+str(ExitCode)+", Start_Time="+"'"+str(datetime.fromtimestamp(float(Start_Time)))+"'"+", Completed_Time='"+str(datetime.fromtimestamp(float(Completed_Time)))+"'"+", RunningLocation="+"'"+str(LastRemoteHost)+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+", RunIP='"+str(RunIP)+"'"
 
-                    #print updatejobstatus
+                    if failedProgram != 'NULL':
+                        updatejobstatus=updatejobstatus+", ProgramFailed='"+str(failedProgram)+"'"
+
+                    updatejobstatus=updatejobstatus+" WHERE BatchJobID='"+str(job["BatchJobID"])+"';"
+                    #print(updatejobstatus)
+                    
                     dbcursorOSG.execute(updatejobstatus)
                     dbcnxOSG.commit()
+
         time.sleep(random.randint(1,5))
         print("FINISHED CHECKING OSG")
 
@@ -561,7 +634,7 @@ def main(argv):
                 lastid = dbcursor.fetchall()
                 #print lastid
                 try:
-                    queryosgjobs="SELECT * from Attempts WHERE BatchSystem='OSG' && Status !='4' && Status !='3' && Status!= '6' && Status != '5';"
+                    queryosgjobs="SELECT * from Attempts WHERE BatchSystem='OSG' && Status !='4' && Status !='3' && Status!= '6' && Status != '5';"# || (Status='4' && ExitCode != 0 && ProgramFailed is NULL) ORDER BY ID desc;"
                     #print queryosgjobs
                     dbcursor.execute(queryosgjobs)
                     Alljobs = dbcursor.fetchall()
@@ -588,7 +661,7 @@ def main(argv):
 
                     if(numOverRide == False): #INSURE OVERRIDE NEVER CAUSES THE VODOO TO CAUSE A RACE CONDITION
                         print("CHECKING SWIF ON MAIN")
-                        queryswifjobs="SELECT * FROM Project WHERE ID IN (SELECT Project_ID FROM Jobs WHERE IsActive=1 && ID IN (SELECT DISTINCT Job_ID FROM Attempts WHERE BatchSystem= 'SWIF' && (Status!='succeeded' || Status is NULL)) )"
+                        queryswifjobs="SELECT * FROM Project WHERE Notified IS NULL && ID IN (SELECT Project_ID FROM Jobs WHERE IsActive=1 && ID IN (SELECT DISTINCT Job_ID FROM Attempts WHERE BatchSystem= 'SWIF' && (Status!='succeeded' || Status is NULL)) )"
                         dbcursor.execute(queryswifjobs)
                         AllWkFlows = dbcursor.fetchall()
                         checkSWIF(AllWkFlows)
