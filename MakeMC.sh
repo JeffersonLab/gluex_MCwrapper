@@ -1127,6 +1127,20 @@ if [[ "$GENR" != "0" ]]; then
 	
 	echo $RECON and $SMEAR
 	
+	if [[ "$RANDBGTAG" != "none" ]]; then
+
+	if [[ `ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1` != "r" ]]; then
+		echo "UConn Connection test failed. Falling back to JLAB...."
+		#echo "attempting to copy the needed file from an alternate source..."
+		#rsync scosg16.jlab.org:/osgpool/halld/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm ./
+		export XRD_RANDOMS_URL=root://scosg16.jlab.org//osgpool/halld/
+		if [[ `ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1` != "r" ]]; then
+			echo "Cannot connect to the file.  Disabling xrootd...."
+			exit 232
+		fi
+	fi
+	fi
+
 	echo "RUNNING MCSMEAR"
 	   
 	if [[ "$BKGFOLDSTR" == "BeamPhotons" || "$BKGFOLDSTR" == "None" || "$BKGFOLDSTR" == "TagOnly" ]]; then

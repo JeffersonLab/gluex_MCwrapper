@@ -1136,6 +1136,9 @@ if ( "$GENR" != "0" ) then
 				set totalnum=$RANDOM_TRIG_NUM_EVT
 			endif
 
+			echo $FILE_NUMBER
+			echo $PER_FILE
+			echo $totalnum
 			set fold_skip_num=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
 			#set bkglocstring="/w/halld-scifs17exp/halld2/home/tbritton/MCwrapper_Development/converted.hddm"
 			

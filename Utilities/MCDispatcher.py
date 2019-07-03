@@ -407,6 +407,9 @@ def source(script, update=True):
 
 
 def TestProject(ID,versionSet,commands_to_call=""):
+    mktestdir="mkdir -p TestProj_"+str(ID)
+    subprocess.call(mktestdir,shell=True)
+    os.chdir("./TestProj_"+str(ID))
     subprocess.call("rm -f MCDispatched.config", shell=True)
     print("TESTING PROJECT "+str(ID))
     query = "SELECT * FROM Project WHERE ID="+str(ID)

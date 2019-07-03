@@ -331,7 +331,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
         f.write("output      = "+LOG_DIR+"/log/"+"out_"+JOBNAME+".log\n")
         f.write("log = "+LOG_DIR+"/log/"+"OSG_"+JOBNAME+".log\n")
         f.write("initialdir = "+RUNNING_DIR+"\n")
-        f.write("request_memory = 3.0GB"+"\n")
+        f.write("request_memory = 2.0GB"+"\n")
         #f.write("transfer_input_files = "+ENVFILE+"\n")
         f.write("transfer_input_files = "+SCRIPT_TO_RUN+", "+ENVFILE+additional_passins+"\n")
         f.write("transfer_output_files = "+str(RUNNUM)+"_"+str(FILENUM)+"\n")
@@ -530,7 +530,7 @@ def showhelp():
         helpstring+= " cleangenerate=[0/1] where 0 means that the generation step will not be cleaned up after use (default is 1)\n"
         helpstring+= " cleangeant=[0/1] where 0 means that the geant step will not be cleaned up after use (default is 1)\n"
         helpstring+= " cleanmcsmear=[0/1] where 0 means that the mcsmear step will not be cleaned up after use (default is 1)\n"
-        helpstring+= " cleanrecon=[0/1] where 0 means that the reconstruction step will not run (default is 1)\n"
+        helpstring+= " cleanrecon=[0/1]where 0 means that the reconstruction step will not be cleaned up after running (default is 0)\n"
         helpstring+= " batch=[0/1/2] where 1 means that jobs will be submitted, 2 will do the same as 1 but also run the workflow in the case of swif (default is 0 [interactive])\n"
         helpstring+= " logdir=[path] will direct the .out and .err files to the specified path for qsub\n"
         return helpstring
@@ -1227,7 +1227,7 @@ def GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,RUNNUM):
                         return -1
 
                 queryrand="SELECT Num_Events FROM Randoms WHERE Style=\""+Style+"\" && Tag=\""+RANDBGTAG+"\""+" && Run_Number="+str(RUNNUM)+" && Path=\""+str(realpath)+"\""
-                #print queryrand
+                print(queryrand)
                 dbcursor.execute(queryrand)
                 matches = dbcursor.fetchall()
                 #print matches
@@ -1242,9 +1242,11 @@ def GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,RUNNUM):
                         #print addquery
                         dbcursor.execute(addquery)
                         dbcnx.commit()
+                        print("COUNT: "+str(Count))
                         return Count
                 elif len(matches) == 1:
-                        print matches[0][0]
+                        print("Matches")
+                        print(matches[0][0])
                         return matches[0][0]
                 else:
                         print "AMBIGUOUS!"
