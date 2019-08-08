@@ -170,8 +170,12 @@ def SubmitList(SubList,job_IDs_submitted):
 
 def decideSystem(row):
     command="condor_q | grep tbritton"
-    jobSubout=subprocess.check_output(command,shell=True)
-    
+    jobSubout=""
+    try:
+        jobSubout=subprocess.check_output(command,shell=True)
+    except:
+        return "OSG"
+
     print(jobSubout)
 
     rows=jobSubout.split("\n")

@@ -137,18 +137,18 @@ setenv USER_BC '/usr/bin/bc'
 setenv USER_STAT '/usr/bin/stat'
 endif
 
-setenv XRD_RANDOMS_URL root://nod25.phys.uconn.edu/Gluex/rawdata/
+setenv XRD_RANDOMS_URL root://scosg16.jlab.org//osgpool/halld/
 setenv MAKE_MC_USING_XROOTD 0
-if ( -f /usr/lib64/libXrdPosixPreload.so ) then
+if ( -f /usr/lib64/libXrdPosixPreload.so && "$BKGFOLDSTR" != "None" ) then
 	setenv MAKE_MC_USING_XROOTD 1
 	setenv LD_PRELOAD /usr/lib64/libXrdPosixPreload.so
 	echo "I have the share object needed for xrootd!"
 	#set con_test=`ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm`
 	#echo `ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1`
 	if ( `ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1` != "r" ) then
-		echo "UConn Connection test failed.  Falling back to JLAB ...."
+		echo "JLAB Connection test failed.  Falling back to UConn ...."
 		#echo "attempting to copy the needed file from an alternate source..."
-		setenv XRD_RANDOMS_URL root://scosg16.jlab.org//osgpool/halld/
+		setenv XRD_RANDOMS_URL root://nod25.phys.uconn.edu/Gluex/rawdata/
 		if ( `ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1` != "r" ) then
 			echo "Cannot connect to the file.  Disabling xrootd...."
 			setenv MAKE_MC_USING_XROOTD 0
@@ -481,22 +481,22 @@ endif
 #echo `-d "$OUTDIR"`
 if ( ! -d "$OUTDIR" ) then
     echo "making dir"
-    mkdir $OUTDIR
+    mkdir -p $OUTDIR
 endif
 if ( ! -d "$OUTDIR/configurations/" ) then
-    mkdir $OUTDIR/configurations/
+    mkdir -p $OUTDIR/configurations/
 endif
 if ( ! -d "$OUTDIR/configurations/generation/" ) then
-    mkdir $OUTDIR/configurations/generation/
+    mkdir -p $OUTDIR/configurations/generation/
 endif
 if ( ! -d "$OUTDIR/configurations/geant/" ) then
-    mkdir $OUTDIR/configurations/geant/
+    mkdir -p $OUTDIR/configurations/geant/
 endif
 if ( ! -d "$OUTDIR/hddm/" ) then
-    mkdir $OUTDIR/hddm/
+    mkdir -p $OUTDIR/hddm/
 endif
 if ( ! -d "$OUTDIR/root/" ) then
-    mkdir $OUTDIR/root/
+    mkdir -p $OUTDIR/root/
 endif
 
 set bkglocstring=""
@@ -1139,6 +1139,7 @@ if ( "$GENR" != "0" ) then
 			echo $FILE_NUMBER
 			echo $PER_FILE
 			echo $totalnum
+
 			set fold_skip_num=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
 			#set bkglocstring="/w/halld-scifs17exp/halld2/home/tbritton/MCwrapper_Development/converted.hddm"
 			
@@ -1236,7 +1237,8 @@ endif
 				#set file_options=""
 				if ( "$recon_pre" == "file" ) then
 		   		echo "using config file: "$jana_config_file
-					
+
+				echo hd_root $file_to_recon --config=jana_config.cfg -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 $additional_hdroot
 		   		hd_root $file_to_recon --config=jana_config.cfg -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 $additional_hdroot
 					set hd_root_return_code=$status
 

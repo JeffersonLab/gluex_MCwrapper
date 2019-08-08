@@ -38,10 +38,19 @@ def RecallAll():
     query="SELECT BatchJobID, BatchSystem from Attempts where (Status=\"2\" || Status=\"1\" || Status=\"5\") && Job_ID in (SELECT ID from Jobs where Project_ID in (SELECT ID FROM Project where Tested=2 || Tested=4 || Tested=3 ));"
     curs.execute(query)
     rows=curs.fetchall()
+    print("RECALLING "+str(len(rows)))
     for row in rows:
         if row["BatchSystem"] == "OSG":
             command="condor_rm "+str(row["BatchJobID"])
-            subprocess.call(command,shell=True)
+            cmd=Popen(command.split(" "),stdout=PIPE,stderr=PIPE)
+            out, err = cmd.communicate()
+            print(err)
+            if("not found" in str(err,"utf-8")):
+                print("clear "+str(row["BatchJobID"]))
+                updatequery="UPDATE Attempts SET Status=\"3\" where BatchJobID=\""+str(row["BatchJobID"])+"\""
+                curs.execute(updatequery)
+                conn.commit()
+            #subprocess.call(command,shell=True)
 
 def DeclareAllComplete():
     query="SELECT ID,OutputLocation,Email from Project where Tested=4 && Notified is NULL;"
@@ -103,11 +112,15 @@ def CancelAll():
 
 def AutoLaunch():
     #print "in autolaunch"
+    print("RECALLING...")
     RecallAll()
+    print("CANCELING...")
     CancelAll()
+    print("DECLARING...")
     DeclareAllComplete()
+    print("RETRYING...")
     RetryAllJobs()
-
+    print("TESTING...")
     query = "SELECT ID,Email,VersionSet,Tested,UName FROM Project WHERE (Tested = 0) && Dispatched_Time is NULL ORDER BY (SELECT Priority from Users where name=UName) DESC;"
     #print query
     curs.execute(query) 
@@ -148,7 +161,7 @@ def AutoLaunch():
                 msg['From'] = str('MCwrapper-bot')
                 print("SET FROM")
 
-                msg['To'] = str(row['Email'])
+                msg['To'] = str(row['Email'])#str("tbritton@jlab.org")#
                 print("SET SUB TO FROM")
                 # Send the message via our own SMTP server.                                                                                                                                                                        
                 s = smtplib.SMTP('localhost')
@@ -190,7 +203,7 @@ def DispatchProject(ID,SYSTEM,PERCENT):
         print("Error: Cannot find Project with ID="+ID)
     
 def RetryAllJobs(rlim=False):
-    query= "SELECT ID FROM Project where Completed_Time is NULL && Is_Dispatched=1.0 && Tested!=2 && Tested!=4 && Tested!=3;"
+    query= "SELECT ID FROM Project where Completed_Time is NULL && Is_Dispatched=1.0 && Tested!=2 && Tested!=4 && Tested!=-4 && Tested!=3;"
     curs.execute(query) 
     rows=curs.fetchall()
     for row in rows:
@@ -376,10 +389,16 @@ def CheckGenConfig(order):
     file_split=fileSTR.split("/")
     name=file_split[len(file_split)-1]
     #print name
-    #print fileSTR
+    print(fileSTR)
     if(os.path.isfile(fileSTR)==False and socket.gethostname() == "scosg16.jlab.org" ):
         copyTo="/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"
         subprocess.call("scp tbritton@ifarm:"+fileSTR+" "+copyTo+str(ID)+"_"+name,shell=True)
+        #subprocess.call("rsync -ruvt ifarm1402:"+fileSTR+" "+copyTo,shell=True)
+        order["Generator_Config"]=copyTo+name
+        return copyTo+str(ID)+"_"+name
+    elif(os.path.isfile(fileSTR)==True and socket.gethostname() == "scosg16.jlab.org" ):
+        copyTo="/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"
+        subprocess.call("scp "+fileSTR+" "+copyTo+str(ID)+"_"+name,shell=True)
         #subprocess.call("rsync -ruvt ifarm1402:"+fileSTR+" "+copyTo,shell=True)
         order["Generator_Config"]=copyTo+name
         return copyTo+str(ID)+"_"+name
@@ -416,12 +435,12 @@ def TestProject(ID,versionSet,commands_to_call=""):
     curs.execute(query) 
     rows=curs.fetchall()
     order=rows[0]
-    #print "========================"
-    #print order["Generator_Config"]
+    print("========================")
+    print(order["Generator_Config"])
     newLoc=CheckGenConfig(order)
-    #print order["Generator_Config"]
-    #print "========================"
-    #print newLoc
+    print(order["Generator_Config"])
+    print("========================")
+    print(newLoc)
     if(newLoc!="True"):
         curs.execute(query) 
         rows=curs.fetchall()
@@ -652,6 +671,7 @@ def WritePayloadConfig(order,foundConfig):
             MCconfig_file.write("GENERATOR="+str(order["Generator"])+"/"+foundConfig+"\n")
     else:
         MCconfig_file.write("GENERATOR="+str(order["Generator"])+"\n")
+        print(order["Generator_Config"])
         if foundConfig=="True":
             MCconfig_file.write("GENERATOR_CONFIG="+str(order["Generator_Config"])+"\n")
         else:
@@ -660,7 +680,9 @@ def WritePayloadConfig(order,foundConfig):
     MCconfig_file.write("GEANT_VERSION="+str(order["GeantVersion"])+"\n")
     MCconfig_file.write("NOSECONDARIES="+str(abs(order["GeantSecondaries"]-1))+"\n")
     MCconfig_file.write("BKG="+str(order["BKG"])+"\n")
+    print(order["OutputLocation"])
     splitLoc=str(order["OutputLocation"]).split("/")
+    print(splitLoc)
     outputstring="/".join(splitLoc[7:-1])
     #order["OutputLocation"]).split("/")[7]
     MCconfig_file.write("DATA_OUTPUT_BASE_DIR=/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/"+str(outputstring)+"\n")

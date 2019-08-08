@@ -133,20 +133,20 @@ done
 formatted_runNumber=$formatted_runNumber$RUN_NUMBER
 flength_count=$((`echo $FILE_NUMBER | wc -c` - 1))
 
-export XRD_RANDOMS_URL=root://nod25.phys.uconn.edu/Gluex/rawdata
+export XRD_RANDOMS_URL=root://scosg16.jlab.org//osgpool/halld/
 export MAKE_MC_USING_XROOTD=0
 #ls /usr/lib64/libXrdPosixPreload.so
-if [[ -f /usr/lib64/libXrdPosixPreload.so ]]; then
+if [[ -f /usr/lib64/libXrdPosixPreload.so && "$BKGFOLDSTR" != "None" ]]; then
 	export MAKE_MC_USING_XROOTD=1
 	export LD_PRELOAD=/usr/lib64/libXrdPosixPreload.so
 	echo "I have the share object needed for xrootd!"
 	#con_test=`ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | grep "cannot access"`
 	#echo `ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1`
 	if [[ `ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1` != "r" ]]; then
-		echo "UConn Connection test failed. FAlling back to JLAB...."
+		echo "JLab Connection test failed. FAlling back to UConn...."
 		#echo "attempting to copy the needed file from an alternate source..."
 		#rsync scosg16.jlab.org:/osgpool/halld/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm ./
-		export XRD_RANDOMS_URL=root://scosg16.jlab.org//osgpool/halld/
+		export XRD_RANDOMS_URL=root://nod25.phys.uconn.edu/Gluex/rawdata/
 		if [[ `ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1` != "r" ]]; then
 			echo "Cannot connect to the file.  Disabling xrootd...."
 			export MAKE_MC_USING_XROOTD=0
@@ -560,6 +560,12 @@ if [[ "$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" == 
 			#set bkglocstring="/w/halld-scifs1a/home/tbritton/converted.hddm"
 		    
 		    if [[ ! -f $bkglocstring && "$MAKE_MC_USING_XROOTD" == "0" ]]; then
+			echo "something went wrong with initialization"
+			echo "Could not find mix-in file "$bkglocstring
+			exit 1000
+		    fi
+
+			if [[ "$BATCHSYS" == "OSG" && "$MAKE_MC_USING_XROOTD" == "1" && $RANDOM_TRIG_NUM_EVT == -1 ]]; then
 			echo "something went wrong with initialization"
 			echo "Could not find mix-in file "$bkglocstring
 			exit 1000
@@ -1248,6 +1254,7 @@ fi
 			reaction_filter=""
 			if [[ "$recon_pre" == "file" ]]; then
 				echo "using config file: "$jana_config_file
+				echo hd_root $file_to_recon --config=jana_config.cfg -PNTHREADS=$NUMTHREADS $additional_hdroot
 				hd_root $file_to_recon --config=jana_config.cfg -PNTHREADS=$NUMTHREADS $additional_hdroot
 				hd_root_return_code=$?
 				reaction_filter=`grep ReactionFilter jana_config.cfg`
