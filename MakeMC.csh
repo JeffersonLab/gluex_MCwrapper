@@ -1088,6 +1088,7 @@ if ( "$GENR" != "0" ) then
 	    	rm -f run.mac
 	    	echo "/run/beamOn $EVT_TO_GEN" > run.mac
 	    	echo "exit" >>! run.mac
+
 	    	hdgeant4 -t$NUMTHREADS run.mac
 			set geant_return_code=$status
 	    	rm run.mac

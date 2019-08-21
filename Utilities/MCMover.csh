@@ -9,7 +9,7 @@ fi
 if [[ `ps all -u tbritton | grep MCMover.csh | grep -v grep | wc -l` == 2 ]]; then
     echo "moving"
     input_dir=/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/
-    output_dir=/cache/halld/halld-scratch/REQUESTED_MC/
+    output_dir=/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/
     # move slag-like files in the input directory out of the way
     mkdir -pv $input_dir/slag
     find $input_dir -maxdepth 2 -mindepth 2 -type f -exec mv -v {} $input_dir/slag/ \;

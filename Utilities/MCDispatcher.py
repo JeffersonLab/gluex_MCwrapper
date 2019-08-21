@@ -128,7 +128,6 @@ def AutoLaunch():
     #print rows
     #print len(rows)
     for row in rows:
-
         status=[]
         status.append(-1)
         status.append(-1)
@@ -246,7 +245,7 @@ def RetryJobsFromProject(ID, countLim):
                     countq="SELECT Count(Job_ID) from Attempts where Job_ID="+str(row["Job_ID"])
                     curs.execute(countq)
                     count=curs.fetchall()
-                    if int(count[0]["Count(Job_ID)"]) > 15 :
+                    if int(count[0]["Count(Job_ID)"]) > 10 :
                         j=j+1
                         continue
                     
@@ -476,6 +475,14 @@ def TestProject(ID,versionSet,commands_to_call=""):
         my_env=source("/group/halld/Software/build_scripts/gluex_env_jlab.sh /group/halld/www/halldweb/html/dist/"+versionSet)
         my_env["MCWRAPPER_CENTRAL"]=MCWRAPPER_BOT_HOME
 
+    #print(my_env)
+    if "" in my_env:
+        split_kv=my_env[""].split("\n")
+        absorbed=split_kv[len(split_kv)-1].split("=")
+        print(absorbed)
+        del my_env[""]
+        my_env[absorbed[0]]=absorbed[1]
+    #print(my_env)
     p = Popen(commands_to_call+command, env=my_env ,stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True)
     #print p
     #print "p defined"

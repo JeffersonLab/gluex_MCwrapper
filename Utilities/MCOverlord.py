@@ -57,7 +57,7 @@ except:
         pass
 
 def checkProjectsForCompletion():
-    OutstandingProjectsQuery="SELECT ID,OutputLocation,Email FROM Project WHERE Is_Dispatched != '0' && Notified is NULL"
+    OutstandingProjectsQuery="SELECT ID,OutputLocation,Email,NumEvents FROM Project WHERE Is_Dispatched != '0' && Notified is NULL"
     dbcursor.execute(OutstandingProjectsQuery)
     OutstandingProjects=dbcursor.fetchall()
 
@@ -95,7 +95,12 @@ def checkProjectsForCompletion():
         print(len(fulfilledJobs))
         print(len(AllActiveJobs))
         print("TO MOVE: "+str(filesToMove))
-        if(len(fulfilledJobs)==len(AllActiveJobs) and len(AllActiveJobs) != 0 and filesToMove ==0):
+
+        totalSubmitted="SELECT SUM(NumEvts) from Jobs where Project_ID="+str(proj['ID'])
+        dbcursor.execute(totalSubmitted)
+        submitted_evtNum=dbcursor.fetchall()
+
+        if(len(fulfilledJobs)==len(AllActiveJobs) and len(AllActiveJobs) != 0 and filesToMove ==0 and submitted_evtNum[0]["SUM(NumEvts)"] >= proj["NumEvents"]):
             print("DONE")
 
             getFinalCompleteTime="SELECT MAX(Completed_Time) FROM Attempts WHERE Job_ID IN (SELECT ID FROM Jobs WHERE Project_ID="+str(proj['ID'])+");"
