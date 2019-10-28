@@ -92,7 +92,8 @@ def main(argv):
                 DroneDo(lastid[0]["MAX(ID)"])
                 dbcursor.execute("UPDATE MCDrone SET EndTime=NOW(), Status='Success' where ID="+str(lastid[0]["MAX(ID)"]))
                 dbcnx.commit()
-            except:
+            except Exception as e:
+                print(e)
                 dbcursor.execute("UPDATE MCDrone SET Status='Fail' where ID="+str(lastid[0]["MAX(ID)"]))
                 dbcnx.commit()
                 pass

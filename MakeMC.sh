@@ -143,7 +143,7 @@ if [[ -f /usr/lib64/libXrdPosixPreload.so && "$BKGFOLDSTR" != "None" ]]; then
 	#con_test=`ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | grep "cannot access"`
 	#echo `ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1`
 	if [[ `ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1` != "r" ]]; then
-		echo "JLab Connection test failed. FAlling back to UConn...."
+		echo "JLab Connection test failed. Falling back to UConn...."
 		#echo "attempting to copy the needed file from an alternate source..."
 		#rsync scosg16.jlab.org:/osgpool/halld/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm ./
 		export XRD_RANDOMS_URL=root://nod25.phys.uconn.edu/Gluex/rawdata/
@@ -153,6 +153,9 @@ if [[ -f /usr/lib64/libXrdPosixPreload.so && "$BKGFOLDSTR" != "None" ]]; then
 		fi
 	fi
 fi
+
+#override xrootd
+export MAKE_MC_USING_XROOTD=0
 
 if [[ "$BATCHSYS" == "OSG" && "$BATCHRUN"=="1" ]]; then
 export USER_BC='/usr/bin/bc'
@@ -198,13 +201,13 @@ elif [[ "$ccdbSQLITEPATH" == "batch_default" ]]; then
     export CCDB_CONNECTION=sqlite:////group/halld/www/halldweb/html/dist/ccdb.sqlite
     export JANA_CALIB_URL=${CCDB_CONNECTION}
 elif [[ "$ccdbSQLITEPATH" == "jlab_batch_default" ]]; then
-		ccdb_jlab_sqlite_path=`echo $((1 + RANDOM % 100))`
-		if ( -f /work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite ) then
-			export CCDB_CONNECTION=sqlite:////work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite
-		else
-			export CCDB_CONNECTION=mysql://ccdb_user@hallddb.jlab.org/ccdb
-		fi
-
+		#ccdb_jlab_sqlite_path=`echo $((1 + RANDOM % 100))`
+		#if ( -f /work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite ) then
+		#	export CCDB_CONNECTION=sqlite:////work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite
+		#else
+		#	export CCDB_CONNECTION=mysql://ccdb_user@hallddb.jlab.org/ccdb
+		#fi
+	export CCDB_CONNECTION mysql://ccdb_user@hallddb-farm.jlab.org/ccdb
     export JANA_CALIB_URL=${CCDB_CONNECTION}
 
 fi

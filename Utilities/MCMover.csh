@@ -15,6 +15,7 @@ if [[ `ps all -u tbritton | grep MCMover.csh | grep -v grep | wc -l` == 2 ]]; th
     find $input_dir -maxdepth 2 -mindepth 2 -type f -exec mv -v {} $input_dir/slag/ \;
 
     #find me the dirs
+    movecount=0
     transArray=()
     while IFS=  read -r -d $'\0'; do
         transArray+=("$REPLY")
@@ -28,16 +29,22 @@ if [[ `ps all -u tbritton | grep MCMover.csh | grep -v grep | wc -l` == 2 ]]; th
         echo $projpath
         mkdir -p $output_dir/$projpath/
         
-        rsync_command="rsync -pruvt $dir/ $output_dir/$projpath/" #--exclude $input_dir/slag"
+        rsync_command="rsync --progress -pruvt $dir/ $output_dir/$projpath/" #--exclude $input_dir/slag"
         echo $rsync_command
         status="255"
         while [ "$status" -eq "255" ]
         do
-            $rsync_command
+            echo $rsync_command
+	    $rsync_command
             status="$?"
             echo status = $status
             sleep 1
         done
+        ((movecount=movecount+1))
+        echo $movecount
+        #if [[ $movecount > 10000 ]]; then
+        #    break
+        #fi
     done
 
     cd $output_dir

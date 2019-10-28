@@ -556,7 +556,7 @@ def checkOSG(Jobs_List):
                         #print("CRASHED")
                         std_out_loc=str(JSON_job["Out"])
                         if( not os.path.isfile(std_out_loc)):
-                            std_out_loc="/cache/halld/halld-scratch/REQUESTED_MC/"+std_out_loc.split("REQUESTEDMC_OUTPUT")[1]
+                            std_out_loc="/cache/halld/gluex_simulations/REQUESTED_MC/"+std_out_loc.split("REQUESTEDMC_OUTPUT")[1]
                         #print(std_out_loc)
                         with open(std_out_loc) as stdoutF:
                             for num,line in enumerate(stdoutF,1):

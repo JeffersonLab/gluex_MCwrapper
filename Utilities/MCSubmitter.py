@@ -91,7 +91,7 @@ def WritePayloadConfig(order,foundConfig,batch_system):
     if batch_system == "OSG":
         MCconfig_file.write("DATA_OUTPUT_BASE_DIR=/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/"+str(outputstring)+"\n")
     elif batch_system == "SWIF":
-        MCconfig_file.write("DATA_OUTPUT_BASE_DIR=/cache/halld/halld-scratch/REQUESTED_MC/"+str(outputstring)+"\n")
+        MCconfig_file.write("DATA_OUTPUT_BASE_DIR=/cache/halld/gluex_simulations/REQUESTED_MC/"+str(outputstring)+"\n")
     #print "FOUND CONFIG="+foundConfig
 
     if(order["RCDBQuery"] != ""):
