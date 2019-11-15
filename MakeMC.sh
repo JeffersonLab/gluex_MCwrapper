@@ -452,8 +452,10 @@ if [[ "$CUSTOM_GCONTROL" == "0" && "$GEANT" == "1" ]]; then
 	fi
 
     chmod 777 ./temp_Gcontrol.in
-else
+elif [[ "$CUSTOM_GCONTROL" != "0" && "$GEANT" == "1" ]]; then
     cp $CUSTOM_GCONTROL ./temp_Gcontrol.in
+else
+	echo "NO GEANT"
 fi
 
 
@@ -1028,7 +1030,7 @@ if [[ "$GENR" != "0" ]]; then
 		exit 11
 	fi
     #GEANT/smearing
-    
+    fi
     if [[ "$GEANT" != "0" ]]; then
 	echo "RUNNING GEANT"$GEANTVER
 	
@@ -1124,7 +1126,7 @@ if [[ "$GENR" != "0" ]]; then
 		echo "An hddm file was not created by Geant.  Terminating MC production.  Please consult logs to diagnose"
 		exit 12
 	fi
-	
+	fi
 	MCSMEAR_Flags=""
 	if [[ "$SMEAR" == "0" ]]; then
 		MCSMEAR_Flags="$MCSMEAR_Flags"" -s"
@@ -1136,22 +1138,28 @@ if [[ "$GENR" != "0" ]]; then
 	
 	echo $RECON and $SMEAR
 	
-	if [[ "$RANDBGTAG" != "none" ]]; then
+	#if [[ "$RANDBGTAG" != "none" ]]; then
 
-	if [[ `ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1` != "r" ]]; then
-		echo "UConn Connection test failed. Falling back to JLAB...."
-		#echo "attempting to copy the needed file from an alternate source..."
-		#rsync scosg16.jlab.org:/osgpool/halld/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm ./
-		export XRD_RANDOMS_URL=root://scosg16.jlab.org//osgpool/halld/
-		if [[ `ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1` != "r" ]]; then
-			echo "Cannot connect to the file.  Disabling xrootd...."
-			exit 232
-		fi
-	fi
-	fi
-
+	#if [[ `ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1` != "r" ]]; then
+	#	echo "JLab Connection test failed. Falling back to UConn...."
+	#	#echo "attempting to copy the needed file from an alternate source..."
+	#	#rsync scosg16.jlab.org:/osgpool/halld/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm ./
+	#	export XRD_RANDOMS_URL=root://nod25.phys.uconn.edu/Gluex/rawdata/
+	#	if [[ `ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1` != "r" ]]; then
+	#		echo "Cannot connect to the file.  Disabling xrootd...."
+	#		exit 232
+	#	fi
+	#fi
+	#fi
+	
+	if [[ !("$GENR" == "0" && "$GEANT" == "0" && "$SMEAR" == "0") ]]; then
 	echo "RUNNING MCSMEAR"
-	   
+	if [[ "$GENR" == "0" && "$GEANT" == "0" ]]; then
+		echo $GENERATOR
+		geant_file=`echo $GENERATOR | cut -c 6-`
+		echo $geant_file
+		cp $geant_file ./$STANDARD_NAME'_geant'$GEANTVER'.hddm'
+	fi
 	if [[ "$BKGFOLDSTR" == "BeamPhotons" || "$BKGFOLDSTR" == "None" || "$BKGFOLDSTR" == "TagOnly" ]]; then
 		echo "running MCsmear without folding in random background"
 		mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3000 -o$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' $STANDARD_NAME'_geant'$GEANTVER'.hddm'
@@ -1208,6 +1216,7 @@ if [[ "$GENR" != "0" ]]; then
 	    #run reconstruction
 	if [[ "$CLEANGENR" == "1" ]]; then
 		rm beam.config
+		rm $STANDARD_NAME'_beam.conf'
 		if [[ "$GENERATOR" == "genr8" ]]; then
 		    rm *.ascii
 		elif [[ "$GENERATOR" == "bggen" || "$GENERATOR" == "bggen_jpsi" || "$GENERATOR" == "bggen_phi_ee" ]]; then
@@ -1236,8 +1245,6 @@ if [[ "$GENR" != "0" ]]; then
 		fi
 		
 	fi
-	
-fi
 	    if [[ "$RECON" != "0" ]]; then
 		echo "RUNNING RECONSTRUCTION"
 		file_to_recon=$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm'
