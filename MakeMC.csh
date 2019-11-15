@@ -442,8 +442,10 @@ if ( "$CUSTOM_GCONTROL" == "0" && "$GEANT" == "1" ) then
 	endif
 
     chmod 777 ./temp_Gcontrol.in
-else
+else if ( "$CUSTOM_GCONTROL" != "0" && "$GEANT" == "1" ) then
     cp $CUSTOM_GCONTROL ./temp_Gcontrol.in
+else
+	echo "NO GEANT"
 endif
 
 
@@ -1008,9 +1010,9 @@ if ( "$GENR" != "0" ) then
 				exit $generator_return_code
 	endif
 #GEANT/smearing
+endif
 
-
-    if ( "$GEANT" != "0" ) then
+    if ( "$GEANT" != "0"  ) then
 		echo "RUNNING GEANT"$GEANTVER
 
 		if ( `echo $eBEAM_ENERGY | grep -o "\." | wc -l` == 0 ) then
@@ -1109,7 +1111,8 @@ if ( "$GENR" != "0" ) then
 			echo "An hddm file was not created by Geant.  Terminating MC production.  Please consult logs to diagnose"
 			exit 12
 		endif
-		
+	endif
+
 		set MCSMEAR_Flags=""
 		if ( "$SMEAR" == "0" ) then
 			set MCSMEAR_Flags="$MCSMEAR_Flags"" -s"
@@ -1119,8 +1122,15 @@ if ( "$GENR" != "0" ) then
 			set MCSMEAR_Flags="$MCSMEAR_Flags"" -T"
 		endif
 
-		echo "RUNNING MCSMEAR"
 		
+		if ( !("$GENR" == "0" && "$GEANT" == "0" && "$SMEAR" == "0" ) ) then
+		echo "RUNNING MCSMEAR"
+		if ( "$GENR" == "0" && "$GEANT" == "0" ) then
+		echo $GENERATOR
+		set geant_file=`echo $GENERATOR | cut -c 6-`
+		echo $geant_file
+		cp $geant_file ./$STANDARD_NAME'_geant'$GEANTVER'.hddm'
+		endif
 	    if ( "$BKGFOLDSTR" == "BeamPhotons" || "$BKGFOLDSTR" == "None" || "$BKGFOLDSTR" == "TagOnly" ) then
 			echo "running MCsmear without folding in random background"
 			echo 'mcsmear' $MCSMEAR_Flags' -PTHREAD_TIMEOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3000 -o'$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' $STANDARD_NAME'_geant'$GEANTVER'.hddm'
@@ -1187,6 +1197,7 @@ if ( "$GENR" != "0" ) then
 	    #run reconstruction
 	    if ( "$CLEANGENR" == "1" ) then
 				rm beam.config
+				rm $STANDARD_NAME'_beam.conf'
 				if ( "$GENERATOR" == "genr8" ) then
 		  		rm *.ascii
 				else if ( "$GENERATOR" == "bggen" || "$GENERATOR" == "bggen_jpsi" || "$GENERATOR" == "bggen_phi_ee" ) then
@@ -1214,9 +1225,7 @@ if ( "$GENR" != "0" ) then
 			echo "An hddm file was not created by mcsmear.  Terminating MC production.  Please consult logs to diagnose"
 			exit 13
 		endif
-	endif
-    
-endif
+
 	    if ( "$RECON" != "0" ) then
 				echo "RUNNING RECONSTRUCTION"
 				set file_to_recon=$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm'
