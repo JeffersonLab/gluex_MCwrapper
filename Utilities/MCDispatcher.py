@@ -234,6 +234,7 @@ def RetryJobsFromProject(ID, countLim):
 
         if (row["BatchSystem"]=="SWIF"):
             if((row["Status"] == "succeeded" and row["ExitCode"] != 0) or (row["Status"]=="problem" and row["ExitCode"]!="232")):
+            #if(row["Status"] != "succeeded"):
                 SWIF_retry_IDs.append(row["BatchJobID"])
                 #RetryJob(row["Job_ID"])
                 i=i+1
@@ -265,7 +266,8 @@ def RetryJobsFromProject(ID, countLim):
                 RetryJob(row["Job_ID"])
                 i=i+1
         
-        #print(SWIF_retry_IDs)
+    
+    print(SWIF_retry_IDs)
     if(len(SWIF_retry_IDs)!=0):
         queryproj = "SELECT * FROM Project WHERE ID="+str(ID)
         curs.execute(queryproj) 

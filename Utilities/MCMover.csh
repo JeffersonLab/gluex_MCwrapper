@@ -12,7 +12,7 @@ if [[ `ps all -u tbritton | grep MCMover.csh | grep -v grep | wc -l` == 2 ]]; th
     output_dir=/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/
     # move slag-like files in the input directory out of the way
     mkdir -pv $input_dir/slag
-    find $input_dir -maxdepth 2 -mindepth 2 -type f -exec mv -v {} $input_dir/slag/ \;
+    find $input_dir -maxdepth 2 -mindepth 2 -type f -exec mv -v {} /osgpool/halld/tbritton/SLAG/ \;
 
     #find me the dirs
     movecount=0
