@@ -55,9 +55,20 @@ try:
 except:
         print("WARNING: CANNOT CONNECT TO DATABASE.  JOBS WILL NOT BE CONTROLLED OR MONITORED")
         pass
+def CheckForFile(rootLoc,expFile):
+    found=False
+    subloc="hddm"
+    if(expFile.split(".")[1]=="root"):
+        subloc="root/monitoring_hists"
+
+    if(os.path.isfile('/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/'+rootLoc+"/"+subloc+"/"+expFile) or os.path.isfile('/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) or os.path.isfile('/mss/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) ):
+        found=True
+    else:
+        print(rootLoc+"/"+subloc+"/"+expFile)
+    return found
 
 def checkProjectsForCompletion():
-    OutstandingProjectsQuery="SELECT ID,OutputLocation,Email,NumEvents FROM Project WHERE Is_Dispatched != '0' && Notified is NULL"
+    OutstandingProjectsQuery="SELECT * FROM Project WHERE (Is_Dispatched != '0' && Tested != '-1' && Tested != '2' ) && Notified is NULL"
     dbcursor.execute(OutstandingProjectsQuery)
     OutstandingProjects=dbcursor.fetchall()
 
@@ -80,19 +91,77 @@ def checkProjectsForCompletion():
 
         filesToMove = len(files) #sum([len(files) for r, d, files in os.walk(outdir_root+locparts[len(locparts)-2])])
         #print cpt
-        print(filesToMove)
+        #print(proj)
         
-        TOTCompletedQuery ="SELECT DISTINCT ID From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1 && ID in (SELECT DISTINCT Job_ID FROM Attempts WHERE ExitCode = 0 && (Status ='4' || Status='succeeded')  && ExitCode IS NOT NULL);" 
+        print(filesToMove)
+        #DISTINCT ID ------in query below
+        TOTCompletedQuery ="SELECT * From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1 && ID in (SELECT DISTINCT Job_ID FROM Attempts WHERE ExitCode = 0 && (Status ='4' || Status='succeeded')  && ExitCode IS NOT NULL);" 
         dbcursor.execute(TOTCompletedQuery)
         fulfilledJobs=dbcursor.fetchall()
+        #print(fulfilledJobs)
 
+        
+        if(proj["Tested"]==2 or proj["Tested"]==3):
+            continue
+
+        rootLoc=proj['OutputLocation'].split("REQUESTED_MC")[1].replace("/","")
+        nullify_list=[]
+        for job in fulfilledJobs:
+            STANDARD_NAME=str(job['RunNumber']).zfill(6)+'_'+str(job['FileNumber']).zfill(3)
+            if(proj['Generator']!="file:"):
+                STANDARD_NAME=proj['Generator']+'_'+STANDARD_NAME
+            #print(STANDARD_NAME)
+
+            Expected_returned_files=[]
+
+            if(str(proj['RunGeneration'])=="1" and str(proj['SaveGeneration'])=="1"):
+                Expected_returned_files.append(STANDARD_NAME+".hddm")
+            if(str(proj['RunGeant'])=="1" and str(proj['SaveGeant'])=="1"):
+                Expected_returned_files.append(STANDARD_NAME+'_geant'+proj['GeantVersion']+'.hddm')
+            if(str(proj['RunSmear'])=="1" and str(proj['SaveSmear'])=="1"):
+                Expected_returned_files.append(STANDARD_NAME+'_geant'+proj['GeantVersion']+'_smeared.hddm')
+            if(str(proj['RunReconstruction'])=="1" and str(proj['SaveReconstruction'])=="1"):
+                Expected_returned_files.append('dana_rest_'+STANDARD_NAME+'.hddm')
+                Expected_returned_files.append('hd_root_'+STANDARD_NAME+'.root')
+
+            found_AllexpFile=True
+            for expFile in Expected_returned_files:
+                #print(expFile)
+                found=CheckForFile(rootLoc,expFile)
+                if not found:
+                    found_AllexpFile=False
+                    break
+            
+            if not found_AllexpFile:
+                print("FLAG LAST ATTEMPT AS SPECIAL FAIL 404")
+                GET_Attempt_to_update="SELECT * FROM Attempts WHERE Job_ID="+str(job["ID"])+" ORDER BY ID DESC;"
+                dbcursor.execute(GET_Attempt_to_update)
+                Attempt_to_update=dbcursor.fetchall()[0]
+                print(Attempt_to_update)
+                Update_q="UPDATE Attempts Set ExitCode=404 where ID="+str(Attempt_to_update["ID"])
+                dbcursor.execute(Update_q)
+                dbcnx.commit()
+                nullify_list.append(job["ID"]) 
+                
+            
+        #if len(nullify_list) != 0:
+        #    for null in nullify_list:
+        #        index=0
+        #        for job in fulfilledJobs:
+        #            if(job["ID"] == null):
+        #                print(null)
+        #                print(job["ID"])
+        #                fulfilledJobs.pop(index)
+        #                break
+        #            index=index+1
+                    
         TOTJobs="SELECT ID From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1;"
         dbcursor.execute(TOTJobs)
         AllActiveJobs=dbcursor.fetchall()
         print("=====================")
         print(proj['ID'])
         print(proj['OutputLocation'])
-        print(len(fulfilledJobs))
+        print(len(fulfilledJobs)-len(nullify_list))
         print(len(AllActiveJobs))
         print("TO MOVE: "+str(filesToMove))
 
@@ -102,7 +171,7 @@ def checkProjectsForCompletion():
         print(submitted_evtNum[0]["SUM(NumEvts)"])
         print(proj["NumEvents"]-len(AllActiveJobs))
 
-        if(len(fulfilledJobs)==len(AllActiveJobs) and len(AllActiveJobs) != 0 and filesToMove ==0 and submitted_evtNum[0]["SUM(NumEvts)"] >= proj["NumEvents"]-len(AllActiveJobs)):
+        if(len(fulfilledJobs)-len(nullify_list)==len(AllActiveJobs) and len(AllActiveJobs) != 0 and filesToMove ==0 and submitted_evtNum[0]["SUM(NumEvts)"] >= proj["NumEvents"]):#-len(AllActiveJobs)):
             print("DONE")
 
             getFinalCompleteTime="SELECT MAX(Completed_Time) FROM Attempts WHERE Job_ID IN (SELECT ID FROM Jobs WHERE Project_ID="+str(proj['ID'])+");"
@@ -697,7 +766,7 @@ def main(argv):
                     #        spawns[i].join()
                     
                     print("CHECKING GLOBALS ON MAIN")
-                    UpdateOutputSize()
+                    #UpdateOutputSize()
                     checkProjectsForCompletion()
                     dbcursor.execute("UPDATE MCOverlord SET EndTime=NOW(), Status=\"Success\" where ID="+str(lastid[0]["MAX(ID)"]))
                     dbcnx.commit()

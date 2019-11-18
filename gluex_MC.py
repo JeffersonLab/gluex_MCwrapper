@@ -1003,6 +1003,9 @@ def main(argv):
         COMMAND_dict['experiment']=str(PROJECT)
         COMMAND_dict['num_rand_trigs']=str(RANDOM_NUM_EVT)
         
+        if(COMMAND_dict['generator'][:4]=="file:" and len(RunType) != 1):
+                print("ERROR: MCwrapper currently does not support taking a monolithic file and converting it into a range of runs.")
+                exit(1)
 
         #The submitter grabs a single unattempted job and submits it.  Always a single runnumber
         # 
