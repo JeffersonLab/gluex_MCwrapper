@@ -766,7 +766,7 @@ def main(argv):
                     #        spawns[i].join()
                     
                     print("CHECKING GLOBALS ON MAIN")
-                    #UpdateOutputSize()
+                    UpdateOutputSize()
                     checkProjectsForCompletion()
                     dbcursor.execute("UPDATE MCOverlord SET EndTime=NOW(), Status=\"Success\" where ID="+str(lastid[0]["MAX(ID)"]))
                     dbcnx.commit()
