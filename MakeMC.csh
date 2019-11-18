@@ -800,6 +800,7 @@ if ( "$GENR" != "0" ) then
 		gamp_2_hddm -r$formatted_runNumber -V"0 0 0 0" $STANDARD_NAME.gamp
     else if ( "$GENERATOR" == "bggen" ) then
 		set RANDOMnum=`bash -c 'echo $RANDOM'`
+		
 		echo Random Number used: $RANDOMnum
 		sed -i 's/TEMPTRIG/'$EVT_TO_GEN'/' $STANDARD_NAME.conf
 		sed -i 's/TEMPRUNNO/'$RUN_NUMBER'/' $STANDARD_NAME.conf
@@ -1025,6 +1026,7 @@ endif
 
 		cp temp_Gcontrol.in $PWD/control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 		chmod 777 $PWD/control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+		#a 4byte int: od -vAn -N4 -tu4 < /dev/urandom
 		set RANDOMnumGeant=`shuf -i1-215 -n1`
 		sed -i 's/TEMPRANDOM/'$RANDOMnumGeant'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 		sed -i 's/TEMPELECE/'$eBEAM_ENERGY'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
