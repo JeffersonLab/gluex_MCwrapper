@@ -58,13 +58,24 @@ except:
 def CheckForFile(rootLoc,expFile):
     found=False
     subloc="hddm"
-    if(expFile.split(".")[1]=="root"):
+    parse_expFile=expFile.split(".")
+    #print(parse_expFile[len(parse_expFile)-1])
+    if(parse_expFile[len(parse_expFile)-1]=="root"):
         subloc="root/monitoring_hists"
+
+    #if( os.path.isfile('/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/'+rootLoc+"/"+subloc+"/"+expFile) ):
+    #    print(rootLoc+"/"+subloc+"/"+expFile+"   found on OSG pool")
+
+    #if( os.path.isfile('/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) ):
+    #    print(rootLoc+"/"+subloc+"/"+expFile+"   found on cache")
+
+    #if( os.path.isfile('/mss/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) ):
+    #    print(rootLoc+"/"+subloc+"/"+expFile+"   found on tape")
 
     if(os.path.isfile('/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/'+rootLoc+"/"+subloc+"/"+expFile) or os.path.isfile('/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) or os.path.isfile('/mss/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) ):
         found=True
     else:
-        print(rootLoc+"/"+subloc+"/"+expFile)
+        print(rootLoc+"/"+subloc+"/"+expFile+"   NOT FOUND")
     return found
 
 def checkProjectsForCompletion():
@@ -75,10 +86,11 @@ def checkProjectsForCompletion():
     outdir_root="/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/"
 
     for proj in OutstandingProjects:
-        print(proj['ID'])
+        
         locparts=proj['OutputLocation'].split("/")
 
         print("~~~~~~~~~~~~~~~~~~")
+        print(proj['ID'])
         files=[]
         dirs=[]
         #print locparts[len(locparts)-2]
@@ -95,17 +107,19 @@ def checkProjectsForCompletion():
         
         print(filesToMove)
         #DISTINCT ID ------in query below
-        TOTCompletedQuery ="SELECT * From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1 && ID in (SELECT DISTINCT Job_ID FROM Attempts WHERE ExitCode = 0 && (Status ='4' || Status='succeeded')  && ExitCode IS NOT NULL);" 
+        TOTCompletedQuery ="SELECT * From Jobs inner join Attempts on Attempts.job_id = Jobs.id WHERE Project_ID="+str(proj['ID'])+" && IsActive=1 and Attempts.ExitCode = 0 && (Attempts.Status ='4' || Attempts.Status='succeeded') && Attempts.ExitCode IS NOT NULL and Attempts.id = (select max(id) from Attempts Attempts2 where Attempts2.job_id = Jobs.id);"
+  #"SELECT * From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1 && ID in (SELECT DISTINCT Job_ID FROM Attempts WHERE ExitCode = 0 && (Status ='4' || Status='succeeded')  && ExitCode rIS NOT NULL ORDER BY ID DESC LIMIT 1);" 
         dbcursor.execute(TOTCompletedQuery)
         fulfilledJobs=dbcursor.fetchall()
         #print(fulfilledJobs)
 
-        
+        print(str(len(fulfilledJobs)))
         if(proj["Tested"]==2 or proj["Tested"]==3):
             continue
 
-        rootLoc=proj['OutputLocation'].split("REQUESTED_MC")[1].replace("/","")
+        rootLoc=proj['OutputLocation'].split("REQUESTED_MC")[1]#.replace("/","")
         nullify_list=[]
+        
         for job in fulfilledJobs:
             STANDARD_NAME=str(job['RunNumber']).zfill(6)+'_'+str(job['FileNumber']).zfill(3)
             if(proj['Generator']!="file:"):
@@ -113,22 +127,27 @@ def checkProjectsForCompletion():
             #print(STANDARD_NAME)
 
             Expected_returned_files=[]
-
+            
             if(str(proj['RunGeneration'])=="1" and str(proj['SaveGeneration'])=="1"):
                 Expected_returned_files.append(STANDARD_NAME+".hddm")
+
             if(str(proj['RunGeant'])=="1" and str(proj['SaveGeant'])=="1"):
-                Expected_returned_files.append(STANDARD_NAME+'_geant'+proj['GeantVersion']+'.hddm')
+                Expected_returned_files.append(STANDARD_NAME+'_geant'+str(proj['GeantVersion'])+'.hddm')
+
             if(str(proj['RunSmear'])=="1" and str(proj['SaveSmear'])=="1"):
-                Expected_returned_files.append(STANDARD_NAME+'_geant'+proj['GeantVersion']+'_smeared.hddm')
+                Expected_returned_files.append(STANDARD_NAME+'_geant'+str(proj['GeantVersion'])+'_smeared.hddm')
+            
             if(str(proj['RunReconstruction'])=="1" and str(proj['SaveReconstruction'])=="1"):
                 Expected_returned_files.append('dana_rest_'+STANDARD_NAME+'.hddm')
                 Expected_returned_files.append('hd_root_'+STANDARD_NAME+'.root')
-
+            
             found_AllexpFile=True
             for expFile in Expected_returned_files:
                 #print(expFile)
+                
                 found=CheckForFile(rootLoc,expFile)
                 if not found:
+                    print(expFile+"   NOT FOUND!!!!")
                     found_AllexpFile=False
                     break
             
@@ -137,8 +156,9 @@ def checkProjectsForCompletion():
                 GET_Attempt_to_update="SELECT * FROM Attempts WHERE Job_ID="+str(job["ID"])+" ORDER BY ID DESC;"
                 dbcursor.execute(GET_Attempt_to_update)
                 Attempt_to_update=dbcursor.fetchall()[0]
-                print(Attempt_to_update)
+                #print(Attempt_to_update)
                 Update_q="UPDATE Attempts Set ExitCode=404 where ID="+str(Attempt_to_update["ID"])
+                print(Update_q)
                 dbcursor.execute(Update_q)
                 dbcnx.commit()
                 nullify_list.append(job["ID"]) 
@@ -164,14 +184,19 @@ def checkProjectsForCompletion():
         print(len(fulfilledJobs)-len(nullify_list))
         print(len(AllActiveJobs))
         print("TO MOVE: "+str(filesToMove))
-
+        
         totalSubmitted="SELECT SUM(NumEvts) from Jobs where Project_ID="+str(proj['ID'])
         dbcursor.execute(totalSubmitted)
         submitted_evtNum=dbcursor.fetchall()
         print(submitted_evtNum[0]["SUM(NumEvts)"])
-        print(proj["NumEvents"]-len(AllActiveJobs))
-
-        if(len(fulfilledJobs)-len(nullify_list)==len(AllActiveJobs) and len(AllActiveJobs) != 0 and filesToMove ==0 and submitted_evtNum[0]["SUM(NumEvts)"] >= proj["NumEvents"]):#-len(AllActiveJobs)):
+        print(proj["NumEvents"])
+        print((len(fulfilledJobs)-len(nullify_list))==len(AllActiveJobs))
+        print(len(AllActiveJobs) != 0)
+        print(filesToMove ==0)
+        print(submitted_evtNum[0]["SUM(NumEvts)"] >= proj["NumEvents"]-len(AllActiveJobs))
+        print("=====================")
+        #need -len(AllActiveJobs for when Run number need 0 events and it round to nearest NOT up in num events
+        if((len(fulfilledJobs)-len(nullify_list))==len(AllActiveJobs) and len(AllActiveJobs) != 0 and filesToMove ==0 and submitted_evtNum[0]["SUM(NumEvts)"] >= proj["NumEvents"]-len(AllActiveJobs)):
             print("DONE")
 
             getFinalCompleteTime="SELECT MAX(Completed_Time) FROM Attempts WHERE Job_ID IN (SELECT ID FROM Jobs WHERE Project_ID="+str(proj['ID'])+");"
@@ -692,7 +717,7 @@ def array_split(lst,n):
 
 def main(argv):
 
-        spawnNum=20
+        spawnNum=25
         numOverRide=False
 
         if(len(argv) !=0):

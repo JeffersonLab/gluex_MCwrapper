@@ -133,7 +133,7 @@ done
 formatted_runNumber=$formatted_runNumber$RUN_NUMBER
 flength_count=$((`echo $FILE_NUMBER | wc -c` - 1))
 
-export XRD_RANDOMS_URL=root://scosg16.jlab.org//osgpool/halld/
+export XRD_RANDOMS_URL=root://sci-xrootd.jlab.org//osgpool/halld/
 export MAKE_MC_USING_XROOTD=0
 #ls /usr/lib64/libXrdPosixPreload.so
 if [[ -f /usr/lib64/libXrdPosixPreload.so && "$BKGFOLDSTR" != "None" ]]; then
@@ -155,7 +155,7 @@ if [[ -f /usr/lib64/libXrdPosixPreload.so && "$BKGFOLDSTR" != "None" ]]; then
 fi
 
 #override xrootd
-export MAKE_MC_USING_XROOTD=0
+#export MAKE_MC_USING_XROOTD=0
 
 if [[ "$BATCHSYS" == "OSG" && "$BATCHRUN"=="1" ]]; then
 export USER_BC='/usr/bin/bc'
@@ -390,7 +390,7 @@ echo "Run Number: "$RUN_NUMBER
 echo "Electron beam current to use: "$beam_on_current" uA"
 echo "Electron beam energy to use: "$eBEAM_ENERGY" GeV"
 echo "Radiator Thickness to use: "$radthick" m"
-echo "Collimator Diameter: "$colsize" m"
+echo "Collimator Diameter: 0.00"$colsize" m"
 echo "Photon Energy between "$GEN_MIN_ENERGY" and "$GEN_MAX_ENERGY" GeV"
 echo "Polarization Angle: "$polarization_angle "degrees"
 echo "Coherent Peak position: "$COHERENT_PEAK

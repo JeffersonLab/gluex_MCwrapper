@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import rcdb
 import MySQLdb
 import sys
 import datetime
@@ -430,6 +431,7 @@ def source(script, update=True):
 
 
 def TestProject(ID,versionSet,commands_to_call=""):
+
     mktestdir="mkdir -p TestProj_"+str(ID)
     subprocess.call(mktestdir,shell=True)
     os.chdir("./TestProj_"+str(ID))
@@ -450,8 +452,34 @@ def TestProject(ID,versionSet,commands_to_call=""):
         rows=curs.fetchall()
         order=rows[0]
 
+    if(order["RunNumHigh"] != order["RunNumLow"] and order["Generator"]=="file:"):
+        updatequery="UPDATE Project SET Tested=-1"+" WHERE ID="+str(ID)+";"
+        curs.execute(updatequery)
+        conn.commit()
+
+        print(bcolors.FAIL+"TEST FAILED"+bcolors.ENDC)
+        print("rm -rf "+order["OutputLocation"])
+
+        return ["oh no!!!",-1,"MCwrapper cannot currently handle an input file with many run numbers properly"]
+
     WritePayloadConfig(order,newLoc)
     RunNumber=str(order["RunNumLow"])
+
+
+
+    if(order["RunNumLow"] != order["RunNumHigh"]):
+        query_to_do="@is_production and @status_approved"
+    
+        if(order["RCDBQuery"] != ""):
+            query_to_do=order["RCDBQuery"]
+    
+        print("RCDB_QUERY IS: "+str(query_to_do))
+        #rcdb_db = rcdb.RCDBProvider("mysql://rcdb@hallddb.jlab.org/rcdb")
+        #runList=rcdb_db.select_runs(str(query_to_do),order["RunNumLow"],order["RunNumHigh"]).get_values(['event_count'],True)
+
+        RunNumber=str(order["RunNumLow"])#str(runList[0][0])
+    
+
     #if order["RunNumLow"] != order["RunNumHigh"] :
     #    RunNumber = RunNumber + "-" + str(order["RunNumHigh"])
 
@@ -476,6 +504,7 @@ def TestProject(ID,versionSet,commands_to_call=""):
     STATUS=-1
     # print (command+command2).split(" ")
     my_env=None
+    print(versionSet)
     if(versionSet != ""):
         my_env=source("/group/halld/Software/build_scripts/gluex_env_jlab.sh /group/halld/www/halldweb/html/dist/"+versionSet)
         my_env["MCWRAPPER_CENTRAL"]=MCWRAPPER_BOT_HOME
@@ -816,7 +845,21 @@ def main(argv):
         elif MODE == "VIEW":
             ListUnDispatched()
         elif MODE == "TEST":
-            TestProject(ID,"")
+            query = "SELECT Email,VersionSet,Tested,UName FROM Project WHERE ID="+str(ID)
+            #print query
+            curs.execute(query) 
+            row=curs.fetchall()[0]
+            status=TestProject(ID,row["VersionSet"],"")
+            if(status[1]!=-1):
+                subprocess.call(MCWRAPPER_BOT_HOME+"/Utilities/MCDispatcher.py dispatch -rlim -sys OSG "+str(ID),shell=True)
+            else:
+                f=open(str(ID)+".out","w+")
+                f.write(str(status[0]))
+                f.close()
+                f=open(str(ID)+".err","w+")
+                f.write(str(status[2]))
+                f.close()
+                
         elif MODE == "RETRYJOB":
             RetryJob(ID)
         elif MODE == "RETRYJOBS":

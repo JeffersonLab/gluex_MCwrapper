@@ -137,7 +137,7 @@ setenv USER_BC '/usr/bin/bc'
 setenv USER_STAT '/usr/bin/stat'
 endif
 
-setenv XRD_RANDOMS_URL root://scosg16.jlab.org//osgpool/halld/
+setenv XRD_RANDOMS_URL root://sci-xrootd.jlab.org//osgpool/halld/
 setenv MAKE_MC_USING_XROOTD 0
 if ( -f /usr/lib64/libXrdPosixPreload.so && "$BKGFOLDSTR" != "None" ) then
 	setenv MAKE_MC_USING_XROOTD 1
@@ -322,7 +322,7 @@ if ( ( "$VERSION" != "mc" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_workfes
 	exit 1
 endif
 
-set colsize=`rcnd $RUN_NUMBER collimator_diameter | awk '{print $1}' | sed -r 's/.{2}$//'| sed -e 's/\.//g'`
+set colsize=`rcnd $RUN_NUMBER collimator_diameter | awk '{print $1}' | sed -r 's/.{2}$//' | sed -e 's/\.//g'`
 
 if ( "$colsize" == "B" || "$colsize" == "R" || "$JANA_CALIB_CONTEXT" != "variation=mc" ) then
 	set colsize="50"
@@ -380,7 +380,7 @@ echo "Run Number: "$RUN_NUMBER
 echo "Electron beam current to use: "$beam_on_current" uA"
 echo "Electron beam energy to use: "$eBEAM_ENERGY" GeV"
 echo "Radiator Thickness to use: "$radthick" m"
-echo "Collimator Diameter: "$colsize" m"
+echo "Collimator Diameter: 0.00"$colsize" m"
 echo "Photon Energy between "$GEN_MIN_ENERGY" and "$GEN_MAX_ENERGY" GeV"
 echo "Polarization Angle: "$polarization_angle "degrees"
 echo "Coherent Peak position: "$COHERENT_PEAK
