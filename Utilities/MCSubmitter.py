@@ -212,7 +212,7 @@ def decideSystem(row):
     
     if osg_sum > 3000 and osg_ratio > 2.0:
         print("SWIF")
-        return "OSG"
+        return "SWIF"
     else:
         print("OSG")
         return "OSG"
