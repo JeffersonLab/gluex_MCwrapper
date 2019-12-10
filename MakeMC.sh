@@ -133,22 +133,29 @@ done
 formatted_runNumber=$formatted_runNumber$RUN_NUMBER
 flength_count=$((`echo $FILE_NUMBER | wc -c` - 1))
 
-export XRD_RANDOMS_URL=root://nod25.phys.uconn.edu/Gluex/rawdata
+export XRD_RANDOMS_URL=root://sci-xrootd.jlab.org//osgpool/halld/
 export MAKE_MC_USING_XROOTD=0
 #ls /usr/lib64/libXrdPosixPreload.so
-if [[ -f /usr/lib64/libXrdPosixPreload.so ]]; then
+if [[ -f /usr/lib64/libXrdPosixPreload.so && "$BKGFOLDSTR" != "None" ]]; then
 	export MAKE_MC_USING_XROOTD=1
 	export LD_PRELOAD=/usr/lib64/libXrdPosixPreload.so
 	echo "I have the share object needed for xrootd!"
 	#con_test=`ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | grep "cannot access"`
-	echo `ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1`
+	#echo `ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1`
 	if [[ `ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1` != "r" ]]; then
-		echo "Connection test failed.  Disabling xrootd...."
+		echo "JLab Connection test failed. Falling back to UConn...."
 		#echo "attempting to copy the needed file from an alternate source..."
 		#rsync scosg16.jlab.org:/osgpool/halld/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm ./
-		export MAKE_MC_USING_XROOTD=0
+		export XRD_RANDOMS_URL=root://nod25.phys.uconn.edu/Gluex/rawdata/
+		if [[ `ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1` != "r" ]]; then
+			echo "Cannot connect to the file.  Disabling xrootd...."
+			export MAKE_MC_USING_XROOTD=0
+		fi
 	fi
 fi
+
+#override xrootd
+#export MAKE_MC_USING_XROOTD=0
 
 if [[ "$BATCHSYS" == "OSG" && "$BATCHRUN"=="1" ]]; then
 export USER_BC='/usr/bin/bc'
@@ -194,13 +201,13 @@ elif [[ "$ccdbSQLITEPATH" == "batch_default" ]]; then
     export CCDB_CONNECTION=sqlite:////group/halld/www/halldweb/html/dist/ccdb.sqlite
     export JANA_CALIB_URL=${CCDB_CONNECTION}
 elif [[ "$ccdbSQLITEPATH" == "jlab_batch_default" ]]; then
-		ccdb_jlab_sqlite_path=`echo $((1 + RANDOM % 100))`
-		if ( -f /work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite ) then
-			export CCDB_CONNECTION=sqlite:////work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite
-		else
-			export CCDB_CONNECTION=mysql://ccdb_user@hallddb.jlab.org/ccdb
-		fi
-
+		#ccdb_jlab_sqlite_path=`echo $((1 + RANDOM % 100))`
+		#if ( -f /work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite ) then
+		#	export CCDB_CONNECTION=sqlite:////work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite
+		#else
+		#	export CCDB_CONNECTION=mysql://ccdb_user@hallddb.jlab.org/ccdb
+		#fi
+	export CCDB_CONNECTION mysql://ccdb_user@hallddb-farm.jlab.org/ccdb
     export JANA_CALIB_URL=${CCDB_CONNECTION}
 
 fi
@@ -383,7 +390,7 @@ echo "Run Number: "$RUN_NUMBER
 echo "Electron beam current to use: "$beam_on_current" uA"
 echo "Electron beam energy to use: "$eBEAM_ENERGY" GeV"
 echo "Radiator Thickness to use: "$radthick" m"
-echo "Collimator Diameter: "$colsize" m"
+echo "Collimator Diameter: 0.00"$colsize" m"
 echo "Photon Energy between "$GEN_MIN_ENERGY" and "$GEN_MAX_ENERGY" GeV"
 echo "Polarization Angle: "$polarization_angle "degrees"
 echo "Coherent Peak position: "$COHERENT_PEAK
@@ -445,8 +452,10 @@ if [[ "$CUSTOM_GCONTROL" == "0" && "$GEANT" == "1" ]]; then
 	fi
 
     chmod 777 ./temp_Gcontrol.in
-else
+elif [[ "$CUSTOM_GCONTROL" != "0" && "$GEANT" == "1" ]]; then
     cp $CUSTOM_GCONTROL ./temp_Gcontrol.in
+else
+	echo "NO GEANT"
 fi
 
 
@@ -556,6 +565,12 @@ if [[ "$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" == 
 			#set bkglocstring="/w/halld-scifs1a/home/tbritton/converted.hddm"
 		    
 		    if [[ ! -f $bkglocstring && "$MAKE_MC_USING_XROOTD" == "0" ]]; then
+			echo "something went wrong with initialization"
+			echo "Could not find mix-in file "$bkglocstring
+			exit 1000
+		    fi
+
+			if [[ "$BATCHSYS" == "OSG" && "$MAKE_MC_USING_XROOTD" == "1" && $RANDOM_TRIG_NUM_EVT == -1 ]]; then
 			echo "something went wrong with initialization"
 			echo "Could not find mix-in file "$bkglocstring
 			exit 1000
@@ -811,6 +826,7 @@ if [[ "$GENR" != "0" ]]; then
 		gamp_2_hddm -r$formatted_runNumber -V"0 0 0 0" $STANDARD_NAME.gamp
     elif [[ "$GENERATOR" == "bggen" ]]; then
 	RANDOMnum=`bash -c 'echo $RANDOM'`
+	
 	echo "Random number used: "$RANDOMnum
 	sed -i 's/TEMPTRIG/'$EVT_TO_GEN'/' $STANDARD_NAME.conf
 	sed -i 's/TEMPRUNNO/'$RUN_NUMBER'/' $STANDARD_NAME.conf
@@ -1015,7 +1031,7 @@ if [[ "$GENR" != "0" ]]; then
 		exit 11
 	fi
     #GEANT/smearing
-    
+    fi
     if [[ "$GEANT" != "0" ]]; then
 	echo "RUNNING GEANT"$GEANTVER
 	
@@ -1029,6 +1045,7 @@ if [[ "$GENR" != "0" ]]; then
 	cp temp_Gcontrol.in $PWD/control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 	chmod 777 $PWD/control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 	RANDOMnumGeant=`shuf -i1-215 -n1`
+	#a 4byte int: od -vAn -N4 -tu4 < /dev/urandom
 	sed -i 's/TEMPRANDOM/'$RANDOMnumGeant'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 	sed -i 's/TEMPELECE/'$eBEAM_ENERGY'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 	if [[ "$polarization_angle" == "-1" ]]; then
@@ -1111,7 +1128,7 @@ if [[ "$GENR" != "0" ]]; then
 		echo "An hddm file was not created by Geant.  Terminating MC production.  Please consult logs to diagnose"
 		exit 12
 	fi
-	
+	fi
 	MCSMEAR_Flags=""
 	if [[ "$SMEAR" == "0" ]]; then
 		MCSMEAR_Flags="$MCSMEAR_Flags"" -s"
@@ -1123,8 +1140,28 @@ if [[ "$GENR" != "0" ]]; then
 	
 	echo $RECON and $SMEAR
 	
+	#if [[ "$RANDBGTAG" != "none" ]]; then
+
+	#if [[ `ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1` != "r" ]]; then
+	#	echo "JLab Connection test failed. Falling back to UConn...."
+	#	#echo "attempting to copy the needed file from an alternate source..."
+	#	#rsync scosg16.jlab.org:/osgpool/halld/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm ./
+	#	export XRD_RANDOMS_URL=root://nod25.phys.uconn.edu/Gluex/rawdata/
+	#	if [[ `ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1` != "r" ]]; then
+	#		echo "Cannot connect to the file.  Disabling xrootd...."
+	#		exit 232
+	#	fi
+	#fi
+	#fi
+	
+	if [[ !("$GENR" == "0" && "$GEANT" == "0" && "$SMEAR" == "0") ]]; then
 	echo "RUNNING MCSMEAR"
-	   
+	if [[ "$GENR" == "0" && "$GEANT" == "0" ]]; then
+		echo $GENERATOR
+		geant_file=`echo $GENERATOR | cut -c 6-`
+		echo $geant_file
+		cp $geant_file ./$STANDARD_NAME'_geant'$GEANTVER'.hddm'
+	fi
 	if [[ "$BKGFOLDSTR" == "BeamPhotons" || "$BKGFOLDSTR" == "None" || "$BKGFOLDSTR" == "TagOnly" ]]; then
 		echo "running MCsmear without folding in random background"
 		mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3000 -o$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' $STANDARD_NAME'_geant'$GEANTVER'.hddm'
@@ -1181,6 +1218,7 @@ if [[ "$GENR" != "0" ]]; then
 	    #run reconstruction
 	if [[ "$CLEANGENR" == "1" ]]; then
 		rm beam.config
+		rm $STANDARD_NAME'_beam.conf'
 		if [[ "$GENERATOR" == "genr8" ]]; then
 		    rm *.ascii
 		elif [[ "$GENERATOR" == "bggen" || "$GENERATOR" == "bggen_jpsi" || "$GENERATOR" == "bggen_phi_ee" ]]; then
@@ -1209,8 +1247,6 @@ if [[ "$GENR" != "0" ]]; then
 		fi
 		
 	fi
-	
-fi
 	    if [[ "$RECON" != "0" ]]; then
 		echo "RUNNING RECONSTRUCTION"
 		file_to_recon=$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm'
@@ -1230,6 +1266,7 @@ fi
 			reaction_filter=""
 			if [[ "$recon_pre" == "file" ]]; then
 				echo "using config file: "$jana_config_file
+				echo hd_root $file_to_recon --config=jana_config.cfg -PNTHREADS=$NUMTHREADS $additional_hdroot
 				hd_root $file_to_recon --config=jana_config.cfg -PNTHREADS=$NUMTHREADS $additional_hdroot
 				hd_root_return_code=$?
 				reaction_filter=`grep ReactionFilter jana_config.cfg`
@@ -1280,6 +1317,43 @@ fi
 			else
 				source $ANAENVIRONMENT
 			fi
+
+if [[ "$ccdbSQLITEPATH" != "no_sqlite" && "$ccdbSQLITEPATH" != "batch_default" && "$ccdbSQLITEPATH" != "jlab_batch_default" ]]; then
+	if [[ `$USER_STAT --file-system --format=%T $PWD` == "lustre" ]]; then
+		echo "Attempting to use sqlite on a lustre file system. This does not work.  Try running on a different file system!"
+		exit 1
+	fi
+    cp $ccdbSQLITEPATH ./ccdb.sqlite
+    export CCDB_CONNECTION=sqlite:///$PWD/ccdb.sqlite
+    export JANA_CALIB_URL=$CCDB_CONNECTION
+elif [[ "$ccdbSQLITEPATH" == "batch_default" ]]; then
+    export CCDB_CONNECTION=sqlite:////group/halld/www/halldweb/html/dist/ccdb.sqlite
+    export JANA_CALIB_URL=${CCDB_CONNECTION}
+elif [[ "$ccdbSQLITEPATH" == "jlab_batch_default" ]]; then
+		ccdb_jlab_sqlite_path=`echo $((1 + RANDOM % 100))`
+		if ( -f /work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite ) then
+			export CCDB_CONNECTION=sqlite:////work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite
+		else
+			export CCDB_CONNECTION=mysql://ccdb_user@hallddb.jlab.org/ccdb
+		fi
+
+    export JANA_CALIB_URL=${CCDB_CONNECTION}
+
+fi
+
+if [[ "$rcdbSQLITEPATH" != "no_sqlite" && "$rcdbSQLITEPATH" != "batch_default" ]]; then
+	if [[ `$USER_STAT --file-system --format=%T $PWD` == "lustre" ]]; then
+		echo "Attempting to use sqlite on a lustre file system. This does not work.  Try running on a different file system!"
+		exit 1
+	fi
+    cp $rcdbSQLITEPATH ./rcdb.sqlite
+    export RCDB_CONNECTION=sqlite:///$PWD/rcdb.sqlite
+elif [[ "$rcdbSQLITEPATH" == "batch_default" ]]; then
+	#echo "keeping the RCDB on mysql now"
+    export RCDB_CONNECTION=sqlite:////group/halld/www/halldweb/html/dist/rcdb.sqlite
+fi
+
+
 			echo "EMULATING ANALYSIS LAUNCH"
 			echo "changed software to:  "`which hd_root`
 			echo "PLUGINS ReactionFilter" > ana_jana.cfg
@@ -1287,7 +1361,7 @@ fi
 
 			cat ana_jana.cfg
 
-			hd_root dana_rest_$STANDARD_NAME.hddm --config=ana_jana.cfg -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500
+			hd_root dana_rest_$STANDARD_NAME.hddm --config=ana_jana.cfg -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 -o hd_root_ana_$STANDARD_NAME.root
 			anahd_root_return_code=$?
 
 			if [[ $anahd_root_return_code != 0 ]]; then

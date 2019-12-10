@@ -137,19 +137,22 @@ setenv USER_BC '/usr/bin/bc'
 setenv USER_STAT '/usr/bin/stat'
 endif
 
-setenv XRD_RANDOMS_URL root://nod25.phys.uconn.edu/Gluex/rawdata/
+setenv XRD_RANDOMS_URL root://sci-xrootd.jlab.org//osgpool/halld/
 setenv MAKE_MC_USING_XROOTD 0
-if ( -f /usr/lib64/libXrdPosixPreload.so ) then
+if ( -f /usr/lib64/libXrdPosixPreload.so && "$BKGFOLDSTR" != "None" ) then
 	setenv MAKE_MC_USING_XROOTD 1
 	setenv LD_PRELOAD /usr/lib64/libXrdPosixPreload.so
 	echo "I have the share object needed for xrootd!"
 	#set con_test=`ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm`
-	echo `ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1`
+	#echo `ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1`
 	if ( `ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1` != "r" ) then
-		echo "Connection test failed.  Disabling xrootd...."
+		echo "JLAB Connection test failed.  Falling back to UConn ...."
 		#echo "attempting to copy the needed file from an alternate source..."
-		#rsync scosg16.jlab.org:/osgpool/halld/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm ./
-		setenv MAKE_MC_USING_XROOTD 0
+		setenv XRD_RANDOMS_URL root://nod25.phys.uconn.edu/Gluex/rawdata/
+		if ( `ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1` != "r" ) then
+			echo "Cannot connect to the file.  Disabling xrootd...."
+			setenv MAKE_MC_USING_XROOTD 0
+		endif
 	endif
 
 endif
@@ -190,13 +193,13 @@ else if ( "$ccdbSQLITEPATH" == "batch_default" ) then
     setenv CCDB_CONNECTION sqlite:////group/halld/www/halldweb/html/dist/ccdb.sqlite
     setenv JANA_CALIB_URL ${CCDB_CONNECTION}
 else if ( "$ccdbSQLITEPATH" == "jlab_batch_default" ) then
-		set ccdb_jlab_sqlite_path=`bash -c 'echo $((1 + RANDOM % 100))'`
-		if ( -f /work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite ) then
-			setenv CCDB_CONNECTION sqlite:////work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite
-		else
-			setenv CCDB_CONNECTION mysql://ccdb_user@hallddb.jlab.org/ccdb
-		endif
-
+		#set ccdb_jlab_sqlite_path=`bash -c 'echo $((1 + RANDOM % 100))'`
+		#if ( -f /work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite ) then
+		#	setenv CCDB_CONNECTION sqlite:////work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite
+		#else
+		#	setenv CCDB_CONNECTION mysql://ccdb_user@hallddb.jlab.org/ccdb
+		#endif
+	setenv CCDB_CONNECTION mysql://ccdb_user@hallddb-farm.jlab.org/ccdb
     setenv JANA_CALIB_URL ${CCDB_CONNECTION}
 endif
 
@@ -319,7 +322,7 @@ if ( ( "$VERSION" != "mc" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_workfes
 	exit 1
 endif
 
-set colsize=`rcnd $RUN_NUMBER collimator_diameter | awk '{print $1}' | sed -r 's/.{2}$//'| sed -e 's/\.//g'`
+set colsize=`rcnd $RUN_NUMBER collimator_diameter | awk '{print $1}' | sed -r 's/.{2}$//' | sed -e 's/\.//g'`
 
 if ( "$colsize" == "B" || "$colsize" == "R" || "$JANA_CALIB_CONTEXT" != "variation=mc" ) then
 	set colsize="50"
@@ -377,7 +380,7 @@ echo "Run Number: "$RUN_NUMBER
 echo "Electron beam current to use: "$beam_on_current" uA"
 echo "Electron beam energy to use: "$eBEAM_ENERGY" GeV"
 echo "Radiator Thickness to use: "$radthick" m"
-echo "Collimator Diameter: "$colsize" m"
+echo "Collimator Diameter: 0.00"$colsize" m"
 echo "Photon Energy between "$GEN_MIN_ENERGY" and "$GEN_MAX_ENERGY" GeV"
 echo "Polarization Angle: "$polarization_angle "degrees"
 echo "Coherent Peak position: "$COHERENT_PEAK
@@ -439,8 +442,10 @@ if ( "$CUSTOM_GCONTROL" == "0" && "$GEANT" == "1" ) then
 	endif
 
     chmod 777 ./temp_Gcontrol.in
-else
+else if ( "$CUSTOM_GCONTROL" != "0" && "$GEANT" == "1" ) then
     cp $CUSTOM_GCONTROL ./temp_Gcontrol.in
+else
+	echo "NO GEANT"
 endif
 
 
@@ -478,22 +483,22 @@ endif
 #echo `-d "$OUTDIR"`
 if ( ! -d "$OUTDIR" ) then
     echo "making dir"
-    mkdir $OUTDIR
+    mkdir -p $OUTDIR
 endif
 if ( ! -d "$OUTDIR/configurations/" ) then
-    mkdir $OUTDIR/configurations/
+    mkdir -p $OUTDIR/configurations/
 endif
 if ( ! -d "$OUTDIR/configurations/generation/" ) then
-    mkdir $OUTDIR/configurations/generation/
+    mkdir -p $OUTDIR/configurations/generation/
 endif
 if ( ! -d "$OUTDIR/configurations/geant/" ) then
-    mkdir $OUTDIR/configurations/geant/
+    mkdir -p $OUTDIR/configurations/geant/
 endif
 if ( ! -d "$OUTDIR/hddm/" ) then
-    mkdir $OUTDIR/hddm/
+    mkdir -p $OUTDIR/hddm/
 endif
 if ( ! -d "$OUTDIR/root/" ) then
-    mkdir $OUTDIR/root/
+    mkdir -p $OUTDIR/root/
 endif
 
 set bkglocstring=""
@@ -795,6 +800,7 @@ if ( "$GENR" != "0" ) then
 		gamp_2_hddm -r$formatted_runNumber -V"0 0 0 0" $STANDARD_NAME.gamp
     else if ( "$GENERATOR" == "bggen" ) then
 		set RANDOMnum=`bash -c 'echo $RANDOM'`
+		
 		echo Random Number used: $RANDOMnum
 		sed -i 's/TEMPTRIG/'$EVT_TO_GEN'/' $STANDARD_NAME.conf
 		sed -i 's/TEMPRUNNO/'$RUN_NUMBER'/' $STANDARD_NAME.conf
@@ -1005,9 +1011,9 @@ if ( "$GENR" != "0" ) then
 				exit $generator_return_code
 	endif
 #GEANT/smearing
+endif
 
-
-    if ( "$GEANT" != "0" ) then
+    if ( "$GEANT" != "0"  ) then
 		echo "RUNNING GEANT"$GEANTVER
 
 		if ( `echo $eBEAM_ENERGY | grep -o "\." | wc -l` == 0 ) then
@@ -1020,6 +1026,7 @@ if ( "$GENR" != "0" ) then
 
 		cp temp_Gcontrol.in $PWD/control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 		chmod 777 $PWD/control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+		#a 4byte int: od -vAn -N4 -tu4 < /dev/urandom
 		set RANDOMnumGeant=`shuf -i1-215 -n1`
 		sed -i 's/TEMPRANDOM/'$RANDOMnumGeant'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 		sed -i 's/TEMPELECE/'$eBEAM_ENERGY'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
@@ -1085,6 +1092,7 @@ if ( "$GENR" != "0" ) then
 	    	rm -f run.mac
 	    	echo "/run/beamOn $EVT_TO_GEN" > run.mac
 	    	echo "exit" >>! run.mac
+
 	    	hdgeant4 -t$NUMTHREADS run.mac
 			set geant_return_code=$status
 	    	rm run.mac
@@ -1105,7 +1113,8 @@ if ( "$GENR" != "0" ) then
 			echo "An hddm file was not created by Geant.  Terminating MC production.  Please consult logs to diagnose"
 			exit 12
 		endif
-		
+	endif
+
 		set MCSMEAR_Flags=""
 		if ( "$SMEAR" == "0" ) then
 			set MCSMEAR_Flags="$MCSMEAR_Flags"" -s"
@@ -1115,8 +1124,15 @@ if ( "$GENR" != "0" ) then
 			set MCSMEAR_Flags="$MCSMEAR_Flags"" -T"
 		endif
 
-		echo "RUNNING MCSMEAR"
 		
+		if ( !("$GENR" == "0" && "$GEANT" == "0" && "$SMEAR" == "0" ) ) then
+		echo "RUNNING MCSMEAR"
+		if ( "$GENR" == "0" && "$GEANT" == "0" ) then
+		echo $GENERATOR
+		set geant_file=`echo $GENERATOR | cut -c 6-`
+		echo $geant_file
+		cp $geant_file ./$STANDARD_NAME'_geant'$GEANTVER'.hddm'
+		endif
 	    if ( "$BKGFOLDSTR" == "BeamPhotons" || "$BKGFOLDSTR" == "None" || "$BKGFOLDSTR" == "TagOnly" ) then
 			echo "running MCsmear without folding in random background"
 			echo 'mcsmear' $MCSMEAR_Flags' -PTHREAD_TIMEOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3000 -o'$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' $STANDARD_NAME'_geant'$GEANTVER'.hddm'
@@ -1132,6 +1148,10 @@ if ( "$GENR" != "0" ) then
 			else
 				set totalnum=$RANDOM_TRIG_NUM_EVT
 			endif
+
+			echo $FILE_NUMBER
+			echo $PER_FILE
+			echo $totalnum
 
 			set fold_skip_num=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
 			#set bkglocstring="/w/halld-scifs17exp/halld2/home/tbritton/MCwrapper_Development/converted.hddm"
@@ -1179,6 +1199,7 @@ if ( "$GENR" != "0" ) then
 	    #run reconstruction
 	    if ( "$CLEANGENR" == "1" ) then
 				rm beam.config
+				rm $STANDARD_NAME'_beam.conf'
 				if ( "$GENERATOR" == "genr8" ) then
 		  		rm *.ascii
 				else if ( "$GENERATOR" == "bggen" || "$GENERATOR" == "bggen_jpsi" || "$GENERATOR" == "bggen_phi_ee" ) then
@@ -1206,9 +1227,7 @@ if ( "$GENR" != "0" ) then
 			echo "An hddm file was not created by mcsmear.  Terminating MC production.  Please consult logs to diagnose"
 			exit 13
 		endif
-	endif
-    
-endif
+
 	    if ( "$RECON" != "0" ) then
 				echo "RUNNING RECONSTRUCTION"
 				set file_to_recon=$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm'
@@ -1230,7 +1249,8 @@ endif
 				#set file_options=""
 				if ( "$recon_pre" == "file" ) then
 		   		echo "using config file: "$jana_config_file
-					
+
+				echo hd_root $file_to_recon --config=jana_config.cfg -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 $additional_hdroot
 		   		hd_root $file_to_recon --config=jana_config.cfg -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 $additional_hdroot
 					set hd_root_return_code=$status
 
@@ -1282,6 +1302,40 @@ endif
 					else
 						source $ANAENVIRONMENT
 					endif
+					if ( "$ccdbSQLITEPATH" != "no_sqlite" && "$ccdbSQLITEPATH" != "batch_default" && "$ccdbSQLITEPATH" != "jlab_batch_default" ) then
+	if (`$USER_STAT --file-system --format=%T $PWD` == "lustre" ) then
+		echo "Attempting to use sqlite on a lustre file system. This does not work.  Try running on a different file system!"
+		exit 1
+	endif
+    cp $ccdbSQLITEPATH ./ccdb.sqlite
+    setenv CCDB_CONNECTION sqlite:///$PWD/ccdb.sqlite
+    setenv JANA_CALIB_URL ${CCDB_CONNECTION}
+else if ( "$ccdbSQLITEPATH" == "batch_default" ) then
+    setenv CCDB_CONNECTION sqlite:////group/halld/www/halldweb/html/dist/ccdb.sqlite
+    setenv JANA_CALIB_URL ${CCDB_CONNECTION}
+else if ( "$ccdbSQLITEPATH" == "jlab_batch_default" ) then
+		set ccdb_jlab_sqlite_path=`bash -c 'echo $((1 + RANDOM % 100))'`
+		if ( -f /work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite ) then
+			setenv CCDB_CONNECTION sqlite:////work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite
+		else
+			setenv CCDB_CONNECTION mysql://ccdb_user@hallddb.jlab.org/ccdb
+		endif
+
+    setenv JANA_CALIB_URL ${CCDB_CONNECTION}
+endif
+
+if ( "$rcdbSQLITEPATH" != "no_sqlite" && "$rcdbSQLITEPATH" != "batch_default" ) then
+	if (`$USER_STAT --file-system --format=%T $PWD` == "lustre" ) then
+		echo "Attempting to use sqlite on a lustre file system. This does not work.  Try running on a different file system!"
+		exit 1
+	endif
+    cp $rcdbSQLITEPATH ./rcdb.sqlite
+    setenv RCDB_CONNECTION sqlite:///$PWD/rcdb.sqlite
+else if ( "$rcdbSQLITEPATH" == "batch_default" ) then
+	#echo "keeping the RCDB on mysql now"
+    setenv RCDB_CONNECTION sqlite:////group/halld/www/halldweb/html/dist/rcdb.sqlite 
+endif
+
 					echo "EMULATING ANALYSIS LAUNCH"
 					echo "changed software to:  "`which hd_root`
 					echo "PLUGINS ReactionFilter" > ana_jana.cfg
@@ -1289,7 +1343,7 @@ endif
 
 					cat ana_jana.cfg
 
-					hd_root dana_rest_$STANDARD_NAME.hddm --config=ana_jana.cfg -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500
+					hd_root dana_rest_$STANDARD_NAME.hddm --config=ana_jana.cfg -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 -o hd_root_ana_$STANDARD_NAME.root
 					set anahd_root_return_code=$status
 
 					if ( $anahd_root_return_code != 0 ) then

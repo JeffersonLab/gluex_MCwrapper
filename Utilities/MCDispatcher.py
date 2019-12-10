@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import rcdb
 import MySQLdb
 import sys
 import datetime
@@ -38,10 +39,19 @@ def RecallAll():
     query="SELECT BatchJobID, BatchSystem from Attempts where (Status=\"2\" || Status=\"1\" || Status=\"5\") && Job_ID in (SELECT ID from Jobs where Project_ID in (SELECT ID FROM Project where Tested=2 || Tested=4 || Tested=3 ));"
     curs.execute(query)
     rows=curs.fetchall()
+    print("RECALLING "+str(len(rows)))
     for row in rows:
         if row["BatchSystem"] == "OSG":
             command="condor_rm "+str(row["BatchJobID"])
-            subprocess.call(command,shell=True)
+            cmd=Popen(command.split(" "),stdout=PIPE,stderr=PIPE)
+            out, err = cmd.communicate()
+            print(err)
+            if("not found" in str(err,"utf-8")):
+                print("clear "+str(row["BatchJobID"]))
+                updatequery="UPDATE Attempts SET Status=\"3\" where BatchJobID=\""+str(row["BatchJobID"])+"\""
+                curs.execute(updatequery)
+                conn.commit()
+            #subprocess.call(command,shell=True)
 
 def DeclareAllComplete():
     query="SELECT ID,OutputLocation,Email from Project where Tested=4 && Notified is NULL;"
@@ -103,11 +113,15 @@ def CancelAll():
 
 def AutoLaunch():
     #print "in autolaunch"
+    print("RECALLING...")
     RecallAll()
+    print("CANCELING...")
     CancelAll()
+    print("DECLARING...")
     DeclareAllComplete()
+    print("RETRYING...")
     RetryAllJobs()
-
+    print("TESTING...")
     query = "SELECT ID,Email,VersionSet,Tested,UName FROM Project WHERE (Tested = 0) && Dispatched_Time is NULL ORDER BY (SELECT Priority from Users where name=UName) DESC;"
     #print query
     curs.execute(query) 
@@ -115,7 +129,6 @@ def AutoLaunch():
     #print rows
     #print len(rows)
     for row in rows:
-
         status=[]
         status.append(-1)
         status.append(-1)
@@ -148,14 +161,17 @@ def AutoLaunch():
                 msg['From'] = str('MCwrapper-bot')
                 print("SET FROM")
 
-                msg['To'] = str(row['Email'])
+                msg['To'] = str(row['Email'])#str("tbritton@jlab.org")#
                 print("SET SUB TO FROM")
                 # Send the message via our own SMTP server.                                                                                                                                                                        
                 s = smtplib.SMTP('localhost')
                 print(msg)
                 print("SENDING")
                 s.send_message(msg)
-                s.quit()            
+                s.quit()     
+                copy=open("/osgpool/halld/tbritton/email_"+str(row['ID'])+".log", "w+")
+                copy.write('The log information is reproduced below:\n\n\n'+str(status[0])+'\n\n\nErrors:\n\n\n'+str(status[2]))
+                copy.close()      
                 #subprocess.call("echo 'Your Project ID "+str(row['ID'])+" failed the test.  Please correct this issue by following the link: "+"https://halldweb.jlab.org/gluex_sim/SubmitSim.html?prefill="+str(row['ID'])+"&mod=1" +" .  Do NOT resubmit this request.  Write tbritton@jlab.org for additional assistance\n\n The log information is reproduced below:\n\n\n"+status[0]+"\n\n\n"+status[2]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+str(row['Email']),shell=True)
             except:
                 print("UH OH MAILING")
@@ -190,7 +206,7 @@ def DispatchProject(ID,SYSTEM,PERCENT):
         print("Error: Cannot find Project with ID="+ID)
     
 def RetryAllJobs(rlim=False):
-    query= "SELECT ID FROM Project where Completed_Time is NULL && Is_Dispatched=1.0 && Tested!=2 && Tested!=4 && Tested!=3;"
+    query= "SELECT ID FROM Project where Completed_Time is NULL && Is_Dispatched=1.0 && Tested!=2 && Tested!=4 && Tested!=-4 && Tested!=3;"
     curs.execute(query) 
     rows=curs.fetchall()
     for row in rows:
@@ -218,7 +234,8 @@ def RetryJobsFromProject(ID, countLim):
     for row in rows:
 
         if (row["BatchSystem"]=="SWIF"):
-            if((row["Status"] == "succeeded" and row["ExitCode"] != 0) or row["Status"]=="problem"):
+            if((row["Status"] == "succeeded" and row["ExitCode"] != 0) or (row["Status"]=="problem" and row["ExitCode"]!="232")):
+            #if(row["Status"] != "succeeded"):
                 SWIF_retry_IDs.append(row["BatchJobID"])
                 #RetryJob(row["Job_ID"])
                 i=i+1
@@ -250,7 +267,8 @@ def RetryJobsFromProject(ID, countLim):
                 RetryJob(row["Job_ID"])
                 i=i+1
         
-        #print(SWIF_retry_IDs)
+    
+    print(SWIF_retry_IDs)
     if(len(SWIF_retry_IDs)!=0):
         queryproj = "SELECT * FROM Project WHERE ID="+str(ID)
         curs.execute(queryproj) 
@@ -331,7 +349,7 @@ def RetryJob(ID):
         #print "OSG JOB FOUND"
         status = subprocess.call("cp "+MCWRAPPER_BOT_HOME+"/examples/OSGShell.config ./MCDispatched.config", shell=True)
         WritePayloadConfig(proj[0],"True")
-        command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched.config "+str(job[0]["RunNumber"])+" "+str(job[0]["NumEvts"])+" per_file=50000 base_file_number="+str(job[0]["FileNumber"])+" generate="+str(proj[0]["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(proj[0]["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(proj[0]["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(proj[0]["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid=-"+str(ID)+" batch=1"
+        command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched.config "+str(job[0]["RunNumber"])+" "+str(job[0]["NumEvts"])+" per_file=20000 base_file_number="+str(job[0]["FileNumber"])+" generate="+str(proj[0]["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(proj[0]["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(proj[0]["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(proj[0]["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid=-"+str(ID)+" batch=1"
         print(command)
         status = subprocess.call(command, shell=True)
 
@@ -376,10 +394,16 @@ def CheckGenConfig(order):
     file_split=fileSTR.split("/")
     name=file_split[len(file_split)-1]
     #print name
-    #print fileSTR
+    print(fileSTR)
     if(os.path.isfile(fileSTR)==False and socket.gethostname() == "scosg16.jlab.org" ):
         copyTo="/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"
         subprocess.call("scp tbritton@ifarm:"+fileSTR+" "+copyTo+str(ID)+"_"+name,shell=True)
+        #subprocess.call("rsync -ruvt ifarm1402:"+fileSTR+" "+copyTo,shell=True)
+        order["Generator_Config"]=copyTo+name
+        return copyTo+str(ID)+"_"+name
+    elif(os.path.isfile(fileSTR)==True and socket.gethostname() == "scosg16.jlab.org" ):
+        copyTo="/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"
+        subprocess.call("scp "+fileSTR+" "+copyTo+str(ID)+"_"+name,shell=True)
         #subprocess.call("rsync -ruvt ifarm1402:"+fileSTR+" "+copyTo,shell=True)
         order["Generator_Config"]=copyTo+name
         return copyTo+str(ID)+"_"+name
@@ -407,25 +431,55 @@ def source(script, update=True):
 
 
 def TestProject(ID,versionSet,commands_to_call=""):
+
+    mktestdir="mkdir -p TestProj_"+str(ID)
+    subprocess.call(mktestdir,shell=True)
+    os.chdir("./TestProj_"+str(ID))
     subprocess.call("rm -f MCDispatched.config", shell=True)
     print("TESTING PROJECT "+str(ID))
     query = "SELECT * FROM Project WHERE ID="+str(ID)
     curs.execute(query) 
     rows=curs.fetchall()
     order=rows[0]
-    #print "========================"
-    #print order["Generator_Config"]
+    print("========================")
+    print(order["Generator_Config"])
     newLoc=CheckGenConfig(order)
-    #print order["Generator_Config"]
-    #print "========================"
-    #print newLoc
+    print(order["Generator_Config"])
+    print("========================")
+    print(newLoc)
     if(newLoc!="True"):
         curs.execute(query) 
         rows=curs.fetchall()
         order=rows[0]
 
+    if(order["RunNumHigh"] != order["RunNumLow"] and order["Generator"]=="file:"):
+        updatequery="UPDATE Project SET Tested=-1"+" WHERE ID="+str(ID)+";"
+        curs.execute(updatequery)
+        conn.commit()
+
+        print(bcolors.FAIL+"TEST FAILED"+bcolors.ENDC)
+        print("rm -rf "+order["OutputLocation"])
+
+        return ["oh no!!!",-1,"MCwrapper cannot currently handle an input file with many run numbers properly"]
+
     WritePayloadConfig(order,newLoc)
     RunNumber=str(order["RunNumLow"])
+
+
+
+    if(order["RunNumLow"] != order["RunNumHigh"]):
+        query_to_do="@is_production and @status_approved"
+    
+        if(order["RCDBQuery"] != ""):
+            query_to_do=order["RCDBQuery"]
+    
+        print("RCDB_QUERY IS: "+str(query_to_do))
+        #rcdb_db = rcdb.RCDBProvider("mysql://rcdb@hallddb.jlab.org/rcdb")
+        #runList=rcdb_db.select_runs(str(query_to_do),order["RunNumLow"],order["RunNumHigh"]).get_values(['event_count'],True)
+
+        RunNumber=str(order["RunNumLow"])#str(runList[0][0])
+    
+
     #if order["RunNumLow"] != order["RunNumHigh"] :
     #    RunNumber = RunNumber + "-" + str(order["RunNumHigh"])
 
@@ -445,15 +499,24 @@ def TestProject(ID,versionSet,commands_to_call=""):
     if order["SaveReconstruction"]==1:
         cleanrecon=0
 
-    command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched.config "+str(RunNumber)+" "+str(10)+" per_file=250000 base_file_number=0"+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=0"
+    command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched.config "+str(RunNumber)+" "+str(500)+" per_file=250000 base_file_number=0"+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=0"
     print(command)
     STATUS=-1
     # print (command+command2).split(" ")
     my_env=None
+    print(versionSet)
     if(versionSet != ""):
         my_env=source("/group/halld/Software/build_scripts/gluex_env_jlab.sh /group/halld/www/halldweb/html/dist/"+versionSet)
         my_env["MCWRAPPER_CENTRAL"]=MCWRAPPER_BOT_HOME
 
+    #print(my_env)
+    if "" in my_env:
+        split_kv=my_env[""].split("\n")
+        absorbed=split_kv[len(split_kv)-1].split("=")
+        print(absorbed)
+        del my_env[""]
+        my_env[absorbed[0]]=absorbed[1]
+    #print(my_env)
     p = Popen(commands_to_call+command, env=my_env ,stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True)
     #print p
     #print "p defined"
@@ -649,6 +712,7 @@ def WritePayloadConfig(order,foundConfig):
             MCconfig_file.write("GENERATOR="+str(order["Generator"])+"/"+foundConfig+"\n")
     else:
         MCconfig_file.write("GENERATOR="+str(order["Generator"])+"\n")
+        print(order["Generator_Config"])
         if foundConfig=="True":
             MCconfig_file.write("GENERATOR_CONFIG="+str(order["Generator_Config"])+"\n")
         else:
@@ -657,7 +721,9 @@ def WritePayloadConfig(order,foundConfig):
     MCconfig_file.write("GEANT_VERSION="+str(order["GeantVersion"])+"\n")
     MCconfig_file.write("NOSECONDARIES="+str(abs(order["GeantSecondaries"]-1))+"\n")
     MCconfig_file.write("BKG="+str(order["BKG"])+"\n")
+    print(order["OutputLocation"])
     splitLoc=str(order["OutputLocation"]).split("/")
+    print(splitLoc)
     outputstring="/".join(splitLoc[7:-1])
     #order["OutputLocation"]).split("/")[7]
     MCconfig_file.write("DATA_OUTPUT_BASE_DIR=/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/"+str(outputstring)+"\n")
@@ -779,7 +845,21 @@ def main(argv):
         elif MODE == "VIEW":
             ListUnDispatched()
         elif MODE == "TEST":
-            TestProject(ID,"")
+            query = "SELECT Email,VersionSet,Tested,UName FROM Project WHERE ID="+str(ID)
+            #print query
+            curs.execute(query) 
+            row=curs.fetchall()[0]
+            status=TestProject(ID,row["VersionSet"],"")
+            if(status[1]!=-1):
+                subprocess.call(MCWRAPPER_BOT_HOME+"/Utilities/MCDispatcher.py dispatch -rlim -sys OSG "+str(ID),shell=True)
+            else:
+                f=open(str(ID)+".out","w+")
+                f.write(str(status[0]))
+                f.close()
+                f=open(str(ID)+".err","w+")
+                f.write(str(status[2]))
+                f.close()
+                
         elif MODE == "RETRYJOB":
             RetryJob(ID)
         elif MODE == "RETRYJOBS":
