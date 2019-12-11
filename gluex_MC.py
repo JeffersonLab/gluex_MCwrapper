@@ -44,8 +44,8 @@ try:
 except:
         pass
 
-MCWRAPPER_VERSION="2.3.0"
-MCWRAPPER_DATE="12/09/19"
+MCWRAPPER_VERSION="2.3.1"
+MCWRAPPER_DATE="12/11/19"
 
 #====================================================
 #Takes in a few pertinant pieces of info.  Creates (if needed) a swif workflow and adds a job to it.
@@ -81,6 +81,8 @@ def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,N
         # tags
         add_command += " -tag file_number " + str(FILENO)
         # script with options command
+        add_command += " -fail-save-dir "+DATA_OUTPUT_BASE_DIR
+
         add_command += " "+SCRIPT  +" "+ getCommandString(COMMAND)
 
         if(VERBOSE == True):
