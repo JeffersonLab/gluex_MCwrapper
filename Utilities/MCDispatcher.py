@@ -4,6 +4,7 @@ import MySQLdb
 import sys
 import datetime
 import os.path
+import time
 from optparse import OptionParser
 import subprocess
 from subprocess import call
@@ -12,6 +13,7 @@ import socket
 import pprint
 import smtplib                                                                                                                                                                          
 from email.message import EmailMessage
+from multiprocessing import Process, Queue
 
 
 MCWRAPPER_BOT_HOME="/u/group/halld/gluex_MCwrapper/"
@@ -128,16 +130,61 @@ def AutoLaunch():
     rows=curs.fetchall()
     #print rows
     #print len(rows)
+
+    spawns=[]
+    results_array=[]
     for row in rows:
+        results_array.append([])
+    results_q = Queue()
+    results_q.put(results_array)
+    for i in range(0,len(rows)):
+        if(rows[i]['Tested']!=0):
+            continue
+        print("Test process "+str(i))
+        #print(len(Monitoring_assignments[i]))
+        p=Process(target=ParallelTestProject,args=(results_q,i,rows[i],rows[i]['ID'],str(rows[i]["VersionSet"]),))
+        spawns.append(p)
+
+    for i in range(0,len(spawns)):
+        time.sleep(1)
+        spawns[i].start()
+    
+    for i in range(0,len(spawns)):
+        if spawns[i].is_alive():
+            #print("join "+str(i))            
+            spawns[i].join()
+
+    results_array=results_q.get()
+    print("DONE PARALLEL TESTING")
+    #print(results_array)
+    #exit(0)
+
+    for result in results_array:
         status=[]
         status.append(-1)
         status.append(-1)
-        if(row['Tested'] !=1):
-            status=TestProject(row['ID'],str(row["VersionSet"]))
-        else:
+        if len(result)==0:
             status[0]=0
             status[1]=0
             status[2]=0
+            continue
+        else:
+            status=result
+
+        #print(status)
+        row=result[3]
+        
+        
+    #for row in rows:
+    #    status=[]
+    #    status.append(-1)
+    #    status.append(-1)
+    #    if(row['Tested'] !=1):
+    #        status=TestProject(row['ID'],str(row["VersionSet"]))
+    #    else:
+    #        status[0]=0
+    #        status[1]=0
+    #        status[2]=0
         #print "STATUS IS"
         #print status[0]
         #print("JUST TESTED")
@@ -165,7 +212,7 @@ def AutoLaunch():
                 print("SET SUB TO FROM")
                 # Send the message via our own SMTP server.                                                                                                                                                                        
                 s = smtplib.SMTP('localhost')
-                print(msg)
+                #print(msg)
                 print("SENDING")
                 s.send_message(msg)
                 s.quit()     
@@ -429,6 +476,129 @@ def source(script, update=True):
         os.environ.update(env)
     return env
 
+
+def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
+    
+    mktestdir="mkdir -p TestProj_"+str(ID)
+    subprocess.call(mktestdir,shell=True)
+    os.chdir("./TestProj_"+str(ID))
+    subprocess.call("rm -f MCDispatched.config", shell=True)
+    print("TESTING PROJECT "+str(ID))
+    query = "SELECT * FROM Project WHERE ID="+str(ID)
+    print(str(index)+":  "+query)
+    curs.execute(query) 
+    rows=curs.fetchall()
+    order=rows[0]
+    print("========================")
+    print(order["Generator_Config"])
+    newLoc=CheckGenConfig(order)
+    print(order["Generator_Config"])
+    print("========================")
+    print(newLoc)
+    if(newLoc!="True"):
+        curs.execute(query) 
+        rows=curs.fetchall()
+        order=rows[0]
+
+    if(order["RunNumHigh"] != order["RunNumLow"] and order["Generator"]=="file:"):
+        updatequery="UPDATE Project SET Tested=-1"+" WHERE ID="+str(ID)+";"
+        curs.execute(updatequery)
+        conn.commit()
+
+        print(bcolors.FAIL+"TEST FAILED"+bcolors.ENDC)
+        print("rm -rf "+order["OutputLocation"])
+
+        return ["oh no!!!",-1,"MCwrapper cannot currently handle an input file with many run numbers properly"]
+
+    WritePayloadConfig(order,newLoc)
+    RunNumber=str(order["RunNumLow"])
+
+    print(str(index)+":  "+"Wrote Payload")
+    if(order["RunNumLow"] != order["RunNumHigh"]):
+        query_to_do="@is_production and @status_approved"
+    
+        if(order["RCDBQuery"] != ""):
+            query_to_do=order["RCDBQuery"]
+    
+        print("RCDB_QUERY IS: "+str(query_to_do))
+        #rcdb_db = rcdb.RCDBProvider("mysql://rcdb@hallddb.jlab.org/rcdb")
+        #runList=rcdb_db.select_runs(str(query_to_do),order["RunNumLow"],order["RunNumHigh"]).get_values(['event_count'],True)
+
+        RunNumber=str(order["RunNumLow"])#str(runList[0][0])
+    
+
+    #if order["RunNumLow"] != order["RunNumHigh"] :
+    #    RunNumber = RunNumber + "-" + str(order["RunNumHigh"])
+
+    cleangen=1
+    if order["SaveGeneration"]==1:
+        cleangen=0
+
+    cleangeant=1
+    if order["SaveGeant"]==1:
+        cleangeant=0
+    
+    cleansmear=1
+    if order["SaveSmear"]==1:
+        cleansmear=0
+    
+    cleanrecon=1
+    if order["SaveReconstruction"]==1:
+        cleanrecon=0
+
+    command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched.config "+str(RunNumber)+" "+str(500)+" per_file=250000 base_file_number=0"+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=0"
+    print(command)
+    STATUS=-1
+    # print (command+command2).split(" ")
+    my_env=None
+    print(versionSet)
+    if(versionSet != ""):
+        my_env=source("/group/halld/Software/build_scripts/gluex_env_jlab.sh /group/halld/www/halldweb/html/dist/"+versionSet)
+        my_env["MCWRAPPER_CENTRAL"]=MCWRAPPER_BOT_HOME
+
+    #print(my_env)
+    if "" in my_env:
+        split_kv=my_env[""].split("\n")
+        absorbed=split_kv[len(split_kv)-1].split("=")
+        print(absorbed)
+        del my_env[""]
+        my_env[absorbed[0]]=absorbed[1]
+    #print(my_env)
+    p = Popen(commands_to_call+command, env=my_env ,stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True)
+    #print p
+    #print "p defined"
+    output, errors = p.communicate()
+    
+    #print [p.returncode,errors,output]
+    output=str(output).replace('\\n', '\n')
+    
+    STATUS=output.find("Successfully completed")
+    
+
+    if(STATUS!=-1):
+        updatequery="UPDATE Project SET Tested=1"+" WHERE ID="+str(ID)+";"
+        curs.execute(updatequery)
+        conn.commit()
+        if(newLoc != "True"):
+            updateOrderquery="UPDATE Project SET Generator_Config=\""+newLoc+"\" WHERE ID="+str(ID)+";"
+            print(updateOrderquery)
+            curs.execute(updateOrderquery)
+            conn.commit()
+        
+        print(bcolors.OKGREEN+"TEST SUCCEEDED"+bcolors.ENDC)
+        print("rm -rf "+order["OutputLocation"])
+        #status = subprocess.call("rm -rf "+order["OutputLocation"],shell=True)
+    else:
+        updatequery="UPDATE Project SET Tested=-1"+" WHERE ID="+str(ID)+";"
+        curs.execute(updatequery)
+        conn.commit()
+        
+        print(bcolors.FAIL+"TEST FAILED"+bcolors.ENDC)
+        print("rm -rf "+order["OutputLocation"])
+    results_array=results_q.get()
+    results_array[index]=[output,STATUS,errors,row]
+    results_q.put(results_array)
+    return [output,STATUS,errors]
 
 def TestProject(ID,versionSet,commands_to_call=""):
 

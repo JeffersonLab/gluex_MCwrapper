@@ -473,6 +473,30 @@ def  SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, N
 
 
 #====================================================
+#function to split monolithic hddm file by run number
+#credit to sdobbs for the base
+#====================================================
+def split_file_on_run_number(infname):
+        # output files
+        fout = {}
+        outevts = {}
+        # iterate through the file, splitting by run number
+        for rec in hddm_r.istream(infnamepath):
+                evt = rec.getReconstructedPhysicsEvent()
+                if evt.runNo not in fout:
+                        outfname = "{0}_run{1}.hddm".format(infname[:-5],evt.runNo)
+                        print "Creating output file {0} ...".format(outfname)
+                        fout[evt.runNo] = hddm_r.ostream(outfname)
+                        outevts[evt.runNo] = 0
+                else:
+                        outevts[evt.runNo] += 1
+                fout[evt.runNo].write(rec)
+
+        print(fout)
+        print(outevts)
+        return outevts
+
+#====================================================
 #Simple function to take in the column information and insert into the Jobs Table
 #====================================================
 def recordJob(PROJECT_ID,RUNNO,FILENO,BatchJobID, NUMEVTS):
