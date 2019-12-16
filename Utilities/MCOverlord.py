@@ -184,7 +184,8 @@ def checkProjectsForCompletion():
         print(len(fulfilledJobs)-len(nullify_list))
         print(len(AllActiveJobs))
         print("TO MOVE: "+str(filesToMove))
-        
+        if(len(AllActiveJobs)==0):
+            continue
         totalSubmitted="SELECT SUM(NumEvts) from Jobs where Project_ID="+str(proj['ID'])
         dbcursor.execute(totalSubmitted)
         submitted_evtNum=dbcursor.fetchall()

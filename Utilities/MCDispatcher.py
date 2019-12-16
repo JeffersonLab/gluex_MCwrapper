@@ -152,27 +152,33 @@ def AutoLaunch():
     for i in range(0,len(spawns)):
         if spawns[i].is_alive():
             #print("join "+str(i))            
-            spawns[i].join()
+            spawns[i].join(10*60)
 
-    results_array=results_q.get()
-    print("DONE PARALLEL TESTING")
+    #clean up stalled
+    #for i in range(0,len(spawns)):
+    #    if spawns[i].is_alive():
+    #        spawns[i].terminate()
+
+    #print("GETTING QUEUE")
+    #results_array=results_q.get()
+    #print("DONE PARALLEL TESTING")
     #print(results_array)
     #exit(0)
 
-    for result in results_array:
-        status=[]
-        status.append(-1)
-        status.append(-1)
-        if len(result)==0:
-            status[0]=0
-            status[1]=0
-            status[2]=0
-            continue
-        else:
-            status=result
+    #for result in results_array:
+    #    status=[]
+    #    status.append(-1)
+    #    status.append(-1)
+    #    if len(result)==0:
+    #        status[0]=0
+    #        status[1]=0
+    #        status[2]=0
+    #        continue
+    #    else:
+    #        status=result
 
         #print(status)
-        row=result[3]
+    #    row=result[3]
         
         
     #for row in rows:
@@ -188,44 +194,44 @@ def AutoLaunch():
         #print "STATUS IS"
         #print status[0]
         #print("JUST TESTED")
-        if(status[1]!=-1):
-            #print "TEST success"
-            #EMAIL SUCCESS AND DISPATCH
-            #print("YAY TESTED")
-            subprocess.call(MCWRAPPER_BOT_HOME+"/Utilities/MCDispatcher.py dispatch -rlim -sys OSG "+str(row['ID']),shell=True)
-        else:
-            #print("BOO TESTED")
-            #EMAIL FAIL AND LOG
-            #print("echo 'Your Project ID "+str(row['ID'])+" failed the to properly test.  The log information is reproduced below:\n\n\n"+status[0]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+str(row['Email']))
-            try:
-                print("MAILING\n")
-                msg = EmailMessage()
+    #    if(status[1]!=-1):
+    #        #print "TEST success"
+    #        #EMAIL SUCCESS AND DISPATCH
+    #        #print("YAY TESTED")
+    #        subprocess.call(MCWRAPPER_BOT_HOME+"/Utilities/MCDispatcher.py dispatch -rlim -sys OSG "+str(row['ID']),shell=True)
+    #    else:
+    #        #print("BOO TESTED")
+    #        #EMAIL FAIL AND LOG
+    #        #print("echo 'Your Project ID "+str(row['ID'])+" failed the to properly test.  The log information is reproduced below:\n\n\n"+status[0]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+str(row['Email']))
+    #        try:
+    #            print("MAILING\n")
+    #            msg = EmailMessage()
 
-                msg.set_content('Your Project ID '+str(row['ID'])+' failed the test.  Please correct this issue by following the link: '+'https://halldweb.jlab.org/gluex_sim/SubmitSim.html?prefill='+str(row['ID'])+'&mod=1'+'.  Do NOT resubmit this request.  Write tbritton@jlab.org for additional assistance\n\n The log information is reproduced below:\n\n\n'+str(status[0])+'\n\n\nErrors:\n\n\n'+str(status[2]))
-                print("SET CONTENT")
-                msg['Subject'] = 'Project ID #'+str(row['ID'])+' Failed to test properly'
-                print("SET SUB")
-                msg['From'] = str('MCwrapper-bot')
-                print("SET FROM")
+    #            msg.set_content('Your Project ID '+str(row['ID'])+' failed the test.  Please correct this issue by following the link: '+'https://halldweb.jlab.org/gluex_sim/SubmitSim.html?prefill='+str(row['ID'])+'&mod=1'+'.  Do NOT resubmit this request.  Write tbritton@jlab.org for additional assistance\n\n The log information is reproduced below:\n\n\n'+str(status[0])+'\n\n\nErrors:\n\n\n'+str(status[2]))
+    #            print("SET CONTENT")
+    #            msg['Subject'] = 'Project ID #'+str(row['ID'])+' Failed to test properly'
+    #            print("SET SUB")
+    #            msg['From'] = str('MCwrapper-bot')
+    #            print("SET FROM")
 
-                msg['To'] = str(row['Email'])#str("tbritton@jlab.org")#
-                print("SET SUB TO FROM")
-                # Send the message via our own SMTP server.                                                                                                                                                                        
-                s = smtplib.SMTP('localhost')
-                #print(msg)
-                print("SENDING")
-                s.send_message(msg)
-                s.quit()     
-                copy=open("/osgpool/halld/tbritton/email_"+str(row['ID'])+".log", "w+")
-                copy.write('The log information is reproduced below:\n\n\n'+str(status[0])+'\n\n\nErrors:\n\n\n'+str(status[2]))
-                copy.close()      
-                #subprocess.call("echo 'Your Project ID "+str(row['ID'])+" failed the test.  Please correct this issue by following the link: "+"https://halldweb.jlab.org/gluex_sim/SubmitSim.html?prefill="+str(row['ID'])+"&mod=1" +" .  Do NOT resubmit this request.  Write tbritton@jlab.org for additional assistance\n\n The log information is reproduced below:\n\n\n"+status[0]+"\n\n\n"+status[2]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+str(row['Email']),shell=True)
-            except:
-                print("UH OH MAILING")
-                log = open("/osgpool/halld/tbritton/"+str(row['ID'])+".err", "w+")
-                log.write("this was broke: \n" + str(status[2]))
-                log.write("this was broke: \n" + str(status[0]))
-                log.close()
+    #            msg['To'] = str(row['Email'])#str("tbritton@jlab.org")#
+    #            print("SET SUB TO FROM")
+    #            # Send the message via our own SMTP server.                                                                                                                                                                        
+    #            s = smtplib.SMTP('localhost')
+    #            #print(msg)
+    #            print("SENDING")
+    #            s.send_message(msg)
+    #            s.quit()     
+    #            copy=open("/osgpool/halld/tbritton/REQUESTED_FAIL_MAILS/email_"+str(row['ID'])+".log", "w+")
+    #            copy.write('The log information is reproduced below:\n\n\n'+str(status[0])+'\n\n\nErrors:\n\n\n'+str(status[2]))
+    #            copy.close()      
+    #            #subprocess.call("echo 'Your Project ID "+str(row['ID'])+" failed the test.  Please correct this issue by following the link: "+"https://halldweb.jlab.org/gluex_sim/SubmitSim.html?prefill="+str(row['ID'])+"&mod=1" +" .  Do NOT resubmit this request.  Write tbritton@jlab.org for additional assistance\n\n The log information is reproduced below:\n\n\n"+status[0]+"\n\n\n"+status[2]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+str(row['Email']),shell=True)
+    #        except:
+    #            print("UH OH MAILING")
+    #            log = open("/osgpool/halld/tbritton/"+str(row['ID'])+".err", "w+")
+    #            log.write("this was broke: \n" + str(status[2]))
+    #            log.write("this was broke: \n" + str(status[0]))
+    #            log.close()
             
             #subprocess.call("echo 'Your Project ID "+str(row['ID'])+" failed the test.  Please correct this issue and do NOT resubmit this request.  Write tbritton@jlab.org for assistance or if you are ready for a retest.\n\n The log information is reproduced below:\n\n\n"+status[0]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+"tbritton@jlab.org",shell=True)
             #print status[0]
@@ -394,9 +400,9 @@ def RetryJob(ID):
         status = subprocess.call(command, shell=True)
     elif(rows[0]["BatchSystem"] == "OSG"):
         #print "OSG JOB FOUND"
-        status = subprocess.call("cp "+MCWRAPPER_BOT_HOME+"/examples/OSGShell.config ./MCDispatched.config", shell=True)
+        status = subprocess.call("cp "+MCWRAPPER_BOT_HOME+"/examples/OSGShell.config ./MCDispatched_"+str(ID)+".config", shell=True)
         WritePayloadConfig(proj[0],"True")
-        command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched.config "+str(job[0]["RunNumber"])+" "+str(job[0]["NumEvts"])+" per_file=20000 base_file_number="+str(job[0]["FileNumber"])+" generate="+str(proj[0]["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(proj[0]["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(proj[0]["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(proj[0]["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid=-"+str(ID)+" batch=1"
+        command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched_"+str(ID)+".config "+str(job[0]["RunNumber"])+" "+str(job[0]["NumEvts"])+" per_file=20000 base_file_number="+str(job[0]["FileNumber"])+" generate="+str(proj[0]["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(proj[0]["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(proj[0]["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(proj[0]["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid=-"+str(ID)+" batch=1"
         print(command)
         status = subprocess.call(command, shell=True)
 
@@ -482,7 +488,7 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
     mktestdir="mkdir -p TestProj_"+str(ID)
     subprocess.call(mktestdir,shell=True)
     os.chdir("./TestProj_"+str(ID))
-    subprocess.call("rm -f MCDispatched.config", shell=True)
+    subprocess.call("rm -f MCDispatched_"+str(ID)+".config", shell=True)
     print("TESTING PROJECT "+str(ID))
     query = "SELECT * FROM Project WHERE ID="+str(ID)
     print(str(index)+":  "+query)
@@ -546,7 +552,7 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
     if order["SaveReconstruction"]==1:
         cleanrecon=0
 
-    command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched.config "+str(RunNumber)+" "+str(500)+" per_file=250000 base_file_number=0"+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=0"
+    command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched_"+str(ID)+".config "+str(RunNumber)+" "+str(500)+" per_file=250000 base_file_number=0"+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=0"
     print(command)
     STATUS=-1
     # print (command+command2).split(" ")
@@ -595,9 +601,50 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
         
         print(bcolors.FAIL+"TEST FAILED"+bcolors.ENDC)
         print("rm -rf "+order["OutputLocation"])
-    results_array=results_q.get()
-    results_array[index]=[output,STATUS,errors,row]
-    results_q.put(results_array)
+    #results_array=results_q.get()
+    #results_array[index]=[output,STATUS,errors,row]
+    #results_q.put(results_array)
+
+    status=[output,STATUS,errors]
+    if(status[1]!=-1):
+        #print "TEST success"
+        #EMAIL SUCCESS AND DISPATCH
+        #print("YAY TESTED")
+        subprocess.call(MCWRAPPER_BOT_HOME+"/Utilities/MCDispatcher.py dispatch -rlim -sys OSG "+str(row['ID']),shell=True)
+    else:
+        #print("BOO TESTED")
+        #EMAIL FAIL AND LOG
+        #print("echo 'Your Project ID "+str(row['ID'])+" failed the to properly test.  The log information is reproduced below:\n\n\n"+status[0]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+str(row['Email']))
+        try:
+            print("MAILING\n")
+            msg = EmailMessage()
+
+            msg.set_content('Your Project ID '+str(row['ID'])+' failed the test.  Please correct this issue by following the link: '+'https://halldweb.jlab.org/gluex_sim/SubmitSim.html?prefill='+str(row['ID'])+'&mod=1'+'.  Do NOT resubmit this request.  Write tbritton@jlab.org for additional assistance\n\n The log information is reproduced below:\n\n\n'+str(status[0])+'\n\n\nErrors:\n\n\n'+str(status[2]))
+            print("SET CONTENT")
+            msg['Subject'] = 'Project ID #'+str(row['ID'])+' Failed to test properly'
+            print("SET SUB")
+            msg['From'] = str('MCwrapper-bot')
+            print("SET FROM")
+
+            msg['To'] = str(row['Email'])#str("tbritton@jlab.org")#
+            print("SET SUB TO FROM")
+            # Send the message via our own SMTP server.                                                                                                                                                                        
+            s = smtplib.SMTP('localhost')
+            #print(msg)
+            print("SENDING")
+            s.send_message(msg)
+            s.quit()     
+            copy=open("/osgpool/halld/tbritton/REQUESTED_FAIL_MAILS/email_"+str(row['ID'])+".log", "w+")
+            copy.write('The log information is reproduced below:\n\n\n'+str(status[0])+'\n\n\nErrors:\n\n\n'+str(status[2]))
+            copy.close()      
+            #subprocess.call("echo 'Your Project ID "+str(row['ID'])+" failed the test.  Please correct this issue by following the link: "+"https://halldweb.jlab.org/gluex_sim/SubmitSim.html?prefill="+str(row['ID'])+"&mod=1" +" .  Do NOT resubmit this request.  Write tbritton@jlab.org for additional assistance\n\n The log information is reproduced below:\n\n\n"+status[0]+"\n\n\n"+status[2]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+str(row['Email']),shell=True)
+        except:
+            print("UH OH MAILING")
+            log = open("/osgpool/halld/tbritton/"+str(row['ID'])+".err", "w+")
+            log.write("this was broke: \n" + str(status[2]))
+            log.write("this was broke: \n" + str(status[0]))
+            log.close()
+
     return [output,STATUS,errors]
 
 def TestProject(ID,versionSet,commands_to_call=""):
@@ -605,7 +652,7 @@ def TestProject(ID,versionSet,commands_to_call=""):
     mktestdir="mkdir -p TestProj_"+str(ID)
     subprocess.call(mktestdir,shell=True)
     os.chdir("./TestProj_"+str(ID))
-    subprocess.call("rm -f MCDispatched.config", shell=True)
+    subprocess.call("rm -f MCDispatched_"+str(ID)+".config", shell=True)
     print("TESTING PROJECT "+str(ID))
     query = "SELECT * FROM Project WHERE ID="+str(ID)
     curs.execute(query) 
@@ -644,9 +691,11 @@ def TestProject(ID,versionSet,commands_to_call=""):
             query_to_do=order["RCDBQuery"]
     
         print("RCDB_QUERY IS: "+str(query_to_do))
+        print("run selecting currently broken.  RCDB: 'basestring' not defined.  Testing first runnumber only")
         #rcdb_db = rcdb.RCDBProvider("mysql://rcdb@hallddb.jlab.org/rcdb")
         #runList=rcdb_db.select_runs(str(query_to_do),order["RunNumLow"],order["RunNumHigh"]).get_values(['event_count'],True)
 
+        #RunNumber=str(runList[0][0])
         RunNumber=str(order["RunNumLow"])#str(runList[0][0])
     
 
@@ -669,7 +718,7 @@ def TestProject(ID,versionSet,commands_to_call=""):
     if order["SaveReconstruction"]==1:
         cleanrecon=0
 
-    command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched.config "+str(RunNumber)+" "+str(500)+" per_file=250000 base_file_number=0"+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=0"
+    command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched_"+str(ID)+".config "+str(RunNumber)+" "+str(500)+" per_file=250000 base_file_number=0"+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=0"
     print(command)
     STATUS=-1
     # print (command+command2).split(" ")
@@ -721,7 +770,7 @@ def TestProject(ID,versionSet,commands_to_call=""):
     return [output,STATUS,errors]
 
 def DispatchToInteractive(ID,order,PERCENT):
-    subprocess.call("rm -f MCDispatched.config", shell=True)
+    subprocess.call("rm -f MCDispatched_"+str(ID)+".config", shell=True)
     WritePayloadConfig(order,"True")
     RunNumber=str(order["RunNumLow"])
     if order["RunNumLow"] != order["RunNumHigh"] :
@@ -773,14 +822,14 @@ def DispatchToInteractive(ID,order,PERCENT):
         #print updatequery
         curs.execute(updatequery)
         conn.commit()
-        command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched.config "+str(RunNumber)+" "+str(NumEventsToProduce)+" per_file=250000 base_file_number="+str(FileNumber_NewJob)+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=0"
+        command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched_"+str(ID)+".config "+str(RunNumber)+" "+str(NumEventsToProduce)+" per_file=250000 base_file_number="+str(FileNumber_NewJob)+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=0"
         print(command)
         status = subprocess.call(command, shell=True)
     else:
         print("All jobs submitted for this order")
 
 def DispatchToSWIF(ID,order,PERCENT):
-    status = subprocess.call("cp "+MCWRAPPER_BOT_HOME+"/examples/SWIFShell.config ./MCDispatched.config", shell=True)
+    status = subprocess.call("cp "+MCWRAPPER_BOT_HOME+"/examples/SWIFShell.config ./MCDispatched_"+str(ID)+".config", shell=True)
     WritePayloadConfig(order,"True")
     RunNumber=str(order["RunNumLow"])
     if order["RunNumLow"] != order["RunNumHigh"] :
@@ -832,7 +881,7 @@ def DispatchToSWIF(ID,order,PERCENT):
         #print updatequery
         curs.execute(updatequery)
         conn.commit()
-        command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched.config "+str(RunNumber)+" "+str(NumEventsToProduce)+" per_file=50000 base_file_number="+str(FileNumber_NewJob)+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=2"
+        command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched_"+str(ID)+".config "+str(RunNumber)+" "+str(NumEventsToProduce)+" per_file=50000 base_file_number="+str(FileNumber_NewJob)+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=2"
         print(command)
         status = subprocess.call(command, shell=True)
     else:
@@ -843,12 +892,12 @@ def WriteConfig(ID):
     curs.execute(query) 
     rows=curs.fetchall()
 
-    status = subprocess.call("cp "+MCWRAPPER_BOT_HOME+"/examples/SWIFShell.config ./MCDispatched.config", shell=True)
+    status = subprocess.call("cp "+MCWRAPPER_BOT_HOME+"/examples/SWIFShell.config ./MCDispatched_"+str(ID)+".config", shell=True)
     WritePayloadConfig(rows[0],"True")
 
 def WritePayloadConfig(order,foundConfig):
     
-    MCconfig_file= open("MCDispatched.config","a")
+    MCconfig_file= open("MCDispatched_"+str(order['ID'])+".config","a")
     MCconfig_file.write("PROJECT="+str(order["Exp"])+"\n")
 
     if str(order["Exp"]) == "CPP":
@@ -888,6 +937,12 @@ def WritePayloadConfig(order,foundConfig):
         else:
             MCconfig_file.write("GENERATOR_CONFIG="+foundConfig+"\n")
 
+
+    if(order["CoherentPeak"] != None):
+        MCconfig_file.write("COHERENT_PEAK="+str(order["CoherentPeak"])+"\n")
+    else:
+        MCconfig_file.write("COHERENT_PEAK=rcdb"+"\n")
+
     MCconfig_file.write("GEANT_VERSION="+str(order["GeantVersion"])+"\n")
     MCconfig_file.write("NOSECONDARIES="+str(abs(order["GeantSecondaries"]-1))+"\n")
     MCconfig_file.write("BKG="+str(order["BKG"])+"\n")
@@ -923,7 +978,7 @@ def WritePayloadConfig(order,foundConfig):
     MCconfig_file.close()
 
 def DispatchToOSG(ID,order,PERCENT):
-    status = subprocess.call("cp "+MCWRAPPER_BOT_HOME+"/examples/OSGShell.config ./MCDispatched.config", shell=True)
+    status = subprocess.call("cp "+MCWRAPPER_BOT_HOME+"/examples/OSGShell.config ./MCDispatched_"+str(ID)+".config", shell=True)
     WritePayloadConfig(order,"True")
 
     RunNumber=str(order["RunNumLow"])
@@ -951,7 +1006,7 @@ def DispatchToOSG(ID,order,PERCENT):
     #print updatequery
     curs.execute(updatequery)
     conn.commit()
-    command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched.config "+str(RunNumber)+" "+str(order["NumEvents"])+" per_file=20000 base_file_number="+str(0)+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" logdir=/osgpool/halld/tbritton/REQUESTEDMC_LOGS/"+order["OutputLocation"].split("/")[7]+" batch=1"
+    command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched_"+str(ID)+".config "+str(RunNumber)+" "+str(order["NumEvents"])+" per_file=20000 base_file_number="+str(0)+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" logdir=/osgpool/halld/tbritton/REQUESTEDMC_LOGS/"+order["OutputLocation"].split("/")[7]+" batch=1"
     print(command)
     status = subprocess.call(command, shell=True)
     

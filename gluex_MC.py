@@ -45,7 +45,7 @@ except:
         pass
 
 MCWRAPPER_VERSION="2.3.1"
-MCWRAPPER_DATE="12/11/19"
+MCWRAPPER_DATE="12/16/19"
 
 #====================================================
 #Takes in a few pertinant pieces of info.  Creates (if needed) a swif workflow and adds a job to it.
@@ -1066,6 +1066,8 @@ def main(argv):
                                 elif BATCHSYS.upper()=="JSLURM":
                                         JSUB_add_job(VERBOSE, WORKFLOW, PROJECT, TRACK, RUNNUM, BASEFILENUM, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
         else:
+                #print("NOT THE SUBMITTER")
+                #print(len(RunType))
                 if len(RunType) != 1 : #RUN RANGE GIVEN
                         event_sum=0.
                         #Make python rcdb calls to form the vector
@@ -1102,15 +1104,16 @@ def main(argv):
                         if(RCDB_QUERY!=""):
                                 query_to_do=RCDB_QUERY
 
+                        print(str(runlow)+"------->"+str(runhigh))
                         table = db.select_runs(str(query_to_do),runlow,runhigh).get_values(['event_count'],True)
-                        #print table
+                        print(table)
                         #print len(table)
                         for runs in table:
                                 if len(table)<=1:
                                         break
                                 event_sum = event_sum + runs[1]
 
-                        print( event_sum)
+                        print("Events from rcdb: "+str(event_sum))
                         sum2=0.
                         for runs in table: #do for each job
                                 #print runs[0]
@@ -1288,8 +1291,13 @@ def GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,RUNNUM):
                         print(matches[0][0])
                         return matches[0][0]
                 else:
-                        print "AMBIGUOUS!"
-                        return -1
+                        value=matches[0]['Num_Events']
+                        for match in matches:
+                                if match['Num_events'] != value:
+                                        print("AMBIGUOUS!")
+                                        return -1
+                        
+                        return value
         except Exception as e:
                 print(e)
                 pass
