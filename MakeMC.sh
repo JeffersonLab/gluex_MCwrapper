@@ -207,7 +207,7 @@ elif [[ "$ccdbSQLITEPATH" == "jlab_batch_default" ]]; then
 		#else
 		#	export CCDB_CONNECTION=mysql://ccdb_user@hallddb.jlab.org/ccdb
 		#fi
-	export CCDB_CONNECTION mysql://ccdb_user@hallddb-farm.jlab.org/ccdb
+	export CCDB_CONNECTION=mysql://ccdb_user@hallddb-farm.jlab.org/ccdb
     export JANA_CALIB_URL=${CCDB_CONNECTION}
 
 fi

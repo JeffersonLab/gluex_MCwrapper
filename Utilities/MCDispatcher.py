@@ -146,13 +146,13 @@ def AutoLaunch():
         spawns.append(p)
 
     for i in range(0,len(spawns)):
-        time.sleep(1)
+        time.sleep(5)
         spawns[i].start()
     
     for i in range(0,len(spawns)):
         if spawns[i].is_alive():
             #print("join "+str(i))            
-            spawns[i].join(10*60)
+            spawns[i].join(15*60)
 
     #clean up stalled
     #for i in range(0,len(spawns)):
@@ -401,7 +401,7 @@ def RetryJob(ID):
     elif(rows[0]["BatchSystem"] == "OSG"):
         #print "OSG JOB FOUND"
         status = subprocess.call("cp "+MCWRAPPER_BOT_HOME+"/examples/OSGShell.config ./MCDispatched_"+str(ID)+".config", shell=True)
-        WritePayloadConfig(proj[0],"True")
+        WritePayloadConfig(proj[0],"True",ID)
         command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched_"+str(ID)+".config "+str(job[0]["RunNumber"])+" "+str(job[0]["NumEvts"])+" per_file=20000 base_file_number="+str(job[0]["FileNumber"])+" generate="+str(proj[0]["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(proj[0]["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(proj[0]["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(proj[0]["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid=-"+str(ID)+" batch=1"
         print(command)
         status = subprocess.call(command, shell=True)
@@ -577,7 +577,7 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
     
     #print [p.returncode,errors,output]
     output=str(output).replace('\\n', '\n')
-    
+    errors=str(errors).replace('\\n', '\n')
     STATUS=output.find("Successfully completed")
     
 
@@ -743,7 +743,7 @@ def TestProject(ID,versionSet,commands_to_call=""):
     
     #print [p.returncode,errors,output]
     output=str(output).replace('\\n', '\n')
-    
+    errors=str(errors).replace('\\n', '\n')
     STATUS=output.find("Successfully completed")
     
 
@@ -895,9 +895,12 @@ def WriteConfig(ID):
     status = subprocess.call("cp "+MCWRAPPER_BOT_HOME+"/examples/SWIFShell.config ./MCDispatched_"+str(ID)+".config", shell=True)
     WritePayloadConfig(rows[0],"True")
 
-def WritePayloadConfig(order,foundConfig):
-    
-    MCconfig_file= open("MCDispatched_"+str(order['ID'])+".config","a")
+def WritePayloadConfig(order,foundConfig,jobID=-1):
+    if jobID==-1:
+        MCconfig_file= open("MCDispatched_"+str(order['ID'])+".config","a")
+    else:
+        MCconfig_file= open("MCDispatched_"+str(jobID)+".config","a")
+
     MCconfig_file.write("PROJECT="+str(order["Exp"])+"\n")
 
     if str(order["Exp"]) == "CPP":
