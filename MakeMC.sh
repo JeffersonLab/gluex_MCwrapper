@@ -201,13 +201,13 @@ elif [[ "$ccdbSQLITEPATH" == "batch_default" ]]; then
     export CCDB_CONNECTION=sqlite:////group/halld/www/halldweb/html/dist/ccdb.sqlite
     export JANA_CALIB_URL=${CCDB_CONNECTION}
 elif [[ "$ccdbSQLITEPATH" == "jlab_batch_default" ]]; then
-		#ccdb_jlab_sqlite_path=`echo $((1 + RANDOM % 100))`
-		#if ( -f /work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite ) then
-		#	export CCDB_CONNECTION=sqlite:////work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite
-		#else
-		#	export CCDB_CONNECTION=mysql://ccdb_user@hallddb.jlab.org/ccdb
-		#fi
-	export CCDB_CONNECTION=mysql://ccdb_user@hallddb-farm.jlab.org/ccdb
+		ccdb_jlab_sqlite_path=`echo $((1 + RANDOM % 100))`
+		if [[ -f /work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite ]]; then
+			export CCDB_CONNECTION=sqlite:////work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite
+		else
+			export CCDB_CONNECTION=mysql://ccdb_user@hallddb.jlab.org/ccdb
+		fi
+	#export CCDB_CONNECTION=mysql://ccdb_user@hallddb-farm.jlab.org/ccdb
     export JANA_CALIB_URL=${CCDB_CONNECTION}
 
 fi

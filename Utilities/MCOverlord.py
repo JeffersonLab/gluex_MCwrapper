@@ -718,7 +718,7 @@ def array_split(lst,n):
 
 def main(argv):
 
-        spawnNum=25
+        spawnNum=20
         numOverRide=False
 
         if(len(argv) !=0):
