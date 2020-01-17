@@ -6,7 +6,7 @@ DATA_OUTPUT_BASE_DIR=OUTDIR #your desired output location
 NCORES=4      # Number of CPU threads to use or nodes:node-id:ppn or nodes:ppn depending on your system
 CCDBSQLITEPATH=SQLITE_PATH
 GENERATOR=gen_GTO #or you may specifile file:/.../file-to-use.hddm
-GENERATOR_CONFIG=/home/ijaegle/workdir/test/gluex_MCwrapper/config_GTO.dat
+GENERATOR_CONFIG=/home/ijaegle/workdir/test/gluex_MCwrapper/FILENAME
 
 #common parameters for generators
 FLUX_TO_GEN=/home/ijaegle/workdir/flux/results/Run_RNB_RNB_flux.root:tagged_flux
@@ -35,6 +35,6 @@ TRACK= simulation     	   # https://scicomp.jlab.org/docs/batch_job_tracks
 # RESOURCES for swif jobs
 DISK=5GB            # Max Disk usage
 RAM=5GB            # Max RAM usage
-TIMELIMIT=60minutes      # Max walltime.  This may be of the form xx:xx:xx depending on your system
+TIMELIMIT=2hours      # Max walltime.  This may be of the form xx:xx:xx depending on your system
 OS=centos7        # Specify CentOS65 machines
 
