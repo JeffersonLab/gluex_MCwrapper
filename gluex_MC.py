@@ -1291,9 +1291,10 @@ def GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,RUNNUM):
                         print(matches[0][0])
                         return matches[0][0]
                 else:
-                        value=matches[0]['Num_Events']
+                        #print(matches[0])
+                        value=matches[0][0]
                         for match in matches:
-                                if match['Num_events'] != value:
+                                if match[0] != value:
                                         print("AMBIGUOUS!")
                                         return -1
                         

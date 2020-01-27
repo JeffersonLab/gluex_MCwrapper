@@ -1,19 +1,25 @@
 #!/usr/bin/env python3
-import rcdb
+try:
+    import rcdb
+except:
+    pass
 import MySQLdb
 import sys
 import datetime
 import os.path
 import time
 from optparse import OptionParser
-import subprocess
-from subprocess import call
-from subprocess import Popen, PIPE
-import socket
-import pprint
-import smtplib                                                                                                                                                                          
-from email.message import EmailMessage
-from multiprocessing import Process, Queue
+try:
+    import subprocess
+    from subprocess import call
+    from subprocess import Popen, PIPE
+    import socket
+    import pprint
+    import smtplib                                                                                                                                                                          
+    from email.message import EmailMessage
+    from multiprocessing import Process, Queue
+except:
+    pass
 
 
 MCWRAPPER_BOT_HOME="/u/group/halld/gluex_MCwrapper/"
@@ -278,21 +284,33 @@ def RemoveAllJobs():
 
 
 def RetryJobsFromProject(ID, countLim):
+    AllOSG=True
     query= "SELECT * FROM Attempts WHERE ID IN (SELECT Max(ID) FROM Attempts GROUP BY Job_ID) && Job_ID IN (SELECT ID FROM Jobs WHERE IsActive=1 && Project_ID="+str(ID)+");"
     curs.execute(query) 
     rows=curs.fetchall()
    
+    projq="SELECT Tested from Project where ID="+str(ID)
+    curs.execute(projq)
+    proj=curs.fetchall()[0]
     i=0
     j=0
     SWIF_retry_IDs=[]
     for row in rows:
 
         if (row["BatchSystem"]=="SWIF"):
-            if((row["Status"] == "succeeded" and row["ExitCode"] != 0) or (row["Status"]=="problem" and row["ExitCode"]!="232")):
+            if((row["Status"] == "succeeded" and row["ExitCode"] != 0) or (row["Status"]=="problem" and row["ExitCode"]!="232") or (proj['Tested']==1 and row["Status"]=="canceled" )):
             #if(row["Status"] != "succeeded"):
-                SWIF_retry_IDs.append(row["BatchJobID"])
-                #RetryJob(row["Job_ID"])
-                i=i+1
+                limiterq="SELECT COUNT(*) from Attempts where BatchJobID="+str(row["BatchJobID"])
+                curs.execute(limiterq) 
+                attres=curs.fetchall()[0]
+                print(attres)
+                if(attres["COUNT(*)"] < 15):
+                    SWIF_retry_IDs.append(row["BatchJobID"])
+                    #RetryJob(row["Job_ID"])
+                    i=i+1
+                if(AllOSG):
+                    RetryJob(row["Job_ID"],AllOSG)
+                
         elif (row["BatchSystem"]=="OSG"):
             #print "=========================="
             #print row
@@ -318,12 +336,12 @@ def RetryJobsFromProject(ID, countLim):
                             curs.execute(statusUpdate)
                             conn.commit()
                             
-                RetryJob(row["Job_ID"])
+                RetryJob(row["Job_ID"],AllOSG)
                 i=i+1
         
     
     print(SWIF_retry_IDs)
-    if(len(SWIF_retry_IDs)!=0):
+    if(len(SWIF_retry_IDs)!=0 and AllOSG == False):
         queryproj = "SELECT * FROM Project WHERE ID="+str(ID)
         curs.execute(queryproj) 
         proj=curs.fetchall()
@@ -331,6 +349,8 @@ def RetryJobsFromProject(ID, countLim):
         retry_swif_command="swif retry-jobs -workflow "+"proj"+str(ID)+"_"+proj[0]["OutputLocation"].split("/")[splitL-2]+" "+" ".join(SWIF_retry_IDs)
         print(retry_swif_command)
         status = subprocess.call(retry_swif_command, shell=True)
+    
+    
     print("retried "+str(i)+" Jobs")
     print(str(j)+" jobs over restart limit of 15")
 
@@ -346,7 +366,7 @@ def RetryJobsFromProject(ID, countLim):
 
 
 
-def RetryJob(ID):
+def RetryJob(ID,AllOSG=False):
     #query = "SELECT * FROM Attempts WHERE Job_ID="+str(ID)
     query= "SELECT Attempts.*,Max(Attempts.Creation_Time) FROM Attempts,Jobs WHERE Attempts.Job_ID = "+str(ID)
     curs.execute(query) 
@@ -376,30 +396,14 @@ def RetryJob(ID):
     if proj[0]["SaveReconstruction"]==1:
         cleanrecon=0
 
-    #bkg_parts=proj[0]["BKG"].split(":")
-    #if bkg_parts[0] == "Random":
-    #    formatted_runnum="%06d" % job[0]["RunNumber"]
-    #    path_to_check="/osgpool/halld/random_triggers/"+str(bkg_parts[1])+"/run"+str(formatted_runnum)+"_random.hddm"
-    #    print(path_to_check)
-    #    if not os.path.isfile(path_to_check):
-    #        jobdeactivate="UPDATE Jobs Set IsActive=0 where ID="+str(job[0]["ID"])
-    #        print(jobdeactivate)
-    #        curs.execute(jobdeactivate)
-    #        conn.commit()
-    #        status_six="UPDATE Attempts Set Status=\"6\" where Job_ID="+str(job[0]["ID"])
-    #        print(status_six)
-    #        curs.execute(status_six)
-    #        conn.commit()
-    #        return
-
-
-    if(rows[0]["BatchSystem"] == "SWIF"):
+    print("AllOSG? "+str(AllOSG))
+    if(rows[0]["BatchSystem"] == "SWIF" and AllOSG==False):
         splitL=len(proj[0]["OutputLocation"].split("/"))
         command = "swif retry-jobs -workflow "+"proj"+str(proj[0]["ID"])+"_"+proj[0]["OutputLocation"].split("/")[splitL-2]+" "+rows[0]["BatchJobID"]
         #proj548_gen_amp_L1520_errval_20190522055719am
         print(command)
         status = subprocess.call(command, shell=True)
-    elif(rows[0]["BatchSystem"] == "OSG"):
+    elif(rows[0]["BatchSystem"] == "OSG" or AllOSG):
         #print "OSG JOB FOUND"
         status = subprocess.call("cp "+MCWRAPPER_BOT_HOME+"/examples/OSGShell.config ./MCDispatched_"+str(ID)+".config", shell=True)
         WritePayloadConfig(proj[0],"True",ID)
@@ -449,15 +453,16 @@ def CheckGenConfig(order):
     name=file_split[len(file_split)-1]
     #print name
     #print(fileSTR)
+    copyTo="/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"
     if(os.path.isfile(fileSTR)==False and socket.gethostname() == "scosg16.jlab.org" ):
-        copyTo="/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"
+        #copyTo="/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"
         print("scp tbritton@ifarm:"+fileSTR+" "+copyTo+str(ID)+"_"+name)
         subprocess.call("scp tbritton@ifarm:"+fileSTR+" "+copyTo+str(ID)+"_"+name,shell=True)
         #subprocess.call("rsync -ruvt ifarm1402:"+fileSTR+" "+copyTo,shell=True)
         order["Generator_Config"]=copyTo+name
         return copyTo+str(ID)+"_"+name
     elif(os.path.isfile(fileSTR)==True and socket.gethostname() == "scosg16.jlab.org" ):
-        copyTo="/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"
+        #copyTo="/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"
         subprocess.call("scp "+fileSTR+" "+copyTo+str(ID)+"_"+name,shell=True)
         #subprocess.call("rsync -ruvt ifarm1402:"+fileSTR+" "+copyTo,shell=True)
         order["Generator_Config"]=copyTo+name
@@ -696,10 +701,12 @@ def TestProject(ID,versionSet,commands_to_call=""):
         #print("run selecting currently broken.  RCDB: 'basestring' not defined.  Testing first runnumber only")
         rcdbdb = rcdb.RCDBProvider("mysql://rcdb@hallddb.jlab.org/rcdb")
         try:
-            runtable = rcdbdb.select_runs(str(query_to_do),int(order["RunNumLow"]),int(order["RunNumHigh"])).get_values(['event_count'],True)
-        #rcdb_db = rcdb.RCDBProvider("mysql://rcdb@hallddb.jlab.org/rcdb")
-        #runList=rcdb_db.select_runs(str(query_to_do),order["RunNumLow"],order["RunNumHigh"]).get_values(['event_count'],True)
+            print(str(query_to_do)+" | "+str(int(order["RunNumLow"]))+" | "+str(int(order["RunNumHigh"])))
+            #runtable = rcdbdb.select_runs(str(query_to_do),int(order["RunNumLow"]),int(order["RunNumHigh"])).get_values(['event_count'],True)
+        
+        
         except Exception as e:
+            print(e)
             updatequery="UPDATE Project SET Tested=-1"+" WHERE ID="+str(ID)+";"
             curs.execute(updatequery)
             conn.commit()
@@ -723,7 +730,7 @@ def TestProject(ID,versionSet,commands_to_call=""):
                 s = smtplib.SMTP('localhost')
                 #print(msg)
                 print("SENDING")
-                s.send_message(msg)
+                #s.send_message(msg)
                 s.quit()     
                 copy=open("/osgpool/halld/tbritton/REQUESTED_FAIL_MAILS/email_"+str(order['ID'])+".log", "w+")
                 copy.write('The log information is reproduced below:\n\n\n'+str("There was a problem with the RCDB query provided")+'\n\n\nErrors:\n\n\n'+str(e))
@@ -733,7 +740,8 @@ def TestProject(ID,versionSet,commands_to_call=""):
                 pass
             return ["Problem with rcdb query",-1,e]
 
-        print(runtable)
+        #print(runtable)
+        
         #RunNumber=str(runList[0][0])
 
         RunNumber=str(order["RunNumLow"])#str(runList[0][0])
@@ -1117,14 +1125,14 @@ def WritePayloadConfigString(order,foundConfig):
         config_str+="RCDB_QUERY="+order["RCDBQuery"]+"\n"
 
     if(order["ReactionLines"] != ""):
-        jana_config_file=open("/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config","w")
+        #jana_config_file=open("/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config","w")
         janaplugins="PLUGINS danarest,monitoring_hists,mcthrown_tree"
         if(order["ReactionLines"]):
             janaplugins+=",ReactionFilter\n"+order["ReactionLines"]
         else:
             janaplugins+="\n"
-        jana_config_file.write(janaplugins)
-        jana_config_file.close()
+        #jana_config_file.write(janaplugins)
+        #jana_config_file.close()
         config_str+="CUSTOM_PLUGINS=file:/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config\n"
 
     

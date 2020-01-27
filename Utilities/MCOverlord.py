@@ -239,6 +239,12 @@ def checkProjectsForCompletion():
             dbcnx.commit()
 
 
+def checkSWIF2():
+    dbcnxSWIF=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
+    dbcursorSWIF=dbcnxSWIF.cursor(MySQLdb.cursors.DictCursor)
+    runningq="SELECT * FROM Attempts where BatchSystem=\"SWIF\" && (Status!=\"succeeded\" && Status!=\"problem\") && Job_ID in (SELECT ID FROM Jobs where Project_ID in (SELECT ID from Project where Completed_Time is NULL));"
+
+
 def checkSWIF(WKflows_to_check):
         #print "CHECKING SWIF JOBS"
         #queryswifjobs="SELECT OutputLocation,ID,NumEvents,Completed_Time FROM Project WHERE ID IN (SELECT Project_ID FROM Jobs WHERE IsActive=1 && ID IN (SELECT Job_ID FROM Attempts WHERE BatchSystem= 'SWIF') )"
@@ -257,14 +263,19 @@ def checkSWIF(WKflows_to_check):
             ProjID=workflow["ID"]
             projIDs.append(ProjID)
             #statuscommand="swif status -workflow "+str("pim_g3_1_70_v2_20180718011203pm")+" -jobs -display json"
-            statuscommand="/site/bin/swif status -workflow proj"+str(ProjID)+"_"+str(wkflowname)+" -jobs -display json"
-            print(statuscommand)
-            jsonOutputstr=subprocess.check_output(statuscommand.split(" "))
+            try:
+                statuscommand="/site/bin/swif status -workflow proj"+str(ProjID)+"_"+str(wkflowname)+" -jobs -display json"
+                print(statuscommand)
+                jsonOutputstr=subprocess.check_output(statuscommand.split(" "))
+            except Exception as e:
+                print(e)
+                continue
             ReturnedJobs=json.loads(str(jsonOutputstr, "utf-8"))
             #print "*******************"
             #print ReturnedJobs
             #print "======================"
             #LOOP OVER ALL JOBS IN WORKFLOW
+            print(len(ReturnedJobs))
             for job in ReturnedJobs["jobs"]:
                 check_query="SELECT Job_ID,Status,ExitCode from Attempts WHERE BatchJobID="+str(job["id"])
                 dbcursor.execute(check_query)
@@ -766,7 +777,7 @@ def main(argv):
                         queryswifjobs="SELECT * FROM Project WHERE Notified IS NULL && ID IN (SELECT Project_ID FROM Jobs WHERE IsActive=1 && ID IN (SELECT DISTINCT Job_ID FROM Attempts WHERE BatchSystem= 'SWIF' && (Status!='succeeded' || Status is NULL)) )"
                         dbcursor.execute(queryswifjobs)
                         AllWkFlows = dbcursor.fetchall()
-                        checkSWIF(AllWkFlows)
+                        #checkSWIF(AllWkFlows)
                         #SWIF CHECK MUST BE SINGLE THREADED FOR NOW DUE TO THE VODOO NOT BEING THREAD SAFE
                     
                     #print(AllWkFlows)
@@ -796,6 +807,7 @@ def main(argv):
                     checkProjectsForCompletion()
                     dbcursor.execute("UPDATE MCOverlord SET EndTime=NOW(), Status=\"Success\" where ID="+str(lastid[0]["MAX(ID)"]))
                     dbcnx.commit()
+                    #break
                 except Exception as e:
                     print("exception")
                     print(e)
