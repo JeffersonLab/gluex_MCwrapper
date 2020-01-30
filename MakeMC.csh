@@ -118,6 +118,8 @@ shift
 setenv EXPERIMENT $1
 shift
 setenv RANDOM_TRIG_NUM_EVT $1
+shift
+setenv MCWRAPPER_RUN_LOCATION $1
 
 setenv USER_BC `which bc`
 setenv USER_PYTHON `which python`
@@ -138,6 +140,11 @@ setenv USER_STAT '/usr/bin/stat'
 endif
 
 setenv XRD_RANDOMS_URL root://sci-xrootd.jlab.org//osgpool/halld/
+
+if ( "$MCWRAPPER_RUN_LOCATION" == "JLAB" ) then
+	setenv XRD_RANDOMS_URL root://sci-xrootd-ib.jlab.org//osgpool/halld/
+endif
+
 setenv MAKE_MC_USING_XROOTD 0
 if ( -f /usr/lib64/libXrdPosixPreload.so && "$BKGFOLDSTR" != "None" ) then
 	setenv MAKE_MC_USING_XROOTD 1
@@ -180,7 +187,8 @@ if ( ! -d $RUNNING_DIR/${RUN_NUMBER}_${FILE_NUMBER} ) then
 endif
 
 cd $RUNNING_DIR/${RUN_NUMBER}_${FILE_NUMBER}
-
+echo "what path?"
+echo $ccdbSQLITEPATH
 if ( "$ccdbSQLITEPATH" != "no_sqlite" && "$ccdbSQLITEPATH" != "batch_default" && "$ccdbSQLITEPATH" != "jlab_batch_default" ) then
 	if (`$USER_STAT --file-system --format=%T $PWD` == "lustre" ) then
 		echo "Attempting to use sqlite on a lustre file system. This does not work.  Try running on a different file system!"
@@ -210,6 +218,9 @@ else if ( "$ccdbSQLITEPATH" == "jlab_batch_default" ) then
 	#setenv CCDB_CONNECTION mysql://ccdb_user@hallddb-farm.jlab.org/ccdb
     setenv JANA_CALIB_URL ${CCDB_CONNECTION}
 endif
+#xrdcopy $XRD_RANDOMS_URL/ccdb.sqlite ./
+#setenv CCDB_CONNECTION sqlite:///$PWD/ccdb.sqlite
+#setenv JANA_CALIB_URL ${CCDB_CONNECTION}
 
 if ( "$rcdbSQLITEPATH" != "no_sqlite" && "$rcdbSQLITEPATH" != "batch_default" ) then
 	if (`$USER_STAT --file-system --format=%T $PWD` == "lustre" ) then
@@ -1166,11 +1177,11 @@ endif
 			
 			
 			if ( $MAKE_MC_USING_XROOTD == 0 ) then
-				echo "mcsmear "$MCSMEAR_Flags" -PTHREAD_TIMEOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3000 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
-				mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3000 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
+				echo "mcsmear "$MCSMEAR_Flags" -PTHREAD_TIMEOUT_FIRST_EVENT=5200 -PTHREAD_TIMEOUT=3000 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
+				mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=5200 -PTHREAD_TIMEOUT=3000 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
 			else
-				echo "mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3000 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm:1+$fold_skip_num"
-				mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3000 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm\:1\+$fold_skip_num
+				echo "mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=5200 -PTHREAD_TIMEOUT=3000 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm:1+$fold_skip_num"
+				mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=5200 -PTHREAD_TIMEOUT=3000 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm\:1\+$fold_skip_num
 			endif
 			set mcsmear_return_code=$status
 		else if ( "$bkgloc_pre" == "loc:" ) then
@@ -1185,8 +1196,8 @@ endif
 			endif
 			set fold_skip_num=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
 			
-			echo "mcsmear "$MCSMEAR_Flags" -PTHREAD_TIMEOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3000 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
-			mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3000 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
+			echo "mcsmear "$MCSMEAR_Flags" -PTHREAD_TIMEOUT_FIRST_EVENT=5200 -PTHREAD_TIMEOUT=3000 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
+			mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=5200 -PTHREAD_TIMEOUT=3000 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
 			set mcsmear_return_code=$status
 	    
 			else

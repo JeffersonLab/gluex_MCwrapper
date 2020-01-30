@@ -116,6 +116,8 @@ shift
 export EXPERIMENT=$1
 shift
 export RANDOM_TRIG_NUM_EVT=$1
+shift
+export MCWRAPPER_RUN_LOCATION=$1
 
 export USER_BC=`which bc`
 export USER_PYTHON=`which python`
@@ -134,6 +136,11 @@ formatted_runNumber=$formatted_runNumber$RUN_NUMBER
 flength_count=$((`echo $FILE_NUMBER | wc -c` - 1))
 
 export XRD_RANDOMS_URL=root://sci-xrootd.jlab.org//osgpool/halld/
+
+if [[ "$MCWRAPPER_RUN_LOCATION" == "JLAB" ]]; then
+	export XRD_RANDOMS_URL=root://sci-xrootd-ib.jlab.org//osgpool/halld/
+fi
+
 export MAKE_MC_USING_XROOTD=0
 #ls /usr/lib64/libXrdPosixPreload.so
 if [[ -f /usr/lib64/libXrdPosixPreload.so && "$BKGFOLDSTR" != "None" ]]; then
@@ -1184,11 +1191,11 @@ if [[ "$GENR" != "0" ]]; then
 		fold_skip_num=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
 		echo "skipping: "$fold_skip_num
 		if [[ $MAKE_MC_USING_XROOTD == 0 ]]; then
-			echo "mcsmear "$MCSMEAR_Flags " -PTHREAD_TIMEOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3000 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
-			mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3000 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
+			echo "mcsmear "$MCSMEAR_Flags " -PTHREAD_TIMEOUT_FIRST_EVENT=5200 -PTHREAD_TIMEOUT=3000 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
+			mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=5200 -PTHREAD_TIMEOUT=3000 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
 		else
-			echo "mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3000 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm:1+$fold_skip_num"
-            mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3000 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $XRD_RANDOMS_URL/random_triggers//$RANDBGTAG/run$formatted_runNumber\_random.hddm\:1\+$fold_skip_num
+			echo "mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=5200 -PTHREAD_TIMEOUT=3000 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm:1+$fold_skip_num"
+            mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=5200 -PTHREAD_TIMEOUT=3000 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $XRD_RANDOMS_URL/random_triggers//$RANDBGTAG/run$formatted_runNumber\_random.hddm\:1\+$fold_skip_num
 		fi
 		mcsmear_return_code=$?
 	elif [[ "$bkgloc_pre" == "loc:" ]]; then
