@@ -146,17 +146,19 @@ export MAKE_MC_USING_XROOTD=0
 if [[ -f /usr/lib64/libXrdPosixPreload.so && "$BKGFOLDSTR" != "None" ]]; then
 	export MAKE_MC_USING_XROOTD=1
 	export LD_PRELOAD=/usr/lib64/libXrdPosixPreload.so
-	echo "I have the share object needed for xrootd!"
+	echo "XROOTD is available for use if needed..."
 	#con_test=`ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | grep "cannot access"`
 	#echo `ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1`
-	if [[ `ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1` != "r" ]]; then
-		echo "JLab Connection test failed. Falling back to UConn...."
-		#echo "attempting to copy the needed file from an alternate source..."
-		#rsync scosg16.jlab.org:/osgpool/halld/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm ./
-		export XRD_RANDOMS_URL=root://nod25.phys.uconn.edu/Gluex/rawdata/
+	if [[ "$BKGFOLDSTR" == "Random" ]]; then
 		if [[ `ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1` != "r" ]]; then
-			echo "Cannot connect to the file.  Disabling xrootd...."
-			export MAKE_MC_USING_XROOTD=0
+			echo "JLab Connection test failed. Falling back to UConn...."
+			#echo "attempting to copy the needed file from an alternate source..."
+			#rsync scosg16.jlab.org:/osgpool/halld/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm ./
+			export XRD_RANDOMS_URL=root://nod25.phys.uconn.edu/Gluex/rawdata/
+			if [[ `ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1` != "r" ]]; then
+				echo "Cannot connect to the file.  Disabling xrootd...."
+				export MAKE_MC_USING_XROOTD=0
+			fi
 		fi
 	fi
 fi
