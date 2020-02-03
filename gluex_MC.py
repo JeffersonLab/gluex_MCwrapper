@@ -45,7 +45,7 @@ except:
         pass
 
 MCWRAPPER_VERSION="2.3.1"
-MCWRAPPER_DATE="01/30/20"
+MCWRAPPER_DATE="02/03/20"
 
 #====================================================
 #Takes in a few pertinant pieces of info.  Creates (if needed) a swif workflow and adds a job to it.
@@ -949,6 +949,9 @@ def main(argv):
                 script_to_use = "/MakeMC.sh"
         
         SCRIPT_TO_RUN+=script_to_use
+
+        if ".jlab.org" in socket.gethostname() :
+                LOCATION="JLAB"
 
         if len(CUSTOM_MAKEMC)!= 0 and CUSTOM_MAKEMC != "DEFAULT":
                 SCRIPT_TO_RUN=CUSTOM_MAKEMC

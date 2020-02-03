@@ -139,26 +139,29 @@ setenv USER_BC '/usr/bin/bc'
 setenv USER_STAT '/usr/bin/stat'
 endif
 
+
 setenv XRD_RANDOMS_URL root://sci-xrootd.jlab.org//osgpool/halld/
 
 if ( "$MCWRAPPER_RUN_LOCATION" == "JLAB" ) then
-	setenv XRD_RANDOMS_URL root://sci-xrootd-ib.jlab.org//osgpool/halld/
+	setenv XRD_RANDOMS_URL root://sci-xrootd-ib.qcd.jlab.org//osgpool/halld/
 endif
 
 setenv MAKE_MC_USING_XROOTD 0
 if ( -f /usr/lib64/libXrdPosixPreload.so && "$BKGFOLDSTR" != "None" ) then
 	setenv MAKE_MC_USING_XROOTD 1
 	setenv LD_PRELOAD /usr/lib64/libXrdPosixPreload.so
-	echo "I have the share object needed for xrootd!"
+	echo "XROOTD is available for use if needed..."
 	#set con_test=`ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm`
 	#echo `ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1`
-	if ( `ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1` != "r" ) then
-		echo "JLAB Connection test failed.  Falling back to UConn ...."
-		#echo "attempting to copy the needed file from an alternate source..."
-		setenv XRD_RANDOMS_URL root://nod25.phys.uconn.edu/Gluex/rawdata/
+	if ( "$BKGFOLDSTR" == "Random" ) then
 		if ( `ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1` != "r" ) then
-			echo "Cannot connect to the file.  Disabling xrootd...."
-			setenv MAKE_MC_USING_XROOTD 0
+			echo "JLAB Connection test failed.  Falling back to UConn ...."
+			#echo "attempting to copy the needed file from an alternate source..."
+			setenv XRD_RANDOMS_URL root://nod25.phys.uconn.edu/Gluex/rawdata/
+			if ( `ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1` != "r" ) then
+				echo "Cannot connect to the file.  Disabling xrootd...."
+				setenv MAKE_MC_USING_XROOTD 0
+			endif
 		endif
 	endif
 
