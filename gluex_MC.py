@@ -45,7 +45,7 @@ except:
         pass
 
 MCWRAPPER_VERSION="2.3.1"
-MCWRAPPER_DATE="02/03/20"
+MCWRAPPER_DATE="02/11/20"
 
 #====================================================
 #Takes in a few pertinant pieces of info.  Creates (if needed) a swif workflow and adds a job to it.
@@ -966,7 +966,7 @@ def main(argv):
         #if (BATCHSYS.upper() == "OSG" or BATCHSYS.upper() == "SWIF") and int(BATCHRUN) != 0 and rcdbSQLITEPATH=="no_sqlite":
         if (BATCHSYS.upper() == "OSG" ) and int(BATCHRUN) != 0 and rcdbSQLITEPATH=="no_sqlite":
                 rcdbSQLITEPATH="batch_default"
-
+                LOCATION="OSG"
         if str(SCRIPT_TO_RUN) == "None":
                 print( "MCWRAPPER_CENTRAL not set")
                 return
