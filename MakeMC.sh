@@ -387,7 +387,7 @@ if [[ "$polarization_angle" == "-1.0" ]]; then
 		POL_TO_GEN=0
 fi
 # PRINT INPUTS
-echo "This job has been configured to run at: " $MCWRAPPER_RUN_LOCATION
+echo "This job has been configured to run at: " $MCWRAPPER_RUN_LOCATION" : "`hostname`
 echo "Job started: " `date`
 echo "Simulating the Experiment: " $EXPERIMENT
 echo "ccdbsqlite path: " $ccdbSQLITEPATH $CCDB_CONNECTION
@@ -609,7 +609,6 @@ if [[ "$GENR" != "0" ]]; then
 	gen_pre=`echo $GENERATOR | cut -c1-4`
 
     if [[ "$gen_pre" != "file" && "$GENERATOR" != "genr8" && "$GENERATOR" != "bggen" && "$GENERATOR" != "genEtaRegge" && "$GENERATOR" != "gen_2pi_amp" && "$GENERATOR" != "gen_pi0" && "$GENERATOR" != "gen_2pi_primakoff" && "$GENERATOR" != "gen_omega_3pi" && "$GENERATOR" != "gen_2k" && "$GENERATOR" != "bggen_jpsi" && "$GENERATOR" != "gen_ee" && "$GENERATOR" != "gen_ee_hb" && "$GENERATOR" != "particle_gun" && "$GENERATOR" != "bggen_phi_ee" && "$GENERATOR" != "genBH" && "$GENERATOR" != "gen_omega_radiative" && "$GENERATOR" != "gen_amp" && "$GENERATOR" != "genr8_new" && "$GENERATOR" != "gen_compton" && "$GENERATOR" != "gen_npi" && "$GENERATOR" != "gen_compton_simple" && "$GENERATOR" != "gen_primex_eta_he4" && "$GENERATOR" != "gen_whizard" ]]; then
-
 		echo "NO VALID GENERATOR GIVEN"
 		echo "only [genr8, bggen, genEtaRegge, gen_2pi_amp, gen_pi0, gen_omega_3pi, gen_2k, bggen_jpsi, gen_ee, gen_ee_hb,  bggen_phi_ee, particle_gun, genBH, gen_omega_radiative, gen_amp, gen_compton, gen_npi, gen_compton_simple, gen_primex_eta_he4, gen_whizard] are supported"
 		exit 1

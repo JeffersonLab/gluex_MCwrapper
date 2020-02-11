@@ -386,7 +386,7 @@ if ( "$polarization_angle" == "-1.0" ) then
 		set POL_TO_GEN=0
 endif
 # PRINT INPUTS
-echo "This job has been configured to run at: " $MCWRAPPER_RUN_LOCATION
+echo "This job has been configured to run at: " $MCWRAPPER_RUN_LOCATION" : "`hostname`
 echo "Job started: " `date`
 echo "Simulating the Experiment: " $EXPERIMENT
 echo "ccdb sqlite path: " $ccdbSQLITEPATH $CCDB_CONNECTION
