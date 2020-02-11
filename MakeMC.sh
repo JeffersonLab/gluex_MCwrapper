@@ -171,8 +171,6 @@ export USER_BC='/usr/bin/bc'
 export USER_STAT='/usr/bin/stat'
 fi
 
-
-
 #printenv
 #necessary to run swif, uses local directory if swif=0 is used
 if [[ "$BATCHRUN" != "0" ]]; then
@@ -213,6 +211,7 @@ elif [[ "$ccdbSQLITEPATH" == "jlab_batch_default" ]]; then
 		if [[ -f /usr/lib64/libXrdPosixPreload.so ]]; then
 			xrdcopy $XRD_RANDOMS_URL/ccdb.sqlite ./
 			export CCDB_CONNECTION=sqlite:///$PWD/ccdb.sqlite
+
 		else
 			ccdb_jlab_sqlite_path=`echo $((1 + RANDOM % 100))`
 			if [[ -f /work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite ]]; then
@@ -388,6 +387,7 @@ if [[ "$polarization_angle" == "-1.0" ]]; then
 		POL_TO_GEN=0
 fi
 # PRINT INPUTS
+echo "This job has been configured to run at: " $MCWRAPPER_RUN_LOCATION
 echo "Job started: " `date`
 echo "Simulating the Experiment: " $EXPERIMENT
 echo "ccdbsqlite path: " $ccdbSQLITEPATH $CCDB_CONNECTION
@@ -607,7 +607,9 @@ gen_pre=""
 if [[ "$GENR" != "0" ]]; then
 
 	gen_pre=`echo $GENERATOR | cut -c1-4`
+
     if [[ "$gen_pre" != "file" && "$GENERATOR" != "genr8" && "$GENERATOR" != "bggen" && "$GENERATOR" != "genEtaRegge" && "$GENERATOR" != "gen_2pi_amp" && "$GENERATOR" != "gen_pi0" && "$GENERATOR" != "gen_2pi_primakoff" && "$GENERATOR" != "gen_omega_3pi" && "$GENERATOR" != "gen_2k" && "$GENERATOR" != "bggen_jpsi" && "$GENERATOR" != "gen_ee" && "$GENERATOR" != "gen_ee_hb" && "$GENERATOR" != "particle_gun" && "$GENERATOR" != "bggen_phi_ee" && "$GENERATOR" != "genBH" && "$GENERATOR" != "gen_omega_radiative" && "$GENERATOR" != "gen_amp" && "$GENERATOR" != "genr8_new" && "$GENERATOR" != "gen_compton" && "$GENERATOR" != "gen_npi" && "$GENERATOR" != "gen_compton_simple" && "$GENERATOR" != "gen_primex_eta_he4" && "$GENERATOR" != "gen_whizard" ]]; then
+
 		echo "NO VALID GENERATOR GIVEN"
 		echo "only [genr8, bggen, genEtaRegge, gen_2pi_amp, gen_pi0, gen_omega_3pi, gen_2k, bggen_jpsi, gen_ee, gen_ee_hb,  bggen_phi_ee, particle_gun, genBH, gen_omega_radiative, gen_amp, gen_compton, gen_npi, gen_compton_simple, gen_primex_eta_he4, gen_whizard] are supported"
 		exit 1
@@ -757,6 +759,10 @@ if [[ "$GENR" != "0" ]]; then
     elif [[ "$GENERATOR" == "gen_2pi_primakoff" ]]; then
 		echo "configuring gen_2pi_primakoff"
 		STANDARD_NAME="gen_2pi_primakoff_"$STANDARD_NAME
+		cp $CONFIG_FILE ./$STANDARD_NAME.conf
+	 elif [[ "$GENERATOR" == "gen_2pi0_primakoff" ]]; then
+        echo "configuring gen_2pi0_primakoff"
+        STANDARD_NAME="gen_2pi0_primakoff_"$STANDARD_NAME
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
     elif [[ "$GENERATOR" == "gen_pi0" ]]; then
 		echo "configuring gen_pi0"
@@ -955,6 +961,14 @@ if [[ "$GENR" != "0" ]]; then
 	echo gen_2pi_primakoff -c $STANDARD_NAME.conf -o  $STANDARD_NAME.hddm -hd  $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
 	gen_2pi_primakoff -c $STANDARD_NAME.conf -hd  $STANDARD_NAME.hddm -o  $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
     generator_return_code=$?
+	elif [[ "$GENERATOR" == "gen_2pi0_primakoff" ]]; then
+        echo "RUNNING GEN_2PI0_PRIMAKOFF"
+        optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
+		echo $optionals_line
+		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
+        echo gen_2pi0_primakoff -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
+        gen_2pi0_primakoff -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
+		generator_return_code=$?
 	elif [[ "$GENERATOR" == "gen_pi0" ]]; then
 	echo "RUNNING GEN_PI0" 
 	optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
@@ -1225,11 +1239,12 @@ if [[ "$GENR" != "0" ]]; then
 		fold_skip_num=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
 		echo "skipping: "$fold_skip_num
 		if [[ $MAKE_MC_USING_XROOTD == 0 ]]; then
-			echo "mcsmear "$MCSMEAR_Flags " -PTHREAD_TIMEOUT_FIRST_EVENT=5200 -PTHREAD_TIMEOUT=3000 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
-			mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=5200 -PTHREAD_TIMEOUT=3000 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
+			echo "mcsmear "$MCSMEAR_Flags " -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
+			mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
 		else
-			echo "mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=5200 -PTHREAD_TIMEOUT=3000 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm:1+$fold_skip_num"
-            mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=5200 -PTHREAD_TIMEOUT=3000 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $XRD_RANDOMS_URL/random_triggers//$RANDBGTAG/run$formatted_runNumber\_random.hddm\:1\+$fold_skip_num
+			echo "mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm:1+$fold_skip_num"
+            mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $XRD_RANDOMS_URL/random_triggers//$RANDBGTAG/run$formatted_runNumber\_random.hddm\:1\+$fold_skip_num
+
 		fi
 		mcsmear_return_code=$?
 	elif [[ "$bkgloc_pre" == "loc:" ]]; then
@@ -1243,13 +1258,13 @@ if [[ "$GENR" != "0" ]]; then
 			totalnum=$RANDOM_TRIG_NUM_EVT
 	   fi
 		fold_skip_num=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
-		echo "mcsmear "$MCSMEAR_Flags " -PTHREAD_TIMEOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3000 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
-		mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3000 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
+		echo "mcsmear "$MCSMEAR_Flags " -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
+		mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
 		mcsmear_return_code=$?
 	else
 	    #trust the user and use their string
-	    echo 'mcsmear -PTHREAD_TIMEOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3000 -o'$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm'' '$STANDARD_NAME'_geant'$GEANTVER'.hddm'' '$BKGFOLDSTR
-	    mcsmear -PTHREAD_TIMEOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3000 -o$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' $STANDARD_NAME'_geant'$GEANTVER'.hddm' $BKGFOLDSTR
+	    echo 'mcsmear -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o'$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm'' '$STANDARD_NAME'_geant'$GEANTVER'.hddm'' '$BKGFOLDSTR
+	    mcsmear -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' $STANDARD_NAME'_geant'$GEANTVER'.hddm' $BKGFOLDSTR
 		mcsmear_return_code=$?
 	fi
 	
@@ -1376,12 +1391,20 @@ elif [[ "$ccdbSQLITEPATH" == "batch_default" ]]; then
     export CCDB_CONNECTION=sqlite:////group/halld/www/halldweb/html/dist/ccdb.sqlite
     export JANA_CALIB_URL=${CCDB_CONNECTION}
 elif [[ "$ccdbSQLITEPATH" == "jlab_batch_default" ]]; then
-		ccdb_jlab_sqlite_path=`echo $((1 + RANDOM % 100))`
-		if ( -f /work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite ) then
-			export CCDB_CONNECTION=sqlite:////work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite
+		if [[ -f /usr/lib64/libXrdPosixPreload.so ]]; then
+			#echo "stop...its xrdcopy time"
+			xrdcopy $XRD_RANDOMS_URL/ccdb.sqlite ./
+			export CCDB_CONNECTION=sqlite:///$PWD/ccdb.sqlite
+		else
+			ccdb_jlab_sqlite_path=`bash -c 'echo $((1 + RANDOM % 100))'`
+		if [[ -f /work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite ]]; then
+		#	cp /work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite $PWD/ccdb.sqlite
+			export CCDB_CONNECTION sqlite:///$PWD/ccdb.sqlite
+			#setenv CCDB_CONNECTION sqlite:////work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite
 		else
 			export CCDB_CONNECTION=mysql://ccdb_user@hallddb.jlab.org/ccdb
 		fi
+	fi
 
     export JANA_CALIB_URL=${CCDB_CONNECTION}
 
