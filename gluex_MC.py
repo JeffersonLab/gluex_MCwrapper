@@ -44,8 +44,8 @@ try:
 except:
         pass
 
-MCWRAPPER_VERSION="2.3.0"
-MCWRAPPER_DATE="12/09/19"
+MCWRAPPER_VERSION="2.3.1"
+MCWRAPPER_DATE="02/11/20"
 
 #====================================================
 #Takes in a few pertinant pieces of info.  Creates (if needed) a swif workflow and adds a job to it.
@@ -81,6 +81,8 @@ def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,N
         # tags
         add_command += " -tag file_number " + str(FILENO)
         # script with options command
+        add_command += " -fail-save-dir "+DATA_OUTPUT_BASE_DIR
+
         add_command += " "+SCRIPT  +" "+ getCommandString(COMMAND)
 
         if(VERBOSE == True):
@@ -471,6 +473,30 @@ def  SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, N
 
 
 #====================================================
+#function to split monolithic hddm file by run number
+#credit to sdobbs for the base
+#====================================================
+def split_file_on_run_number(infname):
+        # output files
+        fout = {}
+        outevts = {}
+        # iterate through the file, splitting by run number
+        for rec in hddm_r.istream(infnamepath):
+                evt = rec.getReconstructedPhysicsEvent()
+                if evt.runNo not in fout:
+                        outfname = "{0}_run{1}.hddm".format(infname[:-5],evt.runNo)
+                        print "Creating output file {0} ...".format(outfname)
+                        fout[evt.runNo] = hddm_r.ostream(outfname)
+                        outevts[evt.runNo] = 0
+                else:
+                        outevts[evt.runNo] += 1
+                fout[evt.runNo].write(rec)
+
+        print(fout)
+        print(outevts)
+        return outevts
+
+#====================================================
 #Simple function to take in the column information and insert into the Jobs Table
 #====================================================
 def recordJob(PROJECT_ID,RUNNO,FILENO,BatchJobID, NUMEVTS):
@@ -526,7 +552,7 @@ def recordAttempt(JOB_ID,RUNNO,FILENO,BatchSYS,BatchJobID, NUMEVTS,NCORES, RAM):
 #the COMMAND dictionary expects ALL the KEYS
 #====================================================
 def getCommandString(COMMAND):
-        return COMMAND['batchrun']+" "+COMMAND['environment_file']+" "+COMMAND['ana_environment_file']+" "+COMMAND['generator_config']+" "+COMMAND['output_directory']+" "+COMMAND['run_number']+" "+COMMAND['file_number']+" "+COMMAND['num_events']+" "+COMMAND['jana_calib_context']+" "+COMMAND['jana_calibtime']+" "+COMMAND['do_gen']+" "+COMMAND['do_geant']+" "+COMMAND['do_mcsmear']+" "+COMMAND['do_recon']+" "+COMMAND['clean_gen']+" "+COMMAND['clean_geant']+" "+COMMAND['clean_mcsmear']+" "+COMMAND['clean_recon']+" "+COMMAND['batch_system']+" "+COMMAND['num_cores']+" "+COMMAND['generator']+" "+COMMAND['geant_version']+" "+COMMAND['background_to_include']+" "+COMMAND['custom_Gcontrol']+" "+COMMAND['eBeam_energy']+" "+COMMAND['coherent_peak']+" "+COMMAND['min_generator_energy']+" "+COMMAND['max_generator_energy']+" "+COMMAND['custom_tag_string']+" "+COMMAND['custom_plugins']+" "+COMMAND['events_per_file']+" "+COMMAND['running_directory']+" "+COMMAND['ccdb_sqlite_path']+" "+COMMAND['rcdb_sqlite_path']+" "+COMMAND['background_tagger_only']+" "+COMMAND['radiator_thickness']+" "+COMMAND['background_rate']+" "+COMMAND['random_background_tag']+" "+COMMAND['recon_calibtime']+" "+COMMAND['no_geant_secondaries']+" "+COMMAND['mcwrapper_version']+" "+COMMAND['no_bcal_sipm_saturation']+" "+COMMAND['flux_to_generate']+" "+COMMAND['flux_histogram']+" "+COMMAND['polarization_to_generate']+" "+COMMAND['polarization_histogram']+" "+COMMAND['eBeam_current']+" "+COMMAND['experiment']+" "+COMMAND['num_rand_trigs']
+        return COMMAND['batchrun']+" "+COMMAND['environment_file']+" "+COMMAND['ana_environment_file']+" "+COMMAND['generator_config']+" "+COMMAND['output_directory']+" "+COMMAND['run_number']+" "+COMMAND['file_number']+" "+COMMAND['num_events']+" "+COMMAND['jana_calib_context']+" "+COMMAND['jana_calibtime']+" "+COMMAND['do_gen']+" "+COMMAND['do_geant']+" "+COMMAND['do_mcsmear']+" "+COMMAND['do_recon']+" "+COMMAND['clean_gen']+" "+COMMAND['clean_geant']+" "+COMMAND['clean_mcsmear']+" "+COMMAND['clean_recon']+" "+COMMAND['batch_system']+" "+COMMAND['num_cores']+" "+COMMAND['generator']+" "+COMMAND['geant_version']+" "+COMMAND['background_to_include']+" "+COMMAND['custom_Gcontrol']+" "+COMMAND['eBeam_energy']+" "+COMMAND['coherent_peak']+" "+COMMAND['min_generator_energy']+" "+COMMAND['max_generator_energy']+" "+COMMAND['custom_tag_string']+" "+COMMAND['custom_plugins']+" "+COMMAND['events_per_file']+" "+COMMAND['running_directory']+" "+COMMAND['ccdb_sqlite_path']+" "+COMMAND['rcdb_sqlite_path']+" "+COMMAND['background_tagger_only']+" "+COMMAND['radiator_thickness']+" "+COMMAND['background_rate']+" "+COMMAND['random_background_tag']+" "+COMMAND['recon_calibtime']+" "+COMMAND['no_geant_secondaries']+" "+COMMAND['mcwrapper_version']+" "+COMMAND['no_bcal_sipm_saturation']+" "+COMMAND['flux_to_generate']+" "+COMMAND['flux_histogram']+" "+COMMAND['polarization_to_generate']+" "+COMMAND['polarization_histogram']+" "+COMMAND['eBeam_current']+" "+COMMAND['experiment']+" "+COMMAND['num_rand_trigs']+" "+COMMAND['location']
 
 def showhelp():
         helpstring= "variation=%s where %s is a valid jana_calib_context variation string (default is \"mc\")\n"
@@ -649,6 +675,7 @@ def main(argv):
         NOSIPMSATURATION=0
         SHELL_TO_USE="csh"
         MYJOB=[]
+        LOCATION="auto"
         
         #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         #loop over config file and set the "parameters"
@@ -923,6 +950,9 @@ def main(argv):
         
         SCRIPT_TO_RUN+=script_to_use
 
+        if ".jlab.org" in socket.gethostname() :
+                LOCATION="JLAB"
+
         if len(CUSTOM_MAKEMC)!= 0 and CUSTOM_MAKEMC != "DEFAULT":
                 SCRIPT_TO_RUN=CUSTOM_MAKEMC
 
@@ -932,10 +962,11 @@ def main(argv):
         
         if (BATCHSYS.upper() == "SWIF") and int(BATCHRUN) != 0 and ccdbSQLITEPATH=="no_sqlite":
                 ccdbSQLITEPATH="jlab_batch_default"
+                LOCATION="JLAB"
         #if (BATCHSYS.upper() == "OSG" or BATCHSYS.upper() == "SWIF") and int(BATCHRUN) != 0 and rcdbSQLITEPATH=="no_sqlite":
         if (BATCHSYS.upper() == "OSG" ) and int(BATCHRUN) != 0 and rcdbSQLITEPATH=="no_sqlite":
                 rcdbSQLITEPATH="batch_default"
-
+                LOCATION="OSG"
         if str(SCRIPT_TO_RUN) == "None":
                 print( "MCWRAPPER_CENTRAL not set")
                 return
@@ -1002,6 +1033,7 @@ def main(argv):
         COMMAND_dict['eBeam_current']=str(eBEAM_CURRENT)
         COMMAND_dict['experiment']=str(PROJECT)
         COMMAND_dict['num_rand_trigs']=str(RANDOM_NUM_EVT)
+        COMMAND_dict['location']=str(LOCATION)
         
         if(COMMAND_dict['generator'][:4]=="file:" and len(RunType) != 1):
                 print("ERROR: MCwrapper currently does not support taking a monolithic file and converting it into a range of runs.")
@@ -1040,6 +1072,8 @@ def main(argv):
                                 elif BATCHSYS.upper()=="JSLURM":
                                         JSUB_add_job(VERBOSE, WORKFLOW, PROJECT, TRACK, RUNNUM, BASEFILENUM, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
         else:
+                #print("NOT THE SUBMITTER")
+                #print(len(RunType))
                 if len(RunType) != 1 : #RUN RANGE GIVEN
                         event_sum=0.
                         #Make python rcdb calls to form the vector
@@ -1076,15 +1110,16 @@ def main(argv):
                         if(RCDB_QUERY!=""):
                                 query_to_do=RCDB_QUERY
 
+                        print(str(runlow)+"------->"+str(runhigh))
                         table = db.select_runs(str(query_to_do),runlow,runhigh).get_values(['event_count'],True)
-                        #print table
+                        print(table)
                         #print len(table)
                         for runs in table:
                                 if len(table)<=1:
                                         break
                                 event_sum = event_sum + runs[1]
 
-                        print( event_sum)
+                        print("Events from rcdb: "+str(event_sum))
                         sum2=0.
                         for runs in table: #do for each job
                                 #print runs[0]
@@ -1262,8 +1297,14 @@ def GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,RUNNUM):
                         print(matches[0][0])
                         return matches[0][0]
                 else:
-                        print "AMBIGUOUS!"
-                        return -1
+                        #print(matches[0])
+                        value=matches[0][0]
+                        for match in matches:
+                                if match[0] != value:
+                                        print("AMBIGUOUS!")
+                                        return -1
+                        
+                        return value
         except Exception as e:
                 print(e)
                 pass
