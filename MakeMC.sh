@@ -215,9 +215,11 @@ elif [[ "$ccdbSQLITEPATH" == "jlab_batch_default" ]]; then
 		else
 			ccdb_jlab_sqlite_path=`echo $((1 + RANDOM % 100))`
 			if [[ -f /work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite ]]; then
-				export CCDB_CONNECTION=sqlite:////work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite
+				cp /work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite $PWD/ccdb.sqlite
+				export CCDB_CONNECTION=sqlite:///$PWD/ccdb.sqlite
+				#setenv CCDB_CONNECTION sqlite:////work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite
 			else
-				export CCDB_CONNECTION=mysql://ccdb_user@hallddb.jlab.org/ccdb
+				export CCDB_CONNECTION=mysql://ccdb_user@hallddb-farm.jlab.org/ccdb
 			fi
 		fi
 	#export CCDB_CONNECTION=mysql://ccdb_user@hallddb-farm.jlab.org/ccdb
@@ -287,9 +289,6 @@ if [[ $CALIBTIME != "notime" ]]; then
 	variation=$variation":"$CALIBTIME
 fi
 
-which xrdcopy
-which ccdb
-ls /usr/lib64/libXrd*
 
 ccdbelece="`ccdb dump PHOTON_BEAM/endpoint_energy:${RUN_NUMBER}:${variation} | grep -v \#`"
 

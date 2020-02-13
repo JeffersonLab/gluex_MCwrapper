@@ -1,5 +1,5 @@
 #!/bin/csh -f
-
+#set echo
 echo `date`   
 # SET INPUTS
 setenv BATCHRUN $1
@@ -211,11 +211,11 @@ else if ( "$ccdbSQLITEPATH" == "jlab_batch_default" ) then
 	else
 		set ccdb_jlab_sqlite_path=`bash -c 'echo $((1 + RANDOM % 100))'`
 		if ( -f /work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite ) then
-		#	cp /work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite $PWD/ccdb.sqlite
+			cp /work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite $PWD/ccdb.sqlite
 			setenv CCDB_CONNECTION sqlite:///$PWD/ccdb.sqlite
 			#setenv CCDB_CONNECTION sqlite:////work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite
 		else
-			setenv CCDB_CONNECTION mysql://ccdb_user@hallddb.jlab.org/ccdb
+			setenv CCDB_CONNECTION mysql://ccdb_user@hallddb-farm.jlab.org/ccdb
 		endif
 	endif
 	#setenv CCDB_CONNECTION mysql://ccdb_user@hallddb-farm.jlab.org/ccdb
@@ -288,13 +288,6 @@ if ( $CALIBTIME != "notime" ) then
 set variation=$variation":"$CALIBTIME
 endif
 
-echo $RUN_NUMBER
-echo $variation
-
-which xrdcopy
-which ccdb
-
-ls /usr/lib64/libXrd*
 
 set ccdbelece="`ccdb dump PHOTON_BEAM/endpoint_energy:${RUN_NUMBER}:${variation} | grep -v \#`"
 
