@@ -226,7 +226,7 @@ endif
 #setenv JANA_CALIB_URL ${CCDB_CONNECTION}
 
 if ( "$rcdbSQLITEPATH" != "no_sqlite" && "$rcdbSQLITEPATH" != "batch_default" ) then
-	if (`$USER_STAT --file-system --format=%T $PWD` == "lustre" ) then
+	if ( `$USER_STAT --file-system --format=%T $PWD` == "lustre" ) then
 		echo "Attempting to use sqlite on a lustre file system. This does not work.  Try running on a different file system!"
 		exit 1
 	endif
@@ -266,7 +266,7 @@ else
 		endif
 	end
 endif
-
+echo "Radiator thickness set..."
 set polarization_angle=`rcnd $RUN_NUMBER polarization_angle | awk '{print $1}'`
 
 if ( "$polarization_angle" == "" ) then
@@ -280,6 +280,7 @@ if ( "$polarization_angle" == "" ) then
 	endif
 endif
 
+echo "Polarization angle set..."
 set elecE=0
 set variation=$VERSION
 
@@ -287,10 +288,18 @@ if ( $CALIBTIME != "notime" ) then
 set variation=$variation":"$CALIBTIME
 endif
 
+echo $RUN_NUMBER
+echo $variation
+
+which xrdcopy
+which ccdb
+
+ls /usr/lib64/libXrd*
+
 set ccdbelece="`ccdb dump PHOTON_BEAM/endpoint_energy:${RUN_NUMBER}:${variation} | grep -v \#`"
 
 #set ccdblist=($ccdbelece:as/ / /)
-
+echo $ccdbelece
 set elecE_text="$ccdbelece" #$ccdblist[$#ccdblist]
 
 #echo "text: " $elecE_text
@@ -304,6 +313,8 @@ else if ( $elecE_text == "-1.0" ) then
 else
 	set elecE=`echo $elecE_text`  #set elecE = `echo "$elecE_text / 1000" | $USER_BC -l ` #rcdb method
 endif
+
+echo "Electron beam energy set..."
 
 set copeak = 0
 set copeak_text = `rcnd $RUN_NUMBER coherent_peak | awk '{print $1}'`
@@ -328,7 +339,7 @@ if ( "$polarization_angle" == "-1.0" && "$COHERENT_PEAK" == "rcdb" ) then
 endif
 
 setenv COHERENT_PEAK $copeak
-
+echo "Coherent peak set..."
 #echo $copeak
 #set copeak=`rcnd $RUN_NUMBER coherent_peak | awk '{print $1}' | sed 's/\.//g' #| awk -vFS="" -vOFS="" '{$1=$1"."}1' `
 
@@ -338,7 +349,7 @@ if ( ( "$VERSION" != "mc" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_workfes
 endif
 
 setenv eBEAM_ENERGY $elecE
-
+echo "eBEAM energy set..."
 if ( ( "$VERSION" != "mc" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_workfest2018" ) && "$eBEAM_ENERGY" == "rcdb" ) then
 	echo "error in requesting rcdb for the electron beam energy and not using variation=mc"
 	exit 1
@@ -349,7 +360,7 @@ set colsize=`rcnd $RUN_NUMBER collimator_diameter | awk '{print $1}' | sed -r 's
 if ( "$colsize" == "B" || "$colsize" == "R" || "$JANA_CALIB_CONTEXT" != "variation=mc" ) then
 	set colsize="50"
 endif
-
+echo "Colimator size set..."
 set beam_on_current=`rcnd $RUN_NUMBER beam_on_current | awk '{print $1}'`
 
 if ( $beam_on_current == "" ) then
@@ -362,6 +373,8 @@ set beam_on_current=`echo "$beam_on_current / 1000." | $USER_BC -l`
 if ( "$eBEAM_CURRENT" != "rcdb" ) then
 	set beam_on_current=$eBEAM_CURRENT
 endif
+
+echo "beam on current..."
 
 set BGRATE_toUse=$BGRATE
 
@@ -381,6 +394,8 @@ else
 		endif
 	endif
 endif
+
+echo "BGrate set..."
 
 if ( "$polarization_angle" == "-1.0" ) then
 		set POL_TO_GEN=0

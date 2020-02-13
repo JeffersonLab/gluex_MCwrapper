@@ -287,6 +287,10 @@ if [[ $CALIBTIME != "notime" ]]; then
 	variation=$variation":"$CALIBTIME
 fi
 
+which xrdcopy
+which ccdb
+ls /usr/lib64/libXrd*
+
 ccdbelece="`ccdb dump PHOTON_BEAM/endpoint_energy:${RUN_NUMBER}:${variation} | grep -v \#`"
 
 #ccdblist=(`echo ${ccdbelece}`) #(${ccdbelece:/\ /\ /})
