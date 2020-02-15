@@ -138,7 +138,7 @@ flength_count=$((`echo $FILE_NUMBER | wc -c` - 1))
 export XRD_RANDOMS_URL=root://sci-xrootd.jlab.org//osgpool/halld/
 
 if [[ "$MCWRAPPER_RUN_LOCATION" == "JLAB" ]]; then
-	export XRD_RANDOMS_URL=root://sci-xrootd-ib.jlab.org//osgpool/halld/
+	export XRD_RANDOMS_URL=root://sci-xrootd-ib.qcd.jlab.org//osgpool/halld/
 fi
 
 export MAKE_MC_USING_XROOTD=0
