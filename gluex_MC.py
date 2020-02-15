@@ -45,7 +45,7 @@ except:
         pass
 
 MCWRAPPER_VERSION="2.3.1"
-MCWRAPPER_DATE="02/11/20"
+MCWRAPPER_DATE="02/15/20"
 
 #====================================================
 #Takes in a few pertinant pieces of info.  Creates (if needed) a swif workflow and adds a job to it.
@@ -652,7 +652,7 @@ def main(argv):
         DISK       = "10GB"            # Max Disk usage
         RAM        = "20GB"            # Max RAM usage
         TIMELIMIT  = "300minutes"      # Max walltime
-        OS         = "centos7"        # Specify CentOS65 machines
+        OS         = "centos77"        # Specify CentOS65 machines
 
         PROJECT_ID=0 #internally used when needed
         IS_SUBMITTER=0
