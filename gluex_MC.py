@@ -138,7 +138,7 @@ def  qsub_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NC
                 shell_to_use="/bin/csh"
 
 
-        if( ".iu.edu" in hostname and QUEUENAME.upper() == "STANLEY"):
+        if( ".iu.edu" in socket.gethostname() and QUEUENAME.upper() == "STANLEY"):
                 f=open('MCqsub.submit','w')
                 f.write("#$ -o "+LOG_DIR+"/log/"+JOBNAME+".out"+"\n" )
                 f.write("#$ -N "+JOBNAME+"\n" )
