@@ -45,7 +45,7 @@ except:
         pass
 
 MCWRAPPER_VERSION="2.3.1"
-MCWRAPPER_DATE="02/15/20"
+MCWRAPPER_DATE="02/17/20"
 
 #====================================================
 #Takes in a few pertinant pieces of info.  Creates (if needed) a swif workflow and adds a job to it.
@@ -137,26 +137,36 @@ def  qsub_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NC
         if (SCRIPT_TO_RUN[len(SCRIPT_TO_RUN)-3]=='c'):
                 shell_to_use="/bin/csh"
 
-        f=open('MCqsub.submit','w')
-        f.write("#!/bin/sh -f"+"\n" )
-        f.write("#PBS"+" -N "+JOBNAME+"\n" )
-        f.write("#PBS"+" -l "+qsub_ml_command+"\n" )
-        f.write("#PBS"+" -o "+LOG_DIR+"/log/"+JOBNAME+".out"+"\n" )
-        f.write("#PBS"+" -e "+LOG_DIR+"/log/"+JOBNAME+".err"+"\n" )
-        f.write("#PBS"+" -l walltime="+TIMELIMIT+"\n" )
-        if (QUEUENAME != "DEF"):
-                f.write("#PBS"+" -q "+QUEUENAME+"\n" )
-        f.write("#PBS"+" -l mem="+MEMLIMIT+"\n" ) 
-        f.write("#PBS"+" -m a"+"\n" )  
-        f.write("#PBS"+" -p 0"+"\n" )
-        f.write("#PBS -c c=2 \n")
-        f.write("NCPU=\\ \n")
-        f.write("NNODES=\\ \n")    
+
+        if( ".iu.edu" in hostname and QUEUENAME.upper() == "STANLEY"):
+                f=open('MCqsub.submit','w')
+                f.write("#$ -o "+LOG_DIR+"/log/"+JOBNAME+".out"+"\n" )
+                f.write("#$ -N "+JOBNAME+"\n" )
+                f.write("#$ -j y\n" )
+                f.write(shell_to_use+indir+" "+COMMAND+"\n" )
+                # f.write("exit 0\n")
+                f.close()
+        else:
+                f=open('MCqsub.submit','w')
+                f.write("#!/bin/sh -f"+"\n" )
+                f.write("#PBS"+" -N "+JOBNAME+"\n" )
+                f.write("#PBS"+" -l "+qsub_ml_command+"\n" )
+                f.write("#PBS"+" -o "+LOG_DIR+"/log/"+JOBNAME+".out"+"\n" )
+                f.write("#PBS"+" -e "+LOG_DIR+"/log/"+JOBNAME+".err"+"\n" )
+                f.write("#PBS"+" -l walltime="+TIMELIMIT+"\n" )
+                if (QUEUENAME != "DEF"):
+                        f.write("#PBS"+" -q "+QUEUENAME+"\n" )
+                f.write("#PBS"+" -l mem="+MEMLIMIT+"\n" ) 
+                f.write("#PBS"+" -m a"+"\n" )  
+                f.write("#PBS"+" -p 0"+"\n" )
+                f.write("#PBS -c c=2 \n")
+                f.write("NCPU=\\ \n")
+                f.write("NNODES=\\ \n")    
        
-       # f.write("trap \'\' 2 9 15 \n" )
-        f.write(shell_to_use+" "+SCRIPT_TO_RUN+" "+getCommandString(COMMAND)+"\n" )
-        f.write("exit 0\n")
-        f.close()
+                # f.write("trap \'\' 2 9 15 \n" )
+                f.write(shell_to_use+" "+SCRIPT_TO_RUN+" "+getCommandString(COMMAND)+"\n" )
+                f.write("exit 0\n")
+                f.close()
 
         time.sleep(0.25)
 
