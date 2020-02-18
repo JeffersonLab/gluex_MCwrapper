@@ -144,7 +144,7 @@ def  qsub_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NC
                 f.write("#$ -N "+JOBNAME+"\n" )
                 f.write("#$ -j y\n" )
                 f.write(shell_to_use+indir+" "+COMMAND+"\n" )
-                # f.write("exit 0\n")
+                f.write("exit 0\n")
                 f.close()
         else:
                 f=open('MCqsub.submit','w')
