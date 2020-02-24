@@ -38,7 +38,7 @@ else
 wholecontext="variation=$VERSION"
 fi
 export JANA_CALIB_CONTEXT="$wholecontext"
-export JANA_GEOMETRY_URL="$JANA_GEOMETRY_URL context=\"$VERSION\""
+
 shift
 export GENR=$1
 shift
@@ -204,6 +204,7 @@ if [[ "$ccdbSQLITEPATH" != "no_sqlite" && "$ccdbSQLITEPATH" != "batch_default" &
 	fi
     cp $ccdbSQLITEPATH ./ccdb.sqlite
     export CCDB_CONNECTION=sqlite:///$PWD/ccdb.sqlite
+	
     export JANA_CALIB_URL=$CCDB_CONNECTION
 elif [[ "$ccdbSQLITEPATH" == "batch_default" ]]; then
     export CCDB_CONNECTION=sqlite:////group/halld/www/halldweb/html/dist/ccdb.sqlite
@@ -226,7 +227,11 @@ elif [[ "$ccdbSQLITEPATH" == "jlab_batch_default" ]]; then
 	#export CCDB_CONNECTION=mysql://ccdb_user@hallddb-farm.jlab.org/ccdb
     export JANA_CALIB_URL=${CCDB_CONNECTION}
 
+
 fi
+
+export JANA_GEOMETRY_URL="ccdb:///GEOMETRY/main_HDDS.xml context=\"$VERSION\""
+
 
 if [[ "$rcdbSQLITEPATH" != "no_sqlite" && "$rcdbSQLITEPATH" != "batch_default" ]]; then
 	if [[ `$USER_STAT --file-system --format=%T $PWD` == "lustre" ]]; then

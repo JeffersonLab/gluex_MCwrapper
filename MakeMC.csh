@@ -40,7 +40,6 @@ else
 set wholecontext = "variation=$VERSION"
 endif
 setenv JANA_CALIB_CONTEXT "$wholecontext"
-setenv JANA_GEOMETRY_URL "$JANA_GEOMETRY_URL context=\"$VERSION\""
 shift
 setenv GENR $1
 shift
@@ -222,6 +221,9 @@ else if ( "$ccdbSQLITEPATH" == "jlab_batch_default" ) then
 	#setenv CCDB_CONNECTION mysql://ccdb_user@hallddb-farm.jlab.org/ccdb
     setenv JANA_CALIB_URL ${CCDB_CONNECTION}
 endif
+
+
+setenv JANA_GEOMETRY_URL "ccdb:///GEOMETRY/main_HDDS.xml context=\"$VERSION\""
 #xrdcopy $XRD_RANDOMS_URL/ccdb.sqlite ./
 #setenv CCDB_CONNECTION sqlite:///$PWD/ccdb.sqlite
 #setenv JANA_CALIB_URL ${CCDB_CONNECTION}
