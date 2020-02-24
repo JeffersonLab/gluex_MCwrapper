@@ -230,7 +230,7 @@ elif [[ "$ccdbSQLITEPATH" == "jlab_batch_default" ]]; then
 
 fi
 
-export JANA_GEOMETRY_URL="ccdb:///GEOMETRY/main_HDDS.xml context=\"$VERSION\""
+#export JANA_GEOMETRY_URL="ccdb:///GEOMETRY/main_HDDS.xml context=\"$VERSION\""
 
 
 if [[ "$rcdbSQLITEPATH" != "no_sqlite" && "$rcdbSQLITEPATH" != "batch_default" ]]; then

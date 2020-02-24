@@ -223,7 +223,7 @@ else if ( "$ccdbSQLITEPATH" == "jlab_batch_default" ) then
 endif
 
 
-setenv JANA_GEOMETRY_URL "ccdb:///GEOMETRY/main_HDDS.xml context=\"$VERSION\""
+#setenv JANA_GEOMETRY_URL "ccdb:///GEOMETRY/main_HDDS.xml context=\"$VERSION\""
 #xrdcopy $XRD_RANDOMS_URL/ccdb.sqlite ./
 #setenv CCDB_CONNECTION sqlite:///$PWD/ccdb.sqlite
 #setenv JANA_CALIB_URL ${CCDB_CONNECTION}
