@@ -403,6 +403,7 @@ echo "Output location: "$OUTDIR
 echo "Environment file: " $ENVIRONMENT
 echo "Analysis Environment file: " $ANAENVIRONMENT
 echo "Context: "$JANA_CALIB_CONTEXT
+echo "Geometry URL: "$JANA_GEOMETRY_URL
 echo "Reconstruction calibtime: "$RECON_CALIBTIME
 echo "Run Number: "$RUN_NUMBER
 echo "Electron beam current to use: "$beam_on_current" uA"
