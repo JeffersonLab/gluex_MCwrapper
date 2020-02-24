@@ -40,6 +40,7 @@ else
 set wholecontext = "variation=$VERSION"
 endif
 setenv JANA_CALIB_CONTEXT "$wholecontext"
+setenv JANA_GEOMETRY_URL "$JANA_GEOMETRY_URL context=\"$VERSION\""
 shift
 setenv GENR $1
 shift

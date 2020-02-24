@@ -38,6 +38,7 @@ else
 wholecontext="variation=$VERSION"
 fi
 export JANA_CALIB_CONTEXT="$wholecontext"
+export JANA_GEOMETRY_URL="$JANA_GEOMETRY_URL context=\"$VERSION\""
 shift
 export GENR=$1
 shift
