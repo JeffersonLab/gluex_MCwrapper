@@ -1616,12 +1616,12 @@ function populateGenerators(exp)
     if(exp=="CPP")
     {
         defgen="gen_2pi_primakoff"
-        Gens=["genr8","bggen","gen_2pi_amp","gen_2pi_primakoff","gen_pi0","particle_gun","gen_amp","file:"]
+        Gens=["genr8","bggen","gen_2pi_amp","gen_2pi_primakoff","gen_pi0","particle_gun","gen_amp","gen_omegapi","file:"]
     }
     else
     {
         defgen="bggen"
-        Gens = ["genr8","bggen","genEtaRegge","gen_2pi_amp","gen_2pi_primakoff","gen_pi0","gen_omega_3pi","gen_2k","bggen_jpsi","gen_ee","gen_ee_hb","bggen_phi_ee","particle_gun","genBH","gen_omega_radiative","gen_amp","file:"]
+        Gens = ["genr8","bggen","genEtaRegge","gen_2pi_amp","gen_2pi_primakoff","gen_pi0","gen_omega_3pi","gen_2k","bggen_jpsi","gen_ee","gen_ee_hb","bggen_phi_ee","particle_gun","genBH","gen_omega_radiative","gen_amp","gen_omegapi","file:"]
     }
 
     Gens.forEach(function(element) { 
