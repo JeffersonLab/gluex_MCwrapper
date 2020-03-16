@@ -918,9 +918,17 @@ if ( "$GENR" != "0" ) then
 		sed -i 's/TEMPMAXGENE/'$GEN_MAX_ENERGY'/' $STANDARD_NAME.conf
 		sed -i 's/TEMPFLUXDIR/'$MCGEN_FLUX_DIR'/' $STANDARD_NAME.conf
 		sed -i 's/TEMPOUTNAME/'$STANDARD_NAME.hddm'/' $STANDARD_NAME.conf
-	
+		set MCGEN_Translator=`grep Translator $STANDARD_NAME.conf`
+
 		echo mc_gen $STANDARD_NAME.conf
 		mc_gen $STANDARD_NAME.conf
+
+		if ( "$MCGEN_Translator" =="!Translator:ppbar" ) then
+		GEN2HDDM_ppbar $STANDARD_NAME.ascii
+		else if ( "$MCGEN_Translator" =="!Translator:lamlambar" )
+		GEN2HDDM_lamlambar $STANDARD_NAME.ascii
+		endif
+
     	generator_return_code=$?
 	else if ( "$GENERATOR" == "gen_2pi_amp" ) then
 		echo "RUNNING GEN_2PI_AMP" 

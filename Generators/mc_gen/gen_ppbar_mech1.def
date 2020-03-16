@@ -87,6 +87,7 @@ TEMPFLUXDIR        	!file containing the beam flux distribution (if used)
 1	            	!Enable GlueX (ASCII input to HDDM) output data written (1=yes, 0=no)
 0	            	!Flag to select whether to call local event analyzer (1=yes, 0=no) 
 TEMPOUTNAME         	!Output file name
+!Translator:ppbar
 TEMPTRIG      	!Number of events in each output file
 .050	        	!instrumental delta_p/p spread in momentum of generated particles
 0.250	        	!Fermi momentum used in nuclear quasi-free calculations (GeV/c)
