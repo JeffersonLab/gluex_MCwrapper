@@ -917,12 +917,13 @@ if ( "$GENR" != "0" ) then
 		sed -i 's/TEMPMINGENE/'$GEN_MIN_ENERGY'/' $STANDARD_NAME.conf
 		sed -i 's/TEMPMAXGENE/'$GEN_MAX_ENERGY'/' $STANDARD_NAME.conf
 		sed -i 's/TEMPFLUXDIR/'$MCGEN_FLUX_DIR'/' $STANDARD_NAME.conf
-		sed -i 's/TEMPOUTNAME/'$STANDARD_NAME.hddm'/' $STANDARD_NAME.conf
+		sed -i 's/TEMPOUTNAME/'./'/' $STANDARD_NAME.conf
 		set MCGEN_Translator=`grep Translator $STANDARD_NAME.conf`
-
+		
 		echo mc_gen $STANDARD_NAME.conf
 		mc_gen $STANDARD_NAME.conf
 
+		mv *.ascii $STANDARD_NAME.ascii
 		if ( "$MCGEN_Translator" =="!Translator:ppbar" ) then
 		GEN2HDDM_ppbar $STANDARD_NAME.ascii
 		else if ( "$MCGEN_Translator" =="!Translator:lamlambar" )
