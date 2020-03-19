@@ -916,8 +916,8 @@ if [[ "$GENR" != "0" ]]; then
 	sed -i 's/TEMPTRIG/'$EVT_TO_GEN'/' $STANDARD_NAME.conf
 	sed -i 's/TEMPMINGENE/'$GEN_MIN_ENERGY'/' $STANDARD_NAME.conf
 	sed -i 's/TEMPMAXGENE/'$GEN_MAX_ENERGY'/' $STANDARD_NAME.conf
-	sed -i 's/TEMPFLUXDIR/'$MCGEN_FLUX_DIR'/' $STANDARD_NAME.conf
-	sed -i 's/TEMPOUTNAME/'./'/' $STANDARD_NAME.conf
+	sed -i 's|TEMPFLUXDIR|'$MCGEN_FLUX_DIR'|' $STANDARD_NAME.conf
+	sed -i 's|TEMPOUTNAME|'./'|' $STANDARD_NAME.conf
 	MCGEN_Translator=`grep Translator $STANDARD_NAME.conf`
 	
 
