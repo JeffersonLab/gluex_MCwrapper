@@ -935,7 +935,7 @@ if ( "$GENR" != "0" ) then
 		GEN2HDDM_lamlambar $STANDARD_NAME.ascii
 		endif
 
-    	generator_return_code=$?
+    	set generator_return_code=$status
 	else if ( "$GENERATOR" == "gen_2pi_amp" ) then
 		echo "RUNNING GEN_2PI_AMP" 
     	set optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
