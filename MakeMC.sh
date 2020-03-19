@@ -927,9 +927,9 @@ if [[ "$GENR" != "0" ]]; then
 
 	mv *.ascii $STANDARD_NAME.ascii
 
-	if [[ "$MCGEN_Translator" =="!Translator:ppbar" ]]; then
+	if [[ "$MCGEN_Translator" == "\!Translator:ppbar" ]]; then
 		GEN2HDDM_ppbar $STANDARD_NAME.ascii
-	elif [[ "$MCGEN_Translator" =="!Translator:lamlambar" ]]; then
+	elif [[ "$MCGEN_Translator" == "\!Translator:lamlambar" ]]; then
 		GEN2HDDM_lamlambar $STANDARD_NAME.ascii
 	fi
 
