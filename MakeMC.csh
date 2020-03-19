@@ -927,7 +927,9 @@ if ( "$GENR" != "0" ) then
 
 		rm flux_*
 		mv *.ascii $STANDARD_NAME.ascii
-		if ( "$MCGEN_Translator" =="!Translator:ppbar" ) then
+		echo $MCGEN_Translator
+		if ( "$MCGEN_Translator" == "!Translator:ppbar" ) then
+		echo GEN2HDDM_ppbar $STANDARD_NAME.ascii
 		GEN2HDDM_ppbar $STANDARD_NAME.ascii
 		else if ( "$MCGEN_Translator" =="!Translator:lamlambar" )
 		GEN2HDDM_lamlambar $STANDARD_NAME.ascii
