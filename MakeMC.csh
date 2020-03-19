@@ -909,20 +909,23 @@ if ( "$GENR" != "0" ) then
 	else if ( "$GENERATOR" == "mc_gen" ) then
 		echo "RUNNING MC_GEN" 
 		python $HD_UTILITIES_HOME/psflux/plot_flux_ccdb.py -b $RUN_NUMBER -e $RUN_NUMBER
-		set FLUX_DIR=`printf './flux_%d_%d.ascii' "$RUN_NUMBER" "$RUN_NUMBER"`
+		set MCGEN_FLUX_DIR=`printf './flux_%d_%d.ascii' "$RUN_NUMBER" "$RUN_NUMBER"`
 		set ROOTSCRIPT=`printf '$MCWRAPPER_CENTRAL/Generators/mc_gen/Flux_to_Ascii.C("flux_%s_%s.root")' "$RUN_NUMBER" "$RUN_NUMBER" `
 		root -l -b -q $ROOTSCRIPT
+
+		echo $MCGEN_FLUX_DIR
 
 		sed -i 's/TEMPTRIG/'$EVT_TO_GEN'/' $STANDARD_NAME.conf
 		sed -i 's/TEMPMINGENE/'$GEN_MIN_ENERGY'/' $STANDARD_NAME.conf
 		sed -i 's/TEMPMAXGENE/'$GEN_MAX_ENERGY'/' $STANDARD_NAME.conf
 		sed -i 's/TEMPFLUXDIR/'$MCGEN_FLUX_DIR'/' $STANDARD_NAME.conf
-		sed -i 's/TEMPOUTNAME/'./'/' $STANDARD_NAME.conf
+		sed -i 's/TEMPOUTNAME/'"./"'/' $STANDARD_NAME.conf
 		set MCGEN_Translator=`grep Translator $STANDARD_NAME.conf`
 		
 		echo mc_gen $STANDARD_NAME.conf
 		mc_gen $STANDARD_NAME.conf
 
+		rm flux_*
 		mv *.ascii $STANDARD_NAME.ascii
 		if ( "$MCGEN_Translator" =="!Translator:ppbar" ) then
 		GEN2HDDM_ppbar $STANDARD_NAME.ascii

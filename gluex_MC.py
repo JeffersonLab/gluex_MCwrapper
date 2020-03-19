@@ -45,7 +45,7 @@ except:
         pass
 
 MCWRAPPER_VERSION="2.3.1"
-MCWRAPPER_DATE="03/12/20"
+MCWRAPPER_DATE="03/19/20"
 
 #====================================================
 #Takes in a few pertinant pieces of info.  Creates (if needed) a swif workflow and adds a job to it.
@@ -463,7 +463,7 @@ def  SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, N
         f.write("shifter $MCWRAPPER_CENTRAL/MakeMC.sh"+getCommandString(COMMAND)+"\n")
 
         f.close()
-        
+        print(PROJECT_ID)
         exit(1)
         if( int(PROJECT_ID) <=0 ):
                 add_command="condor_submit -name "+JOBNAME+" MCOSG.submit"

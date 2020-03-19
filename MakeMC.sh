@@ -923,6 +923,7 @@ if [[ "$GENR" != "0" ]]; then
 
 	echo mc_gen $STANDARD_NAME.conf
 	mc_gen $STANDARD_NAME.conf
+	rm flux_*
 
 	mv *.ascii $STANDARD_NAME.ascii
 
