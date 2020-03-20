@@ -566,7 +566,7 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
     my_env=None
     print(versionSet)
     if(versionSet != ""):
-        my_env=source("/group/halld/Software/build_scripts/gluex_env_jlab.sh /group/halld/www/halldweb/html/dist/"+versionSet)
+        my_env=source("/group/halld/Software/build_scripts/gluex_env_jlab.sh /group/halld/www/halldweb/html/halld_versions/"+versionSet)
         my_env["MCWRAPPER_CENTRAL"]=MCWRAPPER_BOT_HOME
 
     #print(my_env)
@@ -773,7 +773,7 @@ def TestProject(ID,versionSet,commands_to_call=""):
     my_env=None
     print(versionSet)
     if(versionSet != ""):
-        my_env=source("/group/halld/Software/build_scripts/gluex_env_jlab.sh /group/halld/www/halldweb/html/dist/"+versionSet)
+        my_env=source("/group/halld/Software/build_scripts/gluex_env_jlab.sh /group/halld/www/halldweb/html/halld_versions/"+versionSet)
         my_env["MCWRAPPER_CENTRAL"]=MCWRAPPER_BOT_HOME
 
     #print(my_env)
@@ -1021,12 +1021,12 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
         MCconfig_file.write("CUSTOM_PLUGINS=file:/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config\n")
 
     
-    MCconfig_file.write("ENVIRONMENT_FILE=/group/halld/www/halldweb/html/dist/"+str(order["VersionSet"])+"\n")
+    MCconfig_file.write("ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"+str(order["VersionSet"])+"\n")
     print("ADD ANAVER TO PAYLOAD?")
     print(str(order["ANAVersionSet"]))
     if(order["ANAVersionSet"] != None and order["ANAVersionSet"] != "None" ):
         print("ADDING ANNAVER")
-        MCconfig_file.write("ANA_ENVIRONMENT_FILE=/group/halld/www/halldweb/html/dist/"+str(order["ANAVersionSet"])+"\n")
+        MCconfig_file.write("ANA_ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"+str(order["ANAVersionSet"])+"\n")
     MCconfig_file.close()
 
 def DispatchToOSG(ID,order,PERCENT):
@@ -1136,12 +1136,12 @@ def WritePayloadConfigString(order,foundConfig):
         config_str+="CUSTOM_PLUGINS=file:/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config\n"
 
     
-    config_str+="ENVIRONMENT_FILE=/group/halld/www/halldweb/html/dist/"+str(order["VersionSet"])+"\n"
+    config_str+="ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"+str(order["VersionSet"])+"\n"
     #print("ADD ANAVER TO PAYLOAD?")
     #print(str(order["ANAVersionSet"]))
     if(order["ANAVersionSet"] != None and order["ANAVersionSet"] != "None" ):
         #print("ADDING ANNAVER")
-        config_str+="ANA_ENVIRONMENT_FILE=/group/halld/www/halldweb/html/dist/"+str(order["ANAVersionSet"])+"\n"
+        config_str+="ANA_ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"+str(order["ANAVersionSet"])+"\n"
     #print("---------------------------------")
     print(config_str)
     return config_str
