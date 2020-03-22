@@ -161,87 +161,7 @@ def AutoLaunch():
             #print("join "+str(i))            
             spawns[i].join(15*60)
 
-    #clean up stalled
-    #for i in range(0,len(spawns)):
-    #    if spawns[i].is_alive():
-    #        spawns[i].terminate()
 
-    #print("GETTING QUEUE")
-    #results_array=results_q.get()
-    #print("DONE PARALLEL TESTING")
-    #print(results_array)
-    #exit(0)
-
-    #for result in results_array:
-    #    status=[]
-    #    status.append(-1)
-    #    status.append(-1)
-    #    if len(result)==0:
-    #        status[0]=0
-    #        status[1]=0
-    #        status[2]=0
-    #        continue
-    #    else:
-    #        status=result
-
-        #print(status)
-    #    row=result[3]
-        
-        
-    #for row in rows:
-    #    status=[]
-    #    status.append(-1)
-    #    status.append(-1)
-    #    if(row['Tested'] !=1):
-    #        status=TestProject(row['ID'],str(row["VersionSet"]))
-    #    else:
-    #        status[0]=0
-    #        status[1]=0
-    #        status[2]=0
-        #print "STATUS IS"
-        #print status[0]
-        #print("JUST TESTED")
-    #    if(status[1]!=-1):
-    #        #print "TEST success"
-    #        #EMAIL SUCCESS AND DISPATCH
-    #        #print("YAY TESTED")
-    #        subprocess.call(MCWRAPPER_BOT_HOME+"/Utilities/MCDispatcher.py dispatch -rlim -sys OSG "+str(row['ID']),shell=True)
-    #    else:
-    #        #print("BOO TESTED")
-    #        #EMAIL FAIL AND LOG
-    #        #print("echo 'Your Project ID "+str(row['ID'])+" failed the to properly test.  The log information is reproduced below:\n\n\n"+status[0]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+str(row['Email']))
-    #        try:
-    #            print("MAILING\n")
-    #            msg = EmailMessage()
-
-    #            msg.set_content('Your Project ID '+str(row['ID'])+' failed the test.  Please correct this issue by following the link: '+'https://halldweb.jlab.org/gluex_sim/SubmitSim.html?prefill='+str(row['ID'])+'&mod=1'+'.  Do NOT resubmit this request.  Write tbritton@jlab.org for additional assistance\n\n The log information is reproduced below:\n\n\n'+str(status[0])+'\n\n\nErrors:\n\n\n'+str(status[2]))
-    #            print("SET CONTENT")
-    #            msg['Subject'] = 'Project ID #'+str(row['ID'])+' Failed to test properly'
-    #            print("SET SUB")
-    #            msg['From'] = str('MCwrapper-bot')
-    #            print("SET FROM")
-
-    #            msg['To'] = str(row['Email'])#str("tbritton@jlab.org")#
-    #            print("SET SUB TO FROM")
-    #            # Send the message via our own SMTP server.                                                                                                                                                                        
-    #            s = smtplib.SMTP('localhost')
-    #            #print(msg)
-    #            print("SENDING")
-    #            s.send_message(msg)
-    #            s.quit()     
-    #            copy=open("/osgpool/halld/tbritton/REQUESTED_FAIL_MAILS/email_"+str(row['ID'])+".log", "w+")
-    #            copy.write('The log information is reproduced below:\n\n\n'+str(status[0])+'\n\n\nErrors:\n\n\n'+str(status[2]))
-    #            copy.close()      
-    #            #subprocess.call("echo 'Your Project ID "+str(row['ID'])+" failed the test.  Please correct this issue by following the link: "+"https://halldweb.jlab.org/gluex_sim/SubmitSim.html?prefill="+str(row['ID'])+"&mod=1" +" .  Do NOT resubmit this request.  Write tbritton@jlab.org for additional assistance\n\n The log information is reproduced below:\n\n\n"+status[0]+"\n\n\n"+status[2]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+str(row['Email']),shell=True)
-    #        except:
-    #            print("UH OH MAILING")
-    #            log = open("/osgpool/halld/tbritton/"+str(row['ID'])+".err", "w+")
-    #            log.write("this was broke: \n" + str(status[2]))
-    #            log.write("this was broke: \n" + str(status[0]))
-    #            log.close()
-            
-            #subprocess.call("echo 'Your Project ID "+str(row['ID'])+" failed the test.  Please correct this issue and do NOT resubmit this request.  Write tbritton@jlab.org for assistance or if you are ready for a retest.\n\n The log information is reproduced below:\n\n\n"+status[0]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+"tbritton@jlab.org",shell=True)
-            #print status[0]
 
 
 def ListUnDispatched():
@@ -534,10 +454,10 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
             query_to_do=order["RCDBQuery"]
     
         print("RCDB_QUERY IS: "+str(query_to_do))
-        #rcdb_db = rcdb.RCDBProvider("mysql://rcdb@hallddb.jlab.org/rcdb")
-        #runList=rcdb_db.select_runs(str(query_to_do),order["RunNumLow"],order["RunNumHigh"]).get_values(['event_count'],True)
+        rcdb_db = rcdb.RCDBProvider("mysql://rcdb@hallddb.jlab.org/rcdb")
+        runList=rcdb_db.select_runs(str(query_to_do),order["RunNumLow"],order["RunNumHigh"]).get_values(['event_count'],True)
 
-        RunNumber=str(order["RunNumLow"])#str(runList[0][0])
+        RunNumber=str(runList[0][0])#str(order["RunNumLow"])
     
 
     #if order["RunNumLow"] != order["RunNumHigh"] :

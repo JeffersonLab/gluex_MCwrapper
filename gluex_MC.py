@@ -45,7 +45,7 @@ except:
         pass
 
 MCWRAPPER_VERSION="2.3.1"
-MCWRAPPER_DATE="03/19/20"
+MCWRAPPER_DATE="03/26/20"
 
 #====================================================
 #Takes in a few pertinant pieces of info.  Creates (if needed) a swif workflow and adds a job to it.
@@ -446,27 +446,41 @@ def  SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, N
         STUBNAME = str(RUNNUM) + "_" + str(FILENUM)
         JOBNAME = WORKFLOW + "_" + STUBNAME
 
-        #mkdircom="mkdir -p "+DATA_OUTPUT_BASE_DIR+"/log/"
-
+        mkdircom="mkdir -p "+DATA_OUTPUT_BASE_DIR+"/log/"
+        status = subprocess.call(mkdircom, shell=True)
+        ##!/bin/bash
+#SBATCH -J singularity_test
+#SBATCH -o singularity_test.out
+#SBATCH -e singularity_test.err
+#SBATCH -p shared
+#SBATCH -t 0-00:30
+#SBATCH -N 1
+#SBATCH -c 1
+#SBATCH --mem=4000
+# Singularity command line options
+#singularity exec hello-world.sif cat /etc/os-release
         f=open('MCSLURM.submit','w')
         f.write("#!/bin/bash -l"+"\n")
         f.write("#SBATCH -J "+JOBNAME+"\n")
-        f.write("#SBATCH --image=docker:jeffersonlab/hdrecon:latest"+"\n")
+        #f.write("#SBATCH --image=/cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest"+"\n")
         f.write("#SBATCH --nodes=1"+"\n")
         f.write("#SBATCH --time="+TIMELIMIT+"\n")
         f.write("#SBATCH --tasks-per-node=1"+"\n")
         f.write("#SBATCH --cpus-per-task="+NCORES+"\n")
-        f.write("#SBATCH --qos=regular"+"\n")
-        f.write("#SBATCH -C haswell"+"\n")
-        f.write("#SBATCH -L project"+"\n")
+
+        #f.write("#SBATCH -A gluex"+"\n")
+        f.write("#SBATCH -p production"+"\n")
+        f.write("#SBATCH -o "+DATA_OUTPUT_BASE_DIR+"/log/"+JOBNAME+".out\n")
+        f.write("#SBATCH -e "+DATA_OUTPUT_BASE_DIR+"/log/"+JOBNAME+".err\n")
+        
         #f.write("srun "+SCRIPT_TO_RUN+" "+COMMAND+"\n")
-        f.write("shifter $MCWRAPPER_CENTRAL/MakeMC.sh"+getCommandString(COMMAND)+"\n")
+        #/group/halld/www/halldweb/html/dist/gluex_centos7.img /cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest
+        f.write("module use /apps/modulefiles; module load singularity/3.4.0; singularity exec --bind /cvmfs --bind /group/halld:/group/halld --bind /work/halld:/work/halld --bind /cache/halld:/cache/halld --bind /work/halld2:/work/halld2 /cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest $MCWRAPPER_CENTRAL/MakeMC.sh "+getCommandString(COMMAND)+"\n")
 
         f.close()
-        print(PROJECT_ID)
-        exit(1)
+        
         if( int(PROJECT_ID) <=0 ):
-                add_command="condor_submit -name "+JOBNAME+" MCOSG.submit"
+                add_command="sbatch MCSLURM.submit"
                 if add_command.find(';')!=-1 or add_command.find('&')!=-1 :#THIS CHECK HELPS PROTEXT AGAINST A POTENTIAL HACK VIA CONFIG FILES
                         print( "Nice try.....you cannot use ; or &")
                         exit(1)
@@ -477,9 +491,9 @@ def  SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, N
         elif int(PROJECT_ID) < 0:
                 recordAttempt(abs(int(PROJECT_ID)),RUNNO,FILENO,"SLURM",SWIF_ID_NUM,COMMAND['num_events'],NCORES,"UnSet")
 
-        status = subprocess.call(mkdircom, shell=True)
+        
         status = subprocess.call(add_command, shell=True)
-        status = subprocess.call("rm MCOSG.submit", shell=True)
+        status = subprocess.call("rm MCSLURM.submit", shell=True)
 
 
 #====================================================

@@ -1,10 +1,12 @@
 #!/bin/bash
+ls -lth /group/halld/Software/build_scripts/
 
 # SET INPUTS
 export BATCHRUN=$1
 shift
 export ENVIRONMENT=$1 
 shift
+ls -lth $ENVIRONMENT
 if [[ "$BATCHRUN" != "0" ]]; then
 
 xmltest=`echo $ENVIRONMENT | rev | cut -c -4 | rev`
@@ -210,21 +212,21 @@ elif [[ "$ccdbSQLITEPATH" == "batch_default" ]]; then
     export CCDB_CONNECTION=sqlite:////group/halld/www/halldweb/html/dist/ccdb.sqlite
     export JANA_CALIB_URL=${CCDB_CONNECTION}
 elif [[ "$ccdbSQLITEPATH" == "jlab_batch_default" ]]; then
-		if [[ -f /usr/lib64/libXrdPosixPreload.so ]]; then
-			xrdcopy $XRD_RANDOMS_URL/ccdb.sqlite ./
-			export CCDB_CONNECTION=sqlite:///$PWD/ccdb.sqlite
+		#if [[ -f /usr/lib64/libXrdPosixPreload.so ]]; then
+		#	xrdcopy $XRD_RANDOMS_URL/ccdb.sqlite ./
+		#	export CCDB_CONNECTION=sqlite:///$PWD/ccdb.sqlite
 
-		else
-			ccdb_jlab_sqlite_path=`echo $((1 + RANDOM % 100))`
-			if [[ -f /work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite ]]; then
-				cp /work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite $PWD/ccdb.sqlite
-				export CCDB_CONNECTION=sqlite:///$PWD/ccdb.sqlite
-				#setenv CCDB_CONNECTION sqlite:////work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite
-			else
-				export CCDB_CONNECTION=mysql://ccdb_user@hallddb-farm.jlab.org/ccdb
-			fi
-		fi
-	#export CCDB_CONNECTION=mysql://ccdb_user@hallddb-farm.jlab.org/ccdb
+		#else
+		#	ccdb_jlab_sqlite_path=`echo $((1 + RANDOM % 100))`
+		#	if [[ -f /work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite ]]; then
+		#		cp /work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite $PWD/ccdb.sqlite
+		#		export CCDB_CONNECTION=sqlite:///$PWD/ccdb.sqlite
+		#		#setenv CCDB_CONNECTION sqlite:////work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite
+		#	else
+		#		export CCDB_CONNECTION=mysql://ccdb_user@hallddb-farm.jlab.org/ccdb
+		#	fi
+		#fi
+	export CCDB_CONNECTION=mysql://ccdb_user@hallddb-farm.jlab.org/ccdb
     export JANA_CALIB_URL=${CCDB_CONNECTION}
 
 
@@ -352,11 +354,15 @@ if [[ "$VERSION" != "mc" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_workfest
 	exit 1
 fi
 
+echo RCDB exe: `which rcnd`
 beam_on_current=`rcnd $RUN_NUMBER beam_on_current | awk '{print $1}'`
+echo beam_on_current is $beam_on_current
+
 
 if [[ $beam_on_current == "" ]]; then
 echo "Run $RUN_NUMBER does not have a beam_on_current.  Defaulting to beam_current."
 beam_on_current=`rcnd $RUN_NUMBER beam_current | awk '{print $1}'`
+echo beam_current is `rcnd $RUN_NUMBER beam_current`
 fi
 
 beam_on_current=`echo "$beam_on_current / 1000." | $USER_BC -l`
@@ -734,7 +740,7 @@ if [[ "$GENR" != "0" ]]; then
 		cp $MCWRAPPER_CENTRAL/Generators/bggen/pythia.dat ./
 		cp $MCWRAPPER_CENTRAL/Generators/bggen/pythia-geant.map ./
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
-	
+
     elif [[ "$GENERATOR" == "genEtaRegge" ]]; then
 		echo "configuring genEtaRegge"
 		STANDARD_NAME="genEtaRegge_"$STANDARD_NAME
@@ -887,8 +893,9 @@ if [[ "$GENR" != "0" ]]; then
 	sed -i 's/TEMPCOHERENT/'$Fortran_COHERENT_PEAK'/' $STANDARD_NAME.conf
 	sed -i 's/TEMPMINGENE/'$GEN_MIN_ENERGY'/' $STANDARD_NAME.conf
 	sed -i 's/TEMPMAXGENE/'$GEN_MAX_ENERGY'/' $STANDARD_NAME.conf
-	
+
 	ln -s $STANDARD_NAME.conf fort.15
+	echo bggen
 	bggen
 	generator_return_code=$?
 	mv bggen.hddm $STANDARD_NAME.hddm
