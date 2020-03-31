@@ -359,9 +359,15 @@ endif
 echo "Colimator size set..."
 set beam_on_current=`rcnd $RUN_NUMBER beam_on_current | awk '{print $1}'`
 
-if ( $beam_on_current == "" ) then
+if ( $beam_on_current == "" || $beam_on_current == "Run" ) then
 	echo "Run $RUN_NUMBER does not have a beam_on_current.  Defaulting to beam_current."
 	set beam_on_current=`rcnd $RUN_NUMBER beam_current | awk '{print $1}'`
+endif
+
+if ( $beam_on_current == "Run" ) then
+	echo "The beam current could not be found for Run "$RUN_NUMBER".  This is most like due to the run number provided not existing in the rcdb"
+	echo "Please set eBEAM_CURRENT explicitly in MC.config..."
+	exit 1
 endif
 
 set beam_on_current=`echo "$beam_on_current / 1000." | $USER_BC -l`
@@ -370,7 +376,7 @@ if ( "$eBEAM_CURRENT" != "rcdb" ) then
 	set beam_on_current=$eBEAM_CURRENT
 endif
 
-echo "beam on current..."
+echo "beam (on) current set..."
 
 set BGRATE_toUse=$BGRATE
 
