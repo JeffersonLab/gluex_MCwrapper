@@ -374,7 +374,7 @@ endif
 set beam_on_current=`echo "$beam_on_current / 1000." | $USER_BC -l`
 else
 set beam_on_current=$eBEAM_CURRENT
-fi
+endif
 
 echo "beam (on) current set..."
 
