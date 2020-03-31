@@ -218,7 +218,7 @@ def RetryJobsFromProject(ID, countLim):
     for row in rows:
 
         if (row["BatchSystem"]=="SWIF"):
-            if((row["Status"] == "succeeded" and row["ExitCode"] != 0) or (row["Status"]=="problem" and row["ExitCode"]!="232") or (proj['Tested']==1 and row["Status"]=="canceled" )):
+            if((row["Status"] == "succeeded" and row["ExitCode"] != 0) or (row["Status"]=="problem" and row["ExitCode"]!="232") or (proj['Tested']==1 and row["Status"]=="canceled" ) (proj['Tested']==1 and row["Status"]=="failed" )):
             #if(row["Status"] != "succeeded"):
                 limiterq="SELECT COUNT(*) from Attempts where BatchJobID="+str(row["BatchJobID"])
                 curs.execute(limiterq) 
