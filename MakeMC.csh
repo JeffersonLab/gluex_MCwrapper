@@ -357,6 +357,8 @@ if ( "$colsize" == "B" || "$colsize" == "R" || "$JANA_CALIB_CONTEXT" != "variati
 	set colsize="50"
 endif
 echo "Colimator size set..."
+
+if ( "$eBEAM_CURRENT" == "rcdb" ) then
 set beam_on_current=`rcnd $RUN_NUMBER beam_on_current | awk '{print $1}'`
 
 if ( $beam_on_current == "" || $beam_on_current == "Run" ) then
@@ -369,12 +371,10 @@ if ( $beam_on_current == "Run" ) then
 	echo "Please set eBEAM_CURRENT explicitly in MC.config..."
 	exit 1
 endif
-
 set beam_on_current=`echo "$beam_on_current / 1000." | $USER_BC -l`
-
-if ( "$eBEAM_CURRENT" != "rcdb" ) then
-	set beam_on_current=$eBEAM_CURRENT
-endif
+else
+set beam_on_current=$eBEAM_CURRENT
+fi
 
 echo "beam (on) current set..."
 

@@ -355,6 +355,8 @@ if [[ "$VERSION" != "mc" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_workfest
 fi
 
 echo RCDB exe: `which rcnd`
+
+if [[ "$eBEAM_CURRENT" == "rcdb" ]]; then
 beam_on_current=`rcnd $RUN_NUMBER beam_on_current | awk '{print $1}'`
 echo beam_on_current is $beam_on_current
 
@@ -373,7 +375,7 @@ fi
 
 beam_on_current=`echo "$beam_on_current / 1000." | $USER_BC -l`
 echo "$eBEAM_CURRENT"
-if [[ "$eBEAM_CURRENT" != "rcdb" ]]; then
+else
 beam_on_current=$eBEAM_CURRENT
 fi
 
