@@ -215,12 +215,13 @@ def RetryJobsFromProject(ID, countLim):
     i=0
     j=0
     SWIF_retry_IDs=[]
-    print("Retrying: ",len(rows),"jobs")
+    
     for row in rows:
-        print("Retrying job: ",row["Job_ID"])
+        
         if (row["BatchSystem"]=="SWIF"):
             if((row["Status"] == "succeeded" and row["ExitCode"] != 0) or (row["Status"]=="problem" and row["ExitCode"]!="232") or (proj['Tested']==1 and row["Status"]=="canceled" ) or (proj['Tested']==1 and row["Status"]=="failed" )):
             #if(row["Status"] != "succeeded"):
+                print("Retrying SWIF job: ",row["Job_ID"])
                 limiterq="SELECT COUNT(*) from Attempts where BatchJobID="+str(row["BatchJobID"])
                 curs.execute(limiterq) 
                 attres=curs.fetchall()[0]
@@ -239,6 +240,7 @@ def RetryJobsFromProject(ID, countLim):
             #print row["ExitCode"]
             #print "=========================="
             if (row["Status"] == "4" and row["ExitCode"] != 0) or row["Status"] == "3" or row["Status"]=="5" or row["Status"]=="-1":
+                print("Retrying OSG job: ",row["Job_ID"])
                 if ( countLim ):
                     countq="SELECT Count(Job_ID) from Attempts where Job_ID="+str(row["Job_ID"])
                     curs.execute(countq)
