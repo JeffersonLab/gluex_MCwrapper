@@ -1,12 +1,12 @@
 #!/bin/bash
-ls -lth /group/halld/Software/build_scripts/
+
 
 # SET INPUTS
 export BATCHRUN=$1
 shift
 export ENVIRONMENT=$1 
 shift
-ls -lth $ENVIRONMENT
+
 if [[ "$BATCHRUN" != "0" ]]; then
 
 xmltest=`echo $ENVIRONMENT | rev | cut -c -4 | rev`
@@ -274,7 +274,7 @@ else
 		fi
 	done
 fi
-
+echo "Radiator thickness set..."
 polarization_angle=`rcnd $RUN_NUMBER polarization_angle | awk '{print $1}'`
 
 
@@ -289,6 +289,8 @@ if [[ "$polarization_angle" == "" ]]; then
 		polarization_angle="-1.0"
 	fi
 fi
+
+echo "Polarization angle set..."
 
 elecE=0
 
@@ -316,6 +318,8 @@ else
 	#elecE=`echo "$elecE_text / 1000" | bc -l `
 fi
 
+echo "Electron beam energy set..."
+
 copeak=0
 copeak_text=`rcnd $RUN_NUMBER coherent_peak | awk '{print $1}'`
 
@@ -341,6 +345,7 @@ fi
 #set copeak=`rcnd $RUN_NUMBER coherent_peak | awk '{print $1}' | sed 's/\.//g' #| awk -vFS="" -vOFS="" '{$1=$1"."}1' `
 
 export COHERENT_PEAK=$copeak
+echo "Coherent peak set..."
 
 if [[ "$VERSION" != "mc" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_workfest2018" && "$COHERENT_PEAK" == "rcdb" ]]; then
 	echo "error in requesting rcdb for the coherent peak while not using variation=mc"
@@ -348,6 +353,7 @@ if [[ "$VERSION" != "mc" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_workfest
 fi
 
 export eBEAM_ENERGY=$elecE
+echo "eBEAM energy set..."
 
 if [[ "$VERSION" != "mc" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_workfest2018" && "$eBEAM_ENERGY" == "rcdb" ]]; then
 	echo "error in requesting rcdb for the electron beam energy and not using variation=mc"
@@ -365,25 +371,24 @@ if [[ $beam_on_current == "" || $beam_on_current == "Run" ]]; then
 echo "Run $RUN_NUMBER does not have a beam_on_current.  Defaulting to beam_current."
 beam_on_current=`rcnd $RUN_NUMBER beam_current | awk '{print $1}'`
 echo beam_current is `rcnd $RUN_NUMBER beam_current`
-fi
+	if [[ $beam_on_current == "Run" ]]; then
+		echo "The beam current could not be found for Run "$RUN_NUMBER".  This is most like due to the run number provided not existing in the rcdb"
+		echo "Please set eBEAM_CURRENT explicitly in MC.config..."
+		exit 1
+	fi
 
-if [[ $beam_on_current == "Run" ]]; then
-	echo "The beam current could not be found for Run "$RUN_NUMBER".  This is most like due to the run number provided not existing in the rcdb"
-	echo "Please set eBEAM_CURRENT explicitly in MC.config..."
-	exit 1
-fi
-
-beam_on_current=`echo "$beam_on_current / 1000." | $USER_BC -l`
-echo "$eBEAM_CURRENT"
+	beam_on_current=`echo "$beam_on_current / 1000." | $USER_BC -l`
+	echo "$eBEAM_CURRENT"
 else
-beam_on_current=$eBEAM_CURRENT
+	beam_on_current=$eBEAM_CURRENT
 fi
+echo "beam (on) current set..."
 
 colsize=`rcnd $RUN_NUMBER collimator_diameter | awk '{print $1}' | sed -r 's/.{2}$//' | sed -e 's/\.//g'`
 if [[ "$colsize" == "B" || "$colsize" == "R" || "$JANA_CALIB_CONTEXT" != "variation=mc" ]]; then
     colsize="50"
 fi
-
+echo "Collimator size set..."
 
 BGRATE_toUse=$BGRATE
 
