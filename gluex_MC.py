@@ -45,7 +45,7 @@ except:
         pass
 
 MCWRAPPER_VERSION="2.3.1"
-MCWRAPPER_DATE="03/31/20"
+MCWRAPPER_DATE="04/01/20"
 
 #====================================================
 #Takes in a few pertinant pieces of info.  Creates (if needed) a swif workflow and adds a job to it.
@@ -475,7 +475,7 @@ def  SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, N
         
         #f.write("srun "+SCRIPT_TO_RUN+" "+COMMAND+"\n")
         #/group/halld/www/halldweb/html/dist/gluex_centos7.img /cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest
-        f.write("module use /apps/modulefiles; module load singularity/3.4.0; singularity exec --bind /cvmfs --bind /group/halld:/group/halld --bind /work/halld:/work/halld --bind /cache/halld:/cache/halld --bind /work/halld2:/work/halld2 /cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest $MCWRAPPER_CENTRAL/MakeMC.sh "+getCommandString(COMMAND)+"\n")
+        f.write("module use /apps/modulefiles; module load singularity/3.4.0; singularity exec --bind /cvmfs --bind /work/halld --bind /cache/halld --bind /work/halld2 /cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest $MCWRAPPER_CENTRAL/MakeMC.sh "+getCommandString(COMMAND)+"\n")
 
         f.close()
         

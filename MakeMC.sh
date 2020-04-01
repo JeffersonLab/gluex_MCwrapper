@@ -1451,6 +1451,7 @@ if [[ "$GENR" != "0" ]]; then
         fi
 		if [[ "$ANAENVIRONMENT" != "no_Analysis_env" && "$reaction_filter" != "" ]]; then
 			echo "new env setup"
+			source /group/halld/Software/build_scripts/gluex_env_clean.sh
 			xmltest2=`echo $ANAENVIRONMENT | rev | cut -c -4 | rev`
 			if [[ "$xmltest2" == ".xml" ]]; then
 				source /group/halld/Software/build_scripts/gluex_env_jlab.sh $ANAENVIRONMENT
