@@ -44,7 +44,7 @@ try:
 except:
         pass
 
-MCWRAPPER_VERSION="2.4.0"
+MCWRAPPER_VERSION="2.4.1"
 MCWRAPPER_DATE="04/03/20"
 
 #====================================================
