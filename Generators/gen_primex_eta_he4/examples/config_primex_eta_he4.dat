@@ -1,0 +1,5 @@
+# path and root file name 
+#rfile: /home/ijaegle/volatile/primex/primex_eta_he4.root
+rfile: /volatile/halld/home/ijaegle/primex/PRIMEX-D_eta_he4.root
+# xs_tot/xs_prim/xs_int/xs_coh/xs_inc
+histo: xs_tot_vs_egam

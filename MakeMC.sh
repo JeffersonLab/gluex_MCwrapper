@@ -371,6 +371,7 @@ if [[ $beam_on_current == "" || $beam_on_current == "Run" ]]; then
 echo "Run $RUN_NUMBER does not have a beam_on_current.  Defaulting to beam_current."
 beam_on_current=`rcnd $RUN_NUMBER beam_current | awk '{print $1}'`
 echo beam_current is `rcnd $RUN_NUMBER beam_current`
+fi
 	if [[ $beam_on_current == "Run" ]]; then
 		echo "The beam current could not be found for Run "$RUN_NUMBER".  This is most like due to the run number provided not existing in the rcdb"
 		echo "Please set eBEAM_CURRENT explicitly in MC.config..."
