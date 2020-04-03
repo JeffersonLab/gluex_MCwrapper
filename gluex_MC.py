@@ -44,8 +44,8 @@ try:
 except:
         pass
 
-MCWRAPPER_VERSION="2.3.1"
-MCWRAPPER_DATE="02/11/20"
+MCWRAPPER_VERSION="2.4.0"
+MCWRAPPER_DATE="04/03/20"
 
 #====================================================
 #Takes in a few pertinant pieces of info.  Creates (if needed) a swif workflow and adds a job to it.
@@ -137,26 +137,36 @@ def  qsub_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NC
         if (SCRIPT_TO_RUN[len(SCRIPT_TO_RUN)-3]=='c'):
                 shell_to_use="/bin/csh"
 
-        f=open('MCqsub.submit','w')
-        f.write("#!/bin/sh -f"+"\n" )
-        f.write("#PBS"+" -N "+JOBNAME+"\n" )
-        f.write("#PBS"+" -l "+qsub_ml_command+"\n" )
-        f.write("#PBS"+" -o "+LOG_DIR+"/log/"+JOBNAME+".out"+"\n" )
-        f.write("#PBS"+" -e "+LOG_DIR+"/log/"+JOBNAME+".err"+"\n" )
-        f.write("#PBS"+" -l walltime="+TIMELIMIT+"\n" )
-        if (QUEUENAME != "DEF"):
-                f.write("#PBS"+" -q "+QUEUENAME+"\n" )
-        f.write("#PBS"+" -l mem="+MEMLIMIT+"\n" ) 
-        f.write("#PBS"+" -m a"+"\n" )  
-        f.write("#PBS"+" -p 0"+"\n" )
-        f.write("#PBS -c c=2 \n")
-        f.write("NCPU=\\ \n")
-        f.write("NNODES=\\ \n")    
+
+        if( ".iu.edu" in socket.gethostname() and QUEUENAME.upper() == "STANLEY"):
+                f=open('MCqsub.submit','w')
+                f.write("#$ -o "+LOG_DIR+"/log/"+JOBNAME+".out"+"\n" )
+                f.write("#$ -N "+JOBNAME+"\n" )
+                f.write("#$ -j y\n" )
+                f.write(shell_to_use+indir+" "+COMMAND+"\n" )
+                f.write("exit 0\n")
+                f.close()
+        else:
+                f=open('MCqsub.submit','w')
+                f.write("#!/bin/sh -f"+"\n" )
+                f.write("#PBS"+" -N "+JOBNAME+"\n" )
+                f.write("#PBS"+" -l "+qsub_ml_command+"\n" )
+                f.write("#PBS"+" -o "+LOG_DIR+"/log/"+JOBNAME+".out"+"\n" )
+                f.write("#PBS"+" -e "+LOG_DIR+"/log/"+JOBNAME+".err"+"\n" )
+                f.write("#PBS"+" -l walltime="+TIMELIMIT+"\n" )
+                if (QUEUENAME != "DEF"):
+                        f.write("#PBS"+" -q "+QUEUENAME+"\n" )
+                f.write("#PBS"+" -l mem="+MEMLIMIT+"\n" ) 
+                f.write("#PBS"+" -m a"+"\n" )  
+                f.write("#PBS"+" -p 0"+"\n" )
+                f.write("#PBS -c c=2 \n")
+                f.write("NCPU=\\ \n")
+                f.write("NNODES=\\ \n")    
        
-       # f.write("trap \'\' 2 9 15 \n" )
-        f.write(shell_to_use+" "+SCRIPT_TO_RUN+" "+getCommandString(COMMAND)+"\n" )
-        f.write("exit 0\n")
-        f.close()
+                # f.write("trap \'\' 2 9 15 \n" )
+                f.write(shell_to_use+" "+SCRIPT_TO_RUN+" "+getCommandString(COMMAND)+"\n" )
+                f.write("exit 0\n")
+                f.close()
 
         time.sleep(0.25)
 
@@ -412,7 +422,7 @@ def JSUB_add_job(VERBOSE, WORKFLOW, PROJECT,TRACK, RUNNUM, FILENUM, SCRIPT_TO_RU
 
         #mkdircom="mkdir -p "+DATA_OUTPUT_BASE_DIR+"/log/"
 
-        f=open('MCJSLURM.submit','w')
+        f=open('MCJSUB.submit','w')
         f.write("<Request>"+"\n")
         
         f.write("<Project name=\""+PROJECT+"\"/>"+"\n")
@@ -432,31 +442,35 @@ def JSUB_add_job(VERBOSE, WORKFLOW, PROJECT,TRACK, RUNNUM, FILENUM, SCRIPT_TO_RU
 #if project ID is greater than 0 then it is a project ID and this call is going to record a new job (NOT ACTUALLY MAKING THE ATTEMPT)
 #if project ID == 0 then it is neither and just scrape the batch_ID....do nothing.  Note: this scheme requires the first id in the tables to be 1 and not 0)
 #====================================================
-def  SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID ):
+def  SLURMcont_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID ):
         STUBNAME = str(RUNNUM) + "_" + str(FILENUM)
         JOBNAME = WORKFLOW + "_" + STUBNAME
 
-        #mkdircom="mkdir -p "+DATA_OUTPUT_BASE_DIR+"/log/"
+        mkdircom="mkdir -p "+DATA_OUTPUT_BASE_DIR+"/log/"
+        status = subprocess.call(mkdircom, shell=True)
 
         f=open('MCSLURM.submit','w')
         f.write("#!/bin/bash -l"+"\n")
         f.write("#SBATCH -J "+JOBNAME+"\n")
-        f.write("#SBATCH --image=docker:jeffersonlab/hdrecon:latest"+"\n")
+        #f.write("#SBATCH --image=/cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest"+"\n")
         f.write("#SBATCH --nodes=1"+"\n")
         f.write("#SBATCH --time="+TIMELIMIT+"\n")
         f.write("#SBATCH --tasks-per-node=1"+"\n")
         f.write("#SBATCH --cpus-per-task="+NCORES+"\n")
-        f.write("#SBATCH --qos=regular"+"\n")
-        f.write("#SBATCH -C haswell"+"\n")
-        f.write("#SBATCH -L project"+"\n")
+
+        #f.write("#SBATCH -A gluex"+"\n")
+        f.write("#SBATCH -p production"+"\n")
+        f.write("#SBATCH -o "+DATA_OUTPUT_BASE_DIR+"/log/"+JOBNAME+".out\n")
+        f.write("#SBATCH -e "+DATA_OUTPUT_BASE_DIR+"/log/"+JOBNAME+".err\n")
+        
         #f.write("srun "+SCRIPT_TO_RUN+" "+COMMAND+"\n")
-        f.write("shifter $MCWRAPPER_CENTRAL/MakeMC.sh"+getCommandString(COMMAND)+"\n")
+        #/group/halld/www/halldweb/html/dist/gluex_centos7.img /cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest
+        f.write("module use /apps/modulefiles; module load singularity/3.4.0; singularity exec --bind /cvmfs --bind /work/halld --bind /cache/halld --bind /work/halld2 /cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest $MCWRAPPER_CENTRAL/MakeMC.sh "+getCommandString(COMMAND)+"\n")
 
         f.close()
         
-        exit(1)
         if( int(PROJECT_ID) <=0 ):
-                add_command="condor_submit -name "+JOBNAME+" MCOSG.submit"
+                add_command="sbatch MCSLURM.submit"
                 if add_command.find(';')!=-1 or add_command.find('&')!=-1 :#THIS CHECK HELPS PROTEXT AGAINST A POTENTIAL HACK VIA CONFIG FILES
                         print( "Nice try.....you cannot use ; or &")
                         exit(1)
@@ -467,11 +481,52 @@ def  SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, N
         elif int(PROJECT_ID) < 0:
                 recordAttempt(abs(int(PROJECT_ID)),RUNNO,FILENO,"SLURM",SWIF_ID_NUM,COMMAND['num_events'],NCORES,"UnSet")
 
-        status = subprocess.call(mkdircom, shell=True)
+        
         status = subprocess.call(add_command, shell=True)
-        status = subprocess.call("rm MCOSG.submit", shell=True)
+        status = subprocess.call("rm MCSLURM.submit", shell=True)
 
+def  SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID ):
+        STUBNAME = str(RUNNUM) + "_" + str(FILENUM)
+        JOBNAME = WORKFLOW + "_" + STUBNAME
 
+        mkdircom="mkdir -p "+DATA_OUTPUT_BASE_DIR+"/log/"
+        status = subprocess.call(mkdircom, shell=True)
+
+        f=open('MCSLURM.submit','w')
+        f.write("#!/bin/bash -l"+"\n")
+        f.write("#SBATCH -J "+JOBNAME+"\n")
+        #f.write("#SBATCH --image=/cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest"+"\n")
+        f.write("#SBATCH --nodes=1"+"\n")
+        f.write("#SBATCH --time="+TIMELIMIT+"\n")
+        f.write("#SBATCH --tasks-per-node=1"+"\n")
+        f.write("#SBATCH --cpus-per-task="+NCORES+"\n")
+
+        #f.write("#SBATCH -A gluex"+"\n")
+        f.write("#SBATCH -p production"+"\n")
+        f.write("#SBATCH -o "+DATA_OUTPUT_BASE_DIR+"/log/"+JOBNAME+".out\n")
+        f.write("#SBATCH -e "+DATA_OUTPUT_BASE_DIR+"/log/"+JOBNAME+".err\n")
+        
+        #f.write("srun "+SCRIPT_TO_RUN+" "+COMMAND+"\n")
+        #/group/halld/www/halldweb/html/dist/gluex_centos7.img /cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest
+        f.write(SCRIPT_TO_RUN+" "+getCommandString(COMMAND)+"\n")
+
+        f.close()
+        
+        if( int(PROJECT_ID) <=0 ):
+                add_command="sbatch MCSLURM.submit"
+                if add_command.find(';')!=-1 or add_command.find('&')!=-1 :#THIS CHECK HELPS PROTEXT AGAINST A POTENTIAL HACK VIA CONFIG FILES
+                        print( "Nice try.....you cannot use ; or &")
+                        exit(1)
+
+        if int(PROJECT_ID) > 0:
+                recordJob(PROJECT_ID,RUNNO,FILENO,SWIF_ID_NUM,COMMAND['num_events'])
+                #recordFirstAttempt(PROJECT_ID,RUNNO,FILENO,"SLURM",SWIF_ID_NUM,COMMAND['num_events'],NCORES, "UnSet")
+        elif int(PROJECT_ID) < 0:
+                recordAttempt(abs(int(PROJECT_ID)),RUNNO,FILENO,"SLURM",SWIF_ID_NUM,COMMAND['num_events'],NCORES,"UnSet")
+
+        
+        status = subprocess.call(add_command, shell=True)
+        status = subprocess.call("rm MCSLURM.submit", shell=True)
 #====================================================
 #function to split monolithic hddm file by run number
 #credit to sdobbs for the base
@@ -652,7 +707,7 @@ def main(argv):
         DISK       = "10GB"            # Max Disk usage
         RAM        = "20GB"            # Max RAM usage
         TIMELIMIT  = "300minutes"      # Max walltime
-        OS         = "centos7"        # Specify CentOS65 machines
+        OS         = "centos77"        # Specify CentOS65 machines
 
         PROJECT_ID=0 #internally used when needed
         IS_SUBMITTER=0
@@ -1067,10 +1122,10 @@ def main(argv):
                                         condor_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, PROJECT_ID )
                                 elif BATCHSYS.upper()=="OSG":
                                         OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
+                                elif BATCHSYS.upper()=="SLURMCONT":
+                                        SLURMcont_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
                                 elif BATCHSYS.upper()=="SLURM":
                                         SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
-                                elif BATCHSYS.upper()=="JSLURM":
-                                        JSUB_add_job(VERBOSE, WORKFLOW, PROJECT, TRACK, RUNNUM, BASEFILENUM, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
         else:
                 #print("NOT THE SUBMITTER")
                 #print(len(RunType))
@@ -1174,10 +1229,10 @@ def main(argv):
                                                                 condor_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, PROJECT_ID )
                                                         elif BATCHSYS.upper()=="OSG":
                                                                 OSG_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID)
+                                                        elif BATCHSYS.upper()=="SLURMCONT":
+                                                                SLURM_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
                                                         elif BATCHSYS.upper()=="SLURM":
                                                                 SLURM_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
-                                                        elif BATCHSYS.upper()=="JSLURM":
-                                                                JSUB_add_job(VERBOSE, WORKFLOW, PROJECT, TRACK, runs[0], BASEFILENUM+FILENUM_this_run+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
                 
                 else:
                         if FILES_TO_GEN >= 500 and ( ccdbSQLITEPATH == "no_sqlite" or rcdbSQLITEPATH == "no_sqlite"):
@@ -1223,10 +1278,11 @@ def main(argv):
                                                         condor_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, PROJECT_ID )
                                                 elif BATCHSYS.upper()=="OSG":
                                                         OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
+                                                elif BATCHSYS.upper()=="SLURMCONT":
+                                                        SLURMcont_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
                                                 elif BATCHSYS.upper()=="SLURM":
                                                         SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
-                                                elif BATCHSYS.upper()=="JSLURM":
-                                                        JSUB_add_job(VERBOSE, WORKFLOW, PROJECT, TRACK, RUNNUM, BASEFILENUM+FILENUM+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
+                                                
 
                                         
                 if BATCHRUN == 1 and BATCHSYS.upper() == "SWIF":

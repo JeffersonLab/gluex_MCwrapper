@@ -1,5 +1,5 @@
 #!/bin/csh -f
-
+#set echo
 echo `date`   
 # SET INPUTS
 setenv BATCHRUN $1
@@ -211,22 +211,25 @@ else if ( "$ccdbSQLITEPATH" == "jlab_batch_default" ) then
 	else
 		set ccdb_jlab_sqlite_path=`bash -c 'echo $((1 + RANDOM % 100))'`
 		if ( -f /work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite ) then
-		#	cp /work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite $PWD/ccdb.sqlite
+			cp /work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite $PWD/ccdb.sqlite
 			setenv CCDB_CONNECTION sqlite:///$PWD/ccdb.sqlite
 			#setenv CCDB_CONNECTION sqlite:////work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite
 		else
-			setenv CCDB_CONNECTION mysql://ccdb_user@hallddb.jlab.org/ccdb
+			setenv CCDB_CONNECTION mysql://ccdb_user@hallddb-farm.jlab.org/ccdb
 		endif
 	endif
 	#setenv CCDB_CONNECTION mysql://ccdb_user@hallddb-farm.jlab.org/ccdb
     setenv JANA_CALIB_URL ${CCDB_CONNECTION}
 endif
+
+
+#setenv JANA_GEOMETRY_URL "ccdb:///GEOMETRY/main_HDDS.xml context=\"$VERSION\""
 #xrdcopy $XRD_RANDOMS_URL/ccdb.sqlite ./
 #setenv CCDB_CONNECTION sqlite:///$PWD/ccdb.sqlite
 #setenv JANA_CALIB_URL ${CCDB_CONNECTION}
 
 if ( "$rcdbSQLITEPATH" != "no_sqlite" && "$rcdbSQLITEPATH" != "batch_default" ) then
-	if (`$USER_STAT --file-system --format=%T $PWD` == "lustre" ) then
+	if ( `$USER_STAT --file-system --format=%T $PWD` == "lustre" ) then
 		echo "Attempting to use sqlite on a lustre file system. This does not work.  Try running on a different file system!"
 		exit 1
 	endif
@@ -266,7 +269,7 @@ else
 		endif
 	end
 endif
-
+echo "Radiator thickness set..."
 set polarization_angle=`rcnd $RUN_NUMBER polarization_angle | awk '{print $1}'`
 
 if ( "$polarization_angle" == "" ) then
@@ -280,6 +283,7 @@ if ( "$polarization_angle" == "" ) then
 	endif
 endif
 
+echo "Polarization angle set..."
 set elecE=0
 set variation=$VERSION
 
@@ -287,10 +291,11 @@ if ( $CALIBTIME != "notime" ) then
 set variation=$variation":"$CALIBTIME
 endif
 
+
 set ccdbelece="`ccdb dump PHOTON_BEAM/endpoint_energy:${RUN_NUMBER}:${variation} | grep -v \#`"
 
 #set ccdblist=($ccdbelece:as/ / /)
-
+echo $ccdbelece
 set elecE_text="$ccdbelece" #$ccdblist[$#ccdblist]
 
 #echo "text: " $elecE_text
@@ -304,6 +309,8 @@ else if ( $elecE_text == "-1.0" ) then
 else
 	set elecE=`echo $elecE_text`  #set elecE = `echo "$elecE_text / 1000" | $USER_BC -l ` #rcdb method
 endif
+
+echo "Electron beam energy set..."
 
 set copeak = 0
 set copeak_text = `rcnd $RUN_NUMBER coherent_peak | awk '{print $1}'`
@@ -328,7 +335,7 @@ if ( "$polarization_angle" == "-1.0" && "$COHERENT_PEAK" == "rcdb" ) then
 endif
 
 setenv COHERENT_PEAK $copeak
-
+echo "Coherent peak set..."
 #echo $copeak
 #set copeak=`rcnd $RUN_NUMBER coherent_peak | awk '{print $1}' | sed 's/\.//g' #| awk -vFS="" -vOFS="" '{$1=$1"."}1' `
 
@@ -338,7 +345,7 @@ if ( ( "$VERSION" != "mc" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_workfes
 endif
 
 setenv eBEAM_ENERGY $elecE
-
+echo "eBEAM energy set..."
 if ( ( "$VERSION" != "mc" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_workfest2018" ) && "$eBEAM_ENERGY" == "rcdb" ) then
 	echo "error in requesting rcdb for the electron beam energy and not using variation=mc"
 	exit 1
@@ -349,19 +356,27 @@ set colsize=`rcnd $RUN_NUMBER collimator_diameter | awk '{print $1}' | sed -r 's
 if ( "$colsize" == "B" || "$colsize" == "R" || "$JANA_CALIB_CONTEXT" != "variation=mc" ) then
 	set colsize="50"
 endif
+echo "Collimator size set..."
 
+if ( "$eBEAM_CURRENT" == "rcdb" ) then
 set beam_on_current=`rcnd $RUN_NUMBER beam_on_current | awk '{print $1}'`
 
-if ( $beam_on_current == "" ) then
+if ( $beam_on_current == "" || $beam_on_current == "Run" ) then
 	echo "Run $RUN_NUMBER does not have a beam_on_current.  Defaulting to beam_current."
 	set beam_on_current=`rcnd $RUN_NUMBER beam_current | awk '{print $1}'`
-endif
 
-set beam_on_current=`echo "$beam_on_current / 1000." | $USER_BC -l`
 
-if ( "$eBEAM_CURRENT" != "rcdb" ) then
+	if ( $beam_on_current == "Run" ) then
+		echo "The beam current could not be found for Run "$RUN_NUMBER".  This is most like due to the run number provided not existing in the rcdb"
+		echo "Please set eBEAM_CURRENT explicitly in MC.config..."
+		exit 1
+	endif
+	set beam_on_current=`echo "$beam_on_current / 1000." | $USER_BC -l`
+else
 	set beam_on_current=$eBEAM_CURRENT
 endif
+
+echo "beam (on) current set..."
 
 set BGRATE_toUse=$BGRATE
 
@@ -382,11 +397,13 @@ else
 	endif
 endif
 
+echo "BGrate set..."
+
 if ( "$polarization_angle" == "-1.0" ) then
 		set POL_TO_GEN=0
 endif
 # PRINT INPUTS
-echo "This job has been configured to run at: " $MCWRAPPER_RUN_LOCATION
+echo "This job has been configured to run at: " $MCWRAPPER_RUN_LOCATION" : "`hostname`
 echo "Job started: " `date`
 echo "Simulating the Experiment: " $EXPERIMENT
 echo "ccdb sqlite path: " $ccdbSQLITEPATH $CCDB_CONNECTION
@@ -398,6 +415,7 @@ echo "Output location: "$OUTDIR
 echo "Environment file: " $ENVIRONMENT
 echo "Analysis Environment file: " $ANAENVIRONMENT
 echo "Context: "$JANA_CALIB_CONTEXT
+echo "Geometry URL: "$JANA_GEOMETRY_URL
 echo "Reconstruction calibtime: "$RECON_CALIBTIME
 echo "Run Number: "$RUN_NUMBER
 echo "Electron beam current to use: "$beam_on_current" uA"
@@ -601,9 +619,9 @@ if ( "$GENR" != "0" ) then
 
     set gen_pre=`echo $GENERATOR | cut -c1-4`
 
-    if ( "$gen_pre" != "file" && "$GENERATOR" != "genr8" && "$GENERATOR" != "bggen" && "$GENERATOR" != "genEtaRegge" && "$GENERATOR" != "gen_2pi_amp" && "$GENERATOR" != "gen_pi0" && "$GENERATOR" != "gen_2pi_primakoff" && "$GENERATOR" != "gen_omega_3pi" && "$GENERATOR" != "gen_2k" && "$GENERATOR" != "bggen_jpsi" && "$GENERATOR" != "gen_ee" && "$GENERATOR" != "gen_ee_hb" && "$GENERATOR" != "particle_gun" && "$GENERATOR" != "bggen_phi_ee" && "$GENERATOR" != "genBH" && "$GENERATOR" != "gen_omega_radiative" && "$GENERATOR" != "gen_amp" && "$GENERATOR" != "genr8_new" && "$GENERATOR" != "gen_compton" && "$GENERATOR" != "gen_npi" && "$GENERATOR" != "gen_compton_simple" && "$GENERATOR" != "gen_primex_eta_he4" && "$GENERATOR" != "gen_whizard") then
+    if ( "$gen_pre" != "file" && "$GENERATOR" != "genr8" && "$GENERATOR" != "bggen" && "$GENERATOR" != "genEtaRegge" && "$GENERATOR" != "gen_2pi_amp" && "$GENERATOR" != "gen_pi0" && "$GENERATOR" != "gen_2pi_primakoff" && "$GENERATOR" != "gen_2pi0_primakoff" && "$GENERATOR" != "gen_omega_3pi" && "$GENERATOR" != "gen_omegapi" && "$GENERATOR" != "gen_2k" && "$GENERATOR" != "bggen_jpsi" && "$GENERATOR" != "gen_ee" && "$GENERATOR" != "gen_ee_hb" && "$GENERATOR" != "particle_gun" && "$GENERATOR" != "bggen_phi_ee" && "$GENERATOR" != "genBH" && "$GENERATOR" != "gen_omega_radiative" && "$GENERATOR" != "gen_amp" && "$GENERATOR" != "genr8_new" && "$GENERATOR" != "gen_compton" && "$GENERATOR" != "gen_npi" && "$GENERATOR" != "gen_compton_simple" && "$GENERATOR" != "gen_primex_eta_he4" && "$GENERATOR" != "gen_whizard" && "$GENERATOR" != "mc_gen") then
 		echo "NO VALID GENERATOR GIVEN"
-		echo "only [genr8, bggen, genEtaRegge, gen_2pi_amp, gen_pi0, gen_omega_3pi, gen_2k, bggen_jpsi, gen_ee , gen_ee_hb, bggen_phi_ee, particle_gun, genBH, gen_omega_radiative, gen_amp, gen_compton, gen_npi, gen_compton_simple, gen_primex_eta_he4, gen_whizard] are supported"
+		echo "only [genr8, bggen, genEtaRegge, gen_2pi_amp, gen_pi0, gen_omega_3pi, gen_2k, bggen_jpsi, gen_ee , gen_ee_hb, bggen_phi_ee, particle_gun, genBH, gen_omega_radiative, gen_amp, gen_compton, gen_npi, gen_compton_simple, gen_primex_eta_he4, gen_whizard, gen_omegapi, mc_gen] are supported"
 		exit 1
     endif
 
@@ -736,6 +754,10 @@ if ( "$GENR" != "0" ) then
 		echo "configuring gen_omega_3pi"
 		set STANDARD_NAME="gen_omega_3pi_"$STANDARD_NAME
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
+	else if ( "$GENERATOR" == "gen_omegapi" ) then
+		echo "configuring gen_omegapi"
+		set STANDARD_NAME="gen_omegapi_"$STANDARD_NAME
+		cp $CONFIG_FILE ./$STANDARD_NAME.conf
 	else if ( "$GENERATOR" == "gen_omega_radiative" ) then
 		echo "configuring gen_omega_radiative"
 		set STANDARD_NAME="gen_omega_radiative_"$STANDARD_NAME
@@ -744,7 +766,11 @@ if ( "$GENR" != "0" ) then
 		echo "configuring gen_2pi_primakoff"
 		set STANDARD_NAME="gen_2pi_primakoff_"$STANDARD_NAME
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
-	 else if ( "$GENERATOR" == "gen_2pi0_primakoff" ) then
+	else if ( "$GENERATOR" == "mc_gen" ) then
+		echo "configuring mc_gen"
+		set STANDARD_NAME="mc_gen_"$STANDARD_NAME
+		cp $CONFIG_FILE ./$STANDARD_NAME.conf
+	else if ( "$GENERATOR" == "gen_2pi0_primakoff" ) then
         echo "configuring gen_2pi0_primakoff"
         set STANDARD_NAME="gen_2pi0_primakoff_"$STANDARD_NAME
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
@@ -886,6 +912,36 @@ if ( "$GENR" != "0" ) then
 		echo gen_amp -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY  $optionals_line
 		gen_amp -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
 		set generator_return_code=$status
+	else if ( "$GENERATOR" == "mc_gen" ) then
+		echo "RUNNING MC_GEN" 
+		python $HD_UTILITIES_HOME/psflux/plot_flux_ccdb.py -b $RUN_NUMBER -e $RUN_NUMBER
+		set MCGEN_FLUX_DIR=`printf './flux_%d_%d.ascii' "$RUN_NUMBER" "$RUN_NUMBER"`
+		set ROOTSCRIPT=`printf '$MCWRAPPER_CENTRAL/Generators/mc_gen/Flux_to_Ascii.C("flux_%s_%s.root")' "$RUN_NUMBER" "$RUN_NUMBER" `
+		root -l -b -q $ROOTSCRIPT
+
+		echo $MCGEN_FLUX_DIR
+
+		sed -i 's/TEMPTRIG/'$EVT_TO_GEN'/' $STANDARD_NAME.conf
+		sed -i 's/TEMPMINGENE/'$GEN_MIN_ENERGY'/' $STANDARD_NAME.conf
+		sed -i 's/TEMPMAXGENE/'$GEN_MAX_ENERGY'/' $STANDARD_NAME.conf
+		sed -i 's|TEMPFLUXDIR|'$MCGEN_FLUX_DIR'|' $STANDARD_NAME.conf
+		sed -i 's|TEMPOUTNAME|'./'|' $STANDARD_NAME.conf
+		set MCGEN_Translator=`grep Translator $STANDARD_NAME.conf`
+		
+		echo mc_gen $STANDARD_NAME.conf
+		mc_gen $STANDARD_NAME.conf
+
+		rm flux_*
+		mv *.ascii $STANDARD_NAME.ascii
+		echo $MCGEN_Translator
+		if ( "$MCGEN_Translator" == "\!Translator:ppbar" ) then
+		echo GEN2HDDM_ppbar $STANDARD_NAME.ascii
+		GEN2HDDM_ppbar $STANDARD_NAME.ascii
+		else if ( "$MCGEN_Translator" == "\!Translator:lamlambar" ) then
+		GEN2HDDM_lamlambar $STANDARD_NAME.ascii
+		endif
+
+    	set generator_return_code=$status
 	else if ( "$GENERATOR" == "gen_2pi_amp" ) then
 		echo "RUNNING GEN_2PI_AMP" 
     	set optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
@@ -919,6 +975,23 @@ if ( "$GENR" != "0" ) then
 		echo $optionals_line
 		echo gen_omega_3pi -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
 		gen_omega_3pi -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
+		set generator_return_code=$status
+	else if ( "$GENERATOR" == "gen_omegapi" ) then
+		echo "RUNNING GEN_OMEGAPI" 
+		set optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
+
+		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
+		if ( "$polarization_angle" == "-1.0" ) then
+			sed -i 's/TEMPPOLFRAC/'0'/' $STANDARD_NAME.conf
+			sed -i 's/TEMPPOLANGLE/'0'/' $STANDARD_NAME.conf
+		else
+			sed -i 's/TEMPPOLFRAC/'.4'/' $STANDARD_NAME.conf
+			sed -i 's/TEMPPOLANGLE/'$polarization_angle'/' $STANDARD_NAME.conf
+		endif
+		
+		echo $optionals_line
+		echo gen_omegapi -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY  $optionals_line
+		gen_omegapi -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
 		set generator_return_code=$status
 	else if ( "$GENERATOR" == "gen_omega_radiative" ) then
 		echo "RUNNING GEN_OMEGA_radiative" 
@@ -1372,6 +1445,7 @@ endif
 
 				if ( "$ANAENVIRONMENT" != "no_Analysis_env" && "$reaction_filter" != "" ) then
 					echo "new env setup"
+					source /group/halld/Software/build_scripts/gluex_env_clean.csh
 					set xmltest2=`echo $ANAENVIRONMENT | rev | cut -c -4 | rev`
 					if ( "$xmltest2" == ".xml" ) then
 						source /group/halld/Software/build_scripts/gluex_env_jlab.csh $ANAENVIRONMENT
@@ -1390,13 +1464,13 @@ else if ( "$ccdbSQLITEPATH" == "batch_default" ) then
     setenv CCDB_CONNECTION sqlite:////group/halld/www/halldweb/html/dist/ccdb.sqlite
     setenv JANA_CALIB_URL ${CCDB_CONNECTION}
 else if ( "$ccdbSQLITEPATH" == "jlab_batch_default" ) then
-		set ccdb_jlab_sqlite_path=`bash -c 'echo $((1 + RANDOM % 100))'`
-		if ( -f /work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite ) then
-			setenv CCDB_CONNECTION sqlite:////work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite
-		else
-			setenv CCDB_CONNECTION mysql://ccdb_user@hallddb.jlab.org/ccdb
-		endif
-
+	#	set ccdb_jlab_sqlite_path=`bash -c 'echo $((1 + RANDOM % 100))'`
+	#	if ( -f /work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite ) then
+	#		setenv CCDB_CONNECTION sqlite:////work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite
+	#	else
+	#		setenv CCDB_CONNECTION mysql://ccdb_user@hallddb.jlab.org/ccdb
+	#	endif
+	setenv CCDB_CONNECTION mysql://ccdb_user@hallddb-farm.jlab.org/ccdb
     setenv JANA_CALIB_URL ${CCDB_CONNECTION}
 endif
 
