@@ -345,8 +345,8 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
         f.write('concurrency_limits = GluexProduction'+"\n")
         f.write('on_exit_remove = true'+"\n")
         f.write('on_exit_hold = false'+"\n")
-        f.write("Error      = "+LOG_DIR+"/log/"+"error_"+JOBNAME+".log\n")
-        f.write("output      = "+LOG_DIR+"/log/"+"out_"+JOBNAME+".log\n")
+        f.write("Error      = "+DATA_OUTPUT_BASE_DIR+"/log/"+"error_"+JOBNAME+".log\n")
+        f.write("output      = "+DATA_OUTPUT_BASE_DIR+"/log/"+"out_"+JOBNAME+".log\n")
         f.write("log = "+LOG_DIR+"/log/"+"OSG_"+JOBNAME+".log\n")
         f.write("initialdir = "+RUNNING_DIR+"\n")
         
