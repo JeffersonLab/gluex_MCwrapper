@@ -659,11 +659,14 @@ if [[ "$GENR" != "0" ]]; then
 			generator_return_code=0	
 
 	elif [[ "$GENERATOR" == "particle_gun" ]]; then
-		echo "bypassing generation" 
+		echo "bypassing generation"
+		echo "using" $CONFIG_FILE
 		if [[ ! -f $CONFIG_FILE ]]; then
 			echo $CONFIG_FILE "not found"
 			exit 1
 		else
+			echo "performing error checking"
+			echo `grep "^[^c]" | grep KINE $CONFIG_FILE | awk '{print $2}' ` < 100 && `grep "^[^c]" | grep KINE $CONFIG_FILE | wc -w`
 			if [[ `grep "^[^c]" | grep KINE $CONFIG_FILE | awk '{print $2}' ` < 100 && `grep "^[^c]" | grep KINE $CONFIG_FILE | wc -w` > 3 ]]; then
 				echo "ERROR THETA AND PHI APPEAR TO BE SET BUT WILL BE IGNORED.  PLEASE REMOVE THESE SETTINGS FROM:"$CONFIG_FILE" AND RESUBMIT."
 				exit 1
@@ -685,6 +688,7 @@ if [[ "$GENR" != "0" ]]; then
     	fi
 
 	fi
+	echo "Begin writing beam.config"
 
 	echo "PolarizationAngle $polarization_angle" > beam.config
 	echo "PhotonBeamLowEnergy $GEN_MIN_ENERGY" >> beam.config
@@ -730,7 +734,7 @@ if [[ "$GENR" != "0" ]]; then
 			echo "ROOTPolName $POL_HIST" >> beam.config
 		fi
 	fi
-
+	echo "finished writing beam.config"
     if [[ "$GENERATOR" == "genr8" ]]; then
 		echo "configuring genr8"
 		STANDARD_NAME="genr8_"$STANDARD_NAME
