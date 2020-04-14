@@ -103,7 +103,7 @@ def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,N
         if( int(PROJECT_ID) <=0 ):
                 print(add_command)
                 jobSubout=subprocess.check_output(add_command.split(" "))
-                print jobSubout
+                print(jobSubout)
                 idnumline=jobSubout.split("\n")[0].strip().split("=")
                 
                 if(len(idnumline) == 2 ):
@@ -376,7 +376,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
         SWIF_ID_NUM="-1"
         if( int(PROJECT_ID) <=0 ):
                 jobSubout=subprocess.check_output(add_command.split(" "))
-                print jobSubout
+                print(jobSubout)
                 idnumline=jobSubout.split("\n")[1].split(".")[0].split(" ")
                 
                 if(len(idnumline) == 6 ):
