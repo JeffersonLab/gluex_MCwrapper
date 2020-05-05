@@ -900,7 +900,7 @@ def main(argv):
         
         
         LOG_DIR = DATA_OUTPUT_BASE_DIR  #set LOG_DIR=DATA_OUTPUT_BASE_DIR
-        WORKFLOW=WORKFLOW+"_"+TAGSTR
+        
         #loop over command line arguments 
         for argu in args:
                 argfound=0
@@ -1028,7 +1028,7 @@ def main(argv):
                 return
 
         outdir=DATA_OUTPUT_BASE_DIR
-        
+        WORKFLOW=WORKFLOW+"_"+TAGSTR
         #if local run set out directory to cwd
         if outdir[len(outdir)-1] != "/" :
                 outdir+= "/"

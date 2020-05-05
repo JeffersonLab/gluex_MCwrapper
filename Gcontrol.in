@@ -246,7 +246,7 @@ c  - tofmax = Time of flight cut (1.E+10 sec)
 c  - gcuts  = 5 user words (0.)
 c Only the first 5 fields (the ones that start with 'cut')
 c are supported by hdgeant4.
-CUTS 1e-4 1e-4 1e-3 1e-3 1e-4
+cCUTS 1e-4 1e-4 1e-3 1e-3 1e-4
 
 c Geant4 introduced the concept of ?a unique cut in range? which allows the user
 c to specify the threshold for secondaries production in terms of the range that
