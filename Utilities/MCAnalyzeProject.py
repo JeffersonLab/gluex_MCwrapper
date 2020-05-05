@@ -97,7 +97,9 @@ def getAttemptDistribution(ID, makePlot,extraConstraint="",outputLoc="./MCAnalyz
 
 def getAttemptFailurePie(ID,extraConstraint="",fileName="failurePie_Total",outputLoc="./MCAnalyze_out/"):
     print("Getting the Failure Pie for project ",ID)
-    count_q="SELECT ProgramFailed as pf,COUNT(*) as AttemptsCount from Attempts where Job_ID in (SELECT ID from Jobs where Project_ID IN (SELECT ID FROM Project where ID>"+str(ID)
+    count_q="SELECT ProgramFailed as pf,COUNT(*) as AttemptsCount from Attempts where ProgramFailed is not NULL && Job_ID in (SELECT ID from Jobs where Project_ID IN (SELECT ID FROM Project where ID>"+str(ID)
+    
+    
     if(extraConstraint != ""):
         count_q+=" && "+extraConstraint
     count_q+=")) GROUP BY ProgramFailed;"
@@ -108,6 +110,17 @@ def getAttemptFailurePie(ID,extraConstraint="",fileName="failurePie_Total",outpu
     print("Obtained",len(rows),"Entries")
     df=pd.DataFrame(rows)
 
+    Null_count_q="SELECT ExitCode as pf,COUNT(*) as AttemptsCount from Attempts where ProgramFailed is NULL && Job_ID in (SELECT ID from Jobs where Project_ID IN (SELECT ID FROM Project where ID>"+str(ID)
+    if(extraConstraint != ""):
+        Null_count_q+=" && "+extraConstraint
+    Null_count_q+=")) GROUP BY ExitCode;"
+
+    curs.execute(Null_count_q) 
+    nullrows=curs.fetchall()
+    df2=pd.DataFrame(nullrows)
+
+    DF=pd.concat([df,df2])
+
     titleString="Failure Blame For "
     
     if(int(ID)==0):
@@ -116,9 +129,9 @@ def getAttemptFailurePie(ID,extraConstraint="",fileName="failurePie_Total",outpu
     if(extraConstraint != ""):
         titleString+=" passing "+extraConstraint
 
-    titleString+=" ("+ str(df['AttemptsCount'].sum()) +" Attempts) "
+    titleString+=" ("+ str(df['AttemptsCount'].sum()+df2['AttemptsCount'].sum()) +" Attempts) "
 
-    fig = px.pie(df, values='AttemptsCount', names='pf', title=titleString)
+    fig = px.pie(DF, values='AttemptsCount', names='pf', title=titleString)
     fig.update_traces(textposition='inside', textinfo='percent+label')
     plotly.offline.plot(fig,filename=outputLoc+fileName+".html",image = 'png', image_filename=outputLoc+fileName)
 

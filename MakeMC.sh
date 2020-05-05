@@ -204,6 +204,7 @@ cd $RUNNING_DIR/${RUN_NUMBER}_${FILE_NUMBER}
 if [[ "$ccdbSQLITEPATH" != "no_sqlite" && "$ccdbSQLITEPATH" != "batch_default" && "$ccdbSQLITEPATH" != "jlab_batch_default" ]]; then
 	if [[ `$USER_STAT --file-system --format=%T $PWD` == "lustre" ]]; then
 		echo "Attempting to use sqlite on a lustre file system. This does not work.  Try running on a different file system!"
+		echo "something went wrong with initialization"
 		exit 1
 	fi
     cp $ccdbSQLITEPATH ./ccdb.sqlite
@@ -240,6 +241,7 @@ fi
 if [[ "$rcdbSQLITEPATH" != "no_sqlite" && "$rcdbSQLITEPATH" != "batch_default" ]]; then
 	if [[ `$USER_STAT --file-system --format=%T $PWD` == "lustre" ]]; then
 		echo "Attempting to use sqlite on a lustre file system. This does not work.  Try running on a different file system!"
+		echo "something went wrong with initialization"
 		exit 1
 	fi
     cp $rcdbSQLITEPATH ./rcdb.sqlite
@@ -351,6 +353,7 @@ echo "Coherent peak set..."
 
 if [[ "$VERSION" != "mc" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_workfest2018" && "$COHERENT_PEAK" == "rcdb" ]]; then
 	echo "error in requesting rcdb for the coherent peak while not using variation=mc"
+	echo "something went wrong with initialization"
 	exit 1
 fi
 
@@ -359,6 +362,7 @@ echo "eBEAM energy set..."
 
 if [[ "$VERSION" != "mc" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_workfest2018" && "$eBEAM_ENERGY" == "rcdb" ]]; then
 	echo "error in requesting rcdb for the electron beam energy and not using variation=mc"
+	echo "something went wrong with initialization"
 	exit 1
 fi
 
@@ -377,6 +381,7 @@ fi
 	if [[ $beam_on_current == "Run" ]]; then
 		echo "The beam current could not be found for Run "$RUN_NUMBER".  This is most like due to the run number provided not existing in the rcdb"
 		echo "Please set eBEAM_CURRENT explicitly in MC.config..."
+		echo "something went wrong with initialization"
 		exit 1
 	fi
 
@@ -404,6 +409,7 @@ else
 
 		if [[ $BGRATE_toUse == "" ]]; then
 			echo "BGrate_calc is not built or inaccessible.  Please check your build and/or specify a BGRate to be used."
+			echo "something went wrong with initialization"
 			exit 12
 		else
 			BGRATE_list=(`echo ${BGRATE_toUse}`)
@@ -561,6 +567,7 @@ if [[ "$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" == 
 
 			if [[ "$RANDBGTAG" == "none" && "$bkgloc_pre" != "loc:" ]]; then
 				echo "Random background requested but no tag given. Please provide the desired tag e.g Random:recon-2017_01-ver03"
+				echo "something went wrong with initialization"
 				exit 1
 			fi
 		    echo "Finding the right file to fold in during MCsmear step"
@@ -665,6 +672,7 @@ if [[ "$GENR" != "0" ]]; then
 		echo "using" $CONFIG_FILE
 		if [[ ! -f $CONFIG_FILE ]]; then
 			echo $CONFIG_FILE "not found"
+			echo "something went wrong with initialization"
 			exit 1
 		else
 			echo "performing error checking"
@@ -687,6 +695,7 @@ if [[ "$GENR" != "0" ]]; then
 			echo "Config file not applicable"
 		else
 	    	echo $CONFIG_FILE" does not exist"
+			echo "something went wrong with initialization"
 	    	exit 1
     	fi
 
@@ -729,6 +738,7 @@ if [[ "$GENR" != "0" ]]; then
 		echo "ROOTFluxName $FLUX_HIST" >> beam.config
 		if [[ "$POL_TO_GEN" == "ccdb" ]]; then
 			echo "Can't use a flux file and Polarization from ccdb"
+			echo "something went wrong with initialization"
 			exit 1
 		elif [[ "$POL_HIST" == "unset" ]]; then
 			echo "PolarizationMagnitude $POL_TO_GEN" >> beam.config
