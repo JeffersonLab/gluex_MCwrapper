@@ -1,6 +1,8 @@
 #!/bin/bash
 
-
+echo "DEBUG ls"
+pwd
+ls
 # SET INPUTS
 export BATCHRUN=$1
 shift

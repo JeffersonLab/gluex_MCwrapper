@@ -45,7 +45,7 @@ except:
         pass
 
 MCWRAPPER_VERSION="2.4.1"
-MCWRAPPER_DATE="04/09/20"
+MCWRAPPER_DATE="05/05/20"
 
 #====================================================
 #Takes in a few pertinant pieces of info.  Creates (if needed) a swif workflow and adds a job to it.
@@ -397,7 +397,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
                                 f=open("/osgpool/halld/tbritton/.ALLSTOP","x")
                                 exit(1)
 
-                status = subprocess.call('rm -f MCOSG_'+str(PROJECT_ID)+'.submit', shell=True)
+                #status = subprocess.call('rm -f MCOSG_'+str(PROJECT_ID)+'.submit', shell=True)
                 status = subprocess.call('rm -f /tmp/MCOSG_'+str(PROJECT_ID)+'.submit', shell=True)
         
                 #print "DECIDING IF FIRST JOB"
@@ -900,6 +900,7 @@ def main(argv):
         
         
         LOG_DIR = DATA_OUTPUT_BASE_DIR  #set LOG_DIR=DATA_OUTPUT_BASE_DIR
+        WORKFLOW=WORKFLOW+"_"+TAGSTR
         #loop over command line arguments 
         for argu in args:
                 argfound=0
