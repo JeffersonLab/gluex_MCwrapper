@@ -117,9 +117,25 @@ def getAttemptFailurePie(ID,extraConstraint="",fileName="failurePie_Total",outpu
 
     curs.execute(Null_count_q) 
     nullrows=curs.fetchall()
-    df2=pd.DataFrame(nullrows)
+    
+    for row in nullrows:
+        if row["pf"]==232:
+            row["pf"]="Random trigger not found"
+        elif row["pf"]==-232:
+            row["pf"]="Random trigger does not exist"
+        elif row["pf"]==404:
+            row["pf"]="Output data not returned"
+        elif row["pf"] is None:
+            row["pf"]="Still Running"
+        elif row["pf"]==0:
+            row["pf"]="Successfully completed"
 
+    print(nullrows)
+    df2=pd.DataFrame(nullrows)
     DF=pd.concat([df,df2])
+
+
+        
 
     titleString="Failure Blame For "
     

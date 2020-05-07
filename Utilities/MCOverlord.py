@@ -571,18 +571,25 @@ def checkOSG(Jobs_List):
                 historystatuscommand="condor_history -limit 1 "+str(job["BatchJobID"])+" -json"
                 print(historystatuscommand)
                 jsonOutputstr=subprocess.check_output(historystatuscommand.split(" "))
+                #historystatuscommand_exitcode ="condor_history -limit 1 "+str(job["BatchJobID"])+" -json | grep Exit"
+                #exitCode_out=subprocess.check_output(historystatuscommand_exitcode.split(" "))
+               
                 #print "================"
                 #print(jsonOutputstr)
                 #print "================"
                 if( str(jsonOutputstr, "utf-8") != ""):
                     JSON_jobar=json.loads(str(jsonOutputstr, "utf-8"))
                     #print JSON_jobar[0]
+
                     if JSON_jobar == []:
                         continue
                     JSON_job=JSON_jobar[0]
                     
+
                     ExitCode="NULL"
                     if (JSON_job["JobStatus"]!=3 and "ExitCode" in JSON_job):
+                        print("Out:",str(JSON_job["Out"]))
+                        print("Exit Code:",str(JSON_job["ExitCode"]))
                         ExitCode=str(JSON_job["ExitCode"])
                     
                     Start_Time=0

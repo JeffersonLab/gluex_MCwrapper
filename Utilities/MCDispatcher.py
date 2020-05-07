@@ -48,12 +48,15 @@ def RecallAll():
     curs.execute(query)
     rows=curs.fetchall()
     print("RECALLING "+str(len(rows)))
+    i=0
     for row in rows:
+        i=i+1
+        print("RECALLING:",str(i),"/",str(len(rows)))
         if row["BatchSystem"] == "OSG":
             command="condor_rm "+str(row["BatchJobID"])
             cmd=Popen(command.split(" "),stdout=PIPE,stderr=PIPE)
             out, err = cmd.communicate()
-            print(err)
+            print(str(err,"utf-8"))
             if("not found" in str(err,"utf-8")):
                 print("clear "+str(row["BatchJobID"]))
                 updatequery="UPDATE Attempts SET Status=\"3\" where BatchJobID=\""+str(row["BatchJobID"])+"\""
@@ -130,12 +133,12 @@ def AutoLaunch():
     print("RETRYING...")
     RetryAllJobs()
     print("TESTING...")
-    query = "SELECT ID,Email,VersionSet,Tested,UName FROM Project WHERE (Tested = 0) && Dispatched_Time is NULL ORDER BY (SELECT Priority from Users where name=UName) DESC;"# LIMIT 4;"
+    query = "SELECT ID,Email,VersionSet,Tested,UName FROM Project WHERE (Tested = 0) && Dispatched_Time is NULL ORDER BY (SELECT Priority from Users where name=UName) DESC LIMIT 10;"
     #print query
     curs.execute(query) 
     rows=curs.fetchall()
     #print rows
-    #print len(rows)
+    print("TESTING: ",rows)
 
     spawns=[]
     results_array=[]
@@ -247,6 +250,7 @@ def RetryJobsFromProject(ID, countLim):
                     count=curs.fetchall()
                     if int(count[0]["Count(Job_ID)"]) > 15 :
                         j=j+1
+                        print("Job above count limit")
                         continue
                     
                     if row["Status"] == "-1":
@@ -371,26 +375,35 @@ def CancelJob(ID):
 
 def CheckGenConfig(order):
     ID=order["ID"]
-    fileSTR=order["Generator_Config"]
+    print("checking/getting the generator config for project:",str(ID))
+    fileSTR=order["Generator_Config"].lstrip()
     file_split=fileSTR.split("/")
     name=file_split[len(file_split)-1]
     #print name
     #print(fileSTR)
     copyTo="/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"
     if(os.path.isfile(fileSTR)==False and socket.gethostname() == "scosg16.jlab.org" ):
+        print("File not found and on scosg16")
         #copyTo="/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"
-        print("scp tbritton@ifarm:"+fileSTR+" "+copyTo+str(ID)+"_"+name)
-        subprocess.call("scp tbritton@ifarm:"+fileSTR+" "+copyTo+str(ID)+"_"+name,shell=True)
+        print("scp tbritton@ifarm1801-ib:"+fileSTR.lstrip()+" "+copyTo+str(ID)+"_"+name)
+        subprocess.call("scp tbritton@ifarm1801-ib:"+fileSTR+" "+copyTo+str(ID)+"_"+name,shell=True)
         #subprocess.call("rsync -ruvt ifarm1402:"+fileSTR+" "+copyTo,shell=True)
-        order["Generator_Config"]=copyTo+name
+        print("Updating order gen config:",fileSTR,"------>",copyTo+str(ID)+"_"+name)
+        order["Generator_Config"]=copyTo+str(ID)+"_"+name
+        print("returning",copyTo+str(ID)+"_"+name)
         return copyTo+str(ID)+"_"+name
     elif(os.path.isfile(fileSTR)==True and socket.gethostname() == "scosg16.jlab.org" ):
+        print("File found and on scosg16")
         #copyTo="/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"
+        #print("scp tbritton@ifarm1801-ib:"+fileSTR+" "+copyTo+str(ID)+"_"+name)
+        #subprocess.call("scp tbritton@ifarm1801-ib:"+fileSTR+" "+copyTo+str(ID)+"_"+name,shell=True)
+        print("scp "+fileSTR+" "+copyTo+str(ID)+"_"+name)
         subprocess.call("scp "+fileSTR+" "+copyTo+str(ID)+"_"+name,shell=True)
-        #subprocess.call("rsync -ruvt ifarm1402:"+fileSTR+" "+copyTo,shell=True)
-        order["Generator_Config"]=copyTo+name
+        
+        order["Generator_Config"]=copyTo+str(ID)+"_"+name #copyTo+name
         return copyTo+str(ID)+"_"+name
     elif os.path.isfile(fileSTR)==False and socket.gethostname() != "scosg16.jlab.org":
+        print("File not found and not on scosg16")
         return copyTo+str(ID)+"_"+name
 
     return "True"

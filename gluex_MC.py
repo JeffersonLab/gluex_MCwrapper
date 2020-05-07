@@ -45,7 +45,7 @@ except:
         pass
 
 MCWRAPPER_VERSION="2.4.1"
-MCWRAPPER_DATE="05/05/20"
+MCWRAPPER_DATE="05/07/20"
 
 #====================================================
 #Takes in a few pertinant pieces of info.  Creates (if needed) a swif workflow and adds a job to it.
@@ -129,7 +129,7 @@ def  qsub_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NC
         if(COMMAND['custom_tag_string'] != "I_dont_have_one"):
                 STUBNAME=COMMAND['custom_tag_string']+"_"
         # PREPARE NAMES
-        STUBNAME = STUBNAME+str(RUNNO) + "_" + str(FILENO)
+        STUBNAME = STUBNAME+str(RUNNUM) + "_" + str(FILENO)
         
         JOBNAME = WORKFLOW + "_" + STUBNAME
        
@@ -207,7 +207,7 @@ def  condor_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, 
         if(COMMAND['custom_tag_string'] != "I_dont_have_one"):
                 STUBNAME=COMMAND['custom_tag_string']+"_"
         # PREPARE NAMES
-        STUBNAME = STUBNAME+str(RUNNO) + "_" + str(FILENO)
+        STUBNAME = STUBNAME+str(RUNNUM) + "_" + str(FILENO)
         JOBNAME = WORKFLOW + "_" + STUBNAME
 
         mkdircom="mkdir -p "+DATA_OUTPUT_BASE_DIR+"/log/"
@@ -252,7 +252,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
         if(COMMAND['custom_tag_string'] != "I_dont_have_one"):
                 STUBNAME=COMMAND['custom_tag_string']+"_"
         # PREPARE NAMES
-        STUBNAME = STUBNAME+str(RUNNO) + "_" + str(FILENO)
+        STUBNAME = STUBNAME+str(RUNNUM) + "_" + str(FILENUM)
         JOBNAME = WORKFLOW + "_" + STUBNAME
 
         mkdircom="mkdir -p "+DATA_OUTPUT_BASE_DIR+"/log/"
@@ -438,7 +438,7 @@ def JSUB_add_job(VERBOSE, WORKFLOW, PROJECT,TRACK, RUNNUM, FILENUM, SCRIPT_TO_RU
         if(COMMAND['custom_tag_string'] != "I_dont_have_one"):
                 STUBNAME=COMMAND['custom_tag_string']+"_"
         # PREPARE NAMES
-        STUBNAME = STUBNAME+str(RUNNO) + "_" + str(FILENO)
+        STUBNAME = STUBNAME+str(RUNNUM) + "_" + str(FILENUM)
         JOBNAME = WORKFLOW + "_" + STUBNAME
 
         #mkdircom="mkdir -p "+DATA_OUTPUT_BASE_DIR+"/log/"
@@ -468,7 +468,7 @@ def  SLURMcont_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAN
         if(COMMAND['custom_tag_string'] != "I_dont_have_one"):
                 STUBNAME=COMMAND['custom_tag_string']+"_"
         # PREPARE NAMES
-        STUBNAME = STUBNAME+str(RUNNO) + "_" + str(FILENO)
+        STUBNAME = STUBNAME+str(RUNNUM) + "_" + str(FILENUM)
         JOBNAME = WORKFLOW + "_" + STUBNAME
 
         mkdircom="mkdir -p "+DATA_OUTPUT_BASE_DIR+"/log/"
@@ -515,7 +515,7 @@ def  SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, N
         if(COMMAND['custom_tag_string'] != "I_dont_have_one"):
                 STUBNAME=COMMAND['custom_tag_string']+"_"
         # PREPARE NAMES
-        STUBNAME = STUBNAME+str(RUNNO) + "_" + str(FILENO)
+        STUBNAME = STUBNAME+str(RUNNUM) + "_" + str(FILENUM)
         JOBNAME = WORKFLOW + "_" + STUBNAME
 
         mkdircom="mkdir -p "+DATA_OUTPUT_BASE_DIR+"/log/"
@@ -929,7 +929,8 @@ def main(argv):
         
         
         LOG_DIR = DATA_OUTPUT_BASE_DIR  #set LOG_DIR=DATA_OUTPUT_BASE_DIR
-        
+        if(GENCONFIG==""):
+                GENCONFIG = "NA"
         #loop over command line arguments 
         for argu in args:
                 argfound=0

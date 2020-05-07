@@ -231,6 +231,7 @@ c file using hddm-xml file.hddm | grep random .
 RNDM TEMPRANDOM
 
 c The following line controls the cutoffs for tracking of particles.
+c THIS CARD SHOULD NOT BE USED IN THE PRODUCTION OF MC AND ONLY IN TESTING AND DEVELOPMENT
 c CUTS cutgam cutele cutneu cuthad cutmuo bcute bcutm dcute dcutm ppcutm tofmax
 c  - cutgam = Cut for gammas (0.001 GeV)
 c  - cutele = Cut for electrons (0.001 GeV)
