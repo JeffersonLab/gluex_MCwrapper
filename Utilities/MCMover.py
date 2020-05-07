@@ -57,8 +57,6 @@ def DroneDo():
         retcode=subprocess.check_output([MCWRAPPER_BOT_HOME+"/Utilities/MCMover.csh"],shell=True)
         print retcode
 
-
-
 def main(argv):
 
         numOverRide=False

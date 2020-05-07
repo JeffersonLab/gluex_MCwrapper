@@ -44,8 +44,8 @@ try:
 except:
         pass
 
-MCWRAPPER_VERSION="2.4.0"
-MCWRAPPER_DATE="04/03/20"
+MCWRAPPER_VERSION="2.4.1"
+MCWRAPPER_DATE="05/07/20"
 
 #====================================================
 #Takes in a few pertinant pieces of info.  Creates (if needed) a swif workflow and adds a job to it.
@@ -55,8 +55,12 @@ MCWRAPPER_DATE="04/03/20"
 #====================================================
 
 def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID):
+        STUBNAME=""
+        if(COMMAND['custom_tag_string'] != "I_dont_have_one"):
+                STUBNAME=COMMAND['custom_tag_string']+"_"
         # PREPARE NAMES
-        STUBNAME = str(RUNNO) + "_" + str(FILENO)
+        STUBNAME = STUBNAME+str(RUNNO) + "_" + str(FILENO)
+        
         JOBNAME = WORKFLOW + "_" + STUBNAME
 
         # CREATE ADD-JOB COMMAND
@@ -103,7 +107,7 @@ def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,N
         if( int(PROJECT_ID) <=0 ):
                 print(add_command)
                 jobSubout=subprocess.check_output(add_command.split(" "))
-                print jobSubout
+                print(jobSubout)
                 idnumline=jobSubout.split("\n")[0].strip().split("=")
                 
                 if(len(idnumline) == 2 ):
@@ -121,7 +125,12 @@ def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,N
 #====================================================
 def  qsub_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, MEMLIMIT, QUEUENAME, LOG_DIR, PROJECT_ID ):
         #name
-        STUBNAME = str(RUNNUM) + "_" + str(FILENUM)
+        STUBNAME=""
+        if(COMMAND['custom_tag_string'] != "I_dont_have_one"):
+                STUBNAME=COMMAND['custom_tag_string']+"_"
+        # PREPARE NAMES
+        STUBNAME = STUBNAME+str(RUNNUM) + "_" + str(FILENO)
+        
         JOBNAME = WORKFLOW + "_" + STUBNAME
        
         sub_command="qsub MCqsub.submit"
@@ -194,7 +203,11 @@ def  qsub_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NC
 #essentially take OSG_add_job and remove the OSG specific stuff (path remapping and + flags)
 #====================================================
 def  condor_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, PROJECT_ID ):
-        STUBNAME = str(RUNNUM) + "_" + str(FILENUM)
+        STUBNAME=""
+        if(COMMAND['custom_tag_string'] != "I_dont_have_one"):
+                STUBNAME=COMMAND['custom_tag_string']+"_"
+        # PREPARE NAMES
+        STUBNAME = STUBNAME+str(RUNNUM) + "_" + str(FILENO)
         JOBNAME = WORKFLOW + "_" + STUBNAME
 
         mkdircom="mkdir -p "+DATA_OUTPUT_BASE_DIR+"/log/"
@@ -235,7 +248,11 @@ def  condor_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, 
 #====================================================
 def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID ):
         ship_random_triggers=False
-        STUBNAME = str(RUNNUM) + "_" + str(FILENUM)
+        STUBNAME=""
+        if(COMMAND['custom_tag_string'] != "I_dont_have_one"):
+                STUBNAME=COMMAND['custom_tag_string']+"_"
+        # PREPARE NAMES
+        STUBNAME = STUBNAME+str(RUNNUM) + "_" + str(FILENUM)
         JOBNAME = WORKFLOW + "_" + STUBNAME
 
         mkdircom="mkdir -p "+DATA_OUTPUT_BASE_DIR+"/log/"
@@ -345,8 +362,8 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
         f.write('concurrency_limits = GluexProduction'+"\n")
         f.write('on_exit_remove = true'+"\n")
         f.write('on_exit_hold = false'+"\n")
-        f.write("Error      = "+LOG_DIR+"/log/"+"error_"+JOBNAME+".log\n")
-        f.write("output      = "+LOG_DIR+"/log/"+"out_"+JOBNAME+".log\n")
+        f.write("Error      = "+DATA_OUTPUT_BASE_DIR+"/log/"+"error_"+JOBNAME+".log\n")
+        f.write("output      = "+DATA_OUTPUT_BASE_DIR+"/log/"+"out_"+JOBNAME+".log\n")
         f.write("log = "+LOG_DIR+"/log/"+"OSG_"+JOBNAME+".log\n")
         f.write("initialdir = "+RUNNING_DIR+"\n")
         
@@ -376,7 +393,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
         SWIF_ID_NUM="-1"
         if( int(PROJECT_ID) <=0 ):
                 jobSubout=subprocess.check_output(add_command.split(" "))
-                print jobSubout
+                print(jobSubout)
                 idnumline=jobSubout.split("\n")[1].split(".")[0].split(" ")
                 
                 if(len(idnumline) == 6 ):
@@ -397,7 +414,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
                                 f=open("/osgpool/halld/tbritton/.ALLSTOP","x")
                                 exit(1)
 
-                status = subprocess.call('rm -f MCOSG_'+str(PROJECT_ID)+'.submit', shell=True)
+                #status = subprocess.call('rm -f MCOSG_'+str(PROJECT_ID)+'.submit', shell=True)
                 status = subprocess.call('rm -f /tmp/MCOSG_'+str(PROJECT_ID)+'.submit', shell=True)
         
                 #print "DECIDING IF FIRST JOB"
@@ -417,7 +434,11 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
 #Currently a stub. No time to implement (or real demand)
 #====================================================
 def JSUB_add_job(VERBOSE, WORKFLOW, PROJECT,TRACK, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID):
-        STUBNAME = str(RUNNUM) + "_" + str(FILENUM)
+        STUBNAME=""
+        if(COMMAND['custom_tag_string'] != "I_dont_have_one"):
+                STUBNAME=COMMAND['custom_tag_string']+"_"
+        # PREPARE NAMES
+        STUBNAME = STUBNAME+str(RUNNUM) + "_" + str(FILENUM)
         JOBNAME = WORKFLOW + "_" + STUBNAME
 
         #mkdircom="mkdir -p "+DATA_OUTPUT_BASE_DIR+"/log/"
@@ -443,7 +464,11 @@ def JSUB_add_job(VERBOSE, WORKFLOW, PROJECT,TRACK, RUNNUM, FILENUM, SCRIPT_TO_RU
 #if project ID == 0 then it is neither and just scrape the batch_ID....do nothing.  Note: this scheme requires the first id in the tables to be 1 and not 0)
 #====================================================
 def  SLURMcont_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID ):
-        STUBNAME = str(RUNNUM) + "_" + str(FILENUM)
+        STUBNAME=""
+        if(COMMAND['custom_tag_string'] != "I_dont_have_one"):
+                STUBNAME=COMMAND['custom_tag_string']+"_"
+        # PREPARE NAMES
+        STUBNAME = STUBNAME+str(RUNNUM) + "_" + str(FILENUM)
         JOBNAME = WORKFLOW + "_" + STUBNAME
 
         mkdircom="mkdir -p "+DATA_OUTPUT_BASE_DIR+"/log/"
@@ -486,7 +511,11 @@ def  SLURMcont_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAN
         status = subprocess.call("rm MCSLURM.submit", shell=True)
 
 def  SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID ):
-        STUBNAME = str(RUNNUM) + "_" + str(FILENUM)
+        STUBNAME=""
+        if(COMMAND['custom_tag_string'] != "I_dont_have_one"):
+                STUBNAME=COMMAND['custom_tag_string']+"_"
+        # PREPARE NAMES
+        STUBNAME = STUBNAME+str(RUNNUM) + "_" + str(FILENUM)
         JOBNAME = WORKFLOW + "_" + STUBNAME
 
         mkdircom="mkdir -p "+DATA_OUTPUT_BASE_DIR+"/log/"
@@ -900,6 +929,8 @@ def main(argv):
         
         
         LOG_DIR = DATA_OUTPUT_BASE_DIR  #set LOG_DIR=DATA_OUTPUT_BASE_DIR
+        if(GENCONFIG==""):
+                GENCONFIG = "NA"
         #loop over command line arguments 
         for argu in args:
                 argfound=0

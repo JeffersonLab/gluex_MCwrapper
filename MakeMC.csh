@@ -195,6 +195,7 @@ echo $ccdbSQLITEPATH
 if ( "$ccdbSQLITEPATH" != "no_sqlite" && "$ccdbSQLITEPATH" != "batch_default" && "$ccdbSQLITEPATH" != "jlab_batch_default" ) then
 	if (`$USER_STAT --file-system --format=%T $PWD` == "lustre" ) then
 		echo "Attempting to use sqlite on a lustre file system. This does not work.  Try running on a different file system!"
+		echo "something went wrong with initialization"
 		exit 1
 	endif
     cp $ccdbSQLITEPATH ./ccdb.sqlite
@@ -231,6 +232,7 @@ endif
 if ( "$rcdbSQLITEPATH" != "no_sqlite" && "$rcdbSQLITEPATH" != "batch_default" ) then
 	if ( `$USER_STAT --file-system --format=%T $PWD` == "lustre" ) then
 		echo "Attempting to use sqlite on a lustre file system. This does not work.  Try running on a different file system!"
+		echo "something went wrong with initialization"
 		exit 1
 	endif
     cp $rcdbSQLITEPATH ./rcdb.sqlite
@@ -341,6 +343,7 @@ echo "Coherent peak set..."
 
 if ( ( "$VERSION" != "mc" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_workfest2018" ) && "$COHERENT_PEAK" == "rcdb" ) then
 	echo "error in requesting rcdb for the coherent peak and not using variation=mc"
+	echo "something went wrong with initialization"
 	exit 1
 endif
 
@@ -369,6 +372,7 @@ endif
 if ( $beam_on_current == "Run" ) then
 	echo "The beam current could not be found for Run "$RUN_NUMBER".  This is most like due to the run number provided not existing in the rcdb"
 	echo "Please set eBEAM_CURRENT explicitly in MC.config..."
+	echo "something went wrong with initialization"
 	exit 1
 endif
 set beam_on_current=`echo "$beam_on_current / 1000." | $USER_BC -l`
@@ -549,6 +553,7 @@ if ( "$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" == "
     #find file and run:1
 	if ( "$RANDBGTAG" == "none" && "$bkgloc_pre" != "loc:" ) then
 		echo "Random background requested but no tag given. Please provide the desired tag e.g Random:recon-2017_01-ver03"
+		echo "something went wrong with initialization"
 		exit 1
 	endif
 
@@ -567,6 +572,7 @@ if ( "$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" == "
 
     if ( $RUN_NUMBER < 10000 ) then
 		echo "Warning: random triggers do not exist for this run"
+		echo "something went wrong with initialization"
 		exit 1
     endif
 	
@@ -622,6 +628,7 @@ if ( "$GENR" != "0" ) then
     if ( "$gen_pre" != "file" && "$GENERATOR" != "genr8" && "$GENERATOR" != "bggen" && "$GENERATOR" != "genEtaRegge" && "$GENERATOR" != "gen_2pi_amp" && "$GENERATOR" != "gen_pi0" && "$GENERATOR" != "gen_2pi_primakoff" && "$GENERATOR" != "gen_2pi0_primakoff" && "$GENERATOR" != "gen_omega_3pi" && "$GENERATOR" != "gen_omegapi" && "$GENERATOR" != "gen_2k" && "$GENERATOR" != "bggen_jpsi" && "$GENERATOR" != "gen_ee" && "$GENERATOR" != "gen_ee_hb" && "$GENERATOR" != "particle_gun" && "$GENERATOR" != "bggen_phi_ee" && "$GENERATOR" != "genBH" && "$GENERATOR" != "gen_omega_radiative" && "$GENERATOR" != "gen_amp" && "$GENERATOR" != "genr8_new" && "$GENERATOR" != "gen_compton" && "$GENERATOR" != "gen_npi" && "$GENERATOR" != "gen_compton_simple" && "$GENERATOR" != "gen_primex_eta_he4" && "$GENERATOR" != "gen_whizard" && "$GENERATOR" != "mc_gen") then
 		echo "NO VALID GENERATOR GIVEN"
 		echo "only [genr8, bggen, genEtaRegge, gen_2pi_amp, gen_pi0, gen_omega_3pi, gen_2k, bggen_jpsi, gen_ee , gen_ee_hb, bggen_phi_ee, particle_gun, genBH, gen_omega_radiative, gen_amp, gen_compton, gen_npi, gen_compton_simple, gen_primex_eta_he4, gen_whizard, gen_omegapi, mc_gen] are supported"
+		echo "something went wrong with initialization"
 		exit 1
     endif
 
@@ -636,20 +643,24 @@ if ( "$GENR" != "0" ) then
 	    	cp $gen_in_file ./$STANDARD_NAME.hddm
 		else
 	    	echo "cannot find file: "$gen_in_file
+			echo "something went wrong with initialization"
 	    	exit 1
 		endif
 	else if ( "$GENERATOR" == "particle_gun" ) then
 		echo "bypassing generation" 
 		if ( ! -f $CONFIG_FILE ) then
 			echo $CONFIG_FILE" not found"
+			echo "something went wrong with initialization"
 			exit 1
 		else
 			echo `grep KINE $CONFIG_FILE | awk '{print $2}' `
 			if ( `grep "^[^c]" | grep KINE $CONFIG_FILE | awk '{print $2}' ` < 100 && `grep "^[^c]" | grep KINE $CONFIG_FILE | wc -w` > 3 ) then
 				echo "ERROR THETA AND PHI APPEAR TO BE SET BUT WILL BE IGNORED.  PLEASE REMOVE THESE SETTINGS FROM:"$CONFIG_FILE" AND RESUBMIT."
+				echo "something went wrong with initialization"
 				exit 1
 			else if ( `grep "^[^c]" | grep KINE $CONFIG_FILE | awk '{print $2}' ` > 100 && ` grep "^[^c]" | grep KINE $CONFIG_FILE | wc -w` < 8 ) then
 				echo "ERROR THETA AND PHI DON'T APPEAR TO BE SET BUT ARE GOING TO BE USED. PLEASE ADD THESE SETTINGS FROM: "$CONFIG_FILE" AND RESUBMIT."
+				echo "something went wrong with initialization"
 				exit 1
 			endif
 		endif
@@ -661,6 +672,7 @@ if ( "$GENR" != "0" ) then
 			echo "Config file not applicable"
 		else
 	    	echo $CONFIG_FILE" does not exist"
+			echo "something went wrong with initialization"
 	    	exit 1
     	endif
 	endif
@@ -703,6 +715,7 @@ if ( "$GENR" != "0" ) then
 		echo "ROOTFluxName $FLUX_HIST" >>! beam.config
 		if ( "$POL_TO_GEN" == "ccdb" ) then
 			echo "Can't use a flux file and Polarization from ccdb"
+			echo "something went wrong with initialization"
 			exit 1
 		else if ( "$POL_HIST" == "unset" ) then
 			echo "PolarizationMagnitude $POL_TO_GEN" >>! beam.config

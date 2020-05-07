@@ -231,6 +231,7 @@ c file using hddm-xml file.hddm | grep random .
 RNDM TEMPRANDOM
 
 c The following line controls the cutoffs for tracking of particles.
+c THIS CARD SHOULD NOT BE USED IN THE PRODUCTION OF MC AND ONLY IN TESTING AND DEVELOPMENT
 c CUTS cutgam cutele cutneu cuthad cutmuo bcute bcutm dcute dcutm ppcutm tofmax
 c  - cutgam = Cut for gammas (0.001 GeV)
 c  - cutele = Cut for electrons (0.001 GeV)
@@ -246,7 +247,7 @@ c  - tofmax = Time of flight cut (1.E+10 sec)
 c  - gcuts  = 5 user words (0.)
 c Only the first 5 fields (the ones that start with 'cut')
 c are supported by hdgeant4.
-CUTS 1e-4 1e-4 1e-3 1e-3 1e-4
+cCUTS 1e-4 1e-4 1e-3 1e-3 1e-4
 
 c Geant4 introduced the concept of ?a unique cut in range? which allows the user
 c to specify the threshold for secondaries production in terms of the range that

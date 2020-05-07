@@ -118,9 +118,9 @@ def WritePayloadConfig(order,foundConfig,batch_system):
             MCconfig_file.write("CUSTOM_PLUGINS=file:/work/halld/home/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config\n")
 
 
-    MCconfig_file.write("ENVIRONMENT_FILE=/group/halld/www/halldweb/html/dist/"+str(order["VersionSet"])+"\n")
+    MCconfig_file.write("ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"+str(order["VersionSet"])+"\n")
     if(order["ANAVersionSet"] != None and order["ANAVersionSet"] != "None" ):
-        MCconfig_file.write("ANA_ENVIRONMENT_FILE=/group/halld/www/halldweb/html/dist/"+str(order["ANAVersionSet"])+"\n")
+        MCconfig_file.write("ANA_ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"+str(order["ANAVersionSet"])+"\n")
     MCconfig_file.close()
 
 def SubmitList(SubList,job_IDs_submitted):
