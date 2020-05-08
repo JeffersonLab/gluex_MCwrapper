@@ -44,8 +44,8 @@ try:
 except:
         pass
 
-MCWRAPPER_VERSION="2.4.1"
-MCWRAPPER_DATE="05/07/20"
+MCWRAPPER_VERSION="2.4.2"
+MCWRAPPER_DATE="05/08/20"
 
 #====================================================
 #Takes in a few pertinant pieces of info.  Creates (if needed) a swif workflow and adds a job to it.
