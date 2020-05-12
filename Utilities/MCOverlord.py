@@ -709,9 +709,12 @@ def checkOSG(Jobs_List):
 
                     updatejobstatus=updatejobstatus+" WHERE BatchJobID='"+str(job["BatchJobID"])+"';"
                     #print(updatejobstatus)
-                    
-                    dbcursorOSG.execute(updatejobstatus)
-                    dbcnxOSG.commit()
+                    try:
+                        dbcursorOSG.execute(updatejobstatus)
+                        dbcnxOSG.commit()
+                    except Exception as e:
+                        print(e)
+                        pass
 
         time.sleep(random.randint(1,5))
         print("FINISHED CHECKING OSG")
