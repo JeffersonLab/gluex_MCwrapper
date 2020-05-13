@@ -494,7 +494,7 @@ def  SLURMcont_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAN
         
         #f.write("srun "+SCRIPT_TO_RUN+" "+COMMAND+"\n")
         #/group/halld/www/halldweb/html/dist/gluex_centos7.img /cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest
-        f.write("module use /apps/modulefiles; module load singularity/3.4.0; singularity exec --bind /cvmfs --bind /work/halld --bind /cache/halld --bind /work/halld2 /cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest $MCWRAPPER_CENTRAL/MakeMC.sh "+getCommandString(COMMAND)+"\n")
+        f.write("module use /apps/modulefiles; module load singularity/3.4.0; singularity exec --bind /cvmfs --bind /work/osgpool/ --bind /work/halld --bind /cache/halld --bind /work/halld2 /cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest $MCWRAPPER_CENTRAL/MakeMC.sh "+getCommandString(COMMAND)+"\n")
 
         f.close()
         
@@ -1342,7 +1342,7 @@ def GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,RUNNUM):
                 if BGFOLD[0:3] == "loc":
                         Style="loc"
 
-                path_base="/work/halld/random_triggers/"
+                path_base="/work/osgpool/halld/random_triggers/"
 
                 if socket.gethostname() == "scosg16.jlab.org":
                         path_base="/osgpool/halld/random_triggers/"
