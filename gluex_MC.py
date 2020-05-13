@@ -45,7 +45,7 @@ except:
         pass
 
 MCWRAPPER_VERSION="2.4.2"
-MCWRAPPER_DATE="05/10/20"
+MCWRAPPER_DATE="05/13/20"
 
 #====================================================
 #Takes in a few pertinant pieces of info.  Creates (if needed) a swif workflow and adds a job to it.
@@ -224,7 +224,7 @@ def  condor_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, 
         
         JOBNAME=JOBNAME.replace(".","p")
         if( int(PROJECT_ID) <=0 ):
-                add_command="condor_submit -name "+JOBNAME+" MCcondor.submit"
+                add_command="condor_submit -batch-name "+WORKFLOW+" MCcondor.submit"
                 if add_command.find(';')!=-1 or add_command.find('&')!=-1 or mkdircom.find(';')!=-1 or mkdircom.find('&')!=-1:#THIS CHECK HELPS PROTEXT AGAINST A POTENTIAL HACK VIA CONFIG FILES
                         print( "Nice try.....you cannot use ; or &")
                         exit(1)
@@ -380,7 +380,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
         f.close()
         
         JOBNAME=JOBNAME.replace(".","p")
-
+        #"condor_submit -batch-name "+WORKFLOW+" MCcondor.submit"
         #add_command="condor_submit -name "+JOBNAME+" MCOSG_"+str(PROJECT_ID)+".submit"
         add_command="condor_submit "+"MCOSG_"+str(PROJECT_ID)+".submit"
         if add_command.find(';')!=-1 or add_command.find('&')!=-1 :#THIS CHECK HELPS PROTEXT AGAINST A POTENTIAL HACK VIA CONFIG FILES
