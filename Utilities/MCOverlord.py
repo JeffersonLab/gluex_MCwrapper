@@ -403,9 +403,9 @@ def checkSWIF(WKflows_to_check):
                                     attempt_BKG_parts=attempt_BKG.split(":")
                                     print(len(attempt_BKG_parts))
                                     if len(attempt_BKG_parts) != 1:
-                                        locally_found=os.path.isfile("/osgpool/halld/random_triggers/"+str(attempt_BKG_parts[1])+"/run"+str(thisJOB_RunNumber).zfill(6)+"_random.hddm")
+                                        locally_found=os.path.isfile("/work/osgpool/halld/random_triggers/"+str(attempt_BKG_parts[1])+"/run"+str(thisJOB_RunNumber).zfill(6)+"_random.hddm")
                                         if locally_found:
-                                            print("found file locally: "+str("/osgpool/halld/random_triggers/"+str(attempt_BKG_parts[1])+"/run"+str(thisJOB_RunNumber).zfill(6)+"_random.hddm"))
+                                            print("found file locally: "+str("/work/osgpool/halld/random_triggers/"+str(attempt_BKG_parts[1])+"/run"+str(thisJOB_RunNumber).zfill(6)+"_random.hddm"))
 
                                             if(locally_found):
                                                 JOB_STATUS="problem"
@@ -642,9 +642,9 @@ def checkOSG(Jobs_List):
                                 attempt_BKG_parts=attempt_BKG.split(":")
                                 print(len(attempt_BKG_parts))
                                 if len(attempt_BKG_parts) != 1:
-                                    locally_found=os.path.isfile("/osgpool/halld/random_triggers/"+str(attempt_BKG_parts[1])+"/run"+str(thisJOB_RunNumber).zfill(6)+"_random.hddm")
+                                    locally_found=os.path.isfile("/work/osgpool/halld/random_triggers/"+str(attempt_BKG_parts[1])+"/run"+str(thisJOB_RunNumber).zfill(6)+"_random.hddm")
                                     if locally_found:
-                                        print("found file locally: "+str("/osgpool/halld/random_triggers/"+str(attempt_BKG_parts[1])+"/run"+str(thisJOB_RunNumber).zfill(6)+"_random.hddm"))
+                                        print("found file locally: "+str("/work/osgpool/halld/random_triggers/"+str(attempt_BKG_parts[1])+"/run"+str(thisJOB_RunNumber).zfill(6)+"_random.hddm"))
                                         response=os.system("ping -c 1 nod25.phys.uconn.edu")
                                         print("PING RESPONSE:"+str(response))
                                         if response != 0:
