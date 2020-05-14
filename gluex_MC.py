@@ -1270,9 +1270,9 @@ def main(argv):
                                                                 SLURM_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
                 
                 else:
-                        if FILES_TO_GEN >= 500 and ( ccdbSQLITEPATH == "no_sqlite" or rcdbSQLITEPATH == "no_sqlite"):
-                                print( "This job has >500 subjobs and risks ddosing the servers.  Please use sqlite or request again with a larger per file. ")
-                                return
+                        #if FILES_TO_GEN >= 500 and ( ccdbSQLITEPATH == "no_sqlite" or rcdbSQLITEPATH == "no_sqlite"):
+                        #        print( "This job has >500 subjobs and risks ddosing the servers.  Please use sqlite or request again with a larger per file. ")
+                        #        return
                         for FILENUM in range(1, FILES_TO_GEN + 2):
                                 num=PERFILE
                                 #last file gets the remainder
