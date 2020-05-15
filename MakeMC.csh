@@ -206,20 +206,22 @@ else if ( "$ccdbSQLITEPATH" == "batch_default" ) then
     setenv CCDB_CONNECTION sqlite:////group/halld/www/halldweb/html/dist/ccdb.sqlite
     setenv JANA_CALIB_URL ${CCDB_CONNECTION}
 else if ( "$ccdbSQLITEPATH" == "jlab_batch_default" ) then
-	if ( -f /usr/lib64/libXrdPosixPreload.so ) then
-		#echo "stop...its xrdcopy time"
-		xrdcopy $XRD_RANDOMS_URL/ccdb.sqlite ./
-		setenv CCDB_CONNECTION sqlite:///$PWD/ccdb.sqlite
-	else
-		set ccdb_jlab_sqlite_path=`bash -c 'echo $((1 + RANDOM % 100))'`
-		if ( -f /work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite ) then
-			cp /work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite $PWD/ccdb.sqlite
-			setenv CCDB_CONNECTION sqlite:///$PWD/ccdb.sqlite
-			#setenv CCDB_CONNECTION sqlite:////work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite
-		else
-			setenv CCDB_CONNECTION mysql://ccdb_user@hallddb-farm.jlab.org/ccdb
-		endif
-	endif
+	#if ( -f /usr/lib64/libXrdPosixPreload.so ) then
+	#	#echo "stop...its xrdcopy time"
+	#	xrdcopy $XRD_RANDOMS_URL/ccdb.sqlite ./
+	#	setenv CCDB_CONNECTION sqlite:///$PWD/ccdb.sqlite
+	#else
+	#	set ccdb_jlab_sqlite_path=`bash -c 'echo $((1 + RANDOM % 100))'`
+	#	if ( -f /work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite ) then
+	#		cp /work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite $PWD/ccdb.sqlite
+	#		setenv CCDB_CONNECTION sqlite:///$PWD/ccdb.sqlite
+	#		#setenv CCDB_CONNECTION sqlite:////work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite
+	#	else
+	#		setenv CCDB_CONNECTION mysql://ccdb_user@hallddb-farm.jlab.org/ccdb
+	#	endif
+	#endif
+	setenv CCDB_CONNECTION mysql://ccdb_user@hallddb-farm.jlab.org/ccdb
+
 	#setenv CCDB_CONNECTION mysql://ccdb_user@hallddb-farm.jlab.org/ccdb
     setenv JANA_CALIB_URL ${CCDB_CONNECTION}
 endif
