@@ -671,21 +671,24 @@ if [[ "$GENR" != "0" ]]; then
 	elif [[ "$GENERATOR" == "particle_gun" ]]; then
 		echo "bypassing generation"
 		echo "using" $CONFIG_FILE
-		if [[ ! -f $CONFIG_FILE ]]; then
-			echo $CONFIG_FILE "not found"
-			echo "something went wrong with initialization"
-			exit 1
-		else
-			echo "performing error checking"
-			#echo `grep "^[^c]" | grep KINE $CONFIG_FILE | awk '{print $2}' ` 
-			#echo `grep "^[^c]" | grep KINE $CONFIG_FILE | wc -w`
-			#if [[ `grep "^[^c]" | grep KINE $CONFIG_FILE | awk '{print $2}' ` < 100 && `grep "^[^c]" | grep KINE $CONFIG_FILE | wc -w` > 3 ]]; then
-			#	echo "ERROR THETA AND PHI APPEAR TO BE SET BUT WILL BE IGNORED.  PLEASE REMOVE THESE SETTINGS FROM:"$CONFIG_FILE" AND RESUBMIT."
-			#	exit 1
-			#elif [[ `grep "^[^c]" | grep KINE $CONFIG_FILE | awk '{print $2}' ` > 100 && `grep "^[^c]" | grep KINE $CONFIG_FILE | wc -w` < 8 ]]; then
-			#	echo "ERROR THETA AND PHI DON'T APPEAR TO BE SET BUT ARE GOING TO BE USED. PLEASE ADD THESE SETTINGS FROM: "$CONFIG_FILE" AND RESUBMIT."
-			#	exit 1
-			#fi
+		if [[ "$CUSTOM_GCONTROL" == "0" ]]; then
+			if [[ ! -f $CONFIG_FILE ]]; then
+				echo "Generator config file : "$CONFIG_FILE "not found"
+				echo "something went wrong with initialization"
+				exit 1
+			else
+				echo "performing error checking"
+				echo "Note: this specific error checking has been disabled as it causes issues on some bash shells.  Basically if you need to use the THETA and PHI parameters then make sure they are set."
+				#echo `grep "^[^c]" | grep KINE $CONFIG_FILE | awk '{print $2}' ` 
+				#echo `grep "^[^c]" | grep KINE $CONFIG_FILE | wc -w`
+				#if [[ `grep "^[^c]" | grep KINE $CONFIG_FILE | awk '{print $2}' ` < 100 && `grep "^[^c]" | grep KINE $CONFIG_FILE | wc -w` > 3 ]]; then
+				#	echo "ERROR THETA AND PHI APPEAR TO BE SET BUT WILL BE IGNORED.  PLEASE REMOVE THESE SETTINGS FROM:"$CONFIG_FILE" AND RESUBMIT."
+				#	exit 1
+				#elif [[ `grep "^[^c]" | grep KINE $CONFIG_FILE | awk '{print $2}' ` > 100 && `grep "^[^c]" | grep KINE $CONFIG_FILE | wc -w` < 8 ]]; then
+				#	echo "ERROR THETA AND PHI DON'T APPEAR TO BE SET BUT ARE GOING TO BE USED. PLEASE ADD THESE SETTINGS FROM: "$CONFIG_FILE" AND RESUBMIT."
+				#	exit 1
+				#fi
+			fi
 		fi
 		
 		generator_return_code=0

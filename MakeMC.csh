@@ -651,20 +651,22 @@ if ( "$GENR" != "0" ) then
 		endif
 	else if ( "$GENERATOR" == "particle_gun" ) then
 		echo "bypassing generation" 
-		if ( ! -f $CONFIG_FILE ) then
-			echo $CONFIG_FILE" not found"
-			echo "something went wrong with initialization"
-			exit 1
-		else
-			echo `grep KINE $CONFIG_FILE | awk '{print $2}' `
-			if ( `grep "^[^c]" | grep KINE $CONFIG_FILE | awk '{print $2}' ` < 100 && `grep "^[^c]" | grep KINE $CONFIG_FILE | wc -w` > 3 ) then
-				echo "ERROR THETA AND PHI APPEAR TO BE SET BUT WILL BE IGNORED.  PLEASE REMOVE THESE SETTINGS FROM:"$CONFIG_FILE" AND RESUBMIT."
+		if ( "$CUSTOM_GCONTROL" == "0" ) then
+			if ( ! -f $CONFIG_FILE ) then
+				echo "Generator config file : "$CONFIG_FILE" not found"
 				echo "something went wrong with initialization"
 				exit 1
-			else if ( `grep "^[^c]" | grep KINE $CONFIG_FILE | awk '{print $2}' ` > 100 && ` grep "^[^c]" | grep KINE $CONFIG_FILE | wc -w` < 8 ) then
-				echo "ERROR THETA AND PHI DON'T APPEAR TO BE SET BUT ARE GOING TO BE USED. PLEASE ADD THESE SETTINGS FROM: "$CONFIG_FILE" AND RESUBMIT."
-				echo "something went wrong with initialization"
-				exit 1
+			else
+				echo `grep KINE $CONFIG_FILE | awk '{print $2}' `
+				if ( `grep "^[^c]" | grep KINE $CONFIG_FILE | awk '{print $2}' ` < 100 && `grep "^[^c]" | grep KINE $CONFIG_FILE | wc -w` > 3 ) then
+					echo "ERROR THETA AND PHI APPEAR TO BE SET BUT WILL BE IGNORED.  PLEASE REMOVE THESE SETTINGS FROM:"$CONFIG_FILE" AND RESUBMIT."
+					echo "something went wrong with initialization"
+					exit 1
+				else if ( `grep "^[^c]" | grep KINE $CONFIG_FILE | awk '{print $2}' ` > 100 && ` grep "^[^c]" | grep KINE $CONFIG_FILE | wc -w` < 8 ) then
+					echo "ERROR THETA AND PHI DON'T APPEAR TO BE SET BUT ARE GOING TO BE USED. PLEASE ADD THESE SETTINGS FROM: "$CONFIG_FILE" AND RESUBMIT."
+					echo "something went wrong with initialization"
+					exit 1
+				endif
 			endif
 		endif
 		set generator_return_code=0
