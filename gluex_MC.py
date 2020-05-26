@@ -837,12 +837,16 @@ def main(argv):
                                 exit(1)
                 elif str(parts[0]).upper()=="GENERATOR_CONFIG" :
                         GENCONFIG=rm_comments[0].strip()
-                elif str(parts[0]).upper()=="GENERATOR_POSTPROCESS" :
+                elif str(parts[0]).upper()=="GENERATOR_POSTPROCESS":
                         WHOLEPOST=rm_comments[0].strip()
-                        WHOLEPOST_PARTS=WHOLEPOST.split(":")[0]
+                        WHOLEPOST_PARTS=WHOLEPOST.split(":")
                         GENPOST=WHOLEPOST_PARTS[0]
+
                         if(len(WHOLEPOST_PARTS)==2):
                                 GENPOSTCONFIG=WHOLEPOST_PARTS[1]
+                        elif(len(WHOLEPOST_PARTS)==1):
+                                GENPOST=WHOLEPOST
+
                 elif str(parts[0]).upper()=="CUSTOM_MAKEMC" :
                         CUSTOM_MAKEMC=rm_comments[0].strip()
                 elif str(parts[0]).upper()=="CUSTOM_GCONTROL" :
