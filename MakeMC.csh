@@ -120,6 +120,10 @@ shift
 setenv RANDOM_TRIG_NUM_EVT $1
 shift
 setenv MCWRAPPER_RUN_LOCATION $1
+shift
+setenv GENERATOR_POST $1
+shift
+setenv GENERATOR_POST_CONFIG $1
 
 setenv USER_BC `which bc`
 setenv USER_PYTHON `which python`
@@ -437,6 +441,7 @@ echo "Run generation step? "$GENR"  Will be cleaned?" $CLEANGENR
 echo "Flux Hist to use: " "$FLUX_TO_GEN" " : " "$FLUX_HIST"
 echo "Polarization to use: " "$POL_TO_GEN" " : " "$POL_HIST"
 echo "Using "$GENERATOR"  with config: "$CONFIG_FILE
+echo "Will run "$GENERATOR_POST" postprocessing after generator with configuration: "$GENERATOR_POST_CONFIG
 echo "----------------------------------------------"
 echo "Run geant step? "$GEANT"  Will be cleaned?" $CLEANGEANT
 echo "Using geant"$GEANTVER
@@ -458,6 +463,9 @@ echo "Streaming via xrootd? "$MAKE_MC_USING_XROOTD "Event Count: "$RANDOM_TRIG_N
 echo "BC "$USER_BC
 echo "python "$USER_PYTHON
 echo `which $GENERATOR`
+if ( "$GENERATOR_POST" != "No" ) then
+echo `which $GENERATOR_POST`
+endif
 if ( "$GEANTVER" == "3" ) then
 	echo `which hdgeant`
 else
@@ -1179,6 +1187,10 @@ if ( "$GENR" != "0" ) then
 	endif
 #GEANT/smearing
 endif
+if ( "$GENERATOR_POST" != "No" ) then
+echo "I would totaly do post processing now if I was fully developed"
+endif
+
 
     if ( "$GEANT" != "0"  ) then
 		echo "RUNNING GEANT"$GEANTVER
