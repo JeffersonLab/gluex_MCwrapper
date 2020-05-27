@@ -1189,18 +1189,28 @@ if ( "$GENR" != "0" ) then
 endif
 
 if ( "$GENERATOR_POST" != "No" ) then
-
+	echo "RUNNING POSTPROCESSING "
 #copy config locally
 	if ( "$GENERATOR_POST_CONFIG" != "Default" ) then
 		cp $GENERATOR_POST_CONFIG ./userDecay.dec #post'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.cfg
 	endif
 
 	if ( "$GENERATOR_POST" == "decay_evtgen" ) then
-		echo decay_evtgen -o $STANDARD_NAME'_evtgen'.hddm $STANDARD_NAME.hddm
-		decay_evtgen -o $STANDARD_NAME'_evtgen'.hddm $STANDARD_NAME.hddm
-		set $STANDARD_NAME=$STANDARD_NAME'_evtgen'
+		echo decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm $STANDARD_NAME.hddm
+		decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm $STANDARD_NAME.hddm
+		set post_return_code=$status
+		set $STANDARD_NAME=$STANDARD_NAME'_decay_evtgen'
 	endif
-#do if/elses for running 
+	#do if/elses for running 
+	if ( $post_return_code != 0 ) then
+				echo
+				echo
+				echo "Something went wrong with " "$GENERATOR_POST"
+				echo "status code: "$post_return_code
+				exit $post_return_code
+	endif
+
+
 endif
 
 

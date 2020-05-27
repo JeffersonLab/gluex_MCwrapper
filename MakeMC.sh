@@ -1208,7 +1208,29 @@ fi
 
 #POST PROCESSING INSERTION POINT
 if [[ "$GENERATOR_POST" != "No" ]]; then
-echo "I would totaly do post processing now if I was fully developed"
+	echo "RUNNING POSTPROCESSING "
+#copy config locally
+	if [[ "$GENERATOR_POST_CONFIG" != "Default" ]]; then
+		cp $GENERATOR_POST_CONFIG ./userDecay.dec #post'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.cfg
+	fi
+
+	if [[ "$GENERATOR_POST" == "decay_evtgen" ]]; then
+		echo decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm $STANDARD_NAME.hddm
+		decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm $STANDARD_NAME.hddm
+		post_return_code=$status
+		$STANDARD_NAME=$STANDARD_NAME'_decay_evtgen'
+	fi
+
+	#do if/elses for running 
+	if [[ $post_return_code != 0 ]]; then
+				echo
+				echo
+				echo "Something went wrong with " "$GENERATOR_POST"
+				echo "status code: "$post_return_code
+				exit $post_return_code
+	fi
+
+
 fi
 
 
