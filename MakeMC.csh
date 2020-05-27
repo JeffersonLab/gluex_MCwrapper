@@ -1191,13 +1191,14 @@ endif
 if ( "$GENERATOR_POST" != "No" ) then
 	echo "RUNNING POSTPROCESSING "
 #copy config locally
+	set post_return_code=-1
 	if ( "$GENERATOR_POST_CONFIG" != "Default" ) then
-		cp $GENERATOR_POST_CONFIG ./userDecay.dec #post'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.cfg
+		cp $GENERATOR_POST_CONFIG ./post'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.cfg
 	endif
 
 	if ( "$GENERATOR_POST" == "decay_evtgen" ) then
 		echo decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm $STANDARD_NAME.hddm
-		decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm $STANDARD_NAME.hddm
+		decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm -upost'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.cfg $STANDARD_NAME.hddm
 		set post_return_code=$status
 		set $STANDARD_NAME=$STANDARD_NAME'_decay_evtgen'
 	endif
@@ -1209,10 +1210,7 @@ if ( "$GENERATOR_POST" != "No" ) then
 				echo "status code: "$post_return_code
 				exit $post_return_code
 	endif
-
-
 endif
-
 
     if ( "$GEANT" != "0"  ) then
 		echo "RUNNING GEANT"$GEANTVER
@@ -1256,7 +1254,7 @@ endif
 			sed -i 's/INFILE/cINFILE/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 			sed -i 's/BEAM/cBEAM/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 			sed -i 's/TEMPSKIP/'0'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-			cat $STANDARD_NAME.conf >> control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+			grep -v "/particle/" $STANDARD_NAME.conf >> control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 		else
 	    	sed -i 's/TEMPSKIP/'0'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 		endif
@@ -1291,7 +1289,8 @@ endif
 		else if ( "$GEANTVER" == "4" ) then
 	    	#make run.mac then call it below
 	    	rm -f run.mac
-	    	echo "/run/beamOn $EVT_TO_GEN" > run.mac
+			grep "/particle" $STANDARD_NAME.conf >>! run.mac
+	    	echo "/run/beamOn $EVT_TO_GEN" >>! run.mac
 	    	echo "exit" >>! run.mac
 
 	    	hdgeant4 -t$NUMTHREADS run.mac
