@@ -255,6 +255,15 @@ echo "Detected c-shell"
 
 set current_files=`find . -maxdepth 1 -type f`
 
+set beam_on_current="Not needed"
+set radthick="Not needed"
+set colsize="Not Needed"
+set polarization_angle="Not Needed"
+set BGRATE_toUse="Not Needed"
+
+
+set gen_pre_rcdb=`echo $GENERATOR | cut -c1-4`
+if ( $gen_pre_rcdb != "file" || ( "$BGTAGONLY_OPTION" == "1" || "$BKGFOLDSTR" == "BeamPhotons" ) ) then 
 set radthick="50.e-6"
 
 if ( "$RADIATOR_THICKNESS" != "rcdb" || ( "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" ) ) then
@@ -413,6 +422,7 @@ echo "BGrate set..."
 if ( "$polarization_angle" == "-1.0" ) then
 		set POL_TO_GEN=0
 endif
+endif
 # PRINT INPUTS
 echo "This job has been configured to run at: " $MCWRAPPER_RUN_LOCATION" : "`hostname`
 echo "Job started: " `date`
@@ -480,7 +490,7 @@ echo ""
 set isGreater=1
 set isGreater=`echo $GEN_MAX_ENERGY'>'$eBEAM_ENERGY | $USER_BC -l`
 
-if ( "$isGreater" == "1" ) then
+if ( "$isGreater" == "1" && "$eBEAM_ENERGY" != "rcdb" ) then
 echo "something went wrong with initialization"
 echo "Error: Requested Max photon energy $GEN_MAX_ENERGY is above the electron beam energy $eBEAM_ENERGY!"
 exit 1
@@ -1192,6 +1202,7 @@ if ( "$GENERATOR_POST" != "No" ) then
 	echo "RUNNING POSTPROCESSING "
 #copy config locally
 	set post_return_code=-1
+	echo $GENERATOR_POST_CONFIG
 	if ( "$GENERATOR_POST_CONFIG" != "Default" ) then
 		cp $GENERATOR_POST_CONFIG ./post'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.cfg
 	endif
@@ -1229,21 +1240,31 @@ endif
 		set RANDOMnumGeant=`shuf -i1-215 -n1`
 		sed -i 's/TEMPRANDOM/'$RANDOMnumGeant'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 		sed -i 's/TEMPELECE/'$eBEAM_ENERGY'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+		
 		if ( "$polarization_angle" == "-1" ) then
 			sed -i 's/TEMPCOHERENT/'0'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 		else
 			set Fortran_COHERENT_PEAK=`echo $COHERENT_PEAK | cut -c -7`
 			sed -i 's/TEMPCOHERENT/'$Fortran_COHERENT_PEAK'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 		endif
-
+		
 		sed -i 's/TEMPIN/'$STANDARD_NAME.hddm'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 		sed -i 's/TEMPRUNG/'$RUN_NUMBER'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 		sed -i 's/TEMPOUT/'$STANDARD_NAME'_geant'$GEANTVER'.hddm/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 		sed -i 's/TEMPTRIG/'$EVT_TO_GEN'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-		sed -i 's/TEMPCOLD/'0.00$colsize'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+		
+		if ( "$colsize" != "Not Needed" ) then
+			sed -i 's/TEMPCOLD/'0.00$colsize'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+		endif
+		
 		sed -i 's/TEMPRADTHICK/'"$radthick"'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+		
 		sed -i 's/TEMPBGTAGONLY/'$BGTAGONLY_OPTION'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-		sed -i 's/TEMPBGRATE/'$BGRATE_toUse'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+		
+		if ( "$BGRATE_toUse" != "Not Needed" ) then
+			sed -i 's/TEMPBGRATE/'$BGRATE_toUse'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+		endif
+		
 		sed -i 's/TEMPNOSECONDARIES/'$GEANT_NOSECONDARIES'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 
 		if ( "$gen_pre" == "file" ) then
@@ -1274,7 +1295,7 @@ endif
 		else 
 	    	sed -i 's/TEMPMINE/'$GEN_MIN_ENERGY'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 		endif
-
+		
 		echo "" >> control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 		echo END >> control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 		cp $PWD/control'_'$formatted_runNumber'_'$formatted_fileNumber.in $OUTDIR/configurations/geant/
@@ -1289,10 +1310,13 @@ endif
 		else if ( "$GEANTVER" == "4" ) then
 	    	#make run.mac then call it below
 	    	rm -f run.mac
-			grep "/particle" $STANDARD_NAME.conf >>! run.mac
+			
+			if ( $gen_pre != "file" ) then
+				grep "/particle/" $STANDARD_NAME.conf >>! run.mac
+			endif
 	    	echo "/run/beamOn $EVT_TO_GEN" >>! run.mac
 	    	echo "exit" >>! run.mac
-
+			
 	    	hdgeant4 -t$NUMTHREADS run.mac
 			set geant_return_code=$status
 	    	rm run.mac

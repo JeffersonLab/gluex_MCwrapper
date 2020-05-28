@@ -263,6 +263,16 @@ echo "Detected bash shell"
 
 current_files=`find . -maxdepth 1 -type f`
 
+beam_on_current="Not needed"
+radthick="Not needed"
+colsize="Not Needed"
+polarization_angle="Not Needed"
+BGRATE_toUse="Not Needed"
+
+
+gen_pre_rcdb=`echo $GENERATOR | cut -c1-4`
+if [[ $gen_pre_rcdb != "file" || "$BGTAGONLY_OPTION" == "1" || "$BKGFOLDSTR" == "BeamPhotons" ]]; then
+
 radthick="50.e-6"
 
 if [[ "$RADIATOR_THICKNESS" != "rcdb" || "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" ]]; then
@@ -428,6 +438,7 @@ fi
 
 if [[ "$polarization_angle" == "-1.0" ]]; then
 		POL_TO_GEN=0
+fi
 fi
 # PRINT INPUTS
 echo "This job has been configured to run at: " $MCWRAPPER_RUN_LOCATION" : "`hostname`
@@ -1261,10 +1272,14 @@ fi
 	sed -i 's/TEMPRUNG/'$RUN_NUMBER'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 	sed -i 's/TEMPOUT/'$STANDARD_NAME'_geant'$GEANTVER'.hddm/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 	sed -i 's/TEMPTRIG/'$EVT_TO_GEN'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-	sed -i 's/TEMPCOLD/'0.00$colsize'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+	if [[ "$colsize" != "Not Needed" ]]; then
+		sed -i 's/TEMPCOLD/'0.00$colsize'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+	fi
 	sed -i 's/TEMPRADTHICK/'"$radthick"'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 	sed -i 's/TEMPBGTAGONLY/'$BGTAGONLY_OPTION'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-	sed -i 's/TEMPBGRATE/'$BGRATE_toUse'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+	if [[ "$BGRATE_toUse" != "Not Needed" ]]; then
+		sed -i 's/TEMPBGRATE/'$BGRATE_toUse'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+	fi
 	sed -i 's/TEMPNOSECONDARIES/'$GEANT_NOSCONDARIES'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 
 	if [[ "$gen_pre" == "file" ]]; then
@@ -1309,7 +1324,9 @@ fi
 	elif [[ "$GEANTVER" == "4" ]]; then
 	    #make run.mac then call it below
 	    rm -f run.mac
-	    grep "/particle" $STANDARD_NAME.conf >>! run.mac
+		if [[ $gen_pre != "file" ]]; then
+	    	grep "/particle/" $STANDARD_NAME.conf >>! run.mac
+		fi
 	    echo "/run/beamOn $EVT_TO_GEN" >>! run.mac
 	    echo "exit" >>! run.mac
 	    hdgeant4 -t$NUMTHREADS run.mac
