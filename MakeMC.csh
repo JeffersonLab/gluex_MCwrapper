@@ -124,6 +124,10 @@ shift
 setenv GENERATOR_POST $1
 shift
 setenv GENERATOR_POST_CONFIG $1
+shift
+setenv GEANT_VERTEXT_AREA $1
+shift
+setenv GEANT_VERTEXT_LENGTH $1
 
 setenv USER_BC `which bc`
 setenv USER_PYTHON `which python`
@@ -1252,6 +1256,9 @@ endif
 		sed -i 's/TEMPRUNG/'$RUN_NUMBER'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 		sed -i 's/TEMPOUT/'$STANDARD_NAME'_geant'$GEANTVER'.hddm/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 		sed -i 's/TEMPTRIG/'$EVT_TO_GEN'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+
+		sed -i 's/TEMPGEANTAREA/'$GEANT_VERTEXT_AREA'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+		sed -i 's/TEMPGEANTLENGTH/'$GEANT_VERTEXT_LENGTH'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 		
 		if ( "$colsize" != "Not Needed" ) then
 			sed -i 's/TEMPCOLD/'0.00$colsize'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in

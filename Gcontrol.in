@@ -58,7 +58,7 @@ c list (x,y...) may be truncated at any point, in which case the remaining
 c unstated values will be assigned to zero. Whatever values you assign,
 c the entire string MUST BE ENCLOSED IN SINGLE QUOTES ''.
 cVERTEX 'beam_spot(0.20,-0.02,65.,0.06,0.,0.06,-0.0007,0.0004) * 29.5'
-VERTEX 'beam_spot(ccdb) * 29.5'
+VERTEX 'beam_spot(TEMPGEANTAREA) * TEMPGEANTLENGTH'
 
 
 c The BEAM card configures the built-in coherent bremsstralung photon
