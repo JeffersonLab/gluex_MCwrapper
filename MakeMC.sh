@@ -1,8 +1,5 @@
 #!/bin/bash
 
-echo "DEBUG ls"
-pwd
-ls
 # SET INPUTS
 export BATCHRUN=$1
 shift
@@ -128,9 +125,9 @@ export GENERATOR_POST=$1
 shift
 export GENERATOR_POST_CONFIG=$1
 shift
-export GEANT_VERTEXT_AREA $1
+export GEANT_VERTEXT_AREA=$1
 shift
-export GEANT_VERTEXT_LENGTH $1
+export GEANT_VERTEXT_LENGTH=$1
 
 export USER_BC=`which bc`
 export USER_PYTHON=`which python`
@@ -958,6 +955,7 @@ if [[ "$GENR" != "0" ]]; then
 	bggen
 	generator_return_code=$?
 	mv bggen.hddm $STANDARD_NAME.hddm
+	rm -f bggen.his
     elif [[ "$GENERATOR" == "genEtaRegge" ]]; then
 	echo "RUNNING GENETAREGGE" 
 	
@@ -1278,7 +1276,7 @@ fi
 
 	sed -i 's/TEMPGEANTAREA/'$GEANT_VERTEXT_AREA'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 	sed -i 's/TEMPGEANTLENGTH/'$GEANT_VERTEXT_LENGTH'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-	
+
 	if [[ "$colsize" != "Not Needed" ]]; then
 		sed -i 's/TEMPCOLD/'0.00$colsize'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 	fi
@@ -1331,11 +1329,13 @@ fi
 	elif [[ "$GEANTVER" == "4" ]]; then
 	    #make run.mac then call it below
 	    rm -f run.mac
+		
 		if [[ $gen_pre != "file" ]]; then
-	    	grep "/particle/" $STANDARD_NAME.conf >>! run.mac
+	    	grep "/particle/" $STANDARD_NAME.conf >> run.mac
 		fi
-	    echo "/run/beamOn $EVT_TO_GEN" >>! run.mac
-	    echo "exit" >>! run.mac
+	    echo "/run/beamOn $EVT_TO_GEN" >> run.mac
+	    echo "exit" >> run.mac
+		
 	    hdgeant4 -t$NUMTHREADS run.mac
 		geant_return_code=$?
 	    rm run.mac
