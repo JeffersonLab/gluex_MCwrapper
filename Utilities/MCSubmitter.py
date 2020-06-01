@@ -169,7 +169,10 @@ def SubmitList(SubList,job_IDs_submitted):
         job_IDs_submitted.append(row['ID'])
 
 def decideSystem(row):
-    command="condor_q | grep tbritton"
+
+    #return "OSG"
+    command="condor_q | grep 'Total for tbritton'" #"condor_q | grep tbritton"
+    print(command)
     jobSubout=""
     try:
         jobSubout=subprocess.check_output(command,shell=True)
@@ -188,13 +191,13 @@ def decideSystem(row):
         condor_q_vals=row.split()
         if(len(condor_q_vals) <5):
             continue
-        print(str(condor_q_vals[6])+"  |  "+str(condor_q_vals[7]))
-        if(str(condor_q_vals[6]) != "_"):
-            running=running+int(condor_q_vals[6])
+        print(str(condor_q_vals[11])+"  |  "+str(condor_q_vals[9]))
+        if(str(condor_q_vals[11]) != "_"): #old: 6
+            running=running+int(condor_q_vals[11]) #old: 6
             print("running: "+str(running))
        
-        if(condor_q_vals[7] != "_"):
-            idle=idle+int(condor_q_vals[7])
+        if(condor_q_vals[9] != "_"): #old: 7
+            idle=idle+int(condor_q_vals[9]) #old: 7
             print("idle: "+str(idle))
 
     print("Running")
@@ -235,8 +238,12 @@ def main(argv):
     job_IDs_submitted=[]
 
     if(int(numprocesses_running) <3):
-        curs.execute("INSERT INTO MCSubmitter (Host,StartTime,Status) VALUES ('"+str(socket.gethostname())+"', NOW(), 'Running' )")
-        conn.commit()
+        try:
+            curs.execute("INSERT INTO MCSubmitter (Host,StartTime,Status) VALUES ('"+str(socket.gethostname())+"', NOW(), 'Running' )")
+            conn.commit()
+        except Exception as e:
+            print(e)
+            pass
         querysubmitters="SELECT MAX(ID) FROM MCSubmitter;"
         curs.execute(querysubmitters)
         lastid = curs.fetchall()
@@ -275,8 +282,12 @@ def main(argv):
                 SubmitList(rows,job_IDs_submitted)
                 #Must do the following commit even through gluex_MC.py does one.  Else the above query is cached and does not update properly
                 conn.commit()
-            curs.execute("UPDATE MCSubmitter SET EndTime=NOW(), Status=\"Success\" where ID="+str(lastid[0]["MAX(ID)"]))
-            conn.commit()
+            try:
+                curs.execute("UPDATE MCSubmitter SET EndTime=NOW(), Status=\"Success\" where ID="+str(lastid[0]["MAX(ID)"]))
+                conn.commit()
+            except Exception as e:
+                print(e)
+                pass
         except Exception as e:
             print("exception")
             print(e)

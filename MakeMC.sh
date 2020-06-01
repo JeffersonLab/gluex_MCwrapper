@@ -1,8 +1,5 @@
 #!/bin/bash
 
-echo "DEBUG ls"
-pwd
-ls
 # SET INPUTS
 export BATCHRUN=$1
 shift
@@ -123,6 +120,14 @@ shift
 export RANDOM_TRIG_NUM_EVT=$1
 shift
 export MCWRAPPER_RUN_LOCATION=$1
+shift
+export GENERATOR_POST=$1
+shift
+export GENERATOR_POST_CONFIG=$1
+shift
+export GEANT_VERTEXT_AREA=$1
+shift
+export GEANT_VERTEXT_LENGTH=$1
 
 export USER_BC=`which bc`
 export USER_PYTHON=`which python`
@@ -144,6 +149,7 @@ export XRD_RANDOMS_URL=root://sci-xrootd.jlab.org//osgpool/halld/
 
 if [[ "$MCWRAPPER_RUN_LOCATION" == "JLAB" ]]; then
 	export XRD_RANDOMS_URL=root://sci-xrootd-ib.qcd.jlab.org//osgpool/halld/
+	export RUNNING_DIR="./"
 fi
 
 export MAKE_MC_USING_XROOTD=0
@@ -256,6 +262,16 @@ echo ""
 echo "Detected bash shell"
 
 current_files=`find . -maxdepth 1 -type f`
+
+beam_on_current="Not needed"
+radthick="Not needed"
+colsize="Not Needed"
+polarization_angle="Not Needed"
+BGRATE_toUse="Not Needed"
+
+
+gen_pre_rcdb=`echo $GENERATOR | cut -c1-4`
+if [[ $gen_pre_rcdb != "file" || "$BGTAGONLY_OPTION" == "1" || "$BKGFOLDSTR" == "BeamPhotons" ]]; then
 
 radthick="50.e-6"
 
@@ -423,6 +439,7 @@ fi
 if [[ "$polarization_angle" == "-1.0" ]]; then
 		POL_TO_GEN=0
 fi
+fi
 # PRINT INPUTS
 echo "This job has been configured to run at: " $MCWRAPPER_RUN_LOCATION" : "`hostname`
 echo "Job started: " `date`
@@ -451,6 +468,7 @@ echo "Run generation step? "$GENR"  Will be cleaned?" $CLEANGENR
 echo "Flux Hist to use: " "$FLUX_TO_GEN" " : " "$FLUX_HIST"
 echo "Polarization to use: " "$POL_TO_GEN" " : " "$POL_HIST"
 echo "Using "$GENERATOR" with config: "$CONFIG_FILE
+echo "Will run "$GENERATOR_POST" postprocessing after generator with configuration: "$GENERATOR_POST_CONFIG
 echo "----------------------------------------------"
 echo "Run geant step? "$GEANT"  Will be cleaned?" $CLEANGEANT
 echo "Using geant"$GEANTVER
@@ -473,6 +491,10 @@ echo "Streaming via xrootd? "$MAKE_MC_USING_XROOTD "Event Count: "$RANDOM_TRIG_N
 echo "BC "$USER_BC
 echo "python "$USER_PYTHON
 echo `which $GENERATOR`
+if [[ "$GENERATOR_POST" != "No" ]]; then
+echo `which $GENERATOR_POST`
+fi
+
 if [[ "$GEANTVER" == "3" ]]; then
 	echo `which hdgeant`
 else
@@ -609,9 +631,9 @@ if [[ "$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" == 
 					bkglocstring="$XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber""_random.hddm"
 				    fi
 				else
-		    		bkglocstring="/work/halld/random_triggers/"$RANDBGTAG"/run"$formatted_runNumber"_random.hddm"
+		    		bkglocstring="/work/osgpool/halld/random_triggers/"$RANDBGTAG"/run"$formatted_runNumber"_random.hddm"
 					if [[ `hostname` == 'scosg16.jlab.org' ]]; then
-						bkglocstring="/osgpool/halld/random_triggers/"$RANDBGTAG"/run"$formatted_runNumber"_random.hddm"
+						bkglocstring="/work/osgpool/halld/random_triggers/"$RANDBGTAG"/run"$formatted_runNumber"_random.hddm"
 					fi
 				fi
 			fi
@@ -670,21 +692,24 @@ if [[ "$GENR" != "0" ]]; then
 	elif [[ "$GENERATOR" == "particle_gun" ]]; then
 		echo "bypassing generation"
 		echo "using" $CONFIG_FILE
-		if [[ ! -f $CONFIG_FILE ]]; then
-			echo $CONFIG_FILE "not found"
-			echo "something went wrong with initialization"
-			exit 1
-		else
-			echo "performing error checking"
-			#echo `grep "^[^c]" | grep KINE $CONFIG_FILE | awk '{print $2}' ` 
-			#echo `grep "^[^c]" | grep KINE $CONFIG_FILE | wc -w`
-			#if [[ `grep "^[^c]" | grep KINE $CONFIG_FILE | awk '{print $2}' ` < 100 && `grep "^[^c]" | grep KINE $CONFIG_FILE | wc -w` > 3 ]]; then
-			#	echo "ERROR THETA AND PHI APPEAR TO BE SET BUT WILL BE IGNORED.  PLEASE REMOVE THESE SETTINGS FROM:"$CONFIG_FILE" AND RESUBMIT."
-			#	exit 1
-			#elif [[ `grep "^[^c]" | grep KINE $CONFIG_FILE | awk '{print $2}' ` > 100 && `grep "^[^c]" | grep KINE $CONFIG_FILE | wc -w` < 8 ]]; then
-			#	echo "ERROR THETA AND PHI DON'T APPEAR TO BE SET BUT ARE GOING TO BE USED. PLEASE ADD THESE SETTINGS FROM: "$CONFIG_FILE" AND RESUBMIT."
-			#	exit 1
-			#fi
+		if [[ "$CUSTOM_GCONTROL" == "0" ]]; then
+			if [[ ! -f $CONFIG_FILE ]]; then
+				echo "Generator config file : "$CONFIG_FILE "not found"
+				echo "something went wrong with initialization"
+				exit 1
+			else
+				echo "performing error checking"
+				echo "Note: this specific error checking has been disabled as it causes issues on some bash shells.  Basically if you need to use the THETA and PHI parameters then make sure they are set."
+				#echo `grep "^[^c]" | grep KINE $CONFIG_FILE | awk '{print $2}' ` 
+				#echo `grep "^[^c]" | grep KINE $CONFIG_FILE | wc -w`
+				#if [[ `grep "^[^c]" | grep KINE $CONFIG_FILE | awk '{print $2}' ` < 100 && `grep "^[^c]" | grep KINE $CONFIG_FILE | wc -w` > 3 ]]; then
+				#	echo "ERROR THETA AND PHI APPEAR TO BE SET BUT WILL BE IGNORED.  PLEASE REMOVE THESE SETTINGS FROM:"$CONFIG_FILE" AND RESUBMIT."
+				#	exit 1
+				#elif [[ `grep "^[^c]" | grep KINE $CONFIG_FILE | awk '{print $2}' ` > 100 && `grep "^[^c]" | grep KINE $CONFIG_FILE | wc -w` < 8 ]]; then
+				#	echo "ERROR THETA AND PHI DON'T APPEAR TO BE SET BUT ARE GOING TO BE USED. PLEASE ADD THESE SETTINGS FROM: "$CONFIG_FILE" AND RESUBMIT."
+				#	exit 1
+				#fi
+			fi
 		fi
 		
 		generator_return_code=0
@@ -930,6 +955,7 @@ if [[ "$GENR" != "0" ]]; then
 	bggen
 	generator_return_code=$?
 	mv bggen.hddm $STANDARD_NAME.hddm
+	rm -f bggen.his
     elif [[ "$GENERATOR" == "genEtaRegge" ]]; then
 	echo "RUNNING GENETAREGGE" 
 	
@@ -1190,7 +1216,37 @@ if [[ "$GENR" != "0" ]]; then
 		exit 11
 	fi
     #GEANT/smearing
-    fi
+fi
+
+#POST PROCESSING INSERTION POINT
+if [[ "$GENERATOR_POST" != "No" ]]; then
+	echo "RUNNING POSTPROCESSING "
+#copy config locally
+	post_return_code=-1
+	if [[ "$GENERATOR_POST_CONFIG" != "Default" ]]; then
+		cp $GENERATOR_POST_CONFIG ./post'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.cfg
+	fi
+
+	if [[ "$GENERATOR_POST" == "decay_evtgen" ]]; then
+		echo decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm $STANDARD_NAME.hddm
+		decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm -upost'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.cfg $STANDARD_NAME.hddm
+		post_return_code=$status
+		$STANDARD_NAME=$STANDARD_NAME'_decay_evtgen'
+	fi
+
+	#do if/elses for running 
+	if [[ $post_return_code != 0 ]]; then
+				echo
+				echo
+				echo "Something went wrong with " "$GENERATOR_POST"
+				echo "status code: "$post_return_code
+				exit $post_return_code
+	fi
+
+
+fi
+
+
     if [[ "$GEANT" != "0" ]]; then
 	echo "RUNNING GEANT"$GEANTVER
 	
@@ -1217,10 +1273,18 @@ if [[ "$GENR" != "0" ]]; then
 	sed -i 's/TEMPRUNG/'$RUN_NUMBER'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 	sed -i 's/TEMPOUT/'$STANDARD_NAME'_geant'$GEANTVER'.hddm/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 	sed -i 's/TEMPTRIG/'$EVT_TO_GEN'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-	sed -i 's/TEMPCOLD/'0.00$colsize'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+
+	sed -i 's/TEMPGEANTAREA/'$GEANT_VERTEXT_AREA'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+	sed -i 's/TEMPGEANTLENGTH/'$GEANT_VERTEXT_LENGTH'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+
+	if [[ "$colsize" != "Not Needed" ]]; then
+		sed -i 's/TEMPCOLD/'0.00$colsize'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+	fi
 	sed -i 's/TEMPRADTHICK/'"$radthick"'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 	sed -i 's/TEMPBGTAGONLY/'$BGTAGONLY_OPTION'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-	sed -i 's/TEMPBGRATE/'$BGRATE_toUse'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+	if [[ "$BGRATE_toUse" != "Not Needed" ]]; then
+		sed -i 's/TEMPBGRATE/'$BGRATE_toUse'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+	fi
 	sed -i 's/TEMPNOSECONDARIES/'$GEANT_NOSCONDARIES'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 
 	if [[ "$gen_pre" == "file" ]]; then
@@ -1230,7 +1294,7 @@ if [[ "$GENR" != "0" ]]; then
 			sed -i 's/INFILE/cINFILE/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 			sed -i 's/BEAM/cBEAM/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 			sed -i 's/TEMPSKIP/'0'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-			cat $STANDARD_NAME.conf >> control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+			grep -v "/particle/" $STANDARD_NAME.conf >> control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 	else
 	    sed -i 's/TEMPSKIP/'0'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
         fi
@@ -1265,8 +1329,13 @@ if [[ "$GENR" != "0" ]]; then
 	elif [[ "$GEANTVER" == "4" ]]; then
 	    #make run.mac then call it below
 	    rm -f run.mac
-	    echo "/run/beamOn $EVT_TO_GEN" > run.mac
+		
+		if [[ $gen_pre != "file" ]]; then
+	    	grep "/particle/" $STANDARD_NAME.conf >> run.mac
+		fi
+	    echo "/run/beamOn $EVT_TO_GEN" >> run.mac
 	    echo "exit" >> run.mac
+		
 	    hdgeant4 -t$NUMTHREADS run.mac
 		geant_return_code=$?
 	    rm run.mac

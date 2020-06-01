@@ -109,7 +109,9 @@ def getAttemptFailurePie(ID,extraConstraint="",fileName="failurePie_Total",outpu
     rows=curs.fetchall()
     print("Obtained",len(rows),"Entries")
     df=pd.DataFrame(rows)
-
+    if(len(rows)==0):
+        df=pd.DataFrame(columns=["pf","AttemptsCount"])
+    print("df created")
     Null_count_q="SELECT ExitCode as pf,COUNT(*) as AttemptsCount from Attempts where ProgramFailed is NULL && Job_ID in (SELECT ID from Jobs where Project_ID IN (SELECT ID FROM Project where ID>"+str(ID)
     if(extraConstraint != ""):
         Null_count_q+=" && "+extraConstraint
@@ -132,8 +134,9 @@ def getAttemptFailurePie(ID,extraConstraint="",fileName="failurePie_Total",outpu
 
     print(nullrows)
     df2=pd.DataFrame(nullrows)
+    print("df2 created")
     DF=pd.concat([df,df2])
-
+    print("concat completed")
 
         
 

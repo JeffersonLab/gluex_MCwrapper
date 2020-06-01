@@ -44,8 +44,8 @@ try:
 except:
         pass
 
-MCWRAPPER_VERSION="2.4.1"
-MCWRAPPER_DATE="05/07/20"
+MCWRAPPER_VERSION="2.4.2"
+MCWRAPPER_DATE="05/29/20"
 
 #====================================================
 #Takes in a few pertinant pieces of info.  Creates (if needed) a swif workflow and adds a job to it.
@@ -224,7 +224,7 @@ def  condor_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, 
         
         JOBNAME=JOBNAME.replace(".","p")
         if( int(PROJECT_ID) <=0 ):
-                add_command="condor_submit -name "+JOBNAME+" MCcondor.submit"
+                add_command="condor_submit -batch-name "+WORKFLOW+" MCcondor.submit"
                 if add_command.find(';')!=-1 or add_command.find('&')!=-1 or mkdircom.find(';')!=-1 or mkdircom.find('&')!=-1:#THIS CHECK HELPS PROTEXT AGAINST A POTENTIAL HACK VIA CONFIG FILES
                         print( "Nice try.....you cannot use ; or &")
                         exit(1)
@@ -380,11 +380,14 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
         f.close()
         
         JOBNAME=JOBNAME.replace(".","p")
-
-        add_command="condor_submit -name "+JOBNAME+" MCOSG_"+str(PROJECT_ID)+".submit"
+        #"condor_submit -batch-name "+WORKFLOW+" MCcondor.submit"
+        #add_command="condor_submit -name "+JOBNAME+" MCOSG_"+str(PROJECT_ID)+".submit"
+        add_command="condor_submit "+"MCOSG_"+str(PROJECT_ID)+".submit"
         if add_command.find(';')!=-1 or add_command.find('&')!=-1 :#THIS CHECK HELPS PROTEXT AGAINST A POTENTIAL HACK VIA CONFIG FILES
                 print( "Nice try.....you cannot use ; or &")
                 exit(1)
+
+
 
 
         mkdircom2="mkdir -p "+LOG_DIR+"/log/"
@@ -392,6 +395,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
         status = subprocess.call(mkdircom, shell=True)
         SWIF_ID_NUM="-1"
         if( int(PROJECT_ID) <=0 ):
+                print("Submitting: ",add_command)
                 jobSubout=subprocess.check_output(add_command.split(" "))
                 print(jobSubout)
                 idnumline=jobSubout.split("\n")[1].split(".")[0].split(" ")
@@ -490,7 +494,7 @@ def  SLURMcont_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAN
         
         #f.write("srun "+SCRIPT_TO_RUN+" "+COMMAND+"\n")
         #/group/halld/www/halldweb/html/dist/gluex_centos7.img /cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest
-        f.write("module use /apps/modulefiles; module load singularity/3.4.0; singularity exec --bind /cvmfs --bind /work/halld --bind /cache/halld --bind /work/halld2 /cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest $MCWRAPPER_CENTRAL/MakeMC.sh "+getCommandString(COMMAND)+"\n")
+        f.write("module use /apps/modulefiles; module load singularity/3.4.0; singularity exec --bind /cvmfs --bind /work/osgpool/ --bind /work/halld --bind /cache/halld --bind /work/halld2 /cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest $MCWRAPPER_CENTRAL/MakeMC.sh "+getCommandString(COMMAND)+"\n")
 
         f.close()
         
@@ -636,7 +640,7 @@ def recordAttempt(JOB_ID,RUNNO,FILENO,BatchSYS,BatchJobID, NUMEVTS,NCORES, RAM):
 #the COMMAND dictionary expects ALL the KEYS
 #====================================================
 def getCommandString(COMMAND):
-        return COMMAND['batchrun']+" "+COMMAND['environment_file']+" "+COMMAND['ana_environment_file']+" "+COMMAND['generator_config']+" "+COMMAND['output_directory']+" "+COMMAND['run_number']+" "+COMMAND['file_number']+" "+COMMAND['num_events']+" "+COMMAND['jana_calib_context']+" "+COMMAND['jana_calibtime']+" "+COMMAND['do_gen']+" "+COMMAND['do_geant']+" "+COMMAND['do_mcsmear']+" "+COMMAND['do_recon']+" "+COMMAND['clean_gen']+" "+COMMAND['clean_geant']+" "+COMMAND['clean_mcsmear']+" "+COMMAND['clean_recon']+" "+COMMAND['batch_system']+" "+COMMAND['num_cores']+" "+COMMAND['generator']+" "+COMMAND['geant_version']+" "+COMMAND['background_to_include']+" "+COMMAND['custom_Gcontrol']+" "+COMMAND['eBeam_energy']+" "+COMMAND['coherent_peak']+" "+COMMAND['min_generator_energy']+" "+COMMAND['max_generator_energy']+" "+COMMAND['custom_tag_string']+" "+COMMAND['custom_plugins']+" "+COMMAND['events_per_file']+" "+COMMAND['running_directory']+" "+COMMAND['ccdb_sqlite_path']+" "+COMMAND['rcdb_sqlite_path']+" "+COMMAND['background_tagger_only']+" "+COMMAND['radiator_thickness']+" "+COMMAND['background_rate']+" "+COMMAND['random_background_tag']+" "+COMMAND['recon_calibtime']+" "+COMMAND['no_geant_secondaries']+" "+COMMAND['mcwrapper_version']+" "+COMMAND['no_bcal_sipm_saturation']+" "+COMMAND['flux_to_generate']+" "+COMMAND['flux_histogram']+" "+COMMAND['polarization_to_generate']+" "+COMMAND['polarization_histogram']+" "+COMMAND['eBeam_current']+" "+COMMAND['experiment']+" "+COMMAND['num_rand_trigs']+" "+COMMAND['location']
+        return COMMAND['batchrun']+" "+COMMAND['environment_file']+" "+COMMAND['ana_environment_file']+" "+COMMAND['generator_config']+" "+COMMAND['output_directory']+" "+COMMAND['run_number']+" "+COMMAND['file_number']+" "+COMMAND['num_events']+" "+COMMAND['jana_calib_context']+" "+COMMAND['jana_calibtime']+" "+COMMAND['do_gen']+" "+COMMAND['do_geant']+" "+COMMAND['do_mcsmear']+" "+COMMAND['do_recon']+" "+COMMAND['clean_gen']+" "+COMMAND['clean_geant']+" "+COMMAND['clean_mcsmear']+" "+COMMAND['clean_recon']+" "+COMMAND['batch_system']+" "+COMMAND['num_cores']+" "+COMMAND['generator']+" "+COMMAND['geant_version']+" "+COMMAND['background_to_include']+" "+COMMAND['custom_Gcontrol']+" "+COMMAND['eBeam_energy']+" "+COMMAND['coherent_peak']+" "+COMMAND['min_generator_energy']+" "+COMMAND['max_generator_energy']+" "+COMMAND['custom_tag_string']+" "+COMMAND['custom_plugins']+" "+COMMAND['events_per_file']+" "+COMMAND['running_directory']+" "+COMMAND['ccdb_sqlite_path']+" "+COMMAND['rcdb_sqlite_path']+" "+COMMAND['background_tagger_only']+" "+COMMAND['radiator_thickness']+" "+COMMAND['background_rate']+" "+COMMAND['random_background_tag']+" "+COMMAND['recon_calibtime']+" "+COMMAND['no_geant_secondaries']+" "+COMMAND['mcwrapper_version']+" "+COMMAND['no_bcal_sipm_saturation']+" "+COMMAND['flux_to_generate']+" "+COMMAND['flux_histogram']+" "+COMMAND['polarization_to_generate']+" "+COMMAND['polarization_histogram']+" "+COMMAND['eBeam_current']+" "+COMMAND['experiment']+" "+COMMAND['num_rand_trigs']+" "+COMMAND['location']+" "+COMMAND['generator_post']+" "+COMMAND['generator_post_config']+" "+COMMAND['geant_vertex_area']+" "+COMMAND['geant_vertex_length']
 
 def showhelp():
         helpstring= "variation=%s where %s is a valid jana_calib_context variation string (default is \"mc\")\n"
@@ -699,6 +703,9 @@ def main(argv):
         GENERATOR = "genr8"
         GENCONFIG = "NA"
 
+        GENPOST="No"
+        GENPOSTCONFIG="Default"
+
         eBEAM_ENERGY="rcdb"
         eBEAM_CURRENT="rcdb"
         COHERENT_PEAK="rcdb"
@@ -716,6 +723,8 @@ def main(argv):
         rcdbSQLITEPATH="no_sqlite"
 
         GEANTVER = 4        
+        VERTEX_AREA="ccdb"
+        VERTEX_LENGTH="29.5"
         BGFOLD="DEFAULT"
         RANDOM_NUM_EVT=-1
         RANDBGTAG="none"
@@ -823,6 +832,16 @@ def main(argv):
                         GENERATOR=rm_comments[0].strip()
                 elif str(parts[0]).upper()=="GEANT_VERSION" :
                         GEANTVER=rm_comments[0].strip()
+                elif str(parts[0]).upper()=="VERTEX_VOLUME" :
+                        WHOLEVERT=rm_comments[0].strip()
+                        WHOLEVERT_split=WHOLEVERT.split(":")
+                        
+                        if (len(WHOLEVERT_split)==1):
+                                VERTEX_LENGTH=WHOLEVERT_split[0]
+                        elif (len(WHOLEVERT_split)==2):
+                                VERTEX_AREA=WHOLEVERT_split[0]
+                                VERTEX_LENGTH=WHOLEVERT_split[1]
+                        
                 elif str(parts[0]).upper()=="WORKFLOW_NAME" :
                         WORKFLOW=rm_comments[0].strip()
                         if WORKFLOW.find(';')!=-1 or WORKFLOW.find('&')!=-1 :#THIS CHECK HELPS PROTECT AGAINST A POTENTIAL HACK IN WORKFLOW NAMES
@@ -830,6 +849,16 @@ def main(argv):
                                 exit(1)
                 elif str(parts[0]).upper()=="GENERATOR_CONFIG" :
                         GENCONFIG=rm_comments[0].strip()
+                elif str(parts[0]).upper()=="GENERATOR_POSTPROCESS":
+                        WHOLEPOST=rm_comments[0].strip()
+                        WHOLEPOST_PARTS=WHOLEPOST.split(":")
+                        GENPOST=WHOLEPOST_PARTS[0]
+
+                        if(len(WHOLEPOST_PARTS)==2):
+                                GENPOSTCONFIG=WHOLEPOST_PARTS[1]
+                        elif(len(WHOLEPOST_PARTS)==1):
+                                GENPOST=WHOLEPOST
+
                 elif str(parts[0]).upper()=="CUSTOM_MAKEMC" :
                         CUSTOM_MAKEMC=rm_comments[0].strip()
                 elif str(parts[0]).upper()=="CUSTOM_GCONTROL" :
@@ -1120,6 +1149,11 @@ def main(argv):
         COMMAND_dict['experiment']=str(PROJECT)
         COMMAND_dict['num_rand_trigs']=str(RANDOM_NUM_EVT)
         COMMAND_dict['location']=str(LOCATION)
+        COMMAND_dict['generator_post']=str(GENPOST)
+        COMMAND_dict['generator_post_config']=str(GENPOSTCONFIG)
+        COMMAND_dict['geant_vertex_area']=str(VERTEX_AREA)
+        COMMAND_dict['geant_vertex_length']=str(VERTEX_LENGTH)
+        
         
         if(COMMAND_dict['generator'][:4]=="file:" and len(RunType) != 1):
                 print("ERROR: MCwrapper currently does not support taking a monolithic file and converting it into a range of runs.")
@@ -1266,9 +1300,9 @@ def main(argv):
                                                                 SLURM_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
                 
                 else:
-                        if FILES_TO_GEN >= 500 and ( ccdbSQLITEPATH == "no_sqlite" or rcdbSQLITEPATH == "no_sqlite"):
-                                print( "This job has >500 subjobs and risks ddosing the servers.  Please use sqlite or request again with a larger per file. ")
-                                return
+                        #if FILES_TO_GEN >= 500 and ( ccdbSQLITEPATH == "no_sqlite" or rcdbSQLITEPATH == "no_sqlite"):
+                        #        print( "This job has >500 subjobs and risks ddosing the servers.  Please use sqlite or request again with a larger per file. ")
+                        #        return
                         for FILENUM in range(1, FILES_TO_GEN + 2):
                                 num=PERFILE
                                 #last file gets the remainder
@@ -1338,7 +1372,7 @@ def GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,RUNNUM):
                 if BGFOLD[0:3] == "loc":
                         Style="loc"
 
-                path_base="/work/halld/random_triggers/"
+                path_base="/work/osgpool/halld/random_triggers/"
 
                 if socket.gethostname() == "scosg16.jlab.org":
                         path_base="/osgpool/halld/random_triggers/"

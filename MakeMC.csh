@@ -120,6 +120,14 @@ shift
 setenv RANDOM_TRIG_NUM_EVT $1
 shift
 setenv MCWRAPPER_RUN_LOCATION $1
+shift
+setenv GENERATOR_POST $1
+shift
+setenv GENERATOR_POST_CONFIG $1
+shift
+setenv GEANT_VERTEXT_AREA $1
+shift
+setenv GEANT_VERTEXT_LENGTH $1
 
 setenv USER_BC `which bc`
 setenv USER_PYTHON `which python`
@@ -144,6 +152,7 @@ setenv XRD_RANDOMS_URL root://sci-xrootd.jlab.org//osgpool/halld/
 
 if ( "$MCWRAPPER_RUN_LOCATION" == "JLAB" ) then
 	setenv XRD_RANDOMS_URL root://sci-xrootd-ib.qcd.jlab.org//osgpool/halld/
+	setenv RUNNING_DIR "./"
 endif
 
 setenv MAKE_MC_USING_XROOTD 0
@@ -205,20 +214,22 @@ else if ( "$ccdbSQLITEPATH" == "batch_default" ) then
     setenv CCDB_CONNECTION sqlite:////group/halld/www/halldweb/html/dist/ccdb.sqlite
     setenv JANA_CALIB_URL ${CCDB_CONNECTION}
 else if ( "$ccdbSQLITEPATH" == "jlab_batch_default" ) then
-	if ( -f /usr/lib64/libXrdPosixPreload.so ) then
-		#echo "stop...its xrdcopy time"
-		xrdcopy $XRD_RANDOMS_URL/ccdb.sqlite ./
-		setenv CCDB_CONNECTION sqlite:///$PWD/ccdb.sqlite
-	else
-		set ccdb_jlab_sqlite_path=`bash -c 'echo $((1 + RANDOM % 100))'`
-		if ( -f /work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite ) then
-			cp /work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite $PWD/ccdb.sqlite
-			setenv CCDB_CONNECTION sqlite:///$PWD/ccdb.sqlite
-			#setenv CCDB_CONNECTION sqlite:////work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite
-		else
-			setenv CCDB_CONNECTION mysql://ccdb_user@hallddb-farm.jlab.org/ccdb
-		endif
-	endif
+	#if ( -f /usr/lib64/libXrdPosixPreload.so ) then
+	#	#echo "stop...its xrdcopy time"
+	#	xrdcopy $XRD_RANDOMS_URL/ccdb.sqlite ./
+	#	setenv CCDB_CONNECTION sqlite:///$PWD/ccdb.sqlite
+	#else
+	#	set ccdb_jlab_sqlite_path=`bash -c 'echo $((1 + RANDOM % 100))'`
+	#	if ( -f /work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite ) then
+	#		cp /work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite $PWD/ccdb.sqlite
+	#		setenv CCDB_CONNECTION sqlite:///$PWD/ccdb.sqlite
+	#		#setenv CCDB_CONNECTION sqlite:////work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite
+	#	else
+	#		setenv CCDB_CONNECTION mysql://ccdb_user@hallddb-farm.jlab.org/ccdb
+	#	endif
+	#endif
+	setenv CCDB_CONNECTION mysql://ccdb_user@hallddb-farm.jlab.org/ccdb
+
 	#setenv CCDB_CONNECTION mysql://ccdb_user@hallddb-farm.jlab.org/ccdb
     setenv JANA_CALIB_URL ${CCDB_CONNECTION}
 endif
@@ -248,6 +259,15 @@ echo "Detected c-shell"
 
 set current_files=`find . -maxdepth 1 -type f`
 
+set beam_on_current="Not needed"
+set radthick="Not needed"
+set colsize="Not Needed"
+set polarization_angle="Not Needed"
+set BGRATE_toUse="Not Needed"
+
+
+set gen_pre_rcdb=`echo $GENERATOR | cut -c1-4`
+if ( $gen_pre_rcdb != "file" || ( "$BGTAGONLY_OPTION" == "1" || "$BKGFOLDSTR" == "BeamPhotons" ) ) then 
 set radthick="50.e-6"
 
 if ( "$RADIATOR_THICKNESS" != "rcdb" || ( "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" ) ) then
@@ -406,6 +426,7 @@ echo "BGrate set..."
 if ( "$polarization_angle" == "-1.0" ) then
 		set POL_TO_GEN=0
 endif
+endif
 # PRINT INPUTS
 echo "This job has been configured to run at: " $MCWRAPPER_RUN_LOCATION" : "`hostname`
 echo "Job started: " `date`
@@ -434,6 +455,7 @@ echo "Run generation step? "$GENR"  Will be cleaned?" $CLEANGENR
 echo "Flux Hist to use: " "$FLUX_TO_GEN" " : " "$FLUX_HIST"
 echo "Polarization to use: " "$POL_TO_GEN" " : " "$POL_HIST"
 echo "Using "$GENERATOR"  with config: "$CONFIG_FILE
+echo "Will run "$GENERATOR_POST" postprocessing after generator with configuration: "$GENERATOR_POST_CONFIG
 echo "----------------------------------------------"
 echo "Run geant step? "$GEANT"  Will be cleaned?" $CLEANGEANT
 echo "Using geant"$GEANTVER
@@ -455,6 +477,9 @@ echo "Streaming via xrootd? "$MAKE_MC_USING_XROOTD "Event Count: "$RANDOM_TRIG_N
 echo "BC "$USER_BC
 echo "python "$USER_PYTHON
 echo `which $GENERATOR`
+if ( "$GENERATOR_POST" != "No" ) then
+echo `which $GENERATOR_POST`
+endif
 if ( "$GEANTVER" == "3" ) then
 	echo `which hdgeant`
 else
@@ -469,7 +494,7 @@ echo ""
 set isGreater=1
 set isGreater=`echo $GEN_MAX_ENERGY'>'$eBEAM_ENERGY | $USER_BC -l`
 
-if ( "$isGreater" == "1" ) then
+if ( "$isGreater" == "1" && "$eBEAM_ENERGY" != "rcdb" ) then
 echo "something went wrong with initialization"
 echo "Error: Requested Max photon energy $GEN_MAX_ENERGY is above the electron beam energy $eBEAM_ENERGY!"
 exit 1
@@ -596,9 +621,9 @@ if ( "$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" == "
 				set	bkglocstring="$XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm"
 			endif
     else
-			set bkglocstring="/work/halld/random_triggers/"$RANDBGTAG"/run"$formatted_runNumber"_random.hddm"
+			set bkglocstring="/work/osgpool/halld/random_triggers/"$RANDBGTAG"/run"$formatted_runNumber"_random.hddm"
 			if ( `hostname` == 'scosg16.jlab.org' ) then
-				set bkglocstring="/osgpool/halld/random_triggers/"$RANDBGTAG"/run"$formatted_runNumber"_random.hddm"
+				set bkglocstring="/work/osgpool/halld/random_triggers/"$RANDBGTAG"/run"$formatted_runNumber"_random.hddm"
 			endif
 		endif
 	endif
@@ -648,20 +673,22 @@ if ( "$GENR" != "0" ) then
 		endif
 	else if ( "$GENERATOR" == "particle_gun" ) then
 		echo "bypassing generation" 
-		if ( ! -f $CONFIG_FILE ) then
-			echo $CONFIG_FILE" not found"
-			echo "something went wrong with initialization"
-			exit 1
-		else
-			echo `grep KINE $CONFIG_FILE | awk '{print $2}' `
-			if ( `grep "^[^c]" | grep KINE $CONFIG_FILE | awk '{print $2}' ` < 100 && `grep "^[^c]" | grep KINE $CONFIG_FILE | wc -w` > 3 ) then
-				echo "ERROR THETA AND PHI APPEAR TO BE SET BUT WILL BE IGNORED.  PLEASE REMOVE THESE SETTINGS FROM:"$CONFIG_FILE" AND RESUBMIT."
+		if ( "$CUSTOM_GCONTROL" == "0" ) then
+			if ( ! -f $CONFIG_FILE ) then
+				echo "Generator config file : "$CONFIG_FILE" not found"
 				echo "something went wrong with initialization"
 				exit 1
-			else if ( `grep "^[^c]" | grep KINE $CONFIG_FILE | awk '{print $2}' ` > 100 && ` grep "^[^c]" | grep KINE $CONFIG_FILE | wc -w` < 8 ) then
-				echo "ERROR THETA AND PHI DON'T APPEAR TO BE SET BUT ARE GOING TO BE USED. PLEASE ADD THESE SETTINGS FROM: "$CONFIG_FILE" AND RESUBMIT."
-				echo "something went wrong with initialization"
-				exit 1
+			else
+				echo `grep KINE $CONFIG_FILE | awk '{print $2}' `
+				if ( `grep "^[^c]" | grep KINE $CONFIG_FILE | awk '{print $2}' ` < 100 && `grep "^[^c]" | grep KINE $CONFIG_FILE | wc -w` > 3 ) then
+					echo "ERROR THETA AND PHI APPEAR TO BE SET BUT WILL BE IGNORED.  PLEASE REMOVE THESE SETTINGS FROM:"$CONFIG_FILE" AND RESUBMIT."
+					echo "something went wrong with initialization"
+					exit 1
+				else if ( `grep "^[^c]" | grep KINE $CONFIG_FILE | awk '{print $2}' ` > 100 && ` grep "^[^c]" | grep KINE $CONFIG_FILE | wc -w` < 8 ) then
+					echo "ERROR THETA AND PHI DON'T APPEAR TO BE SET BUT ARE GOING TO BE USED. PLEASE ADD THESE SETTINGS FROM: "$CONFIG_FILE" AND RESUBMIT."
+					echo "something went wrong with initialization"
+					exit 1
+				endif
 			endif
 		endif
 		set generator_return_code=0
@@ -1175,6 +1202,31 @@ if ( "$GENR" != "0" ) then
 #GEANT/smearing
 endif
 
+if ( "$GENERATOR_POST" != "No" ) then
+	echo "RUNNING POSTPROCESSING "
+#copy config locally
+	set post_return_code=-1
+	echo $GENERATOR_POST_CONFIG
+	if ( "$GENERATOR_POST_CONFIG" != "Default" ) then
+		cp $GENERATOR_POST_CONFIG ./post'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.cfg
+	endif
+
+	if ( "$GENERATOR_POST" == "decay_evtgen" ) then
+		echo decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm $STANDARD_NAME.hddm
+		decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm -upost'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.cfg $STANDARD_NAME.hddm
+		set post_return_code=$status
+		set $STANDARD_NAME=$STANDARD_NAME'_decay_evtgen'
+	endif
+	#do if/elses for running 
+	if ( $post_return_code != 0 ) then
+				echo
+				echo
+				echo "Something went wrong with " "$GENERATOR_POST"
+				echo "status code: "$post_return_code
+				exit $post_return_code
+	endif
+endif
+
     if ( "$GEANT" != "0"  ) then
 		echo "RUNNING GEANT"$GEANTVER
 
@@ -1192,21 +1244,34 @@ endif
 		set RANDOMnumGeant=`shuf -i1-215 -n1`
 		sed -i 's/TEMPRANDOM/'$RANDOMnumGeant'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 		sed -i 's/TEMPELECE/'$eBEAM_ENERGY'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+		
 		if ( "$polarization_angle" == "-1" ) then
 			sed -i 's/TEMPCOHERENT/'0'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 		else
 			set Fortran_COHERENT_PEAK=`echo $COHERENT_PEAK | cut -c -7`
 			sed -i 's/TEMPCOHERENT/'$Fortran_COHERENT_PEAK'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 		endif
-
+		
 		sed -i 's/TEMPIN/'$STANDARD_NAME.hddm'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 		sed -i 's/TEMPRUNG/'$RUN_NUMBER'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 		sed -i 's/TEMPOUT/'$STANDARD_NAME'_geant'$GEANTVER'.hddm/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 		sed -i 's/TEMPTRIG/'$EVT_TO_GEN'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-		sed -i 's/TEMPCOLD/'0.00$colsize'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+
+		sed -i 's/TEMPGEANTAREA/'$GEANT_VERTEXT_AREA'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+		sed -i 's/TEMPGEANTLENGTH/'$GEANT_VERTEXT_LENGTH'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+		
+		if ( "$colsize" != "Not Needed" ) then
+			sed -i 's/TEMPCOLD/'0.00$colsize'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+		endif
+		
 		sed -i 's/TEMPRADTHICK/'"$radthick"'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+		
 		sed -i 's/TEMPBGTAGONLY/'$BGTAGONLY_OPTION'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-		sed -i 's/TEMPBGRATE/'$BGRATE_toUse'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+		
+		if ( "$BGRATE_toUse" != "Not Needed" ) then
+			sed -i 's/TEMPBGRATE/'$BGRATE_toUse'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+		endif
+		
 		sed -i 's/TEMPNOSECONDARIES/'$GEANT_NOSECONDARIES'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 
 		if ( "$gen_pre" == "file" ) then
@@ -1217,7 +1282,7 @@ endif
 			sed -i 's/INFILE/cINFILE/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 			sed -i 's/BEAM/cBEAM/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 			sed -i 's/TEMPSKIP/'0'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-			cat $STANDARD_NAME.conf >> control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+			grep -v "/particle/" $STANDARD_NAME.conf >> control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 		else
 	    	sed -i 's/TEMPSKIP/'0'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 		endif
@@ -1237,7 +1302,7 @@ endif
 		else 
 	    	sed -i 's/TEMPMINE/'$GEN_MIN_ENERGY'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 		endif
-
+		
 		echo "" >> control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 		echo END >> control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 		cp $PWD/control'_'$formatted_runNumber'_'$formatted_fileNumber.in $OUTDIR/configurations/geant/
@@ -1252,9 +1317,13 @@ endif
 		else if ( "$GEANTVER" == "4" ) then
 	    	#make run.mac then call it below
 	    	rm -f run.mac
-	    	echo "/run/beamOn $EVT_TO_GEN" > run.mac
+			
+			if ( $gen_pre != "file" ) then
+				grep "/particle/" $STANDARD_NAME.conf >>! run.mac
+			endif
+	    	echo "/run/beamOn $EVT_TO_GEN" >>! run.mac
 	    	echo "exit" >>! run.mac
-
+			
 	    	hdgeant4 -t$NUMTHREADS run.mac
 			set geant_return_code=$status
 	    	rm run.mac
