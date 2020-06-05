@@ -207,7 +207,7 @@ def  condor_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, 
         if(COMMAND['custom_tag_string'] != "I_dont_have_one"):
                 STUBNAME=COMMAND['custom_tag_string']+"_"
         # PREPARE NAMES
-        STUBNAME = STUBNAME+str(RUNNUM) + "_" + str(FILENO)
+        STUBNAME = STUBNAME+str(RUNNUM) + "_" + str(FILENUM)
         JOBNAME = WORKFLOW + "_" + STUBNAME
 
         mkdircom="mkdir -p "+DATA_OUTPUT_BASE_DIR+"/log/"
