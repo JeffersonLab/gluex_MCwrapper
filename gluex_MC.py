@@ -234,10 +234,10 @@ def  condor_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, 
                 status = subprocess.call("rm MCcondor.submit", shell=True)
 
         if int(PROJECT_ID) > 0:
-                recordJob(PROJECT_ID,RUNNO,FILENO,SWIF_ID_NUM,COMMAND['num_events'])
+                recordJob(PROJECT_ID,RUNNO,FILENUM,SWIF_ID_NUM,COMMAND['num_events'])
                 #recordFirstAttempt(PROJECT_ID,RUNNO,FILENO,"Condor",SWIF_ID_NUM,COMMAND['num_events'],NCORES,"UnSet")
         elif int(PROJECT_ID) < 0:
-                recordAttempt(abs(int(PROJECT_ID)),RUNNO,FILENO,"Condor",SWIF_ID_NUM,COMMAND['num_events'],NCORES,"UnSet")
+                recordAttempt(abs(int(PROJECT_ID)),RUNNO,FILENUM,"Condor",SWIF_ID_NUM,COMMAND['num_events'],NCORES,"UnSet")
 
 #====================================================
 #Takes in a few pertinant pieces of info.  Submits to the OSG
