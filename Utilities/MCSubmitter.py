@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import MySQLdb
 import sys
 import datetime
@@ -125,7 +125,7 @@ def WritePayloadConfig(order,foundConfig,batch_system):
 
 def SubmitList(SubList,job_IDs_submitted):
     for row in SubList:
-        print row
+        print(row)
                 
         if row['ID'] in job_IDs_submitted:
             continue
@@ -163,7 +163,7 @@ def SubmitList(SubList,job_IDs_submitted):
         WritePayloadConfig(proj[0],"True",system_to_run_on)
 
         command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCSubDispatched.config "+str(RunNumber)+" "+str(row["NumEvts"])+" per_file=20000 base_file_number="+str(row["FileNumber"])+" generate="+str(proj[0]["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(proj[0]["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(proj[0]["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(proj[0]["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid=-"+str(row['ID'])+" logdir=/osgpool/halld/tbritton/REQUESTEDMC_LOGS/"+proj[0]["OutputLocation"].split("/")[7]+" batch=2 submitter=1"
-        print command
+        print(command)
         status = subprocess.call(command, shell=True)
 
         job_IDs_submitted.append(row['ID'])
@@ -229,7 +229,7 @@ def main(argv):
     more_sub=True
     rows=[]
     if(os.path.isfile("/osgpool/halld/tbritton/.ALLSTOP")==True):
-        print "ALL STOP DETECTED"
+        print("ALL STOP DETECTED")
         exit(1)
 
     numprocesses_running=subprocess.check_output(["echo `ps all -u tbritton | grep MCSubmitter.py | grep -v grep | wc -l`"], shell=True)
@@ -251,12 +251,12 @@ def main(argv):
             while more_sub and int_i<1000:
                 rows=[]
                 int_i+=1
-                print "============================================================="
+                print("=============================================================")
                 query = "SELECT UName,RunNumber,FileNumber,Tested,NumEvts,BKG,Notified,Jobs.ID,Project_ID,Priority,IsActive from Jobs,Project,Users where Tested=1 && Notified is NULL && IsActive=1 && Jobs.ID not in (Select Job_ID from Attempts) and Project_ID = Project.ID and Uname = name order by Priority desc limit "+str(Block_size)
                 if(Block_size==1):
                     query = "SELECT UName,RunNumber,FileNumber,Tested,NumEvts,BKG,Notified,Jobs.ID,Project_ID,Priority from Jobs,Project,Users where Tested=1 && Notified is NULL && Jobs.ID not in (Select Job_ID from Attempts) and Project_ID = Project.ID and Uname = name order by Priority desc"
 
-                print query
+                print(query)
                 curs.execute(query) 
                 rows=curs.fetchall()
                 #lrows=list(rows)

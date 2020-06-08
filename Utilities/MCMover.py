@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 ##########################################################################################################################
 #
 # 2017/03 Thomas Britton
@@ -49,13 +49,13 @@ try:
         dbcnx=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
         dbcursor=dbcnx.cursor(MySQLdb.cursors.DictCursor)
 except:
-        print "WARNING: CANNOT CONNECT TO DATABASE.  JOBS WILL NOT BE CONTROLLED OR MONITORED"
+        print("WARNING: CANNOT CONNECT TO DATABASE.  JOBS WILL NOT BE CONTROLLED OR MONITORED")
         pass
 
 def DroneDo():
         MCWRAPPER_BOT_HOME="/u/group/halld/gluex_MCwrapper/"
         retcode=subprocess.check_output([MCWRAPPER_BOT_HOME+"/Utilities/MCMover.csh"],shell=True)
-        print retcode
+        print(retcode)
 
 def main(argv):
 
@@ -66,7 +66,7 @@ def main(argv):
         
         numprocesses_running=subprocess.check_output(["echo `ps all -u tbritton | grep MCMover.py | grep -v grep | wc -l`"], shell=True)
 
-        print int(numprocesses_running)
+        print(int(numprocesses_running))
         ALLSTOP=False
         if(os.path.isfile('/osgpool/halld/tbritton/.ALLSTOP')):
             print("ALL STOP DETECTED")
