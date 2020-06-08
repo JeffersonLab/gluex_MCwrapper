@@ -78,6 +78,31 @@ def CheckForFile(rootLoc,expFile):
         print(rootLoc+"/"+subloc+"/"+expFile+"   NOT FOUND")
     return found
 
+def recursivermdir(rootloc):
+    try:
+        sublocs=os.listdir(rootloc)
+    except Exception as e:
+        print(e)
+        return
+    if len(sublocs)>0:
+        for subloc in sublocs:
+            if(os.path.isdir(rootloc+"/"+subloc)):
+                recursivermdir(rootloc+"/"+subloc)
+
+    
+
+    try:
+        #print(".hdds" in rootloc)
+        if(".hdds" in rootloc):
+            print("Removing ",rootloc)
+            shutil.rmtree(rootloc)
+        else:
+            print("Removing ",rootloc)
+            os.rmdir(rootloc)
+    except Exception as e:
+        print(e)
+        pass
+
 def checkProjectsForCompletion():
     OutstandingProjectsQuery="SELECT * FROM Project WHERE (Is_Dispatched != '0' && Tested != '-1' && Tested != '2' ) && Notified is NULL"
     dbcursor.execute(OutstandingProjectsQuery)
@@ -230,6 +255,11 @@ def checkProjectsForCompletion():
             sql_notified = "UPDATE Project Set Notified=1 WHERE ID="+str(proj['ID'])
             dbcursor.execute(sql_notified)
             dbcnx.commit()
+
+            #clean up empty directories
+            data_location=outdir_root+rootLoc
+            print("Data Location:",data_location)
+            recursivermdir(data_location)
         else:
             #print("ELSE")
             #print(proj['ID'])
@@ -739,6 +769,8 @@ def array_split(lst,n):
 
 def main(argv):
 
+        runnum=0
+        runmax=-1
         spawnNum=20
         numOverRide=False
 
@@ -749,7 +781,8 @@ def main(argv):
 
         print(int(numprocesses_running))
         if(int(numprocesses_running) <2 or numOverRide):
-            while(1):
+            while(runnum<runmax or runmax==-1):
+                runnum=runnum+1
                 dbcursor.execute("INSERT INTO MCOverlord (Host,StartTime,Status) VALUES ('"+str(socket.gethostname())+"', NOW(), 'Running' )")
                 dbcnx.commit()
                 queryoverlords="SELECT MAX(ID) FROM MCOverlord;"
