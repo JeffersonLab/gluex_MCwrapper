@@ -125,7 +125,7 @@ def WritePayloadConfig(order,foundConfig,batch_system):
 
 def SubmitList(SubList,job_IDs_submitted):
     for row in SubList:
-        print(row)
+        print("Row",row)
                 
         if row['ID'] in job_IDs_submitted:
             continue
@@ -179,9 +179,9 @@ def decideSystem(row):
     except:
         return "OSG"
 
-    print(jobSubout)
+    print("job Sub:",str(jobSubout,'utf-8'))
 
-    rows=jobSubout.split("\n")
+    rows=str(jobSubout,'utf-8').split("\n")
     rows=rows[:-1]
     print(rows)
     running=0.
@@ -256,7 +256,8 @@ def main(argv):
                 if(Block_size==1):
                     query = "SELECT UName,RunNumber,FileNumber,Tested,NumEvts,BKG,Notified,Jobs.ID,Project_ID,Priority from Jobs,Project,Users where Tested=1 && Notified is NULL && Jobs.ID not in (Select Job_ID from Attempts) and Project_ID = Project.ID and Uname = name order by Priority desc"
 
-                print(query)
+                
+                print("Query:", query)
                 curs.execute(query) 
                 rows=curs.fetchall()
                 #lrows=list(rows)

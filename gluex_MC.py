@@ -45,7 +45,7 @@ except:
         pass
 
 MCWRAPPER_VERSION="2.5.1"
-MCWRAPPER_DATE="06/02/20"
+MCWRAPPER_DATE="06/12/20"
 
 #====================================================
 #Takes in a few pertinant pieces of info.  Creates (if needed) a swif workflow and adds a job to it.
@@ -1303,6 +1303,7 @@ def main(argv):
                         #if FILES_TO_GEN >= 500 and ( ccdbSQLITEPATH == "no_sqlite" or rcdbSQLITEPATH == "no_sqlite"):
                         #        print( "This job has >500 subjobs and risks ddosing the servers.  Please use sqlite or request again with a larger per file. ")
                         #        return
+                        
                         for FILENUM in range(1, FILES_TO_GEN + 2):
                                 num=PERFILE
                                 #last file gets the remainder

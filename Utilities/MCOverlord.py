@@ -464,7 +464,7 @@ def checkSWIF(WKflows_to_check):
 
 
 def UpdateOutputSize():
-    getUntotaled="SELECT ID FROM Project WHERE Completed_Time IS NULL && Is_Dispatched != '0';"
+    getUntotaled="SELECT ID FROM Project WHERE Completed_Time IS NULL && Is_Dispatched != '0' && Tested != '4' && Tested != '3' && Notified IS NULL;"
     #print querygetLoc
     dbcursor.execute(getUntotaled)
     Projects = dbcursor.fetchall()
