@@ -805,16 +805,6 @@ if [[ "$GENR" != "0" ]]; then
 		echo "configuring gen_amp"
 		STANDARD_NAME="gen_amp_"$STANDARD_NAME
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
-		echo "ElectronBeamEnergy $eBEAM_ENERGY" > beam.config
-	    echo "CoherentPeakEnergy $COHERENT_PEAK" >> beam.config
-		echo "PhotonBeamLowEnergy $GEN_MIN_ENERGY" >> beam.config
-		echo "PhotonBeamHighEnergy $GEN_MAX_ENERGY" >> beam.config
-		echo "Emittance  10.e-9" >> beam.config
-		echo "RadiatorThickness $radthick" >> beam.config
-		echo "CollimatorDiameter 0.00$colsize" >> beam.config
-		echo "CollimatorDistance  76.0" >> beam.config
-		echo "Polarization $polarization_angle" >> beam.config
-		cp beam.config $STANDARD_NAME\_beam.conf
     elif [[ "$GENERATOR" == "gen_2pi_amp" ]]; then
 		echo "configuring gen_2pi_amp"
 		STANDARD_NAME="gen_2pi_amp_"$STANDARD_NAME
@@ -1002,6 +992,10 @@ if [[ "$GENR" != "0" ]]; then
 	echo "RUNNING GEN_AMP" 
     optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
 	echo $optionals_line
+	echo "Beam Config:"
+	more $STANDARD_NAME'_beam.conf'
+	echo "pre run seds"
+	sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
 		if [[ "$polarization_angle" == "-1.0" ]]; then
 			sed -i 's/TEMPPOLFRAC/'0'/' $STANDARD_NAME.conf
 			sed -i 's/TEMPPOLANGLE/'0'/' $STANDARD_NAME.conf
@@ -1009,7 +1003,6 @@ if [[ "$GENR" != "0" ]]; then
 			sed -i 's/TEMPPOLFRAC/'.4'/' $STANDARD_NAME.conf
 			sed -i 's/TEMPPOLANGLE/'$polarization_angle'/' $STANDARD_NAME.conf
 		fi
-		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
 		
 	echo gen_amp -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY  $optionals_line
 	gen_amp -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
