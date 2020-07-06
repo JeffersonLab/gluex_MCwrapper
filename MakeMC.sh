@@ -8,6 +8,11 @@ shift
 
 if [[ "$BATCHRUN" != "0" ]]; then
 
+#echo "HERE"
+#ls
+#echo "THERE"
+#ls ../
+
 xmltest=`echo $ENVIRONMENT | rev | cut -c -4 | rev`
 if [[ "$xmltest" == ".xml" ]]; then
 source /group/halld/Software/build_scripts/gluex_env_jlab.sh $ENVIRONMENT

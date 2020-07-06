@@ -45,7 +45,7 @@ except:
         pass
 
 MCWRAPPER_VERSION="2.5.1"
-MCWRAPPER_DATE="06/23/20"
+MCWRAPPER_DATE="06/26/20"
 
 #====================================================
 #Takes in a few pertinant pieces of info.  Creates (if needed) a swif workflow and adds a job to it.
@@ -261,11 +261,11 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
         script_to_use=indir_parts[len(indir_parts)-1]
         print(script_to_use)
         ENVFILE_parts=ENVFILE.split("/")
-        envfile_to_source="/srv/"+ENVFILE_parts[len(ENVFILE_parts)-1]
+        envfile_to_source="./"+ENVFILE_parts[len(ENVFILE_parts)-1] #"/srv/"+ENVFILE_parts[len(ENVFILE_parts)-1]
 
         ANAENVFILE_parts=ANAENVFILE.split("/")
         if(len(ANAENVFILE_parts) != 1):
-                anaenvfile_to_source="/srv/"+ANAENVFILE_parts[len(ANAENVFILE_parts)-1]
+                anaenvfile_to_source="../"+ANAENVFILE_parts[len(ANAENVFILE_parts)-1] #"/srv/"+ANAENVFILE_parts[len(ANAENVFILE_parts)-1]
 
         COMMAND_parts=COMMAND#COMMAND.split(" ")
 
@@ -284,18 +284,18 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
                 gen_config_parts=COMMAND_parts['generator_config'].split("/")
                 gen_config_to_use=gen_config_parts[len(gen_config_parts)-1]
                 additional_passins+=COMMAND_parts['generator_config'][5:]+", "
-                COMMAND_parts['generator_config']="file:/srv/"+gen_config_to_use
+                COMMAND_parts['generator_config']="file:../"+gen_config_to_use #"file:/srv/"+gen_config_to_use
         elif COMMAND_parts['generator_config'] != "NA":
                 gen_config_parts=COMMAND_parts['generator_config'].split("/")
                 gen_config_to_use=gen_config_parts[len(gen_config_parts)-1]
                 additional_passins+=COMMAND_parts['generator_config']+", "
-                COMMAND_parts['generator_config']="/srv/"+gen_config_to_use
+                COMMAND_parts['generator_config']="../"+gen_config_to_use #"/srv/"+gen_config_to_use
 
         if COMMAND_parts['generator'][:5] == "file:":
                 filegen_parts=COMMAND_parts['generator'][5:].split("/")
                 #print filegen_parts
                 additional_passins+=COMMAND_parts['generator'][5:]+", "
-                COMMAND_parts['generator']="file:/srv/"+filegen_parts[len(filegen_parts)-1]
+                COMMAND_parts['generator']="file:../"+filegen_parts[len(filegen_parts)-1] #"file:/srv/"+filegen_parts[len(filegen_parts)-1]
         
 
         if (COMMAND_parts['background_to_include'] == "Random" and COMMAND_parts['num_rand_trigs'] == -1 ) or COMMAND_parts['background_to_include'][:4] == "loc:" or ship_random_triggers:
@@ -315,29 +315,29 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
                 janaconfig_parts=COMMAND_parts['custom_plugins'].split("/")
                 janaconfig_to_use=janaconfig_parts[len(janaconfig_parts)-1]
                 additional_passins+=COMMAND_parts['custom_plugins'][5:]+", "
-                COMMAND_parts['custom_plugins']="file:/srv/"+janaconfig_to_use
+                COMMAND_parts['custom_plugins']="file:../"+janaconfig_to_use #"file:/srv/"+janaconfig_to_use
 
         if COMMAND_parts['ccdb_sqlite_path'] != "no_sqlite" and COMMAND_parts['ccdb_sqlite_path'] != "batch_default":
                 ccdbsqlite_parts=COMMAND_parts['ccdb_sqlite_path'].split("/")
                 ccdbsqlite_to_use=ccdbsqlite_parts[len(ccdbsqlite_parts)-1]
                 additional_passins+=COMMAND_parts['ccdb_sqlite_path']+", "
-                COMMAND_parts['ccdb_sqlite_path']="/srv/"+ccdbsqlite_to_use
+                COMMAND_parts['ccdb_sqlite_path']="../"+ccdbsqlite_to_use #"/srv/"+ccdbsqlite_to_use
 
         if COMMAND_parts['rcdb_sqlite_path'] != "no_sqlite" and COMMAND_parts['rcdb_sqlite_path'] != "batch_default":
                 rcdbsqlite_parts=COMMAND_parts['rcdb_sqlite_path'].split("/")
                 rcdbsqlite_to_use=rcdbsqlite_parts[len(rcdbsqlite_parts)-1]
                 additional_passins+=COMMAND_parts['rcdb_sqlite_path']+", "
-                COMMAND_parts['rcdb_sqlite_path']="/srv/"+rcdbsqlite_to_use
+                COMMAND_parts['rcdb_sqlite_path']="../"+rcdbsqlite_to_use #"/srv/"+rcdbsqlite_to_use
 
         if COMMAND_parts['flux_to_generate'] != "unset" and COMMAND_parts['flux_to_generate']!="ccdb" and COMMAND_parts['flux_to_generate']!="cobrems" :
                 flux_to_use=COMMAND_parts['flux_to_generate']
                 additional_passins+=COMMAND_parts['flux_to_generate']+", "
-                COMMAND_parts['flux_to_generate']="/srv/"+flux_to_use
+                COMMAND_parts['flux_to_generate']="../"+flux_to_use #"/srv/"+flux_to_use
         
         if COMMAND_parts['polarization_to_generate']!="ccdb" and COMMAND_parts['polarization_histogram'] != "unset":
                 tpol_to_use=COMMAND_parts['polarization_to_generate']
                 additional_passins+=COMMAND_parts['polarization_to_generate']+", "
-                COMMAND_parts['polarization_to_generate']="/srv/"+tpol_to_use
+                COMMAND_parts['polarization_to_generate']="../"+flux_to_use #"/srv/"+tpol_to_use
 
         if additional_passins != "":
                 additional_passins=", "+additional_passins

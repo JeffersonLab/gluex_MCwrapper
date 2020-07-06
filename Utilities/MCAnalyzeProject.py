@@ -54,6 +54,42 @@ def getAverage(numlist):
         print("Can't compute Average as it is nan")
         return 0.
 
+def getNumStartDistribution(ID, makePlot,extraConstraint="",outputLoc="./MCAnalyze_out/"):
+    print("Getting the distributions of attempts for project",ID)
+    count_q="SELECT NumStarts as Starts from Attempts where NumStarts is NOT NULL && Job_ID in (SELECT ID from Jobs where Project_ID IN (SELECT ID FROM Project where ID="+str(ID)
+    if(extraConstraint != ""):
+        count_q+=" && "+extraConstraint
+    count_q+=")) GROUP BY Job_ID;"
+    
+    print(count_q)
+    curs.execute(count_q) 
+    rows=curs.fetchall()
+    print("Obtained",len(rows),"Entries")
+    rawarr=[]
+    count_arr=[]
+    xbins=[]
+    maxval=0
+
+    for row in rows:
+        if(row["Starts"] > maxval):
+            maxval=row["Starts"]
+
+    for i in range (0,maxval+1):
+        count_arr.append(0)
+        xbins.append(i)
+    for entry in rows:
+        rawarr.append(entry["Starts"])
+        count_arr[entry["Starts"]]+=1
+
+
+    if(makePlot):
+        df=pd.DataFrame(rawarr,columns=["Starts"])
+        fig = px.histogram(df,x="Starts",nbins=len(count_arr))
+        plotly.offline.plot(fig,filename=outputLoc+"StartsDistribution_"+str(ID)+".html",image = 'png', image_filename=outputLoc+"StartsDistribution_"+str(ID))
+    
+    print(count_arr)
+
+    #return getAverage(count_arr)
 
 def getAttemptDistribution(ID, makePlot,extraConstraint="",outputLoc="./MCAnalyze_out/"):
     print("Getting the distributions of attempts for project",ID)
@@ -192,7 +228,9 @@ def main(argv):
     if int(ProjectID) != 0:
         print("Analyzing project #",ProjectID)
         getAttemptDistribution(ProjectID,True,outputLoc=outputLoc)
+        getNumStartDistribution(ProjectID,True,outputLoc=outputLoc)
         getAttemptFailurePie(0,"ID="+str(ProjectID),"failurePie_Proj"+str(ProjectID),outputLoc)
+        
 
     else:
         print("Total analysis")
