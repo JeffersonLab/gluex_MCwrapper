@@ -827,27 +827,6 @@ def main(argv):
                         #checkSWIF(AllWkFlows)
                         #SWIF CHECK MUST BE SINGLE THREADED FOR NOW DUE TO THE VODOO NOT BEING THREAD SAFE
                     
-                    #print(AllWkFlows)
-                    #SWIFMonitoring_assignments=array_split(AllWkFlows,1)
-                    #spawns=[]
-                    #for i in range(0,1):
-                    #    print("swif block "+str(i))
-                    #    #print(len(Monitoring_assignments[i]))
-                    #    p=Process(target=checkSWIF,args=(SWIFMonitoring_assignments[i],))
-                    #    p.daemon = True
-                    #    spawns.append(p)
-                    #    
-                    #    #p.join()
-                    #    
-                    #for i in range(0,len(spawns)):
-                    #    #print("join "+str(i))
-                    #    spawns[i].start()
-                    #    
-                    ##time.sleep(2)
-                    #for i in range(0,len(spawns)):
-                    #    if spawns[i].is_alive():
-                    #        #print("join "+str(i))
-                    #        spawns[i].join()
                     
                     print("CHECKING GLOBALS ON MAIN")
                     UpdateOutputSize()
