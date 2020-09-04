@@ -987,9 +987,11 @@ if [[ "$GENR" != "0" ]]; then
 	mv *.ascii $STANDARD_NAME.ascii
 
 	if [[ "$MCGEN_Translator" == "\!Translator:ppbar" ]]; then
-		GEN2HDDM_ppbar $STANDARD_NAME.ascii
+		GEN2HDDM_ppbar -r$RUN_NUMBER $STANDARD_NAME.ascii
 	elif [[ "$MCGEN_Translator" == "\!Translator:lamlambar" ]]; then
-		GEN2HDDM_lamlambar $STANDARD_NAME.ascii
+		GEN2HDDM_lamlambar -r$RUN_NUMBER $STANDARD_NAME.ascii
+	elif [[ "$MCGEN_Translator" == "\!Translator:jpsi" ]]; then
+		GEN2HDDM_jpsi -r$RUN_NUMBER $STANDARD_NAME.ascii
 	fi
 
     generator_return_code=$?
