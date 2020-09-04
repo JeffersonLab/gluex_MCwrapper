@@ -1357,8 +1357,11 @@ def main(argv):
 
         try:
                 dbcnx.close()
-        except:
+        except Exception as e:
+                print(e)
                 pass        
+
+        print("ending gluex_MC.py")
 
 def GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,RUNNUM):
         try:

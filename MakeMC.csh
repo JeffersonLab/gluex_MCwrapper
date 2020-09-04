@@ -1215,7 +1215,7 @@ if ( "$GENERATOR_POST" != "No" ) then
 		echo decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm $STANDARD_NAME.hddm
 		decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm -upost'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.cfg $STANDARD_NAME.hddm
 		set post_return_code=$status
-		set $STANDARD_NAME=$STANDARD_NAME'_decay_evtgen'
+		set STANDARD_NAME=$STANDARD_NAME'_decay_evtgen'
 	endif
 	#do if/elses for running 
 	if ( $post_return_code != 0 ) then

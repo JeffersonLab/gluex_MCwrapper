@@ -89,8 +89,6 @@ def recursivermdir(rootloc):
             if(os.path.isdir(rootloc+"/"+subloc)):
                 recursivermdir(rootloc+"/"+subloc)
 
-    
-
     try:
         #print(".hdds" in rootloc)
         if(".hdds" in rootloc):
@@ -259,6 +257,7 @@ def checkProjectsForCompletion():
             #clean up empty directories
             data_location=outdir_root+rootLoc
             print("Data Location:",data_location)
+            print("Cleaning up empty folders")
             recursivermdir(data_location)
         else:
             #print("ELSE")
