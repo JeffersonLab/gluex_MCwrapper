@@ -1187,19 +1187,18 @@ if ( "$GENR" != "0" ) then
 	endif
 
 
-
-    if ( ! -f ./$STANDARD_NAME.hddm && "$GENERATOR" != "particle_gun" && "$gen_pre" != "file" ) then
-		echo "something went wrong with generation"
-		echo "An hddm file was not found after generation step.  Terminating MC production.  Please consult logs to diagnose"
-		exit 11
-	endif
-
 	if ( $generator_return_code != 0 ) then
 				echo
 				echo
 				echo "Something went wrong with " "$GENERATOR"
 				echo "status code: "$generator_return_code
 				exit $generator_return_code
+	endif
+
+	if ( ! -f ./$STANDARD_NAME.hddm && "$GENERATOR" != "particle_gun" && "$gen_pre" != "file" ) then
+		echo "something went wrong with generation"
+		echo "An hddm file was not found after generation step.  Terminating MC production.  Please consult logs to diagnose"
+		exit 11
 	endif
 #GEANT/smearing
 endif

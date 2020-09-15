@@ -412,6 +412,13 @@ def checkSWIF(WKflows_to_check):
                         #print str(ExitCode)
                         #UPDATE THE SATUS
                         #print Completed_Time
+
+                        if str(ExitCode) == "101":
+                            print("Beam properties integral 0 in given energy range")
+                            deactivate_Job="UPDATE Jobs set IsActive=0 where ID="+str(recordedJobStatus[0]["Job_ID"])+";"
+                            dbcursorSWIF.execute(deactivate_Job)
+                            dbcnxSWIF.commit()
+
                         if str(ExitCode) == "232" or str(ExitCode) == "1000":
                             print("EXIT CODE 232 DETECTED")
                             getrunNum="SELECT RunNumber, Project_ID from Jobs where ID="+str(recordedJobStatus[0]["Job_ID"])
