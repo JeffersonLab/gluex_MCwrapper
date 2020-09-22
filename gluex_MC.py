@@ -45,7 +45,7 @@ except:
         pass
 
 MCWRAPPER_VERSION="2.5.1"
-MCWRAPPER_DATE="06/26/20"
+MCWRAPPER_DATE="09/22/20"
 
 #====================================================
 #Takes in a few pertinant pieces of info.  Creates (if needed) a swif workflow and adds a job to it.
@@ -202,7 +202,7 @@ def  qsub_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NC
 #this has not been fleshed out because of OSG integration.  
 #essentially take OSG_add_job and remove the OSG specific stuff (path remapping and + flags)
 #====================================================
-def  condor_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, PROJECT_ID ):
+def  condor_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, PROJECT_ID, CONDOR_MAGIC ):
         STUBNAME=""
         if(COMMAND['custom_tag_string'] != "I_dont_have_one"):
                 STUBNAME=COMMAND['custom_tag_string']+"_"
@@ -219,6 +219,11 @@ def  condor_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, 
         f.write("Output      = "+DATA_OUTPUT_BASE_DIR+"/log/"+"out_"+JOBNAME+".log\n")
         f.write("Log = "+DATA_OUTPUT_BASE_DIR+"/log/"+"CONDOR_"+JOBNAME+".log\n")
         f.write("RequestCpus = "+NCORES+"\n")
+
+        if CONDOR_MAGIC != []:
+                for magic in CONDOR_MAGIC:
+                        f.write("+"+magic.replace(":","=",1)+"\n")
+
         f.write("Queue 1\n")
         f.close()
         
@@ -737,7 +742,7 @@ def main(argv):
         # PROJECT INFO
         PROJECT    = "gluex"          # http://scicomp.jlab.org/scicomp/#/projects
         TRACK      = "simulation"     # https://scicomp.jlab.org/docs/batch_job_tracks
-        
+        CONDOR_MAGIC = []
         # RESOURCES for swif jobs
         NCORES     = "8"               # Number of CPU cores
         DISK       = "10GB"            # Max Disk usage
@@ -808,6 +813,8 @@ def main(argv):
                                 VERBOSE=True
                 elif str(parts[0]).upper()=="PROJECT" :
                         PROJECT=rm_comments[0].strip()
+                elif str(parts[0]).upper()=="CONDOR_MAGIC" :
+                        CONDOR_MAGIC=CONDOR_MAGIC.append(rm_comments[0].strip().replace(":","="))
                 elif str(parts[0]).upper()=="TRACK" :
                         TRACK=rm_comments[0].strip()
                 elif str(parts[0]).upper()=="NCORES" :
@@ -1145,6 +1152,7 @@ def main(argv):
         COMMAND_dict['polarization_histogram']=str(POL_HIST)
         COMMAND_dict['eBeam_current']=str(eBEAM_CURRENT)
         COMMAND_dict['experiment']=str(PROJECT)
+        
         COMMAND_dict['num_rand_trigs']=str(RANDOM_NUM_EVT)
         COMMAND_dict['location']=str(LOCATION)
         COMMAND_dict['generator_post']=str(GENPOST)
@@ -1182,7 +1190,7 @@ def main(argv):
                                 elif BATCHSYS.upper()=="QSUB":
                                         qsub_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, RAM, QUEUENAME, LOG_DIR, PROJECT_ID )
                                 elif BATCHSYS.upper()=="CONDOR":
-                                        condor_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, PROJECT_ID )
+                                        condor_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, PROJECT_ID, CONDOR_MAGIC )
                                 elif BATCHSYS.upper()=="OSG":
                                         OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
                                 elif BATCHSYS.upper()=="SLURMCONT":
@@ -1289,7 +1297,7 @@ def main(argv):
                                                         elif BATCHSYS.upper()=="QSUB":
                                                                 qsub_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, RAM, QUEUENAME, LOG_DIR, PROJECT_ID )
                                                         elif BATCHSYS.upper()=="CONDOR":
-                                                                condor_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, PROJECT_ID )
+                                                                condor_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, PROJECT_ID, CONDOR_MAGIC )
                                                         elif BATCHSYS.upper()=="OSG":
                                                                 OSG_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID)
                                                         elif BATCHSYS.upper()=="SLURMCONT":
@@ -1339,7 +1347,7 @@ def main(argv):
                                                 elif BATCHSYS.upper()=="QSUB":
                                                         qsub_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, RAM, QUEUENAME, LOG_DIR, PROJECT_ID )
                                                 elif BATCHSYS.upper()=="CONDOR":
-                                                        condor_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, PROJECT_ID )
+                                                        condor_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, PROJECT_ID, CONDOR_MAGIC )
                                                 elif BATCHSYS.upper()=="OSG":
                                                         OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
                                                 elif BATCHSYS.upper()=="SLURMCONT":

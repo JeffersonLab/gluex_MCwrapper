@@ -65,7 +65,7 @@ var result=[];
             news_lock=!news_lock
             GetNews();
             
-        },5000)
+        },30000)
 
         setInterval(function (){
             GetHeartbeats();
@@ -607,7 +607,7 @@ function MakeProjectTable()
     }
     MakeProjectTable_lock=!MakeProjectTable_lock;
     ProjTable.ajax.reload(function(){MakeProjectTable_lock=!MakeProjectTable_lock}, false);  // The second param, false, ensures that if the user is on a page, it doesn't go back to page 1 upon reload
-  }, 1000 );
+  }, 10000 );
     
 }
 
@@ -666,7 +666,7 @@ function MakeJobsTablenew(projID)
   }
   JobsInterval=setInterval( function () {
     jobsTable.ajax.reload(null, false);  // The second param, false, ensures that if the user is on a page, it doesn't go back to page 1 upon reload
-  }, 2000 );
+  }, 10000 );
 }
 function MakeAttemptsTable(projID)
   {
@@ -728,7 +728,7 @@ function MakeAttemptsTable(projID)
   }
   AttemptsInterval= setInterval( function () {
     attemptsTable.ajax.reload(null, false);  // The second param, false, ensures that if the user is on a page, it doesn't go back to page 1 upon reload
-  }, 30000 );
+  }, 60000 );
   QueryDatabaseRunIP(projID);
 }
 
