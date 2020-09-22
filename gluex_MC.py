@@ -203,6 +203,7 @@ def  qsub_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NC
 #essentially take OSG_add_job and remove the OSG specific stuff (path remapping and + flags)
 #====================================================
 def  condor_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, PROJECT_ID, CONDOR_MAGIC ):
+        #print(CONDOR_MAGIC)
         STUBNAME=""
         if(COMMAND['custom_tag_string'] != "I_dont_have_one"):
                 STUBNAME=COMMAND['custom_tag_string']+"_"
@@ -814,7 +815,8 @@ def main(argv):
                 elif str(parts[0]).upper()=="PROJECT" :
                         PROJECT=rm_comments[0].strip()
                 elif str(parts[0]).upper()=="CONDOR_MAGIC" :
-                        CONDOR_MAGIC=CONDOR_MAGIC.append(rm_comments[0].strip().replace(":","="))
+                        #print("detected magic")
+                        CONDOR_MAGIC.append(rm_comments[0].strip())
                 elif str(parts[0]).upper()=="TRACK" :
                         TRACK=rm_comments[0].strip()
                 elif str(parts[0]).upper()=="NCORES" :
