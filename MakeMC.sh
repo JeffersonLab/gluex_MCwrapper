@@ -963,7 +963,7 @@ if [[ "$GENR" != "0" ]]; then
 
 	sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
 
-	genEtaRegge -N$EVT_TO_GEN -O$STANDARD_NAME.hddm -I$STANDARD_NAME.conf
+	genEtaRegge -R$RUN_NUMBER -N$EVT_TO_GEN -O$STANDARD_NAME.hddm -I$STANDARD_NAME.conf
     generator_return_code=$?
 	elif [[ "$GENERATOR" == "mc_gen" ]]; then
 	echo "RUNNING MC_GEN" 
