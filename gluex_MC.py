@@ -223,7 +223,7 @@ def  condor_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, 
 
         if CONDOR_MAGIC != []:
                 for magic in CONDOR_MAGIC:
-                        f.write("+"+magic.replace(":","=",1)+"\n")
+                        f.write(magic.replace(":","=",1)+"\n")
 
         f.write("Queue 1\n")
         f.close()
