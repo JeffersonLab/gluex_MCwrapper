@@ -8,6 +8,11 @@ shift
 
 if [[ "$BATCHRUN" != "0" ]]; then
 
+#echo "HERE"
+#ls
+#echo "THERE"
+#ls ../
+
 xmltest=`echo $ENVIRONMENT | rev | cut -c -4 | rev`
 if [[ "$xmltest" == ".xml" ]]; then
 source /group/halld/Software/build_scripts/gluex_env_jlab.sh $ENVIRONMENT
@@ -805,16 +810,6 @@ if [[ "$GENR" != "0" ]]; then
 		echo "configuring gen_amp"
 		STANDARD_NAME="gen_amp_"$STANDARD_NAME
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
-		echo "ElectronBeamEnergy $eBEAM_ENERGY" > beam.config
-	    echo "CoherentPeakEnergy $COHERENT_PEAK" >> beam.config
-		echo "PhotonBeamLowEnergy $GEN_MIN_ENERGY" >> beam.config
-		echo "PhotonBeamHighEnergy $GEN_MAX_ENERGY" >> beam.config
-		echo "Emittance  10.e-9" >> beam.config
-		echo "RadiatorThickness $radthick" >> beam.config
-		echo "CollimatorDiameter 0.00$colsize" >> beam.config
-		echo "CollimatorDistance  76.0" >> beam.config
-		echo "Polarization $polarization_angle" >> beam.config
-		cp beam.config $STANDARD_NAME\_beam.conf
     elif [[ "$GENERATOR" == "gen_2pi_amp" ]]; then
 		echo "configuring gen_2pi_amp"
 		STANDARD_NAME="gen_2pi_amp_"$STANDARD_NAME
@@ -968,7 +963,7 @@ if [[ "$GENR" != "0" ]]; then
 
 	sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
 
-	genEtaRegge -N$EVT_TO_GEN -O$STANDARD_NAME.hddm -I$STANDARD_NAME.conf
+	genEtaRegge -R$RUN_NUMBER -N$EVT_TO_GEN -O$STANDARD_NAME.hddm -I$STANDARD_NAME.conf
     generator_return_code=$?
 	elif [[ "$GENERATOR" == "mc_gen" ]]; then
 	echo "RUNNING MC_GEN" 
@@ -992,9 +987,11 @@ if [[ "$GENR" != "0" ]]; then
 	mv *.ascii $STANDARD_NAME.ascii
 
 	if [[ "$MCGEN_Translator" == "\!Translator:ppbar" ]]; then
-		GEN2HDDM_ppbar $STANDARD_NAME.ascii
+		GEN2HDDM_ppbar -r$RUN_NUMBER $STANDARD_NAME.ascii
 	elif [[ "$MCGEN_Translator" == "\!Translator:lamlambar" ]]; then
-		GEN2HDDM_lamlambar $STANDARD_NAME.ascii
+		GEN2HDDM_lamlambar -r$RUN_NUMBER $STANDARD_NAME.ascii
+	elif [[ "$MCGEN_Translator" == "\!Translator:jpsi" ]]; then
+		GEN2HDDM_jpsi -r$RUN_NUMBER $STANDARD_NAME.ascii
 	fi
 
     generator_return_code=$?
@@ -1002,6 +999,10 @@ if [[ "$GENR" != "0" ]]; then
 	echo "RUNNING GEN_AMP" 
     optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
 	echo $optionals_line
+	echo "Beam Config:"
+	more $STANDARD_NAME'_beam.conf'
+	echo "pre run seds"
+	sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
 		if [[ "$polarization_angle" == "-1.0" ]]; then
 			sed -i 's/TEMPPOLFRAC/'0'/' $STANDARD_NAME.conf
 			sed -i 's/TEMPPOLANGLE/'0'/' $STANDARD_NAME.conf
@@ -1009,7 +1010,6 @@ if [[ "$GENR" != "0" ]]; then
 			sed -i 's/TEMPPOLFRAC/'.4'/' $STANDARD_NAME.conf
 			sed -i 's/TEMPPOLANGLE/'$polarization_angle'/' $STANDARD_NAME.conf
 		fi
-		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
 		
 	echo gen_amp -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY  $optionals_line
 	gen_amp -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
@@ -1231,7 +1231,7 @@ if [[ "$GENERATOR_POST" != "No" ]]; then
 		echo decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm $STANDARD_NAME.hddm
 		decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm -upost'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.cfg $STANDARD_NAME.hddm
 		post_return_code=$status
-		$STANDARD_NAME=$STANDARD_NAME'_decay_evtgen'
+		STANDARD_NAME=$STANDARD_NAME'_decay_evtgen'
 	fi
 
 	#do if/elses for running 
@@ -1415,7 +1415,7 @@ fi
             mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm ./run$formatted_runNumber\_random.hddm\:1\+$fold_skip_num
 			#echo "mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm:1+$fold_skip_num"
             #mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $XRD_RANDOMS_URL/random_triggers//$RANDBGTAG/run$formatted_runNumber\_random.hddm\:1\+$fold_skip_num
-
+			rm -f ./run$formatted_runNumber\_random.hddm
 		fi
 		mcsmear_return_code=$?
 	elif [[ "$bkgloc_pre" == "loc:" ]]; then

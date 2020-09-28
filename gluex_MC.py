@@ -44,8 +44,8 @@ try:
 except:
         pass
 
-MCWRAPPER_VERSION="2.5.0"
-MCWRAPPER_DATE="06/01/20"
+MCWRAPPER_VERSION="2.5.1"
+MCWRAPPER_DATE="09/22/20"
 
 #====================================================
 #Takes in a few pertinant pieces of info.  Creates (if needed) a swif workflow and adds a job to it.
@@ -202,7 +202,8 @@ def  qsub_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NC
 #this has not been fleshed out because of OSG integration.  
 #essentially take OSG_add_job and remove the OSG specific stuff (path remapping and + flags)
 #====================================================
-def  condor_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, PROJECT_ID ):
+def  condor_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, PROJECT_ID, CONDOR_MAGIC ):
+        #print(CONDOR_MAGIC)
         STUBNAME=""
         if(COMMAND['custom_tag_string'] != "I_dont_have_one"):
                 STUBNAME=COMMAND['custom_tag_string']+"_"
@@ -219,6 +220,11 @@ def  condor_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, 
         f.write("Output      = "+DATA_OUTPUT_BASE_DIR+"/log/"+"out_"+JOBNAME+".log\n")
         f.write("Log = "+DATA_OUTPUT_BASE_DIR+"/log/"+"CONDOR_"+JOBNAME+".log\n")
         f.write("RequestCpus = "+NCORES+"\n")
+
+        if CONDOR_MAGIC != []:
+                for magic in CONDOR_MAGIC:
+                        f.write(magic+"\n")
+
         f.write("Queue 1\n")
         f.close()
         
@@ -261,11 +267,11 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
         script_to_use=indir_parts[len(indir_parts)-1]
         print(script_to_use)
         ENVFILE_parts=ENVFILE.split("/")
-        envfile_to_source="/srv/"+ENVFILE_parts[len(ENVFILE_parts)-1]
+        envfile_to_source="./"+ENVFILE_parts[len(ENVFILE_parts)-1] #"/srv/"+ENVFILE_parts[len(ENVFILE_parts)-1]
 
         ANAENVFILE_parts=ANAENVFILE.split("/")
         if(len(ANAENVFILE_parts) != 1):
-                anaenvfile_to_source="/srv/"+ANAENVFILE_parts[len(ANAENVFILE_parts)-1]
+                anaenvfile_to_source="../"+ANAENVFILE_parts[len(ANAENVFILE_parts)-1] #"/srv/"+ANAENVFILE_parts[len(ANAENVFILE_parts)-1]
 
         COMMAND_parts=COMMAND#COMMAND.split(" ")
 
@@ -284,18 +290,18 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
                 gen_config_parts=COMMAND_parts['generator_config'].split("/")
                 gen_config_to_use=gen_config_parts[len(gen_config_parts)-1]
                 additional_passins+=COMMAND_parts['generator_config'][5:]+", "
-                COMMAND_parts['generator_config']="file:/srv/"+gen_config_to_use
+                COMMAND_parts['generator_config']="file:../"+gen_config_to_use #"file:/srv/"+gen_config_to_use
         elif COMMAND_parts['generator_config'] != "NA":
                 gen_config_parts=COMMAND_parts['generator_config'].split("/")
                 gen_config_to_use=gen_config_parts[len(gen_config_parts)-1]
                 additional_passins+=COMMAND_parts['generator_config']+", "
-                COMMAND_parts['generator_config']="/srv/"+gen_config_to_use
+                COMMAND_parts['generator_config']="../"+gen_config_to_use #"/srv/"+gen_config_to_use
 
         if COMMAND_parts['generator'][:5] == "file:":
                 filegen_parts=COMMAND_parts['generator'][5:].split("/")
                 #print filegen_parts
                 additional_passins+=COMMAND_parts['generator'][5:]+", "
-                COMMAND_parts['generator']="file:/srv/"+filegen_parts[len(filegen_parts)-1]
+                COMMAND_parts['generator']="file:../"+filegen_parts[len(filegen_parts)-1] #"file:/srv/"+filegen_parts[len(filegen_parts)-1]
         
 
         if (COMMAND_parts['background_to_include'] == "Random" and COMMAND_parts['num_rand_trigs'] == -1 ) or COMMAND_parts['background_to_include'][:4] == "loc:" or ship_random_triggers:
@@ -315,29 +321,29 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
                 janaconfig_parts=COMMAND_parts['custom_plugins'].split("/")
                 janaconfig_to_use=janaconfig_parts[len(janaconfig_parts)-1]
                 additional_passins+=COMMAND_parts['custom_plugins'][5:]+", "
-                COMMAND_parts['custom_plugins']="file:/srv/"+janaconfig_to_use
+                COMMAND_parts['custom_plugins']="file:../"+janaconfig_to_use #"file:/srv/"+janaconfig_to_use
 
         if COMMAND_parts['ccdb_sqlite_path'] != "no_sqlite" and COMMAND_parts['ccdb_sqlite_path'] != "batch_default":
                 ccdbsqlite_parts=COMMAND_parts['ccdb_sqlite_path'].split("/")
                 ccdbsqlite_to_use=ccdbsqlite_parts[len(ccdbsqlite_parts)-1]
                 additional_passins+=COMMAND_parts['ccdb_sqlite_path']+", "
-                COMMAND_parts['ccdb_sqlite_path']="/srv/"+ccdbsqlite_to_use
+                COMMAND_parts['ccdb_sqlite_path']="../"+ccdbsqlite_to_use #"/srv/"+ccdbsqlite_to_use
 
         if COMMAND_parts['rcdb_sqlite_path'] != "no_sqlite" and COMMAND_parts['rcdb_sqlite_path'] != "batch_default":
                 rcdbsqlite_parts=COMMAND_parts['rcdb_sqlite_path'].split("/")
                 rcdbsqlite_to_use=rcdbsqlite_parts[len(rcdbsqlite_parts)-1]
                 additional_passins+=COMMAND_parts['rcdb_sqlite_path']+", "
-                COMMAND_parts['rcdb_sqlite_path']="/srv/"+rcdbsqlite_to_use
+                COMMAND_parts['rcdb_sqlite_path']="../"+rcdbsqlite_to_use #"/srv/"+rcdbsqlite_to_use
 
         if COMMAND_parts['flux_to_generate'] != "unset" and COMMAND_parts['flux_to_generate']!="ccdb" and COMMAND_parts['flux_to_generate']!="cobrems" :
                 flux_to_use=COMMAND_parts['flux_to_generate']
                 additional_passins+=COMMAND_parts['flux_to_generate']+", "
-                COMMAND_parts['flux_to_generate']="/srv/"+flux_to_use
+                COMMAND_parts['flux_to_generate']="../"+flux_to_use #"/srv/"+flux_to_use
         
         if COMMAND_parts['polarization_to_generate']!="ccdb" and COMMAND_parts['polarization_histogram'] != "unset":
                 tpol_to_use=COMMAND_parts['polarization_to_generate']
                 additional_passins+=COMMAND_parts['polarization_to_generate']+", "
-                COMMAND_parts['polarization_to_generate']="/srv/"+tpol_to_use
+                COMMAND_parts['polarization_to_generate']="../"+flux_to_use #"/srv/"+tpol_to_use
 
         if additional_passins != "":
                 additional_passins=", "+additional_passins
@@ -388,8 +394,6 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
                 exit(1)
 
 
-
-
         mkdircom2="mkdir -p "+LOG_DIR+"/log/"
         status2 = subprocess.call(mkdircom2, shell=True)
         status = subprocess.call(mkdircom, shell=True)
@@ -418,7 +422,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
                                 f=open("/osgpool/halld/tbritton/.ALLSTOP","x")
                                 exit(1)
 
-                #status = subprocess.call('rm -f MCOSG_'+str(PROJECT_ID)+'.submit', shell=True)
+                status = subprocess.call('rm -f MCOSG_'+str(PROJECT_ID)+'.submit', shell=True)
                 status = subprocess.call('rm -f /tmp/MCOSG_'+str(PROJECT_ID)+'.submit', shell=True)
         
                 #print "DECIDING IF FIRST JOB"
@@ -739,7 +743,7 @@ def main(argv):
         # PROJECT INFO
         PROJECT    = "gluex"          # http://scicomp.jlab.org/scicomp/#/projects
         TRACK      = "simulation"     # https://scicomp.jlab.org/docs/batch_job_tracks
-        
+        CONDOR_MAGIC = []
         # RESOURCES for swif jobs
         NCORES     = "8"               # Number of CPU cores
         DISK       = "10GB"            # Max Disk usage
@@ -782,7 +786,7 @@ def main(argv):
                 if line[0]=="#":
                        continue
 
-                parts=line.split("#")[0].split("=")
+                parts=line.split("#")[0].split("=",1)
                 #print parts
                 if len(parts)==1:
                         #print "Warning! No Sets given"
@@ -810,6 +814,9 @@ def main(argv):
                                 VERBOSE=True
                 elif str(parts[0]).upper()=="PROJECT" :
                         PROJECT=rm_comments[0].strip()
+                elif str(parts[0]).upper()=="CONDOR_MAGIC" :
+                        #print("detected magic")
+                        CONDOR_MAGIC.append(rm_comments[0].strip())
                 elif str(parts[0]).upper()=="TRACK" :
                         TRACK=rm_comments[0].strip()
                 elif str(parts[0]).upper()=="NCORES" :
@@ -1147,6 +1154,7 @@ def main(argv):
         COMMAND_dict['polarization_histogram']=str(POL_HIST)
         COMMAND_dict['eBeam_current']=str(eBEAM_CURRENT)
         COMMAND_dict['experiment']=str(PROJECT)
+        
         COMMAND_dict['num_rand_trigs']=str(RANDOM_NUM_EVT)
         COMMAND_dict['location']=str(LOCATION)
         COMMAND_dict['generator_post']=str(GENPOST)
@@ -1184,7 +1192,7 @@ def main(argv):
                                 elif BATCHSYS.upper()=="QSUB":
                                         qsub_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, RAM, QUEUENAME, LOG_DIR, PROJECT_ID )
                                 elif BATCHSYS.upper()=="CONDOR":
-                                        condor_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, PROJECT_ID )
+                                        condor_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, PROJECT_ID, CONDOR_MAGIC )
                                 elif BATCHSYS.upper()=="OSG":
                                         OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
                                 elif BATCHSYS.upper()=="SLURMCONT":
@@ -1291,7 +1299,7 @@ def main(argv):
                                                         elif BATCHSYS.upper()=="QSUB":
                                                                 qsub_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, RAM, QUEUENAME, LOG_DIR, PROJECT_ID )
                                                         elif BATCHSYS.upper()=="CONDOR":
-                                                                condor_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, PROJECT_ID )
+                                                                condor_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, PROJECT_ID, CONDOR_MAGIC )
                                                         elif BATCHSYS.upper()=="OSG":
                                                                 OSG_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID)
                                                         elif BATCHSYS.upper()=="SLURMCONT":
@@ -1303,6 +1311,7 @@ def main(argv):
                         #if FILES_TO_GEN >= 500 and ( ccdbSQLITEPATH == "no_sqlite" or rcdbSQLITEPATH == "no_sqlite"):
                         #        print( "This job has >500 subjobs and risks ddosing the servers.  Please use sqlite or request again with a larger per file. ")
                         #        return
+                        
                         for FILENUM in range(1, FILES_TO_GEN + 2):
                                 num=PERFILE
                                 #last file gets the remainder
@@ -1340,7 +1349,7 @@ def main(argv):
                                                 elif BATCHSYS.upper()=="QSUB":
                                                         qsub_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, RAM, QUEUENAME, LOG_DIR, PROJECT_ID )
                                                 elif BATCHSYS.upper()=="CONDOR":
-                                                        condor_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, PROJECT_ID )
+                                                        condor_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, PROJECT_ID, CONDOR_MAGIC )
                                                 elif BATCHSYS.upper()=="OSG":
                                                         OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
                                                 elif BATCHSYS.upper()=="SLURMCONT":
@@ -1358,8 +1367,11 @@ def main(argv):
 
         try:
                 dbcnx.close()
-        except:
+        except Exception as e:
+                print(e)
                 pass        
+
+        print("ending gluex_MC.py")
 
 def GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,RUNNUM):
         try:

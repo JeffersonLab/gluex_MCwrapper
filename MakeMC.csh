@@ -933,7 +933,7 @@ if ( "$GENR" != "0" ) then
 		sed -i 's/TEMPMAXGENE/'$GEN_MAX_ENERGY'/' $STANDARD_NAME.conf
 
 		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
-		genEtaRegge -N$EVT_TO_GEN -O$STANDARD_NAME.hddm -I$STANDARD_NAME.conf
+		genEtaRegge -R$RUN_NUMBER -N$EVT_TO_GEN -O$STANDARD_NAME.hddm -I$STANDARD_NAME.conf
 	    set generator_return_code=$status
 	else if ( "$GENERATOR" == "gen_amp" ) then
 		echo "RUNNING GEN_AMP" 
@@ -975,10 +975,12 @@ if ( "$GENR" != "0" ) then
 		mv *.ascii $STANDARD_NAME.ascii
 		echo $MCGEN_Translator
 		if ( "$MCGEN_Translator" == "\!Translator:ppbar" ) then
-		echo GEN2HDDM_ppbar $STANDARD_NAME.ascii
-		GEN2HDDM_ppbar $STANDARD_NAME.ascii
+		echo GEN2HDDM_ppbar -r$RUN_NUMBER $STANDARD_NAME.ascii
+		GEN2HDDM_ppbar -r$RUN_NUMBER $STANDARD_NAME.ascii
 		else if ( "$MCGEN_Translator" == "\!Translator:lamlambar" ) then
-		GEN2HDDM_lamlambar $STANDARD_NAME.ascii
+		GEN2HDDM_lamlambar -r$RUN_NUMBER $STANDARD_NAME.ascii
+		else if ( "$MCGEN_Translator" == "\!Translator:jpsi" ) then
+		GEN2HDDM_jpsi -r$RUN_NUMBER $STANDARD_NAME.ascii
 		endif
 
     	set generator_return_code=$status
@@ -1185,19 +1187,18 @@ if ( "$GENR" != "0" ) then
 	endif
 
 
-
-    if ( ! -f ./$STANDARD_NAME.hddm && "$GENERATOR" != "particle_gun" && "$gen_pre" != "file" ) then
-		echo "something went wrong with generation"
-		echo "An hddm file was not found after generation step.  Terminating MC production.  Please consult logs to diagnose"
-		exit 11
-	endif
-
 	if ( $generator_return_code != 0 ) then
 				echo
 				echo
 				echo "Something went wrong with " "$GENERATOR"
 				echo "status code: "$generator_return_code
 				exit $generator_return_code
+	endif
+
+	if ( ! -f ./$STANDARD_NAME.hddm && "$GENERATOR" != "particle_gun" && "$gen_pre" != "file" ) then
+		echo "something went wrong with generation"
+		echo "An hddm file was not found after generation step.  Terminating MC production.  Please consult logs to diagnose"
+		exit 11
 	endif
 #GEANT/smearing
 endif
@@ -1215,7 +1216,7 @@ if ( "$GENERATOR_POST" != "No" ) then
 		echo decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm $STANDARD_NAME.hddm
 		decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm -upost'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.cfg $STANDARD_NAME.hddm
 		set post_return_code=$status
-		set $STANDARD_NAME=$STANDARD_NAME'_decay_evtgen'
+		set STANDARD_NAME=$STANDARD_NAME'_decay_evtgen'
 	endif
 	#do if/elses for running 
 	if ( $post_return_code != 0 ) then

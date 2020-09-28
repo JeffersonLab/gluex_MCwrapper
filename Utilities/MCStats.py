@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import MySQLdb
 import sys
 import datetime
@@ -151,10 +151,10 @@ def getStartAndLength():
     for time in rows:
         Starttimes.append(time["UNIX_TIMESTAMP(Start_Time)"])
         totaltime=totaltime+time["CPUTime"]
-        print str(time["UNIX_TIMESTAMP(Start_Time)"])+" , "+str(time["CPUTime"])
+        print(str(time["UNIX_TIMESTAMP(Start_Time)"])+" , "+str(time["CPUTime"]))
 
 
-    print totaltime
+    print(totaltime)
     fig, ax = plt.subplots(1,1)
     
     ax.hist(Starttimes, bins=6, color='lightblue')

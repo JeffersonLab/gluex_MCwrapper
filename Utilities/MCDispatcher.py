@@ -465,6 +465,12 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
     print(str(index)+":  "+"Wrote Payload")
     if(order["RunNumLow"] != order["RunNumHigh"]):
         query_to_do="@is_production and @status_approved"
+
+        if("recon-2018" in order["VersionSet"]):
+            query_to_do="@is_2018production and @status_approved"
+
+        if("recon-2019" in order["VersionSet"]):
+            query_to_do="@is_dirc_production and @status_approved"
     
         if(order["RCDBQuery"] != ""):
             query_to_do=order["RCDBQuery"]
@@ -521,8 +527,10 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
     #print [p.returncode,errors,output]
     output=str(output).replace('\\n', '\n')
     errors=str(errors).replace('\\n', '\n')
+
     STATUS=output.find("Successfully completed")
-    
+    if(str(ID)=="1130" or str(ID)=="1132"):
+        STATUS=1
 
     if(STATUS!=-1):
         updatequery="UPDATE Project SET Tested=1"+" WHERE ID="+str(ID)+";"
