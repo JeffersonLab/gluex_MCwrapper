@@ -280,7 +280,7 @@ if [[ $gen_pre_rcdb != "file" || "$BGTAGONLY_OPTION" == "1" || "$BKGFOLDSTR" == 
 
 radthick="50.e-6"
 
-if [[ "$RADIATOR_THICKNESS" != "rcdb" || "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" ]]; then
+if [[ "$RADIATOR_THICKNESS" != "rcdb" || "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" ]]; then
 	radthick=$RADIATOR_THICKNESS
 else
 	words=`rcnd $RUN_NUMBER radiator_type | sed 's/ / /g' `
@@ -332,7 +332,7 @@ ccdbelece="`ccdb dump PHOTON_BEAM/endpoint_energy:${RUN_NUMBER}:${variation} | g
 elecE_text="$ccdbelece" #`echo ${ccdblist[$(($ccdblist_length-1))]}`
 #elecE_text=`rcnd $RUN_NUMBER beam_energy | awk '{print $1}'`
 
-if [[ "$eBEAM_ENERGY" != "rcdb" || "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" ]]; then
+if [[ "$eBEAM_ENERGY" != "rcdb" || "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" ]]; then
     elecE=$eBEAM_ENERGY
 elif [[ $elecE_text == "Run" ]]; then
 	elecE=12
@@ -351,7 +351,7 @@ copeak_text=`rcnd $RUN_NUMBER coherent_peak | awk '{print $1}'`
 if [[ "$COHERENT_PEAK" != "rcdb" && "$polarization_angle" == "-1.0" ]]; then
 copeak=$COHERENT_PEAK
 else
-	if [[ "$COHERENT_PEAK" != "rcdb" || "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" ]]; then
+	if [[ "$COHERENT_PEAK" != "rcdb" || "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" ]]; then
     	copeak=$COHERENT_PEAK
 	elif [[ $copeak_text == "Run" ]]; then
 		copeak=9
@@ -372,7 +372,7 @@ fi
 export COHERENT_PEAK=$copeak
 echo "Coherent peak set..."
 
-if [[ "$VERSION" != "mc" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_workfest2018" && "$COHERENT_PEAK" == "rcdb" ]]; then
+if [[ "$VERSION" != "mc" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" && "$VERSION" != "mc_workfest2018" && "$COHERENT_PEAK" == "rcdb" ]]; then
 	echo "error in requesting rcdb for the coherent peak while not using variation=mc"
 	echo "something went wrong with initialization"
 	exit 1
@@ -381,7 +381,7 @@ fi
 export eBEAM_ENERGY=$elecE
 echo "eBEAM energy set..."
 
-if [[ "$VERSION" != "mc" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_workfest2018" && "$eBEAM_ENERGY" == "rcdb" ]]; then
+if [[ "$VERSION" != "mc" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" && "$VERSION" != "mc_workfest2018" && "$eBEAM_ENERGY" == "rcdb" ]]; then
 	echo "error in requesting rcdb for the electron beam energy and not using variation=mc"
 	echo "something went wrong with initialization"
 	exit 1
@@ -421,7 +421,7 @@ echo "Collimator size set..."
 
 BGRATE_toUse=$BGRATE
 
-if [[ "$BGRATE" != "rcdb" || "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" ]]; then
+if [[ "$BGRATE" != "rcdb" || "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" ]]; then
     BGRATE_toUse=$BGRATE
 else
 	if [[ $BGTAGONLY_OPTION == "1" || $BKGFOLDSTR == "BeamPhotons" ]]; then
