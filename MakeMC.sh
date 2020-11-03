@@ -133,6 +133,8 @@ shift
 export GEANT_VERTEXT_AREA=$1
 shift
 export GEANT_VERTEXT_LENGTH=$1
+shift
+export MCSMEAR_NOTAG=$1
 
 export USER_BC=`which bc`
 export USER_PYTHON=`which python`
@@ -1366,6 +1368,10 @@ fi
 		MCSMEAR_Flags="$MCSMEAR_Flags"" -T"
 	fi
 	
+	if [[ "$MCSMEAR_NOTAG" == "1" ]]; then
+			MCSMEAR_Flags="$MCSMEAR_Flags"" -t"
+	fi
+
 	echo $RECON and $SMEAR
 	
 	#if [[ "$RANDBGTAG" != "none" ]]; then
