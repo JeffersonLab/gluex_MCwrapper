@@ -660,7 +660,7 @@ fi
 
 recon_pre=`echo $CUSTOM_PLUGINS | cut -c1-4`
 jana_config_file=`echo $CUSTOM_PLUGINS | sed -r 's/^.{5}//'`
-
+echo "RECO PREFIX:  " $recon_pre
 if [[ $recon_pre == "file" ]]; then
 	if [[ -f $jana_config_file ]]; then
 	echo "gathering jana config file"

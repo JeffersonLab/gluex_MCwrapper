@@ -481,7 +481,7 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
 
         RunNumber=str(runList[0][0])#str(order["RunNumLow"])
     
-
+    #if(order["ReactionLines"][0:5]=="file:")
     #if order["RunNumLow"] != order["RunNumHigh"] :
     #    RunNumber = RunNumber + "-" + str(order["RunNumHigh"])
 
@@ -901,6 +901,11 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
         MCconfig_file.write("FLUX_TO_GEN=cobrems"+"\n")
     elif str(order["Exp"]) == "JEF":
         MCconfig_file.write("VARIATION=mc_JEF"+"\n")
+        MCconfig_file.write("FLUX_TO_GEN=cobrems"+"\n")
+        MCconfig_file.write("eBEAM_ENERGY=11.6"+"\n")
+        MCconfig_file.write("eBEAM_CURRENT=0.35"+"\n")
+        MCconfig_file.write("RADIATOR_THICKNESS=50.e-06"+"\n")
+        MCconfig_file.write("COHERENT_PEAK=8.6"+"\n")
 
     splitlist=order["OutputLocation"].split("/")
     MCconfig_file.write("WORKFLOW_NAME="+splitlist[len(splitlist)-2]+"\n")
@@ -956,14 +961,25 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
         MCconfig_file.write("RCDB_QUERY="+order["RCDBQuery"]+"\n")
 
     if(order["ReactionLines"] != ""):
-        jana_config_file=open("/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config","w")
-        janaplugins="PLUGINS danarest,monitoring_hists,mcthrown_tree"
-        if(order["ReactionLines"]):
-            janaplugins+=",ReactionFilter\n"+order["ReactionLines"]
+        if(order["ReactionLines"][0:5] == "file:"):
+            jana_config_file=order["ReactionLines"][5:]
+            print("scp "+jana_config_file+" "+"/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config")
+            subprocess.call("scp "+"tbritton@ifarm1801-ib:"+jana_config_file+" "+"/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config",shell=True)
+            update_str="Update Project Set ReactionLines='file:/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config' where ID="+str(order["ID"])
+            print(update_str)
+            curs.execute(update_str)
+            conn.commit()
         else:
-            janaplugins+="\n"
-        jana_config_file.write(janaplugins)
-        jana_config_file.close()
+            jana_config_file=open("/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config","w")
+            janaplugins="PLUGINS danarest,monitoring_hists,mcthrown_tree"
+            if(order["ReactionLines"]):
+                janaplugins+=",ReactionFilter\n"+order["ReactionLines"]
+            else:
+                janaplugins+="\n"
+            jana_config_file.write(janaplugins)
+            jana_config_file.close()
+
+
         MCconfig_file.write("CUSTOM_PLUGINS=file:/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config\n")
 
     
@@ -1018,7 +1034,11 @@ def WritePayloadConfigString(order,foundConfig):
         config_str+="FLUX_TO_GEN=cobrems"+"\n"
     elif str(order["Exp"]) == "JEF":
         config_str+="VARIATION=mc_JEF"+"\n"
-        
+        config_str+="FLUX_TO_GEN=cobrems"+"\n"
+        config_str+="eBEAM_ENERGY=11.6"+"\n"
+        config_str+="eBEAM_CURRENT=0.35"+"\n"
+        config_str+="RADIATOR_THICKNESS=50.e-06"+"\n"
+        config_str+="COHERENT_PEAK=8.6"+"\n"    
 
     splitlist=order["OutputLocation"].split("/")
     config_str+="WORKFLOW_NAME="+splitlist[len(splitlist)-2]+"\n"
@@ -1074,14 +1094,15 @@ def WritePayloadConfigString(order,foundConfig):
         config_str+="RCDB_QUERY="+order["RCDBQuery"]+"\n"
 
     if(order["ReactionLines"] != ""):
-        #jana_config_file=open("/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config","w")
-        janaplugins="PLUGINS danarest,monitoring_hists,mcthrown_tree"
-        if(order["ReactionLines"]):
-            janaplugins+=",ReactionFilter\n"+order["ReactionLines"]
-        else:
-            janaplugins+="\n"
-        #jana_config_file.write(janaplugins)
-        #jana_config_file.close()
+        if(order["ReactionLines"][0:5] != "file:"):
+            #jana_config_file=open("/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config","w")
+            janaplugins="PLUGINS danarest,monitoring_hists,mcthrown_tree"
+            if(order["ReactionLines"]):
+                janaplugins+=",ReactionFilter\n"+order["ReactionLines"]
+            else:
+                janaplugins+="\n"
+            #jana_config_file.write(janaplugins)
+            #jana_config_file.close()
         config_str+="CUSTOM_PLUGINS=file:/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config\n"
 
     

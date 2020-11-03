@@ -637,7 +637,7 @@ endif
 
 set recon_pre=`echo $CUSTOM_PLUGINS | cut -c1-4`
 set jana_config_file=`echo $CUSTOM_PLUGINS | sed -r 's/^.{5}//'`
-
+echo "RECO PREFIX:  " $recon_pre
 if ( $recon_pre == "file" ) then
 	if ( -f $jana_config_file ) then
     	cp $jana_config_file ./jana_config.cfg

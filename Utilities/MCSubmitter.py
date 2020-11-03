@@ -98,15 +98,15 @@ def WritePayloadConfig(order,foundConfig,batch_system):
         MCconfig_file.write("RCDB_QUERY="+order["RCDBQuery"]+"\n")
 
     if(order["ReactionLines"] != ""):
-
-        jana_config_file=open("/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config","w")
-        janaplugins="PLUGINS danarest,monitoring_hists,mcthrown_tree"
-        if(order["ReactionLines"]):
-            janaplugins+=",ReactionFilter\n"+order["ReactionLines"]
-        else:
-            janaplugins+="\n"
-        jana_config_file.write(janaplugins)
-        jana_config_file.close()
+        if(order["ReactionLines"][0:5] != "file:"):
+            jana_config_file=open("/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config","w")
+            janaplugins="PLUGINS danarest,monitoring_hists,mcthrown_tree"
+            if(order["ReactionLines"]):
+                janaplugins+=",ReactionFilter\n"+order["ReactionLines"]
+            else:
+                janaplugins+="\n"
+            jana_config_file.write(janaplugins)
+            jana_config_file.close()
 
 
         if batch_system == "OSG":

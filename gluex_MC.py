@@ -376,7 +376,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
         if DATA_OUTPUT_BASE_DIR == "/lustre/expphy/cache/halld/halld-scratch/REQUESTED_MC/wmcginle_phi_eta_gamma_more2_20190806093041am/":
                 f.write("request_memory = 5.0GB"+"\n")
         else:
-                f.write("request_memory = 2.0GB"+"\n")
+                f.write("request_memory = 4.0GB"+"\n")
         #f.write("transfer_input_files = "+ENVFILE+"\n")
         f.write("transfer_input_files = "+SCRIPT_TO_RUN+", "+ENVFILE+additional_passins+"\n")
         f.write("transfer_output_files = "+str(RUNNUM)+"_"+str(FILENUM)+"\n")
