@@ -128,6 +128,8 @@ shift
 setenv GEANT_VERTEXT_AREA $1
 shift
 setenv GEANT_VERTEXT_LENGTH $1
+shift
+setenv MCSMEAR_NOTAG $1
 
 setenv USER_BC `which bc`
 setenv USER_PYTHON `which python`
@@ -1356,7 +1358,10 @@ endif
 			set MCSMEAR_Flags="$MCSMEAR_Flags"" -T"
 		endif
 
-		
+		if ( "$MCSMEAR_NOTAG" == "1" ) then
+			set MCSMEAR_Flags="$MCSMEAR_Flags"" -t"
+		endif
+
 		if ( !("$GENR" == "0" && "$GEANT" == "0" && "$SMEAR" == "0" ) ) then
 		echo "RUNNING MCSMEAR"
 		if ( "$GENR" == "0" && "$GEANT" == "0" ) then
