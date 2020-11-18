@@ -515,7 +515,7 @@ isGreater=1
 isGreater=`echo $GEN_MAX_ENERGY'>'$eBEAM_ENERGY | $USER_BC -l`
 #echo $isGreater
 #echo "$isGreater"
-if [[ "$isGreater" == "1"  ]]; then 
+if [[ "$isGreater" == "1" && "$eBEAM_ENERGY" != "rcdb" ]]; then 
 echo "something went wrong with initialization"
 echo "Error: Requested Max photon energy $GEN_MAX_ENERGY is above the electron beam energy $eBEAM_ENERGY!"
 exit 1
