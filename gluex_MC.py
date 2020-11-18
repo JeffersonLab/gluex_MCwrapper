@@ -929,16 +929,22 @@ def main(argv):
                 elif str(parts[0]).upper()=="RECON_CALIBTIME" :
                         RECON_CALIBTIME=rm_comments[0].strip()
                 elif str(parts[0]).upper()=="VARIATION":
-                        #print parts
+                        #print(parts)
                         #print rm_comments
-                        if ( len(parts)>2 ) :
-                                VERSION=str(parts[1]).split("calibtime")[0].split("#")[0].strip()
-                                CALIBTIME=str(parts[2]).split("#")[0].strip()
+                        recomb="=".join(parts)
+                        print(recomb)
+                        space_parts=recomb.split(" ")
+                        if ( len(space_parts)==2 ) :
+                                VERSION=space_parts[0].split("=")[1] #str(parts[1]).split("calibtime")[0].split("#")[0].strip()
+                                CALIBTIME=space_parts[1].split("=")[1] #str(parts[2]).split("#")[0].strip()
+                        elif ( len(space_parts)==1):
+                                VERSION=space_parts[0].split("=")[1]
                         else:
-                                VERSION=rm_comments[0].strip()
+                                print("VARIATION improperly set and is not parseable.  Please configure the VARIATION properly in",CONFIG_FILE)
+                                exit(1)
                         
-                        print("ver/calib:",VERSION,CALIBTIME)
-                        if VERSION=="" or (CALIBTIME != "notime" and not str(CALIBTIME[0]).isnumeric()) or len(VERSION.split(" ")) != 1:
+                        #print("ver/calib:",VERSION,CALIBTIME[0])
+                        if VERSION=="" or len(VERSION.split(" ")) != 1 or CALIBTIME=="timegoeshere": #or (CALIBTIME != "notime" and not (CALIBTIME[0]).isnumeric())
                                 print("VARIATION improperly set.  Please configure the VARIATION properly in",CONFIG_FILE)
                                 exit(1)
 
