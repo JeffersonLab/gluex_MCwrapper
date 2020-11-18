@@ -858,7 +858,7 @@ def main(argv):
                 elif str(parts[0]).upper()=="GENERATOR_CONFIG" :
                         GENCONFIG=rm_comments[0].strip()
                         if len(GENCONFIG.split(" ")) != 1:
-                                print(GENCONFIG,"is an invalid generator config file, exiting")
+                                print(GENCONFIG,"is an invalid GENERATOR_CONFIG parameter. Please fix in",CONFIG_FILE,"exiting...")
                                 exit(1)
                 elif str(parts[0]).upper()=="GENERATOR_POSTPROCESS":
                         WHOLEPOST=rm_comments[0].strip()
@@ -937,8 +937,8 @@ def main(argv):
                         else:
                                 VERSION=rm_comments[0].strip()
                         
-                        if VERSION=="":
-                                print("Empty version found.  Please configure the VARIATION properly in",CONFIG_FILE)
+                        if VERSION=="" or (CALIBTIME != "notime" and not str(CALIBTIME[0]).isnumeric()):
+                                print("VARIATION improperly set.  Please configure the VARIATION properly in",CONFIG_FILE)
                                 exit(1)
 
                 elif str(parts[0]).upper()=="CCDBSQLITEPATH":
