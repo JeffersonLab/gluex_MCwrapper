@@ -937,6 +937,7 @@ def main(argv):
                         else:
                                 VERSION=rm_comments[0].strip()
                         
+                        print("ver/calib:",VERSION,CALIBTIME)
                         if VERSION=="" or (CALIBTIME != "notime" and not str(CALIBTIME[0]).isnumeric()):
                                 print("VARIATION improperly set.  Please configure the VARIATION properly in",CONFIG_FILE)
                                 exit(1)
