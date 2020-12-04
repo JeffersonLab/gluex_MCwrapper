@@ -154,7 +154,7 @@ flength_count=$((`echo $FILE_NUMBER | wc -c` - 1))
 
 export XRD_RANDOMS_URL=root://sci-xrootd.jlab.org//osgpool/halld/
 
-if [[ "$MCWRAPPER_RUN_LOCATION" == "JLAB" ]]; then
+if [[ "$MCWRAPPER_RUN_LOCATION" == "JLAB" || `hostname` == *'.jlab.org'* ]]; then
 	export XRD_RANDOMS_URL=root://sci-xrootd-ib.qcd.jlab.org//osgpool/halld/
 	export RUNNING_DIR="./"
 fi

@@ -152,7 +152,7 @@ endif
 
 setenv XRD_RANDOMS_URL root://sci-xrootd.jlab.org//osgpool/halld/
 
-if ( "$MCWRAPPER_RUN_LOCATION" == "JLAB" ) then
+if ( "$MCWRAPPER_RUN_LOCATION" == "JLAB" || `hostname` =~ '*.jlab.org' ) then
 	setenv XRD_RANDOMS_URL root://sci-xrootd-ib.qcd.jlab.org//osgpool/halld/
 	setenv RUNNING_DIR "./"
 endif
