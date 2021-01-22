@@ -976,14 +976,20 @@ if ( "$GENR" != "0" ) then
 		rm flux_*
 		mv *.ascii $STANDARD_NAME.ascii
 		echo $MCGEN_Translator
-		if ( "$MCGEN_Translator" == "\!Translator:ppbar" ) then
-		echo GEN2HDDM_ppbar -r$RUN_NUMBER $STANDARD_NAME.ascii
-		GEN2HDDM_ppbar -r$RUN_NUMBER $STANDARD_NAME.ascii
-		else if ( "$MCGEN_Translator" == "\!Translator:lamlambar" ) then
-		GEN2HDDM_lamlambar -r$RUN_NUMBER $STANDARD_NAME.ascii
-		else if ( "$MCGEN_Translator" == "\!Translator:jpsi" ) then
-		GEN2HDDM_jpsi -r$RUN_NUMBER $STANDARD_NAME.ascii
-		endif
+
+		set translator = ($MCGEN_Translator:as/:/ /)[1] 
+
+		echo GEN2HDDM_$translator -r$RUN_NUMBER $STANDARD_NAME.ascii
+
+		GEN2HDDM_$translator -r$RUN_NUMBER $STANDARD_NAME.ascii
+		#if ( "$MCGEN_Translator" == "\!Translator:ppbar" ) then
+		#
+		#GEN2HDDM_ppbar -r$RUN_NUMBER $STANDARD_NAME.ascii
+		#else if ( "$MCGEN_Translator" == "\!Translator:lamlambar" ) then
+		#GEN2HDDM_lamlambar -r$RUN_NUMBER $STANDARD_NAME.ascii
+		#else if ( "$MCGEN_Translator" == "\!Translator:jpsi" ) then
+		#GEN2HDDM_jpsi -r$RUN_NUMBER $STANDARD_NAME.ascii
+		#endif
 
     	set generator_return_code=$status
 	else if ( "$GENERATOR" == "gen_2pi_amp" ) then
