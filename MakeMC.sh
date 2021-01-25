@@ -988,7 +988,7 @@ if [[ "$GENR" != "0" ]]; then
 
 	mv *.ascii $STANDARD_NAME.ascii
 
-	Translator=(${MCGEN_Translator//:/ })[1]
+	Translator=${MCGEN_Translator##!Translator:}
 
 	GEN2HDDM_$Translator -r$RUN_NUMBER $STANDARD_NAME.ascii
 	#if [[ "$MCGEN_Translator" == "\!Translator:ppbar" ]]; then

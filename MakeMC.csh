@@ -977,7 +977,8 @@ if ( "$GENR" != "0" ) then
 		mv *.ascii $STANDARD_NAME.ascii
 		echo $MCGEN_Translator
 
-		set translator = ($MCGEN_Translator:as/:/ /)[1] 
+		set trans_parts = ($MCGEN_Translator:as/:/ /)
+		set translator = $trans_parts[2]
 
 		echo GEN2HDDM_$translator -r$RUN_NUMBER $STANDARD_NAME.ascii
 
