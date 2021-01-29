@@ -45,11 +45,8 @@ except:
         pass
 
 MCWRAPPER_VERSION="2.5.2"
-<<<<<<< HEAD
 MCWRAPPER_DATE="1/22/21"
-=======
-MCWRAPPER_DATE="11/18/20"
->>>>>>> c425b3701c50a2809c74d8a76890415e1a2d38fe
+
 
 #====================================================
 #Takes in a few pertinant pieces of info.  Creates (if needed) a swif workflow and adds a job to it.
