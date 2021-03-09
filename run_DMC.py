@@ -22,6 +22,7 @@
 ##########################################################################################################################
 from os import environ
 import argparse
+import configparser
 import os.path
 import rcdb
 import ccdb
@@ -44,8 +45,8 @@ try:
 except:
         pass
 
-MCWRAPPER_VERSION="2.5.1"
-MCWRAPPER_DATE="09/22/20"
+MCWRAPPER_VERSION="3.0.0a"
+MCWRAPPER_DATE="xx/xx/21"
 
 #====================================================
 #Takes in a few pertinant pieces of info.  Creates (if needed) a swif workflow and adds a job to it.
@@ -706,260 +707,147 @@ def main(argv):
         print( "Thomas Britton "+str(MCWRAPPER_DATE))
         print( "*********************************")
 
-        #load all argument passed in and set default options
-        VERBOSE    = False
-
-        TAGSTR="I_dont_have_one"
-
-        DATA_OUTPUT_BASE_DIR    = "UNKNOWN_LOCATION"#your desired output location
-        RCDB_QUERY=""
-       
-        ENVFILE = "my-environment-file" #change this to your own environment file
-        ANAENVFILE = "no_Analysis_env"
-
-        GENERATOR = "genr8"
-        GENCONFIG = "NA"
-
-        GENPOST="No"
-        GENPOSTCONFIG="Default"
-
-        eBEAM_ENERGY="rcdb"
-        eBEAM_CURRENT="rcdb"
-        COHERENT_PEAK="rcdb"
-        FLUX_TO_GEN="ccdb"
-        FLUX_HIST="unset"
-        POL_TO_GEN="0.4"
-        POL_HIST="unset"
-        MIN_GEN_ENERGY="3"
-        MAX_GEN_ENERGY="12"
-        RADIATOR_THICKNESS="rcdb"
-        BGRATE="rcdb" #GHz
-        BGTAGONLY="0"
-        RUNNING_DIR="./"
-        ccdbSQLITEPATH="no_sqlite"
-        rcdbSQLITEPATH="no_sqlite"
-
-        GEANTVER = 4        
-        VERTEX_AREA="ccdb"
-        VERTEX_LENGTH="29.5"
-        BGFOLD="DEFAULT"
-        RANDOM_NUM_EVT=-1
-        RANDBGTAG="none"
-
-        CUSTOM_MAKEMC="DEFAULT"
-        CUSTOM_GCONTROL="0"
-        CUSTOM_PLUGINS="None"
-
-        BATCHSYS="NULL"
-        QUEUENAME="DEF"
-        #-------SWIF ONLY-------------
+        #set up variables and parse config file        
+        #-------BATCH ONLY-------------
         # PROJECT INFO
-        PROJECT    = "gluex"          # http://scicomp.jlab.org/scicomp/#/projects
-        TRACK      = "simulation"     # https://scicomp.jlab.org/docs/batch_job_tracks
         CONDOR_MAGIC = []
-        # RESOURCES for swif jobs
-        NCORES     = "8"               # Number of CPU cores
-        DISK       = "10GB"            # Max Disk usage
-        RAM        = "20GB"            # Max RAM usage
-        TIMELIMIT  = "300minutes"      # Max walltime
-        OS         = "centos77"        # Specify CentOS65 machines
-
-        PROJECT_ID=0 #internally used when needed
-        IS_SUBMITTER=0
-        #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        RECON_CALIBTIME="notime"
-        NOSECONDARIES=0
-        NOSIPMSATURATION=0
         MYJOB=[]
         LOCATION="auto"
         
-        #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        #loop over config file and set the "parameters"
-        #The following could be replaced with a better built in parser
-        #At least switch to a switch if you have time!
-        for line in CONFIG_FILE:
-                if len(line)==0:
-                       continue
-                if line[0]=="#":
-                       continue
-
-                parts=line.split("#")[0].split("=",1)
-                #print parts
-                if len(parts)==1:
-                        #print "Warning! No Sets given"
-                        continue
-                
-                if len(parts)>2 and str(parts[0]).upper() != "VARIATION" and str(parts[0]).upper() != "RCDB_QUERY":
+        config = configparser.ConfigParser(delimiters='=', comment_prefixes='#', inline_comment_prefixes='#')
+        config.optionxform=str #to preserve case of keys in config file
+        config.read(CONFIG_FILE.name)
+        
+        for key in config['setup']:
+                if '=' in config['setup'][key] and key != "VARIATION" and key != "RCDB_QUERY":
                         print( "warning! I am going to have a really difficult time with:")
-                        print( line)
+                        print( key, config['setup'][key] )
                         print( "I'm going to just ignore it and hope it isn't a problem....")
-                        continue
-                        
-                        
-                rm_comments=[]
-                if len(parts)>1:
-                        rm_comments=parts[len(parts)-1].split("#")
-                        
-                j=-1
-                for i in parts:
-                        j=j+1
-                        i=i.strip()
-                        parts[j]=i
-                
-                if str(parts[0]).upper()=="VERBOSE" :
-                        if rm_comments[0].strip().upper()=="TRUE" or rm_comments[0].strip() == "1":
-                                VERBOSE=True
-                elif str(parts[0]).upper()=="PROJECT" :
-                        PROJECT=rm_comments[0].strip()
-                elif str(parts[0]).upper()=="CONDOR_MAGIC" :
-                        #print("detected magic")
-                        CONDOR_MAGIC.append(rm_comments[0].strip())
-                elif str(parts[0]).upper()=="TRACK" :
-                        TRACK=rm_comments[0].strip()
-                elif str(parts[0]).upper()=="NCORES" :
-                        NCORES=rm_comments[0].strip()
-                elif str(parts[0]).upper()=="DISK" :
-                        DISK=rm_comments[0].strip()
-                elif str(parts[0]).upper()=="RAM" :
-                        RAM=rm_comments[0].strip()
-                elif str(parts[0]).upper()=="TIMELIMIT" :
-                        TIMELIMIT=rm_comments[0].strip()
-                elif str(parts[0]).upper()=="OS" :
-                        OS=rm_comments[0].strip()
-                elif str(parts[0]).upper()=="DATA_OUTPUT_BASE_DIR" :
-                        DATA_OUTPUT_BASE_DIR=rm_comments[0].strip()
-                elif str(parts[0]).upper()=="ENVIRONMENT_FILE" :
-                        ENVFILE=rm_comments[0].strip()
-                elif str(parts[0]).upper()=="ANA_ENVIRONMENT_FILE" :
-                        ANAENVFILE=rm_comments[0].strip()
-                elif str(parts[0]).upper()=="GENERATOR" :
-                        GENERATOR=rm_comments[0].strip()
-                elif str(parts[0]).upper()=="GEANT_VERSION" :
-                        GEANTVER=rm_comments[0].strip()
-                elif str(parts[0]).upper()=="VERTEX_VOLUME" :
-                        WHOLEVERT=rm_comments[0].strip()
-                        WHOLEVERT_split=WHOLEVERT.split(":")
-                        
-                        if (len(WHOLEVERT_split)==1):
-                                VERTEX_LENGTH=WHOLEVERT_split[0]
-                        elif (len(WHOLEVERT_split)==2):
-                                VERTEX_AREA=WHOLEVERT_split[0]
-                                VERTEX_LENGTH=WHOLEVERT_split[1]
-                        
-                elif str(parts[0]).upper()=="WORKFLOW_NAME" :
-                        WORKFLOW=rm_comments[0].strip()
-                        if WORKFLOW.find(';')!=-1 or WORKFLOW.find('&')!=-1 :#THIS CHECK HELPS PROTECT AGAINST A POTENTIAL HACK IN WORKFLOW NAMES
-                                print( "Nice try.....you cannot use ; or & in the name")
-                                exit(1)
-                elif str(parts[0]).upper()=="GENERATOR_CONFIG" :
-                        GENCONFIG=rm_comments[0].strip()
-                elif str(parts[0]).upper()=="GENERATOR_POSTPROCESS":
-                        WHOLEPOST=rm_comments[0].strip()
-                        WHOLEPOST_PARTS=WHOLEPOST.split(":")
-                        GENPOST=WHOLEPOST_PARTS[0]
+        
+        VERBOSE = config.getboolean('setup','VERBOSE',fallback=False)
+        #----------SWIF-------------------------------------------------------------------------------------------------------
+        PROJECT = config.get('setup','PROJECT',fallback='gluex')           # http://scicomp.jlab.org/scicomp/#/projects
+        TRACK = config.get('setup','TRACK',fallback='simulation')          # https://scicomp.jlab.org/docs/batch_job_tracks
+        NCORES = config.get('setup','NCORES',fallback='8')                 # Number of CPU cores
+        DISK = config.get('setup','DISK',fallback='10GB')                  # Max Disk usage
+        RAM = config.get('setup','RAM',fallback='20GB')                    # Max RAM usage
+        TIMELIMIT = config.get('setup','TIMELIMIT',fallback='300minutes')  # Max walltime
+        OS = config.get('setup','OS',fallback='centos77')                  # Specify CentOS77 machines
+        PROJECT_ID=0                                                       #internally used when needed
+        IS_SUBMITTER=0
+        batch_sys_parts=config.get('setup','BATCH_SYSTEM',fallback='NULL:DEF').split(":")
+        BATCHSYS=batch_sys_parts[0]
+        if len(batch_sys_parts) > 1 :
+                QUEUENAME=batch_sys_parts[1]
+        else:
+                QUEUENAME="DEF"
+        #---------------------------------------------------------------------------------------------------------------------
+        RCDB_QUERY = config.get('setup','RCDB_QUERY',fallback='')
+        DATA_OUTPUT_BASE_DIR = config.get('setup','DATA_OUTPUT_BASE_DIR',fallback='UNKNOWN_LOCATION')
+        ENVFILE = config.get('setup','ENVIRONMENT_FILE',fallback='my-environment-file')
+        ANAENVFILE = config.get('setup','ANA_ENVIRONMENT_FILE',fallback='no_Analysis_env')
+        GENERATOR = config.get('setup','GENERATOR',fallback='genr8')
+        GEANTVER = config.get('setup','GEANT_VERSION',fallback='4')
+        WORKFLOW = config.get('setup','WORKFLOW_NAME',fallback='')
+        if WORKFLOW.find(';')!=-1 or WORKFLOW.find('&')!=-1 :#THIS CHECK HELPS PROTECT AGAINST A POTENTIAL HACK IN WORKFLOW NAMES
+                print( "Nice try.....you cannot use ; or & in the name")
+                exit(1)
+        GENCONFIG = config.get('setup','GENERATOR_CONFIG',fallback='NA')
+        CUSTOM_MAKEMC = config.get('setup','CUSTOM_MAKEMC',fallback='DEFAULT')
+        CUSTOM_GCONTROL = config.get('setup','CUSTOM_GCONTROL',fallback='0')
+        eBEAM_ENERGY = config.get('setup','EBEAM_ENERGY',fallback='rcdb')
+        eBEAM_CURRENT = config.get('setup','EBEAM_CURRENT',fallback='rcdb')
+        COHERENT_PEAK = config.get('setup','COHERENT_PEAK',fallback='rcdb')
+        RADIATOR_THICKNESS = config.get('setup','RADIATOR_THICKNESS',fallback='rcdb')
+        MIN_GEN_ENERGY = config.get('setup','GEN_MIN_ENERGY',fallback='3')
+        MAX_GEN_ENERGY = config.get('setup','GEN_MAX_ENERGY',fallback='12')
+        TAGSTR = config.get('setup','TAG',fallback='I_dont_have_one')
+        CUSTOM_PLUGINS = config.get('setup','CUSTOM_PLUGINS',fallback='None')
+        RUNNING_DIR = config.get('setup','RUNNING_DIRECTORY',fallback='./')
+        RECON_CALIBTIME = config.get('setup','RECON_CALIBTIME',fallback='notime')
+        ccdbSQLITEPATH = config.get('setup','CCDBSQLITEPATH',fallback='no_sqlite')
+        rcdbSQLITEPATH = config.get('setup','RCDBSQLITEPATH',fallback='no_sqlite')
+        NOSECONDARIES = config.get('setup','NOSECONDARIES',fallback='0')
+        NOSIPMSATURATION = config.get('setup','NOSIPMSATURATION',fallback='0')
+        BGFOLD="DEFAULT"
+        BGTAGONLY="0"
+        RANDBGTAG="none"
+        BGRATE="rcdb" #GHz
+        bkg_parts=config.get('setup','BKG',fallback='none').split("+")
+        for part in bkg_parts:
+                subparts=part.split(":")
+                if len(subparts)>2:
+                        print( "Error in BKG Parsing: "+part)
+                        return
+                if subparts[0].upper() == "TAGONLY":
+                        BGTAGONLY=1
+                        if BGFOLD == "DEFAULT":
+                                BGFOLD="TagOnly"
+                        if len(subparts)==2:
+                                BGRATE=subparts[1]
 
-                        if(len(WHOLEPOST_PARTS)==2):
-                                GENPOSTCONFIG=WHOLEPOST_PARTS[1]
-                        elif(len(WHOLEPOST_PARTS)==1):
-                                GENPOST=WHOLEPOST
-
-                elif str(parts[0]).upper()=="CUSTOM_MAKEMC" :
-                        CUSTOM_MAKEMC=rm_comments[0].strip()
-                elif str(parts[0]).upper()=="CUSTOM_GCONTROL" :
-                        CUSTOM_GCONTROL=rm_comments[0].strip()
-                elif str(parts[0]).upper()=="BKG" :
-                        bkg_parts=rm_comments[0].strip().split("+")
-                        #print bkg_parts
-                        for part in bkg_parts:
-                                subparts=part.split(":")
-                                if len(subparts)>2:
-                                        print( "Error in BKG Parsing: "+part)
-                                        return
-                                if subparts[0].upper() == "TAGONLY":
-                                        BGTAGONLY=1
-                                        if BGFOLD == "DEFAULT":
-                                                BGFOLD="TagOnly"
-                                        if len(subparts)==2:
-                                                BGRATE=subparts[1]
-
-                                elif subparts[0].upper() == "BEAMPHOTONS":
-                                        #print subparts
-                                        BGFOLD=subparts[0]
-                                        if len(subparts)==2:
-                                                BGRATE=subparts[1]
-                                elif subparts[0].upper() == "RANDOM" or subparts[0].upper() == "DEFAULT":
-                                        BGFOLD=subparts[0]
-                                        if len(subparts)==2:
-                                                RANDBGTAG=subparts[1]
-                                else:
-                                        BGFOLD=part
-
-                elif str(parts[0]).upper()=="EBEAM_ENERGY" :
-                        eBEAM_ENERGY=rm_comments[0].strip()
-                elif str(parts[0]).upper()=="EBEAM_CURRENT" :
-                        eBEAM_CURRENT=rm_comments[0].strip()
-                elif str(parts[0]).upper()=="COHERENT_PEAK" :
-                        COHERENT_PEAK=rm_comments[0].strip()
-                elif str(parts[0]).upper()=="RADIATOR_THICKNESS" :
-                        RADIATOR_THICKNESS=rm_comments[0].strip()
-                elif str(parts[0]).upper()=="GEN_MIN_ENERGY" :
-                        MIN_GEN_ENERGY=rm_comments[0].strip()
-                elif str(parts[0]).upper()=="GEN_MAX_ENERGY" :
-                        MAX_GEN_ENERGY=rm_comments[0].strip()
-                elif str(parts[0]).upper()=="TAG" :
-                        TAGSTR=rm_comments[0].strip()
-                elif str(parts[0]).upper()=="CUSTOM_PLUGINS" :
-                        CUSTOM_PLUGINS=rm_comments[0].strip()
-                elif str(parts[0]).upper()=="BATCH_SYSTEM" :
-                        batch_sys_parts=rm_comments[0].strip().split(":")
-                        BATCHSYS=batch_sys_parts[0]
-                        if len(batch_sys_parts) > 1 :
-                                QUEUENAME=batch_sys_parts[1]
-                elif str(parts[0]).upper()=="RUNNING_DIRECTORY" :
-                        RUNNING_DIR=rm_comments[0].strip()
-                elif str(parts[0]).upper()=="RECON_CALIBTIME" :
-                        RECON_CALIBTIME=rm_comments[0].strip()
-                elif str(parts[0]).upper()=="VARIATION":
-                        #print parts
-                        #print rm_comments
-                        if ( len(parts)>2 ) :
-                                VERSION=str(parts[1]).split("calibtime")[0].split("#")[0].strip()
-                                CALIBTIME=str(parts[2]).split("#")[0].strip()
-                        else:
-                                VERSION=rm_comments[0].strip()
-                elif str(parts[0]).upper()=="CCDBSQLITEPATH" :
-                        ccdbSQLITEPATH=rm_comments[0].strip()
-                elif str(parts[0]).upper()=="RCDBSQLITEPATH" :
-                        rcdbSQLITEPATH=rm_comments[0].strip()
-                elif str(parts[0]).upper()=="RCDB_QUERY" :
-                        #print line.split("#")[0].find('=')
-                        query=line.split("#")[0][line.split("#")[0].find('=')+1:]
-                        RCDB_QUERY=query
-                elif str(parts[0]).upper()=="NOSECONDARIES" :
-                        NOSECONDARIES=rm_comments[0].strip()
-                elif str(parts[0]).upper()=="NOSIPMSATURATION" :
-                        NOSIPMSATURATION=rm_comments[0].strip()
-                elif str(parts[0]).upper()=="FLUX_TO_GEN":
-                        fluxbits=rm_comments[0].strip().split(":")
-                        if( len(fluxbits) == 2 ): # use flux histogram file
-                                FLUX_TO_GEN=fluxbits[0]
-                                FLUX_HIST=fluxbits[1]
-                        elif ( len(fluxbits) == 1):
-                                if( str(fluxbits[0]).upper()=="COBREMS"): # COBREM calculation
-					FLUX_TO_GEN="cobrems"
-                elif str(parts[0]).upper()=="POL_TO_GEN":
-                        polbits=rm_comments[0].strip().split(":")
-                        if( len(polbits) == 2 ):
-                                POL_TO_GEN=polbits[0]
-                                POL_HIST=polbits[1]
-                        elif (len(polbits)==1):
-                                POL_TO_GEN=polbits[0]
-				if (FLUX_TO_GEN == "cobrems"):
-					POL_HIST="cobrems"
-
+                elif subparts[0].upper() == "BEAMPHOTONS":
+                        BGFOLD=subparts[0]
+                        if len(subparts)==2:
+                                BGRATE=subparts[1]
+                elif subparts[0].upper() == "RANDOM" or subparts[0].upper() == "DEFAULT":
+                        BGFOLD=subparts[0]
+                        if len(subparts)==2:
+                                RANDBGTAG=subparts[1]
                 else:
-                        print( "unknown config parameter!! "+str(parts[0]))
-                        
+                        BGFOLD=part
+        RANDOM_NUM_EVT=-1
+        WHOLEPOST=config.get('setup','GENERATOR_POSTPROCESS',fallback='No:Default')
+        WHOLEPOST_PARTS=WHOLEPOST.split(":")
+        GENPOST=WHOLEPOST_PARTS[0]
+        if len(WHOLEPOST_PARTS)==2:
+                GENPOSTCONFIG=WHOLEPOST_PARTS[1]
+        elif len(WHOLEPOST_PARTS)==1:
+                GENPOST=WHOLEPOST
+        VERTEX_AREA="ccdb"
+        VERTEX_LENGTH="29.5"
+        WHOLEVERT=config.get('setup','VERTEX_VOLUME',fallback='29.5')
+        WHOLEVERT_split=WHOLEVERT.split(":")
+        if len(WHOLEVERT_split)==1:
+                VERTEX_LENGTH=WHOLEVERT_split[0]
+        elif len(WHOLEVERT_split)==2:
+                VERTEX_AREA=WHOLEVERT_split[0]
+                VERTEX_LENGTH=WHOLEVERT_split[1]
+                
+        CALIBTIME='notime'
+        VERSION=config.get('setup','VARIATION',fallback='')
+        VERSION_PARTS=VERSION.split("calibtime=")
+        if  len(VERSION_PARTS)>1 :
+                VERSION=str(VERSION_PARTS[0]).strip()
+                CALIBTIME=str(VERSION_PARTS[1])
+        
+        FLUX_TO_GEN="ccdb"
+        FLUX_HIST="unset"
+        fluxbits=config.get('setup','FLUX_TO_GEN',fallback='ccdb').split(":")
+        if len(fluxbits) == 2 : # use flux histogram file
+                FLUX_TO_GEN=fluxbits[0]
+                FLUX_HIST=fluxbits[1]
+        elif len(fluxbits) == 1:
+                if str(fluxbits[0]).upper()=="COBREMS": # COBREM calculation
+                        FLUX_TO_GEN="cobrems"
+        
+        POL_TO_GEN="0.4"
+        POL_HIST="unset"
+        polbits=config.get('setup','POL_TO_GEN',fallback='0.4').split(":")
+        if len(polbits) == 2 :
+                POL_TO_GEN=polbits[0]
+                POL_HIST=polbits[1]
+        elif len(polbits)==1:
+                POL_TO_GEN=polbits[0]
+        if FLUX_TO_GEN == "cobrems":
+                POL_HIST="cobrems"
+
+
+        if config.has_section('condor'):
+                for key in config['condor']:
+                        condortemp = key+"="+config['condor'][key]
+                        CONDOR_MAGIC.append(condortemp)
+             
         
         LOG_DIR = DATA_OUTPUT_BASE_DIR  #set LOG_DIR=DATA_OUTPUT_BASE_DIR
         if(GENCONFIG==""):
