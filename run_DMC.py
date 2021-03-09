@@ -979,11 +979,15 @@ def main(argv):
         CLEANSMEAR=int(args.cleanmcsmear)
         CLEANRECON=int(args.cleanrecon)
         BATCHRUN=int(args.batch)
-        NCORES=str(args.numthreads)
-        LOG_DIR=str(args.logdir)
-        PROJECT_ID=str(args.projid)
+        if args.numthreads is not None: #no default set so it overwrites NCORES from config file only if present in command line
+                NCORES=str(args.numthreads)
+        if args.logdir is not None:
+                LOG_DIR=str(args.logdir)
+        if args.projid is not None:
+                PROJECT_ID=str(args.projid)
         SHELL_TO_USE=str(args.shell)
-        IS_SUBMITTER=str(args.submitter)
+        if args.submitter is not None:
+                IS_SUBMITTER=str(args.submitter)
         
         if DATA_OUTPUT_BASE_DIR == "UNKNOWN_LOCATION":
                 print( "I doubt that the system will find "+DATA_OUTPUT_BASE_DIR+" so I am saving you the embarassment and stopping this")
