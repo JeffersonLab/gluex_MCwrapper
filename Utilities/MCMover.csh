@@ -12,7 +12,7 @@ if [[ `ps all -u tbritton | grep MCMover.csh | grep -v grep | wc -l` == 2 ]]; th
     echo "=======================================" >> /osgpool/halld/tbritton/MCWrapper_Logs/MCWrapperMover.log
     echo "moving" >> /osgpool/halld/tbritton/MCWrapper_Logs/MCWrapperMover.log
     input_dir=/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/
-    output_dir=/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/
+    output_dir=tbritton@dtn1902-ib:/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/
     # move slag-like files in the input directory out of the way
     mkdir -pv $input_dir/slag
     echo "Finding in $input_dir to move to SLAG" >> /osgpool/halld/tbritton/MCWrapper_Logs/MCWrapperMover.log

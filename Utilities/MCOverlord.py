@@ -843,8 +843,8 @@ def main(argv):
                 except Exception as e:
                     print("exception")
                     print(e)
-                    #dbcursor.execute("UPDATE MCOverlord SET Status=\"Fail\" where ID="+str(lastid[0]["MAX(ID)"]))
-                    #dbcnx.commit()
+                    dbcursor.execute("UPDATE MCOverlord SET Status=\"Fail\" where ID="+str(lastid[0]["MAX(ID)"]))
+                    dbcnx.commit()
                     break
 
 
