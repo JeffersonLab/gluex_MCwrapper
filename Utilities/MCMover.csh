@@ -12,7 +12,8 @@ if [[ `ps all -u tbritton | grep MCMover.csh | grep -v grep | wc -l` == 2 ]]; th
     echo "=======================================" >> /osgpool/halld/tbritton/MCWrapper_Logs/MCWrapperMover.log
     echo "moving" >> /osgpool/halld/tbritton/MCWrapper_Logs/MCWrapperMover.log
     input_dir=/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/
-    output_dir=tbritton@dtn1902-ib:/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/
+    transfer_node=tbritton@dtn1902-ib
+    output_dir=/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/
     # move slag-like files in the input directory out of the way
     mkdir -pv $input_dir/slag
     echo "Finding in $input_dir to move to SLAG" >> /osgpool/halld/tbritton/MCWrapper_Logs/MCWrapperMover.log
@@ -25,15 +26,18 @@ if [[ `ps all -u tbritton | grep MCMover.csh | grep -v grep | wc -l` == 2 ]]; th
         transArray+=("$REPLY")
     done < <(find $input_dir/ -mindepth 2 -maxdepth 2 -type d -not -name ".*" -print0)
     
-    echo ${transArray[*]} >> /osgpool/halld/tbritton/MCWrapper_Logs/MCWrapperMover.log
+    #echo ${transArray[*]} >> /osgpool/halld/tbritton/MCWrapper_Logs/MCWrapperMover.log
     for dir in ${transArray[@]}
     do
         #echo $dir
         projpath=`echo $dir | awk '{split($0,arr,"REQUESTEDMC_OUTPUT"); print arr[2]}'`
         echo $projpath >> /osgpool/halld/tbritton/MCWrapper_Logs/MCWrapperMover.log
-        mkdir -p $output_dir/$projpath/
-        
-        rsync_command="rsync --progress -pruvt $dir/ $output_dir/$projpath/" #--exclude $input_dir/slag"
+        echo "mkdir -p $output_dir/$projpath/"
+        ssh $transfer_node mkdir -p $output_dir/$projpath/
+
+        dir2=${dir::-1}
+        chmod -R g+w $dir2
+        rsync_command="rsync --progress -pruvt $dir/ $transfer_node:$output_dir/$projpath/" #--exclude $input_dir/slag"
         echo $rsync_command >> /osgpool/halld/tbritton/MCWrapper_Logs/MCWrapperMover.log
         status="255"
         while [ "$status" -eq "255" ]
@@ -50,11 +54,14 @@ if [[ `ps all -u tbritton | grep MCMover.csh | grep -v grep | wc -l` == 2 ]]; th
         #    break
         #fi
     done
-    echo "cd $output_dir" >> /osgpool/halld/tbritton/MCWrapper_Logs/MCWrapperMover.log
-    cd $output_dir
+    #echo "cd $output_dir" >> /osgpool/halld/tbritton/MCWrapper_Logs/MCWrapperMover.log
+    #cd $output_dir
     # make list of files in the output directory
-    echo "pwd" $PWD >> /osgpool/halld/tbritton/MCWrapper_Logs/MCWrapperMover.log
-    find . -type f | sort > /tmp/output_files_list.txt
+    echo $transfer_node "cd $output_dir;find . -type f | sort > /tmp/output_files_list.txt; scp /tmp/output_files_list.txt tbritton@scosg16-ib:/tmp/output_files_list.txt"
+    ssh $transfer_node "cd $output_dir;find . -type f | sort > /tmp/output_files_list.txt; scp /tmp/output_files_list.txt tbritton@scosg16-ib:/tmp/output_files_list.txt"
+
+    #echo "pwd" $PWD >> /osgpool/halld/tbritton/MCWrapper_Logs/MCWrapperMover.log
+    #find . -type f | sort > /tmp/output_files_list.txt
     echo "cd $input_dir" >> /osgpool/halld/tbritton/MCWrapper_Logs/MCWrapperMover.log
     cd $input_dir
 

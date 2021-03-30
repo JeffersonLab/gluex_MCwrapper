@@ -152,7 +152,7 @@ def checkProjectsForCompletion():
         fulfilledJobs=dbcursor.fetchall()
         #print(fulfilledJobs)
 
-        #print("Jobs fulfilled:",str(len(fulfilledJobs)))
+        print("Jobs fulfilled:",str(len(fulfilledJobs)))
         if(proj["Tested"]==2 or proj["Tested"]==3):
             continue
 
@@ -160,6 +160,10 @@ def checkProjectsForCompletion():
         nullify_list=[]
         
         for job in fulfilledJobs:
+            #print("Data already Verified?",job['DataVerified'])
+            if(job['DataVerified'] !=0 ):
+                continue
+
             STANDARD_NAME=str(job['RunNumber']).zfill(6)+'_'+str(job['FileNumber']).zfill(3)
             if(proj['Generator']!="file:"):
                 STANDARD_NAME=proj['Generator']+'_'+STANDARD_NAME
@@ -181,14 +185,17 @@ def checkProjectsForCompletion():
                 Expected_returned_files.append('hd_root_'+STANDARD_NAME+'.root')
             
             found_AllexpFile=True
+
+            
             for expFile in Expected_returned_files:
                 #print(expFile)
-                
+                #print("checking for",expFile,"@",rootLoc)
                 found=CheckForFile(rootLoc,expFile)
                 if not found:
                     print(expFile+"   NOT FOUND!!!!")
                     found_AllexpFile=False
                     break
+                
             
             if not found_AllexpFile:
                 print("FLAG LAST ATTEMPT AS SPECIAL FAIL 404")
@@ -201,7 +208,11 @@ def checkProjectsForCompletion():
                 dbcursor.execute(Update_q)
                 dbcnx.commit()
                 nullify_list.append(job["ID"]) 
-                
+            else:
+                #print("data has been verified")
+                dataverified_update="Update Jobs Set DataVerified=1 WHERE ID="+str(job["ID"])
+                dbcursor.execute(dataverified_update)
+                dbcnx.commit()
             
         #if len(nullify_list) != 0:
         #    for null in nullify_list:
@@ -504,7 +515,7 @@ def UpdateOutputSize():
             location=Project[0]["FinalDestination"]
 
         try:
-            statuscommand="du -sh --exclude \".*\" --total "+location
+            statuscommand="ssh tbritton@dtn1902 du -sh --exclude \".*\" --total "+location
             print(statuscommand)
             totalSizeStr=subprocess.check_output([statuscommand], shell=True)
             #print "==============="
@@ -726,16 +737,25 @@ def checkOSG(Jobs_List):
                     if ( str(ExitCode) != "0" and str(ExitCode) != "NULL"):
                         #print("CRASHED")
                         std_out_loc=str(JSON_job["Out"])
+                        print(std_out_loc)
                         if( not os.path.isfile(std_out_loc)):
-                            std_out_loc="/cache/halld/gluex_simulations/REQUESTED_MC/"+std_out_loc.split("REQUESTEDMC_OUTPUT")[1]
+                            print("scp tbritton@dtn1902-ib:/cache/halld/gluex_simulations/REQUESTED_MC/"+std_out_loc.split("REQUESTEDMC_OUTPUT")[1]+" "+"/tmp/"+std_out_loc.split("/")[-1])
+                            subprocess.call("scp tbritton@dtn1902-ib:/cache/halld/gluex_simulations/REQUESTED_MC/"+std_out_loc.split("REQUESTEDMC_OUTPUT")[1]+" "+"/tmp/"+std_out_loc.split("/")[-1],shell=True)
+                            std_out_loc="/tmp/"+std_out_loc.split("/")[-1]
                         #print(std_out_loc)
-                        with open(std_out_loc) as stdoutF:
-                            for num,line in enumerate(stdoutF,1):
-                                if "Something went wrong with" in line:
-                                    #print(line)
-                                    splitl=line.strip().split(" ")
-                                    #print(splitl[len(splitl)-1])
-                                    failedProgram=splitl[len(splitl)-1]
+                        
+                        try:
+                            with open(std_out_loc) as stdoutF:
+                                for num,line in enumerate(stdoutF,1):
+                                    if "Something went wrong with" in line:
+                                        #print(line)
+                                        splitl=line.strip().split(" ")
+                                        #print(splitl[len(splitl)-1])
+                                        failedProgram=splitl[len(splitl)-1]
+                        except Exception as e:
+                            print(e)
+                            failedProgram="Unidentified"
+                            pass
                                     
                         
                     failedProgram=failedProgram.replace("(","\(")
@@ -851,7 +871,7 @@ def main(argv):
                     
                     
                     print("CHECKING GLOBALS ON MAIN")
-                    UpdateOutputSize()
+                    #UpdateOutputSize() broken without lustre mounted
                     checkProjectsForCompletion()
                     dbcursor.execute("UPDATE MCOverlord SET EndTime=NOW(), Status=\"Success\" where ID="+str(lastid[0]["MAX(ID)"]))
                     dbcnx.commit()
