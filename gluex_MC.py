@@ -1363,7 +1363,7 @@ def main(argv):
                         print(table)
                         #print len(table)
 
-                        print("Computing flux from CCDB for all runs in the requested range... this may take a minute...")
+                        print("\nComputing flux from CCDB for all runs in the requested range, this may take a minute...\n")
                         fluxes = []
                         flux_sum = 0
                         for runs in table:
@@ -1389,7 +1389,8 @@ def main(argv):
                                 #sum2_trig=sum2_trig+int(((float(runs[1])/float(event_sum))*EVTS)+.5)
                                 num_events_this_run=int(((flux/flux_sum)*EVTS)+.5)
                                 sum2=sum2+int(((flux/flux_sum)*EVTS)+.5)
-                                print(num_events_this_run)
+                                #print(runs[0],num_events_this_run)
+                                #continue
                         
                                 if num_events_this_run == 0:
                                         continue
