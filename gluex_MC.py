@@ -1363,6 +1363,7 @@ def main(argv):
                         print(table)
                         #print len(table)
 
+                        print("Computing flux from CCDB for all runs in the requested range... this may take a minute...")
                         fluxes = []
                         flux_sum = 0
                         for runs in table:
