@@ -44,6 +44,8 @@ from email.message import EmailMessage
 from multiprocessing import Process
 import random
 import pipes
+import random
+
 
 dbhost = "hallddb.jlab.org"
 dbuser = 'mcuser'
@@ -840,7 +842,10 @@ def main(argv):
                     queryosgjobs="SELECT * from Attempts WHERE BatchSystem='OSG' && Status !='4' && Status !='3' && Status!= '6' && Status != '5';"# || (Status='4' && ExitCode != 0 && ProgramFailed is NULL) ORDER BY ID desc;"
                     #print queryosgjobs
                     dbcursor.execute(queryosgjobs)
-                    Alljobs = dbcursor.fetchall()
+                    Alljobs = list(dbcursor.fetchall())
+                    #print(Alljobs[:5])
+                    random.shuffle(Alljobs)
+                    #print(Alljobs[:5])
                     Monitoring_assignments=array_split(Alljobs,spawnNum)
                     spawns=[]
                     for i in range(0,spawnNum):
