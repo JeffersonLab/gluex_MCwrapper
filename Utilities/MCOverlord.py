@@ -117,14 +117,15 @@ def recursivermdir(rootloc):
         print(e)
         pass
 
-def checkProjectsForCompletion():
-    OutstandingProjectsQuery="SELECT * FROM Project WHERE (Is_Dispatched != '0' && Tested != '-1' && Tested != '2' ) && Notified is NULL"
-    dbcursor.execute(OutstandingProjectsQuery)
-    OutstandingProjects=dbcursor.fetchall()
-
+def checkProjectsForCompletion(comp_assignment):
+    #OutstandingProjectsQuery="SELECT * FROM Project WHERE (Is_Dispatched != '0' && Tested != '-1' && Tested != '2' ) && Notified is NULL"
+    #dbcursor.execute(OutstandingProjectsQuery)
+    #OutstandingProjects=dbcursor.fetchall()
+    dbcnx_comp=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
+    dbcursor_comp=dbcnx_comp.cursor(MySQLdb.cursors.DictCursor)
     outdir_root="/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/"
 
-    for proj in OutstandingProjects:
+    for proj in comp_assignment:#OutstandingProjects:
         
         locparts=proj['OutputLocation'].split("/")
 
@@ -148,8 +149,8 @@ def checkProjectsForCompletion():
         #DISTINCT ID ------in query below
         TOTCompletedQuery ="SELECT * From Jobs inner join Attempts on Attempts.job_id = Jobs.id WHERE Project_ID="+str(proj['ID'])+" && IsActive=1 and Attempts.ExitCode = 0 && (Attempts.Status ='4' || Attempts.Status='succeeded') && Attempts.ExitCode IS NOT NULL and Attempts.id = (select max(id) from Attempts Attempts2 where Attempts2.job_id = Jobs.id);"
   #"SELECT * From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1 && ID in (SELECT DISTINCT Job_ID FROM Attempts WHERE ExitCode = 0 && (Status ='4' || Status='succeeded')  && ExitCode rIS NOT NULL ORDER BY ID DESC LIMIT 1);" 
-        dbcursor.execute(TOTCompletedQuery)
-        fulfilledJobs=dbcursor.fetchall()
+        dbcursor_comp.execute(TOTCompletedQuery)
+        fulfilledJobs=dbcursor_comp.fetchall()
         #print(fulfilledJobs)
 
         print("Jobs fulfilled:",str(len(fulfilledJobs)))
@@ -200,19 +201,19 @@ def checkProjectsForCompletion():
             if not found_AllexpFile:
                 print("FLAG LAST ATTEMPT AS SPECIAL FAIL 404")
                 GET_Attempt_to_update="SELECT * FROM Attempts WHERE Job_ID="+str(job["ID"])+" ORDER BY ID DESC;"
-                dbcursor.execute(GET_Attempt_to_update)
-                Attempt_to_update=dbcursor.fetchall()[0]
+                dbcursor_comp.execute(GET_Attempt_to_update)
+                Attempt_to_update=dbcursor_comp.fetchall()[0]
                 #print(Attempt_to_update)
                 Update_q="UPDATE Attempts Set ExitCode=404 where ID="+str(Attempt_to_update["ID"])
                 print(Update_q)
-                dbcursor.execute(Update_q)
-                dbcnx.commit()
+                dbcursor_comp.execute(Update_q)
+                dbcnx_comp.commit()
                 nullify_list.append(job["ID"]) 
             else:
                 #print("data has been verified")
                 dataverified_update="Update Jobs Set DataVerified=1 WHERE ID="+str(job["ID"])
-                dbcursor.execute(dataverified_update)
-                dbcnx.commit()
+                dbcursor_comp.execute(dataverified_update)
+                dbcnx_comp.commit()
             
         #if len(nullify_list) != 0:
         #    for null in nullify_list:
@@ -226,8 +227,8 @@ def checkProjectsForCompletion():
         #            index=index+1
                     
         TOTJobs="SELECT ID From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1;"
-        dbcursor.execute(TOTJobs)
-        AllActiveJobs=dbcursor.fetchall()
+        dbcursor_comp.execute(TOTJobs)
+        AllActiveJobs=dbcursor_comp.fetchall()
         print("=====================")
         print("Project ID:",proj['ID'])
         print("Output location:",proj['OutputLocation'])
@@ -237,8 +238,8 @@ def checkProjectsForCompletion():
         if(len(AllActiveJobs)==0):
             continue
         totalSubmitted="SELECT SUM(NumEvts) from Jobs where Project_ID="+str(proj['ID'])
-        dbcursor.execute(totalSubmitted)
-        submitted_evtNum=dbcursor.fetchall()
+        dbcursor_comp.execute(totalSubmitted)
+        submitted_evtNum=dbcursor_comp.fetchall()
         print("Number of events submitted:",submitted_evtNum[0]["SUM(NumEvts)"])
         print("Number of events requested:",proj["NumEvents"])
         print("All jobs fulfilled?",(len(fulfilledJobs)-len(nullify_list))==len(AllActiveJobs))
@@ -252,15 +253,15 @@ def checkProjectsForCompletion():
 
             getFinalCompleteTime="SELECT MAX(Completed_Time) FROM Attempts WHERE Job_ID IN (SELECT ID FROM Jobs WHERE Project_ID="+str(proj['ID'])+");"
             print(getFinalCompleteTime)
-            dbcursor.execute(getFinalCompleteTime)
-            finalTimeRes=dbcursor.fetchall()
+            dbcursor_comp.execute(getFinalCompleteTime)
+            finalTimeRes=dbcursor_comp.fetchall()
             #print "============"
             #print finalTimeRes[0]["MAX(Completed_Time)"]
             updateProjectstatus="UPDATE Project SET Completed_Time="+"'"+str(finalTimeRes[0]["MAX(Completed_Time)"])+"'"+ " WHERE ID="+str(proj['ID'])+";"
             print(updateProjectstatus)
             #print "============"
-            dbcursor.execute(updateProjectstatus)
-            dbcnx.commit()
+            dbcursor_comp.execute(updateProjectstatus)
+            dbcnx_comp.commit()
 
             #print "echo 'Your Project ID "+str(proj['ID'])+" has been completed.  Output may be found:\n"+proj['OutputLocation']+"' | mail -s 'GlueX MC Request #"+str(proj['ID'])+" Completed' "+str(proj['Email'])
             msg = EmailMessage()
@@ -278,8 +279,8 @@ def checkProjectsForCompletion():
             s.quit()
             #subprocess.call("echo 'Your Project ID "+str(proj['ID'])+" has been completed.  Output may be found here:\n"+proj['OutputLocation']+"' | mail -s 'GlueX MC Request #"+str(proj['ID'], "utf-8")+" Completed' "+str(proj['Email'], "utf-8"),shell=True)
             sql_notified = "UPDATE Project Set Notified=1 WHERE ID="+str(proj['ID'])
-            dbcursor.execute(sql_notified)
-            dbcnx.commit()
+            dbcursor_comp.execute(sql_notified)
+            dbcnx_comp.commit()
 
             #clean up empty directories
             data_location=outdir_root+rootLoc
@@ -291,8 +292,8 @@ def checkProjectsForCompletion():
             #print(proj['ID'])
             updateProjectstatus="UPDATE Project SET Completed_Time=NULL WHERE ID="+str(proj['ID'])+";"
             #print(updateProjectstatus)
-            dbcursor.execute(updateProjectstatus)
-            dbcnx.commit()
+            dbcursor_comp.execute(updateProjectstatus)
+            dbcnx_comp.commit()
 
 
 def checkSWIF2():
@@ -872,7 +873,30 @@ def main(argv):
                     
                     print("CHECKING GLOBALS ON MAIN")
                     #UpdateOutputSize() broken without lustre mounted
-                    checkProjectsForCompletion()
+                    #MULTI PROCESS THIS? MAYBE 5-10 processes
+                    comp_spawnnum=5
+                    OutstandingProjectsQuery="SELECT * FROM Project WHERE (Is_Dispatched != '0' && Tested != '-1' && Tested != '2' ) && Notified is NULL"
+                    dbcursor.execute(OutstandingProjectsQuery)
+                    OutstandingProjects=dbcursor.fetchall()
+                    completion_assignments=array_split(OutstandingProjects,comp_spawnnum)
+                    comp_spawns=[]
+
+                    for i in range(0,comp_spawnnum):
+                        compp=Process(target=checkProjectsForCompletion,args=(completion_assignments[i],))
+                        compp.daemon = True
+                        comp_spawns.append(compp)
+
+                    for i in range(0,len(comp_spawns)):
+                        #print("join "+str(i))
+                        comp_spawns[i].start()
+                        
+                    #time.sleep(2)
+                    for i in range(0,len(comp_spawns)):
+                        if comp_spawns[i].is_alive():
+                            #print("join "+str(i))
+                            comp_spawns[i].join()
+
+                    #checkProjectsForCompletion()
                     dbcursor.execute("UPDATE MCOverlord SET EndTime=NOW(), Status=\"Success\" where ID="+str(lastid[0]["MAX(ID)"]))
                     dbcnx.commit()
                     #break
