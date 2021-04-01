@@ -27,6 +27,10 @@ import rcdb
 import ccdb
 from ccdb.cmd.console_context import ConsoleContext
 import ccdb.path_utils
+from ccdb import Directory, TypeTable, Assignment, ConstantSet
+from array import array
+from datetime import datetime 
+from ROOT import TF1
 import mysql.connector
 import time
 import os
@@ -647,6 +651,121 @@ def recordAttempt(JOB_ID,RUNNO,FILENO,BatchSYS,BatchJobID, NUMEVTS,NCORES, RAM):
 def getCommandString(COMMAND):
         return COMMAND['batchrun']+" "+COMMAND['environment_file']+" "+COMMAND['ana_environment_file']+" "+COMMAND['generator_config']+" "+COMMAND['output_directory']+" "+COMMAND['run_number']+" "+COMMAND['file_number']+" "+COMMAND['num_events']+" "+COMMAND['jana_calib_context']+" "+COMMAND['jana_calibtime']+" "+COMMAND['do_gen']+" "+COMMAND['do_geant']+" "+COMMAND['do_mcsmear']+" "+COMMAND['do_recon']+" "+COMMAND['clean_gen']+" "+COMMAND['clean_geant']+" "+COMMAND['clean_mcsmear']+" "+COMMAND['clean_recon']+" "+COMMAND['batch_system']+" "+COMMAND['num_cores']+" "+COMMAND['generator']+" "+COMMAND['geant_version']+" "+COMMAND['background_to_include']+" "+COMMAND['custom_Gcontrol']+" "+COMMAND['eBeam_energy']+" "+COMMAND['coherent_peak']+" "+COMMAND['min_generator_energy']+" "+COMMAND['max_generator_energy']+" "+COMMAND['custom_tag_string']+" "+COMMAND['custom_plugins']+" "+COMMAND['events_per_file']+" "+COMMAND['running_directory']+" "+COMMAND['ccdb_sqlite_path']+" "+COMMAND['rcdb_sqlite_path']+" "+COMMAND['background_tagger_only']+" "+COMMAND['radiator_thickness']+" "+COMMAND['background_rate']+" "+COMMAND['random_background_tag']+" "+COMMAND['recon_calibtime']+" "+COMMAND['no_geant_secondaries']+" "+COMMAND['mcwrapper_version']+" "+COMMAND['no_bcal_sipm_saturation']+" "+COMMAND['flux_to_generate']+" "+COMMAND['flux_histogram']+" "+COMMAND['polarization_to_generate']+" "+COMMAND['polarization_histogram']+" "+COMMAND['eBeam_current']+" "+COMMAND['experiment']+" "+COMMAND['num_rand_trigs']+" "+COMMAND['location']+" "+COMMAND['generator_post']+" "+COMMAND['generator_post_config']+" "+COMMAND['geant_vertex_area']+" "+COMMAND['geant_vertex_length']+" "+COMMAND['mcsmear_notag']
 
+def LoadCCDB():
+        sqlite_connect_str = "mysql://ccdb_user@hallddb.jlab.org/ccdb"
+        provider = ccdb.AlchemyProvider()                           # this class has all CCDB manipulation functions
+        provider.connect(sqlite_connect_str)                        # use usual connection string to connect to database
+        provider.authentication.current_user_name = "psflux_user"   # to have a name in logs
+        
+        return provider
+
+def PSAcceptance(x, par):
+
+    min = par[1]
+    max = par[2]
+
+    if x[0] > 2.*min and x[0] < min + max:
+        return par[0]*(1-2.*min/x[0])
+    elif x[0] >= min + max:
+        return par[0]*(2.*max/x[0] - 1)
+
+    return 0.
+
+
+def calcFluxCCDB(ccdb_conn, run, emin, emax):
+
+        flux = 0.
+        VARIATION = "default"
+        CALIBTIME = datetime.now()
+        CALIBTIME_USER = CALIBTIME
+        CALIBTIME_ENERGY = CALIBTIME
+
+        # Set livetime scale factor
+        livetime_ratio = 0.0
+        try:
+                livetime_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/pair_spectrometer/lumi/trig_live", run[0], VARIATION, CALIBTIME)
+                livetime = livetime_assignment.constant_set.data_table
+                if float(livetime[3][1]) > 0.0: # check that livetimes are non-zero
+                       livetime_ratio = float(livetime[0][1])/float(livetime[3][1])
+                else: # if bad livetime assume ratio is 1
+                       livetime_ratio = 1.0
+        except:
+                livetime_ratio = 1.0 # default to unity if table doesn't exist
+
+        # Conversion factors for total flux
+        converterThickness = run[2]
+        converterLength = 0
+        if converterThickness == "Be 75um": # default is 75 um
+                converterLength = 75e-6
+        elif converterThickness == "Be 750um":
+                converterLength = 750e-6
+        else:
+                print "Unknown converter thickness"
+                sys.exit(0)
+
+        berilliumRL = 35.28e-2 # 35.28 cm
+        radiationLength = converterLength/berilliumRL;
+        scale = livetime_ratio * 1./((7/9.) * radiationLength);
+
+        photon_endpoint = array('d')
+        tagm_untagged_flux = array('d')
+        tagm_scaled_energy = array('d')
+        tagh_untagged_flux = array('d')
+        tagh_scaled_energy = array('d')
+
+        try:
+                photon_endpoint_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/endpoint_energy", run[0], VARIATION, CALIBTIME_ENERGY)
+                photon_endpoint = photon_endpoint_assignment.constant_set.data_table
+                
+                tagm_untagged_flux_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/pair_spectrometer/lumi/tagm/untagged", run[0], VARIATION, CALIBTIME)
+                tagm_untagged_flux = tagm_untagged_flux_assignment.constant_set.data_table
+                tagm_scaled_energy_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/microscope/scaled_energy_range", run[0], VARIATION, CALIBTIME_ENERGY)
+                tagm_scaled_energy_table = tagm_scaled_energy_assignment.constant_set.data_table
+                
+                tagh_untagged_flux_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/pair_spectrometer/lumi/tagh/untagged", run[0], VARIATION, CALIBTIME)
+                tagh_untagged_flux = tagh_untagged_flux_assignment.constant_set.data_table
+                tagh_scaled_energy_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/hodoscope/scaled_energy_range", run[0], VARIATION, CALIBTIME_ENERGY)
+                tagh_scaled_energy_table = tagh_scaled_energy_assignment.constant_set.data_table
+        except:
+                print "Missing flux for run number = %d, contact jrsteven@jlab.org" % run[0]
+                sys.exit(0)
+
+        # PS acceptance correction
+        fPSAcceptance = TF1("PSAcceptance", PSAcceptance, 2.0, 12.0, 3);
+
+        # Get parameters from CCDB 
+        PS_accept_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/pair_spectrometer/lumi/PS_accept", run[0], VARIATION, CALIBTIME)
+        PS_accept = PS_accept_assignment.constant_set.data_table
+        fPSAcceptance.SetParameters(float(PS_accept[0][0]), float(PS_accept[0][1]), float(PS_accept[0][2]));
+
+        # sum TAGM flux
+        for tagm_flux, tagm_scaled_energy in zip(tagm_untagged_flux, tagm_scaled_energy_table):
+                tagm_energy = float(photon_endpoint[0][0])*(float(tagm_scaled_energy[1])+float(tagm_scaled_energy[2]))/2.
+
+                if tagm_energy < emin or tagm_energy > emax: 
+                        continue
+                        
+                psAccept = fPSAcceptance.Eval(tagm_energy)
+                if psAccept <= 0.0:
+                        continue
+                
+                flux = flux + float(tagm_flux[1]) * scale / psAccept
+
+        # sum TAGH flux
+        for tagh_flux, tagh_scaled_energy in zip(tagh_untagged_flux, tagh_scaled_energy_table):
+                tagh_energy = float(photon_endpoint[0][0])*(float(tagh_scaled_energy[1])+float(tagh_scaled_energy[2]))/2.
+
+                if tagh_energy < emin or tagh_energy > emax: 
+                        continue
+
+                psAccept = fPSAcceptance.Eval(tagh_energy)
+                if psAccept <= 0.0:
+                        continue
+
+                flux = flux + float(tagh_flux[1]) * scale / psAccept
+
+        return flux
+        
 def showhelp():
         helpstring= "variation=%s where %s is a valid jana_calib_context variation string (default is \"mc\")\n"
         helpstring+= " per_file=%i where %i is the number of events you want per file/job (default is 10000)\n"
@@ -1226,6 +1345,7 @@ def main(argv):
                         event_sum=0.
                         #Make python rcdb calls to form the vector
                         db = rcdb.RCDBProvider("mysql://rcdb@hallddb.jlab.org/rcdb")
+                        ccdb_conn = LoadCCDB()
 
                         runlow=0
                         runhigh=0
@@ -1259,23 +1379,38 @@ def main(argv):
                                 query_to_do=RCDB_QUERY
 
                         print(str(runlow)+"------->"+str(runhigh))
-                        table = db.select_runs(str(query_to_do),runlow,runhigh).get_values(['event_count'],True)
+                        table = db.select_runs(str(query_to_do),runlow,runhigh).get_values(['event_count','polarimeter_converter'],True)
                         print(table)
                         #print len(table)
+
+                        print("\nComputing flux from CCDB for all runs in the requested range, this may take a minute...\n")
+                        fluxes = []
+                        flux_sum = 0
                         for runs in table:
                                 if len(table)<=1:
+                                        fluxes.append(0)
                                         break
                                 event_sum = event_sum + runs[1]
+                                
+                                # compute flux in generated beam energy range
+                                flux = calcFluxCCDB(ccdb_conn, runs, float(MIN_GEN_ENERGY), float(MAX_GEN_ENERGY)) / 1.e9
+                                fluxes.append(flux)
+                                flux_sum = flux_sum + flux
 
                         print("Events from rcdb: "+str(event_sum))
+                        print("Flux from ccdb: "+str(flux_sum))
                         sum2=0.
-                        for runs in table: #do for each job
+                        sum2_trig=0.
+                        for runs,flux in zip(table,fluxes): #do for each job
                                 #print runs[0]
                                 if len(table) <= 1:
                                         break
-                                num_events_this_run=int(((float(runs[1])/float(event_sum))*EVTS)+.5)
-                                sum2=sum2+int(((float(runs[1])/float(event_sum))*EVTS)+.5)
-                                #print num_events_this_run
+                                #num_events_this_run_trig=int(((float(runs[1])/float(event_sum))*EVTS)+.5)
+                                #sum2_trig=sum2_trig+int(((float(runs[1])/float(event_sum))*EVTS)+.5)
+                                num_events_this_run=int(((flux/flux_sum)*EVTS)+.5)
+                                sum2=sum2+int(((flux/flux_sum)*EVTS)+.5)
+                                #print(runs[0],num_events_this_run)
+                                #continue
                         
                                 if num_events_this_run == 0:
                                         continue
