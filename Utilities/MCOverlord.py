@@ -120,6 +120,10 @@ def recursivermdir(rootloc):
         pass
 
 def checkProjectsForCompletion(comp_assignment):
+    chck_Str=""
+    for comp in comp_assignment:
+        chck_Str+=str(comp['ID'])+","
+    print("checking ",chck_Str,"for completion")
     #OutstandingProjectsQuery="SELECT * FROM Project WHERE (Is_Dispatched != '0' && Tested != '-1' && Tested != '2' ) && Notified is NULL"
     #dbcursor.execute(OutstandingProjectsQuery)
     #OutstandingProjects=dbcursor.fetchall()
@@ -131,8 +135,8 @@ def checkProjectsForCompletion(comp_assignment):
         
         locparts=proj['OutputLocation'].split("/")
 
-        print("~~~~~~~~~~~~~~~~~~")
-        print("ProjID:",proj['ID'])
+        #print("~~~~~~~~~~~~~~~~~~")
+        #print("ProjID:",proj['ID'])
         files=[]
         dirs=[]
         #print locparts[len(locparts)-2]
@@ -147,7 +151,7 @@ def checkProjectsForCompletion(comp_assignment):
         #print cpt
         #print(proj)
         
-        print("Files to move:",filesToMove)
+        #print("Files to move:",filesToMove)
         #DISTINCT ID ------in query below
         TOTCompletedQuery ="SELECT * From Jobs inner join Attempts on Attempts.job_id = Jobs.id WHERE Project_ID="+str(proj['ID'])+" && IsActive=1 and Attempts.ExitCode = 0 && (Attempts.Status ='4' || Attempts.Status='succeeded') && Attempts.ExitCode IS NOT NULL and Attempts.id = (select max(id) from Attempts Attempts2 where Attempts2.job_id = Jobs.id);"
   #"SELECT * From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1 && ID in (SELECT DISTINCT Job_ID FROM Attempts WHERE ExitCode = 0 && (Status ='4' || Status='succeeded')  && ExitCode rIS NOT NULL ORDER BY ID DESC LIMIT 1);" 
@@ -155,7 +159,7 @@ def checkProjectsForCompletion(comp_assignment):
         fulfilledJobs=dbcursor_comp.fetchall()
         #print(fulfilledJobs)
 
-        print("Jobs fulfilled:",str(len(fulfilledJobs)))
+        #print("Jobs fulfilled:",str(len(fulfilledJobs)))
         if(proj["Tested"]==2 or proj["Tested"]==3):
             continue
 
@@ -231,27 +235,27 @@ def checkProjectsForCompletion(comp_assignment):
         TOTJobs="SELECT ID From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1;"
         dbcursor_comp.execute(TOTJobs)
         AllActiveJobs=dbcursor_comp.fetchall()
-        print("=====================")
-        print("Project ID:",proj['ID'])
-        print("Output location:",proj['OutputLocation'])
-        print("Jobs Fulfilled:",len(fulfilledJobs)-len(nullify_list))
-        print("Total jobs:",len(AllActiveJobs))
-        print("TO MOVE: "+str(filesToMove))
+        #print("=====================")
+        #print("Project ID:",proj['ID'])
+        #print("Output location:",proj['OutputLocation'])
+        #print("Jobs Fulfilled:",len(fulfilledJobs)-len(nullify_list))
+        #print("Total jobs:",len(AllActiveJobs))
+        #print("TO MOVE: "+str(filesToMove))
         if(len(AllActiveJobs)==0):
             continue
         totalSubmitted="SELECT SUM(NumEvts) from Jobs where Project_ID="+str(proj['ID'])
         dbcursor_comp.execute(totalSubmitted)
         submitted_evtNum=dbcursor_comp.fetchall()
-        print("Number of events submitted:",submitted_evtNum[0]["SUM(NumEvts)"])
-        print("Number of events requested:",proj["NumEvents"])
-        print("All jobs fulfilled?",(len(fulfilledJobs)-len(nullify_list))==len(AllActiveJobs))
-        print("Are there any jobs?",len(AllActiveJobs) != 0)
-        print("All files moved?",filesToMove ==0)
-        print("Total Project fullfilled?",submitted_evtNum[0]["SUM(NumEvts)"] >= proj["NumEvents"]-len(AllActiveJobs))
-        print("=====================")
+        #print("Number of events submitted:",submitted_evtNum[0]["SUM(NumEvts)"])
+        #print("Number of events requested:",proj["NumEvents"])
+        #print("All jobs fulfilled?",(len(fulfilledJobs)-len(nullify_list))==len(AllActiveJobs))
+        #print("Are there any jobs?",len(AllActiveJobs) != 0)
+        #print("All files moved?",filesToMove ==0)
+        #print("Total Project fullfilled?",submitted_evtNum[0]["SUM(NumEvts)"] >= proj["NumEvents"]-len(AllActiveJobs))
+        #print("=====================")
         #need -len(AllActiveJobs for when Run number need 0 events and it round to nearest NOT up in num events
         if((len(fulfilledJobs)-len(nullify_list))==len(AllActiveJobs) and len(AllActiveJobs) != 0 and filesToMove ==0 and submitted_evtNum[0]["SUM(NumEvts)"] >= proj["NumEvents"]-len(AllActiveJobs)):
-            print("DONE")
+            print(proj['ID'],"DONE")
 
             getFinalCompleteTime="SELECT MAX(Completed_Time) FROM Attempts WHERE Job_ID IN (SELECT ID FROM Jobs WHERE Project_ID="+str(proj['ID'])+");"
             print(getFinalCompleteTime)
@@ -555,7 +559,7 @@ def checkOSG(Jobs_List):
                 print(str(os.getpid())+" : "+str(count))
             
             statuscommand="condor_q "+str(job["BatchJobID"])+" -json"
-            print("Checking status:",statuscommand)
+            #print("Checking status:",statuscommand)
             jsonOutputstr=subprocess.check_output(statuscommand.split(" "))
             #print "================"
             #print(jsonOutputstr)
@@ -643,10 +647,20 @@ def checkOSG(Jobs_List):
                 #historystatuscommand_exitcode ="condor_history -limit 1 "+str(job["BatchJobID"])+" -json | grep Exit"
                 #exitCode_out=subprocess.check_output(historystatuscommand_exitcode.split(" "))
                
-                #print "================"
+                #print("================")
                 #print(jsonOutputstr)
-                #print "================"
-                if( str(jsonOutputstr, "utf-8") != ""):
+                #print("================")
+                if(str(jsonOutputstr,"utf-8") == "[\n]\n"):
+                    #print("nothing in history")
+                    updatejobstatus="UPDATE Attempts SET Status=\""+str(4)+"\", ExitCode="+str(999)+", ProgramFailed='condor'"+" WHERE BatchJobID='"+str(job["BatchJobID"])+"';"
+                    #print(updatejobstatus)
+                    try:
+                        dbcursorOSG.execute(updatejobstatus)
+                        dbcnxOSG.commit()
+                    except Exception as e:
+                        print(e)
+                        pass
+                elif( str(jsonOutputstr, "utf-8") != ""):
                     JSON_jobar=json.loads(str(jsonOutputstr, "utf-8"))
                     #print JSON_jobar[0]
 
@@ -795,7 +809,7 @@ def checkOSG(Jobs_List):
                         print(e)
                         pass
 
-        time.sleep(random.randint(1,5))
+        #time.sleep(random.randint(1,5))
         print("FINISHED CHECKING OSG")
 
 
@@ -867,11 +881,11 @@ def main(argv):
                             #print("join "+str(i))
                             spawns[i].join()
 
-                    if(numOverRide == False): #INSURE OVERRIDE NEVER CAUSES THE VODOO TO CAUSE A RACE CONDITION
-                        print("CHECKING SWIF ON MAIN")
-                        queryswifjobs="SELECT * FROM Project WHERE Notified IS NULL && ID IN (SELECT Project_ID FROM Jobs WHERE IsActive=1 && ID IN (SELECT DISTINCT Job_ID FROM Attempts WHERE BatchSystem= 'SWIF' && (Status!='succeeded' || Status is NULL)) )"
-                        dbcursor.execute(queryswifjobs)
-                        AllWkFlows = dbcursor.fetchall()
+                    #if(numOverRide == False): #INSURE OVERRIDE NEVER CAUSES THE VODOO TO CAUSE A RACE CONDITION
+                    #    print("CHECKING SWIF ON MAIN")
+                    #    queryswifjobs="SELECT * FROM Project WHERE Notified IS NULL && ID IN (SELECT Project_ID FROM Jobs WHERE IsActive=1 && ID IN (SELECT DISTINCT Job_ID FROM Attempts WHERE BatchSystem= 'SWIF' && (Status!='succeeded' || Status is NULL)) )"
+                    #    dbcursor.execute(queryswifjobs)
+                    #    AllWkFlows = dbcursor.fetchall()
                         #checkSWIF(AllWkFlows)
                         #SWIF CHECK MUST BE SINGLE THREADED FOR NOW DUE TO THE VODOO NOT BEING THREAD SAFE
                     
@@ -879,7 +893,7 @@ def main(argv):
                     print("CHECKING GLOBALS ON MAIN")
                     #UpdateOutputSize() broken without lustre mounted
                     #MULTI PROCESS THIS? MAYBE 5-10 processes
-                    comp_spawnnum=5
+                    comp_spawnnum=20
                     OutstandingProjectsQuery="SELECT * FROM Project WHERE (Is_Dispatched != '0' && Tested != '-1' && Tested != '2' ) && Notified is NULL"
                     dbcursor.execute(OutstandingProjectsQuery)
                     OutstandingProjects=dbcursor.fetchall()

@@ -35,8 +35,9 @@ if [[ `ps all -u tbritton | grep MCMover.csh | grep -v grep | wc -l` == 2 ]]; th
         echo "mkdir -p $output_dir/$projpath/"
         ssh $transfer_node mkdir -p $output_dir/$projpath/
 
-        dir2=${dir::-1}
-        chmod -R g+w $dir2
+        dir2=${dir}
+        echo chmod -R g+w $dir2
+	chmod -R g+w $dir2
         rsync_command="rsync --progress -pruvt $dir/ $transfer_node:$output_dir/$projpath/" #--exclude $input_dir/slag"
         echo $rsync_command >> /osgpool/halld/tbritton/MCWrapper_Logs/MCWrapperMover.log
         status="255"

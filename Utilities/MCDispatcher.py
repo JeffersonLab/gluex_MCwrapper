@@ -463,6 +463,7 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
     RunNumber=str(order["RunNumLow"])
 
     print(str(index)+":  "+"Wrote Payload")
+    print("original RCDB QUERY:", order["RCDBQuery"])
     if(order["RunNumLow"] != order["RunNumHigh"]):
         query_to_do="@is_production and @status_approved"
 
@@ -478,7 +479,7 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
         print("RCDB_QUERY IS: "+str(query_to_do))
         rcdb_db = rcdb.RCDBProvider("mysql://rcdb@hallddb.jlab.org/rcdb")
         runList=rcdb_db.select_runs(str(query_to_do),order["RunNumLow"],order["RunNumHigh"]).get_values(['event_count'],True)
-
+        print("RunList:",runList)
         RunNumber=str(runList[0][0])#str(order["RunNumLow"])
     
     #if(order["ReactionLines"][0:5]=="file:")
@@ -635,11 +636,20 @@ def TestProject(ID,versionSet,commands_to_call=""):
 
 
 
+    
+
     if(order["RunNumLow"] != order["RunNumHigh"]):
         query_to_do="@is_production and @status_approved"
+
+        if("recon-2018" in order["VersionSet"]):
+            query_to_do="@is_2018production and @status_approved"
+
+        if("recon-2019" in order["VersionSet"]):
+            query_to_do="@is_dirc_production and @status_approved"
     
         if(order["RCDBQuery"] != ""):
             query_to_do=order["RCDBQuery"]
+    
     
         print("RCDB_QUERY IS: "+str(query_to_do))
         #print("run selecting currently broken.  RCDB: 'basestring' not defined.  Testing first runnumber only")
@@ -957,8 +967,20 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
     MCconfig_file.write("DATA_OUTPUT_BASE_DIR=/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/"+str(outputstring)+"\n")
     #print "FOUND CONFIG="+foundConfig
 
-    if(order["RCDBQuery"] != ""):
-        MCconfig_file.write("RCDB_QUERY="+order["RCDBQuery"]+"\n")
+    if(order["RunNumLow"] != order["RunNumHigh"]):
+        query_to_do="@is_production and @status_approved"
+
+        if("recon-2018" in order["VersionSet"]):
+            query_to_do="@is_2018production and @status_approved"
+
+        if("recon-2019" in order["VersionSet"]):
+            query_to_do="@is_dirc_production and @status_approved"
+    
+        if(order["RCDBQuery"] != ""):
+            query_to_do=order["RCDBQuery"]
+    
+    if(query_to_do != ""):
+        MCconfig_file.write("RCDB_QUERY="+query_to_do+"\n")
 
     if(order["ReactionLines"] != ""):
         if(order["ReactionLines"][0:5] == "file:"):
@@ -1090,8 +1112,20 @@ def WritePayloadConfigString(order,foundConfig):
     config_str+="DATA_OUTPUT_BASE_DIR=/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/"+str(outputstring)+"\n"
     #print "FOUND CONFIG="+foundConfig
 
-    if(order["RCDBQuery"] != ""):
-        config_str+="RCDB_QUERY="+order["RCDBQuery"]+"\n"
+    if(order["RunNumLow"] != order["RunNumHigh"]):
+        query_to_do="@is_production and @status_approved"
+
+        if("recon-2018" in order["VersionSet"]):
+            query_to_do="@is_2018production and @status_approved"
+
+        if("recon-2019" in order["VersionSet"]):
+            query_to_do="@is_dirc_production and @status_approved"
+    
+        if(order["RCDBQuery"] != ""):
+            query_to_do=order["RCDBQuery"]
+
+    config_str+="RCDB_QUERY="+query_to_do+"\n"
+        
 
     if(order["ReactionLines"] != ""):
         if(order["ReactionLines"][0:5] != "file:"):
