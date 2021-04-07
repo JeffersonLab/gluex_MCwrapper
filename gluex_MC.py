@@ -725,16 +725,14 @@ def calcFluxCCDB(ccdb_conn, run, emin, emax):
                 tagh_untagged_flux = tagh_untagged_flux_assignment.constant_set.data_table
                 tagh_scaled_energy_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/hodoscope/scaled_energy_range", run[0], VARIATION, CALIBTIME_ENERGY)
                 tagh_scaled_energy_table = tagh_scaled_energy_assignment.constant_set.data_table
+		PS_accept_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/pair_spectrometer/lumi/PS_accept", run[0], VARIATION, CALIBTIME)
+	        PS_accept = PS_accept_assignment.constant_set.data_table
         except:
-                print "Missing flux for run number = %d, contact jrsteven@jlab.org" % run[0]
-                sys.exit(0)
+                print "Missing flux for run number = %d, skipping generation" % run[0]
+		return -1.0
 
         # PS acceptance correction
         fPSAcceptance = TF1("PSAcceptance", PSAcceptance, 2.0, 12.0, 3);
-
-        # Get parameters from CCDB 
-        PS_accept_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/pair_spectrometer/lumi/PS_accept", run[0], VARIATION, CALIBTIME)
-        PS_accept = PS_accept_assignment.constant_set.data_table
         fPSAcceptance.SetParameters(float(PS_accept[0][0]), float(PS_accept[0][1]), float(PS_accept[0][2]));
 
         # sum TAGM flux
@@ -750,7 +748,7 @@ def calcFluxCCDB(ccdb_conn, run, emin, emax):
                 
                 flux = flux + float(tagm_flux[1]) * scale / psAccept
 
-        # sum TAGH flux
+	# sum TAGH flux
         for tagh_flux, tagh_scaled_energy in zip(tagh_untagged_flux, tagh_scaled_energy_table):
                 tagh_energy = float(photon_endpoint[0][0])*(float(tagh_scaled_energy[1])+float(tagh_scaled_energy[2]))/2.
 
@@ -1382,7 +1380,7 @@ def main(argv):
                         sum2=0.
                         sum2_trig=0.
                         for runs,flux in zip(table,fluxes): #do for each job
-                                #print runs[0]
+				#print(runs[0])
                                 if len(table) <= 1:
                                         break
                                 #num_events_this_run_trig=int(((float(runs[1])/float(event_sum))*EVTS)+.5)
