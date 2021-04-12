@@ -133,6 +133,8 @@ shift
 export GEANT_VERTEXT_AREA=$1
 shift
 export GEANT_VERTEXT_LENGTH=$1
+shift
+export MCSMEAR_NOTAG=$1
 
 export USER_BC=`which bc`
 export USER_PYTHON=`which python`
@@ -152,7 +154,7 @@ flength_count=$((`echo $FILE_NUMBER | wc -c` - 1))
 
 export XRD_RANDOMS_URL=root://sci-xrootd.jlab.org//osgpool/halld/
 
-if [[ "$MCWRAPPER_RUN_LOCATION" == "JLAB" ]]; then
+if [[ "$MCWRAPPER_RUN_LOCATION" == "JLAB" || `hostname` == *'.jlab.org'* ]]; then
 	export XRD_RANDOMS_URL=root://sci-xrootd-ib.qcd.jlab.org//osgpool/halld/
 	export RUNNING_DIR="./"
 fi
@@ -280,7 +282,7 @@ if [[ $gen_pre_rcdb != "file" || "$BGTAGONLY_OPTION" == "1" || "$BKGFOLDSTR" == 
 
 radthick="50.e-6"
 
-if [[ "$RADIATOR_THICKNESS" != "rcdb" || "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" ]]; then
+if [[ "$RADIATOR_THICKNESS" != "rcdb" || "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" ]]; then
 	radthick=$RADIATOR_THICKNESS
 else
 	words=`rcnd $RUN_NUMBER radiator_type | sed 's/ / /g' `
@@ -332,7 +334,7 @@ ccdbelece="`ccdb dump PHOTON_BEAM/endpoint_energy:${RUN_NUMBER}:${variation} | g
 elecE_text="$ccdbelece" #`echo ${ccdblist[$(($ccdblist_length-1))]}`
 #elecE_text=`rcnd $RUN_NUMBER beam_energy | awk '{print $1}'`
 
-if [[ "$eBEAM_ENERGY" != "rcdb" || "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" ]]; then
+if [[ "$eBEAM_ENERGY" != "rcdb" || "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" ]]; then
     elecE=$eBEAM_ENERGY
 elif [[ $elecE_text == "Run" ]]; then
 	elecE=12
@@ -351,7 +353,7 @@ copeak_text=`rcnd $RUN_NUMBER coherent_peak | awk '{print $1}'`
 if [[ "$COHERENT_PEAK" != "rcdb" && "$polarization_angle" == "-1.0" ]]; then
 copeak=$COHERENT_PEAK
 else
-	if [[ "$COHERENT_PEAK" != "rcdb" || "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" ]]; then
+	if [[ "$COHERENT_PEAK" != "rcdb" || "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" ]]; then
     	copeak=$COHERENT_PEAK
 	elif [[ $copeak_text == "Run" ]]; then
 		copeak=9
@@ -372,7 +374,7 @@ fi
 export COHERENT_PEAK=$copeak
 echo "Coherent peak set..."
 
-if [[ "$VERSION" != "mc" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_workfest2018" && "$COHERENT_PEAK" == "rcdb" ]]; then
+if [[ "$VERSION" != "mc" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" && "$VERSION" != "mc_workfest2018" && "$COHERENT_PEAK" == "rcdb" ]]; then
 	echo "error in requesting rcdb for the coherent peak while not using variation=mc"
 	echo "something went wrong with initialization"
 	exit 1
@@ -381,7 +383,7 @@ fi
 export eBEAM_ENERGY=$elecE
 echo "eBEAM energy set..."
 
-if [[ "$VERSION" != "mc" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_workfest2018" && "$eBEAM_ENERGY" == "rcdb" ]]; then
+if [[ "$VERSION" != "mc" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" && "$VERSION" != "mc_workfest2018" && "$eBEAM_ENERGY" == "rcdb" ]]; then
 	echo "error in requesting rcdb for the electron beam energy and not using variation=mc"
 	echo "something went wrong with initialization"
 	exit 1
@@ -421,7 +423,7 @@ echo "Collimator size set..."
 
 BGRATE_toUse=$BGRATE
 
-if [[ "$BGRATE" != "rcdb" || "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" ]]; then
+if [[ "$BGRATE" != "rcdb" || "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" ]]; then
     BGRATE_toUse=$BGRATE
 else
 	if [[ $BGTAGONLY_OPTION == "1" || $BKGFOLDSTR == "BeamPhotons" ]]; then
@@ -515,7 +517,7 @@ isGreater=1
 isGreater=`echo $GEN_MAX_ENERGY'>'$eBEAM_ENERGY | $USER_BC -l`
 #echo $isGreater
 #echo "$isGreater"
-if [[ "$isGreater" == "1"  ]]; then 
+if [[ "$isGreater" == "1" && "$eBEAM_ENERGY" != "rcdb" ]]; then 
 echo "something went wrong with initialization"
 echo "Error: Requested Max photon energy $GEN_MAX_ENERGY is above the electron beam energy $eBEAM_ENERGY!"
 exit 1
@@ -660,7 +662,7 @@ fi
 
 recon_pre=`echo $CUSTOM_PLUGINS | cut -c1-4`
 jana_config_file=`echo $CUSTOM_PLUGINS | sed -r 's/^.{5}//'`
-
+echo "RECO PREFIX:  " $recon_pre
 if [[ $recon_pre == "file" ]]; then
 	if [[ -f $jana_config_file ]]; then
 	echo "gathering jana config file"
@@ -986,13 +988,16 @@ if [[ "$GENR" != "0" ]]; then
 
 	mv *.ascii $STANDARD_NAME.ascii
 
-	if [[ "$MCGEN_Translator" == "\!Translator:ppbar" ]]; then
-		GEN2HDDM_ppbar -r$RUN_NUMBER $STANDARD_NAME.ascii
-	elif [[ "$MCGEN_Translator" == "\!Translator:lamlambar" ]]; then
-		GEN2HDDM_lamlambar -r$RUN_NUMBER $STANDARD_NAME.ascii
-	elif [[ "$MCGEN_Translator" == "\!Translator:jpsi" ]]; then
-		GEN2HDDM_jpsi -r$RUN_NUMBER $STANDARD_NAME.ascii
-	fi
+	Translator=${MCGEN_Translator##!Translator:}
+
+	GEN2HDDM_$Translator -r$RUN_NUMBER $STANDARD_NAME.ascii
+	#if [[ "$MCGEN_Translator" == "\!Translator:ppbar" ]]; then
+	#	GEN2HDDM_ppbar -r$RUN_NUMBER $STANDARD_NAME.ascii
+	#elif [[ "$MCGEN_Translator" == "\!Translator:lamlambar" ]]; then
+	#	GEN2HDDM_lamlambar -r$RUN_NUMBER $STANDARD_NAME.ascii
+	#elif [[ "$MCGEN_Translator" == "\!Translator:jpsi" ]]; then
+	#	GEN2HDDM_jpsi -r$RUN_NUMBER $STANDARD_NAME.ascii
+	#fi
 
     generator_return_code=$?
 	elif [[ "$GENERATOR" == "gen_amp" ]]; then
@@ -1366,6 +1371,10 @@ fi
 		MCSMEAR_Flags="$MCSMEAR_Flags"" -T"
 	fi
 	
+	if [[ "$MCSMEAR_NOTAG" == "1" ]]; then
+			MCSMEAR_Flags="$MCSMEAR_Flags"" -t"
+	fi
+
 	echo $RECON and $SMEAR
 	
 	#if [[ "$RANDBGTAG" != "none" ]]; then
@@ -1409,15 +1418,17 @@ fi
 		if [[ $MAKE_MC_USING_XROOTD == 0 ]]; then
 			echo "mcsmear "$MCSMEAR_Flags " -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
 			mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
+			mcsmear_return_code=$?
 		else
 			xrdcopy $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm ./run$formatted_runNumber\_random.hddm
 			echo "mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm ./run$formatted_runNumber\_random.hddm:1+$fold_skip_num"
             mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm ./run$formatted_runNumber\_random.hddm\:1\+$fold_skip_num
+			mcsmear_return_code=$?
 			#echo "mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm:1+$fold_skip_num"
             #mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $XRD_RANDOMS_URL/random_triggers//$RANDBGTAG/run$formatted_runNumber\_random.hddm\:1\+$fold_skip_num
 			rm -f ./run$formatted_runNumber\_random.hddm
 		fi
-		mcsmear_return_code=$?
+		
 	elif [[ "$bkgloc_pre" == "loc:" ]]; then
 		rm -f count.py
 		if [[ $RANDOM_TRIG_NUM_EVT == -1 ]]; then

@@ -1,25 +1,19 @@
 #!/usr/bin/env python3
-try:
-    import rcdb
-except:
-    pass
+import rcdb
 import MySQLdb
 import sys
 import datetime
 import os.path
 import time
 from optparse import OptionParser
-try:
-    import subprocess
-    from subprocess import call
-    from subprocess import Popen, PIPE
-    import socket
-    import pprint
-    import smtplib                                                                                                                                                                          
-    from email.message import EmailMessage
-    from multiprocessing import Process, Queue
-except:
-    pass
+import subprocess
+from subprocess import call
+from subprocess import Popen, PIPE
+import socket
+import pprint
+import smtplib                                                                                                                                                                          
+from email.message import EmailMessage
+from multiprocessing import Process, Queue
 
 
 MCWRAPPER_BOT_HOME="/u/group/halld/gluex_MCwrapper/"
@@ -48,15 +42,12 @@ def RecallAll():
     curs.execute(query)
     rows=curs.fetchall()
     print("RECALLING "+str(len(rows)))
-    i=0
     for row in rows:
-        i=i+1
-        print("RECALLING:",str(i),"/",str(len(rows)))
         if row["BatchSystem"] == "OSG":
             command="condor_rm "+str(row["BatchJobID"])
             cmd=Popen(command.split(" "),stdout=PIPE,stderr=PIPE)
             out, err = cmd.communicate()
-            print(str(err,"utf-8"))
+            print(err)
             if("not found" in str(err,"utf-8")):
                 print("clear "+str(row["BatchJobID"]))
                 updatequery="UPDATE Attempts SET Status=\"3\" where BatchJobID=\""+str(row["BatchJobID"])+"\""
@@ -133,12 +124,12 @@ def AutoLaunch():
     print("RETRYING...")
     RetryAllJobs()
     print("TESTING...")
-    query = "SELECT ID,Email,VersionSet,Tested,UName FROM Project WHERE (Tested = 0) && Dispatched_Time is NULL ORDER BY (SELECT Priority from Users where name=UName) DESC LIMIT 10;"
+    query = "SELECT ID,Email,VersionSet,Tested,UName FROM Project WHERE (Tested = 0) && Dispatched_Time is NULL ORDER BY (SELECT Priority from Users where name=UName) DESC;"
     #print query
     curs.execute(query) 
     rows=curs.fetchall()
     #print rows
-    print("TESTING: ",rows)
+    #print len(rows)
 
     spawns=[]
     results_array=[]
@@ -153,10 +144,9 @@ def AutoLaunch():
         #print(len(Monitoring_assignments[i]))
         p=Process(target=ParallelTestProject,args=(results_q,i,rows[i],rows[i]['ID'],str(rows[i]["VersionSet"]),))
         spawns.append(p)
-        time.sleep(1)
 
     for i in range(0,len(spawns)):
-        time.sleep(5)
+        time.sleep(1)
         spawns[i].start()
     
     for i in range(0,len(spawns)):
@@ -164,7 +154,82 @@ def AutoLaunch():
             #print("join "+str(i))            
             spawns[i].join(15*60)
 
+    #print("GETTING QUEUE")
+    #results_array=results_q.get()
+    #print("DONE PARALLEL TESTING")
+    #print(results_array)
+    #exit(0)
 
+    #for result in results_array:
+    #    status=[]
+    #    status.append(-1)
+    #    status.append(-1)
+    #    if len(result)==0:
+    #        status[0]=0
+    #        status[1]=0
+    #        status[2]=0
+    #        continue
+    #    else:
+    #        status=result
+
+        #print(status)
+    #    row=result[3]
+        
+        
+    #for row in rows:
+    #    status=[]
+    #    status.append(-1)
+    #    status.append(-1)
+    #    if(row['Tested'] !=1):
+    #        status=TestProject(row['ID'],str(row["VersionSet"]))
+    #    else:
+    #        status[0]=0
+    #        status[1]=0
+    #        status[2]=0
+        #print "STATUS IS"
+        #print status[0]
+        #print("JUST TESTED")
+    #    if(status[1]!=-1):
+    #        #print "TEST success"
+    #        #EMAIL SUCCESS AND DISPATCH
+    #        #print("YAY TESTED")
+    #        subprocess.call(MCWRAPPER_BOT_HOME+"/Utilities/MCDispatcher.py dispatch -rlim -sys OSG "+str(row['ID']),shell=True)
+    #    else:
+    #        #print("BOO TESTED")
+    #        #EMAIL FAIL AND LOG
+    #        #print("echo 'Your Project ID "+str(row['ID'])+" failed the to properly test.  The log information is reproduced below:\n\n\n"+status[0]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+str(row['Email']))
+    #        try:
+    #            print("MAILING\n")
+    #            msg = EmailMessage()
+
+    #            msg.set_content('Your Project ID '+str(row['ID'])+' failed the test.  Please correct this issue by following the link: '+'https://halldweb.jlab.org/gluex_sim/SubmitSim.html?prefill='+str(row['ID'])+'&mod=1'+'.  Do NOT resubmit this request.  Write tbritton@jlab.org for additional assistance\n\n The log information is reproduced below:\n\n\n'+str(status[0])+'\n\n\nErrors:\n\n\n'+str(status[2]))
+    #            print("SET CONTENT")
+    #            msg['Subject'] = 'Project ID #'+str(row['ID'])+' Failed to test properly'
+    #            print("SET SUB")
+    #            msg['From'] = str('MCwrapper-bot')
+    #            print("SET FROM")
+
+    #            msg['To'] = str(row['Email'])#str("tbritton@jlab.org")#
+    #            print("SET SUB TO FROM")
+    #            # Send the message via our own SMTP server.                                                                                                                                                                        
+    #            s = smtplib.SMTP('localhost')
+    #            #print(msg)
+    #            print("SENDING")
+    #            s.send_message(msg)
+    #            s.quit()     
+    #            copy=open("/osgpool/halld/tbritton/REQUESTED_FAIL_MAILS/email_"+str(row['ID'])+".log", "w+")
+    #            copy.write('The log information is reproduced below:\n\n\n'+str(status[0])+'\n\n\nErrors:\n\n\n'+str(status[2]))
+    #            copy.close()      
+    #            #subprocess.call("echo 'Your Project ID "+str(row['ID'])+" failed the test.  Please correct this issue by following the link: "+"https://halldweb.jlab.org/gluex_sim/SubmitSim.html?prefill="+str(row['ID'])+"&mod=1" +" .  Do NOT resubmit this request.  Write tbritton@jlab.org for additional assistance\n\n The log information is reproduced below:\n\n\n"+status[0]+"\n\n\n"+status[2]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+str(row['Email']),shell=True)
+    #        except:
+    #            print("UH OH MAILING")
+    #            log = open("/osgpool/halld/tbritton/"+str(row['ID'])+".err", "w+")
+    #            log.write("this was broke: \n" + str(status[2]))
+    #            log.write("this was broke: \n" + str(status[0]))
+    #            log.close()
+            
+            #subprocess.call("echo 'Your Project ID "+str(row['ID'])+" failed the test.  Please correct this issue and do NOT resubmit this request.  Write tbritton@jlab.org for assistance or if you are ready for a retest.\n\n The log information is reproduced below:\n\n\n"+status[0]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+"tbritton@jlab.org",shell=True)
+            #print status[0]
 
 
 def ListUnDispatched():
@@ -207,35 +272,21 @@ def RemoveAllJobs():
 
 
 def RetryJobsFromProject(ID, countLim):
-    AllOSG=True
     query= "SELECT * FROM Attempts WHERE ID IN (SELECT Max(ID) FROM Attempts GROUP BY Job_ID) && Job_ID IN (SELECT ID FROM Jobs WHERE IsActive=1 && Project_ID="+str(ID)+");"
     curs.execute(query) 
     rows=curs.fetchall()
    
-    projq="SELECT Tested from Project where ID="+str(ID)
-    curs.execute(projq)
-    proj=curs.fetchall()[0]
     i=0
     j=0
     SWIF_retry_IDs=[]
-    
     for row in rows:
-        
+
         if (row["BatchSystem"]=="SWIF"):
-            if((row["Status"] == "succeeded" and row["ExitCode"] != 0) or (row["Status"]=="problem" and row["ExitCode"]!="232") or (proj['Tested']==1 and row["Status"]=="canceled" ) or (proj['Tested']==1 and row["Status"]=="failed" )):
+            if((row["Status"] == "succeeded" and row["ExitCode"] != 0) or (row["Status"]=="problem" and row["ExitCode"]!="232")):
             #if(row["Status"] != "succeeded"):
-                print("Retrying SWIF job: ",row["Job_ID"])
-                limiterq="SELECT COUNT(*) from Attempts where BatchJobID="+str(row["BatchJobID"])
-                curs.execute(limiterq) 
-                attres=curs.fetchall()[0]
-                print(attres)
-                if(attres["COUNT(*)"] < 15):
-                    SWIF_retry_IDs.append(row["BatchJobID"])
-                    #RetryJob(row["Job_ID"])
-                    i=i+1
-                if(AllOSG):
-                    RetryJob(row["Job_ID"],AllOSG)
-                
+                SWIF_retry_IDs.append(row["BatchJobID"])
+                #RetryJob(row["Job_ID"])
+                i=i+1
         elif (row["BatchSystem"]=="OSG"):
             #print "=========================="
             #print row
@@ -243,14 +294,12 @@ def RetryJobsFromProject(ID, countLim):
             #print row["ExitCode"]
             #print "=========================="
             if (row["Status"] == "4" and row["ExitCode"] != 0) or row["Status"] == "3" or row["Status"]=="5" or row["Status"]=="-1":
-                print("Retrying OSG job: ",row["Job_ID"])
                 if ( countLim ):
                     countq="SELECT Count(Job_ID) from Attempts where Job_ID="+str(row["Job_ID"])
                     curs.execute(countq)
                     count=curs.fetchall()
                     if int(count[0]["Count(Job_ID)"]) > 15 :
                         j=j+1
-                        print("Job above count limit")
                         continue
                     
                     if row["Status"] == "-1":
@@ -263,12 +312,12 @@ def RetryJobsFromProject(ID, countLim):
                             curs.execute(statusUpdate)
                             conn.commit()
                             
-                RetryJob(row["Job_ID"],AllOSG)
+                RetryJob(row["Job_ID"])
                 i=i+1
         
     
     print(SWIF_retry_IDs)
-    if(len(SWIF_retry_IDs)!=0 and AllOSG == False):
+    if(len(SWIF_retry_IDs)!=0):
         queryproj = "SELECT * FROM Project WHERE ID="+str(ID)
         curs.execute(queryproj) 
         proj=curs.fetchall()
@@ -276,8 +325,6 @@ def RetryJobsFromProject(ID, countLim):
         retry_swif_command="swif retry-jobs -workflow "+"proj"+str(ID)+"_"+proj[0]["OutputLocation"].split("/")[splitL-2]+" "+" ".join(SWIF_retry_IDs)
         print(retry_swif_command)
         status = subprocess.call(retry_swif_command, shell=True)
-    
-    
     print("retried "+str(i)+" Jobs")
     print(str(j)+" jobs over restart limit of 15")
 
@@ -293,7 +340,7 @@ def RetryJobsFromProject(ID, countLim):
 
 
 
-def RetryJob(ID,AllOSG=False):
+def RetryJob(ID):
     #query = "SELECT * FROM Attempts WHERE Job_ID="+str(ID)
     query= "SELECT Attempts.*,Max(Attempts.Creation_Time) FROM Attempts,Jobs WHERE Attempts.Job_ID = "+str(ID)
     curs.execute(query) 
@@ -323,17 +370,33 @@ def RetryJob(ID,AllOSG=False):
     if proj[0]["SaveReconstruction"]==1:
         cleanrecon=0
 
-    print("AllOSG? "+str(AllOSG))
-    if(rows[0]["BatchSystem"] == "SWIF" and AllOSG==False):
+    #bkg_parts=proj[0]["BKG"].split(":")
+    #if bkg_parts[0] == "Random":
+    #    formatted_runnum="%06d" % job[0]["RunNumber"]
+    #    path_to_check="/osgpool/halld/random_triggers/"+str(bkg_parts[1])+"/run"+str(formatted_runnum)+"_random.hddm"
+    #    print(path_to_check)
+    #    if not os.path.isfile(path_to_check):
+    #        jobdeactivate="UPDATE Jobs Set IsActive=0 where ID="+str(job[0]["ID"])
+    #        print(jobdeactivate)
+    #        curs.execute(jobdeactivate)
+    #        conn.commit()
+    #        status_six="UPDATE Attempts Set Status=\"6\" where Job_ID="+str(job[0]["ID"])
+    #        print(status_six)
+    #        curs.execute(status_six)
+    #        conn.commit()
+    #        return
+
+
+    if(rows[0]["BatchSystem"] == "SWIF"):
         splitL=len(proj[0]["OutputLocation"].split("/"))
         command = "swif retry-jobs -workflow "+"proj"+str(proj[0]["ID"])+"_"+proj[0]["OutputLocation"].split("/")[splitL-2]+" "+rows[0]["BatchJobID"]
         #proj548_gen_amp_L1520_errval_20190522055719am
         print(command)
         status = subprocess.call(command, shell=True)
-    elif(rows[0]["BatchSystem"] == "OSG" or AllOSG):
+    elif(rows[0]["BatchSystem"] == "OSG"):
         #print "OSG JOB FOUND"
         status = subprocess.call("cp "+MCWRAPPER_BOT_HOME+"/examples/OSGShell.config ./MCDispatched_"+str(ID)+".config", shell=True)
-        WritePayloadConfig(proj[0],"True",ID)
+        WritePayloadConfig(proj[0],"True")
         command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched_"+str(ID)+".config "+str(job[0]["RunNumber"])+" "+str(job[0]["NumEvts"])+" per_file=20000 base_file_number="+str(job[0]["FileNumber"])+" generate="+str(proj[0]["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(proj[0]["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(proj[0]["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(proj[0]["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid=-"+str(ID)+" batch=1"
         print(command)
         status = subprocess.call(command, shell=True)
@@ -375,35 +438,24 @@ def CancelJob(ID):
 
 def CheckGenConfig(order):
     ID=order["ID"]
-    print("checking/getting the generator config for project:",str(ID))
-    fileSTR=order["Generator_Config"].lstrip()
+    fileSTR=order["Generator_Config"]
     file_split=fileSTR.split("/")
     name=file_split[len(file_split)-1]
     #print name
-    #print(fileSTR)
-    copyTo="/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"
+    print(fileSTR)
     if(os.path.isfile(fileSTR)==False and socket.gethostname() == "scosg16.jlab.org" ):
-        print("File not found and on scosg16")
-        #copyTo="/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"
-        print("scp tbritton@ifarm1801-ib:"+fileSTR.lstrip()+" "+copyTo+str(ID)+"_"+name)
-        subprocess.call("scp tbritton@ifarm1801-ib:"+fileSTR+" "+copyTo+str(ID)+"_"+name,shell=True)
+        copyTo="/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"
+        subprocess.call("scp tbritton@ifarm:"+fileSTR+" "+copyTo+str(ID)+"_"+name,shell=True)
         #subprocess.call("rsync -ruvt ifarm1402:"+fileSTR+" "+copyTo,shell=True)
-        print("Updating order gen config:",fileSTR,"------>",copyTo+str(ID)+"_"+name)
-        order["Generator_Config"]=copyTo+str(ID)+"_"+name
-        print("returning",copyTo+str(ID)+"_"+name)
+        order["Generator_Config"]=copyTo+name
         return copyTo+str(ID)+"_"+name
     elif(os.path.isfile(fileSTR)==True and socket.gethostname() == "scosg16.jlab.org" ):
-        print("File found and on scosg16")
-        #copyTo="/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"
-        #print("scp tbritton@ifarm1801-ib:"+fileSTR+" "+copyTo+str(ID)+"_"+name)
-        #subprocess.call("scp tbritton@ifarm1801-ib:"+fileSTR+" "+copyTo+str(ID)+"_"+name,shell=True)
-        print("scp "+fileSTR+" "+copyTo+str(ID)+"_"+name)
+        copyTo="/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"
         subprocess.call("scp "+fileSTR+" "+copyTo+str(ID)+"_"+name,shell=True)
-        
-        order["Generator_Config"]=copyTo+str(ID)+"_"+name #copyTo+name
+        #subprocess.call("rsync -ruvt ifarm1402:"+fileSTR+" "+copyTo,shell=True)
+        order["Generator_Config"]=copyTo+name
         return copyTo+str(ID)+"_"+name
     elif os.path.isfile(fileSTR)==False and socket.gethostname() != "scosg16.jlab.org":
-        print("File not found and not on scosg16")
         return copyTo+str(ID)+"_"+name
 
     return "True"
@@ -463,26 +515,19 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
     RunNumber=str(order["RunNumLow"])
 
     print(str(index)+":  "+"Wrote Payload")
-    print("original RCDB QUERY:", order["RCDBQuery"])
     if(order["RunNumLow"] != order["RunNumHigh"]):
         query_to_do="@is_production and @status_approved"
-
-        if("recon-2018" in order["VersionSet"]):
-            query_to_do="@is_2018production and @status_approved"
-
-        if("recon-2019" in order["VersionSet"]):
-            query_to_do="@is_dirc_production and @status_approved"
     
         if(order["RCDBQuery"] != ""):
             query_to_do=order["RCDBQuery"]
     
         print("RCDB_QUERY IS: "+str(query_to_do))
-        rcdb_db = rcdb.RCDBProvider("mysql://rcdb@hallddb.jlab.org/rcdb")
-        runList=rcdb_db.select_runs(str(query_to_do),order["RunNumLow"],order["RunNumHigh"]).get_values(['event_count'],True)
-        print("RunList:",runList)
-        RunNumber=str(runList[0][0])#str(order["RunNumLow"])
+        #rcdb_db = rcdb.RCDBProvider("mysql://rcdb@hallddb.jlab.org/rcdb")
+        #runList=rcdb_db.select_runs(str(query_to_do),order["RunNumLow"],order["RunNumHigh"]).get_values(['event_count'],True)
+
+        RunNumber=str(order["RunNumLow"])#str(runList[0][0])
     
-    #if(order["ReactionLines"][0:5]=="file:")
+
     #if order["RunNumLow"] != order["RunNumHigh"] :
     #    RunNumber = RunNumber + "-" + str(order["RunNumHigh"])
 
@@ -509,7 +554,7 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
     my_env=None
     print(versionSet)
     if(versionSet != ""):
-        my_env=source("/group/halld/Software/build_scripts/gluex_env_jlab.sh /group/halld/www/halldweb/html/halld_versions/"+versionSet)
+        my_env=source("/group/halld/Software/build_scripts/gluex_env_jlab.sh /group/halld/www/halldweb/html/dist/"+versionSet)
         my_env["MCWRAPPER_CENTRAL"]=MCWRAPPER_BOT_HOME
 
     #print(my_env)
@@ -527,11 +572,9 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
     
     #print [p.returncode,errors,output]
     output=str(output).replace('\\n', '\n')
-    errors=str(errors).replace('\\n', '\n')
-
+    
     STATUS=output.find("Successfully completed")
-    if(str(ID)=="1130" or str(ID)=="1132"):
-        STATUS=1
+    
 
     if(STATUS!=-1):
         updatequery="UPDATE Project SET Tested=1"+" WHERE ID="+str(ID)+";"
@@ -636,67 +679,15 @@ def TestProject(ID,versionSet,commands_to_call=""):
 
 
 
-    
-
     if(order["RunNumLow"] != order["RunNumHigh"]):
         query_to_do="@is_production and @status_approved"
-
-        if("recon-2018" in order["VersionSet"]):
-            query_to_do="@is_2018production and @status_approved"
-
-        if("recon-2019" in order["VersionSet"]):
-            query_to_do="@is_dirc_production and @status_approved"
     
         if(order["RCDBQuery"] != ""):
             query_to_do=order["RCDBQuery"]
     
-    
         print("RCDB_QUERY IS: "+str(query_to_do))
-        #print("run selecting currently broken.  RCDB: 'basestring' not defined.  Testing first runnumber only")
-        rcdbdb = rcdb.RCDBProvider("mysql://rcdb@hallddb.jlab.org/rcdb")
-        try:
-            print(str(query_to_do)+" | "+str(int(order["RunNumLow"]))+" | "+str(int(order["RunNumHigh"])))
-            #runtable = rcdbdb.select_runs(str(query_to_do),int(order["RunNumLow"]),int(order["RunNumHigh"])).get_values(['event_count'],True)
-        
-        
-        except Exception as e:
-            print(e)
-            updatequery="UPDATE Project SET Tested=-1"+" WHERE ID="+str(ID)+";"
-            curs.execute(updatequery)
-            conn.commit()
-        
-            print(bcolors.FAIL+"TEST FAILED"+bcolors.ENDC)
-            print("rm -rf "+order["OutputLocation"])
-            try:
-                print("MAILING\n")
-                msg = EmailMessage()
-
-                msg.set_content('Your Project ID '+str(order['ID'])+' failed the test.  Please correct this issue by following the link: '+'https://halldweb.jlab.org/gluex_sim/SubmitSim.html?prefill='+str(order['ID'])+'&mod=1'+'.  Do NOT resubmit this request.  Write tbritton@jlab.org for additional assistance\n\n The log information is reproduced below:\n\n\n'+str("There was a problem with the RCDB query provided")+'\n\n\nErrors:\n\n\n'+str(e))
-                print("SET CONTENT")
-                msg['Subject'] = 'Project ID #'+str(order['ID'])+' Failed to test properly'
-                print("SET SUB")
-                msg['From'] = str('MCwrapper-bot')
-                print("SET FROM")
-
-                msg['To'] = str(order['Email'])#str("tbritton@jlab.org")#
-                print("SET SUB TO FROM")
-                # Send the message via our own SMTP server.                                                                                                                                                                        
-                s = smtplib.SMTP('localhost')
-                #print(msg)
-                print("SENDING")
-                #s.send_message(msg)
-                s.quit()     
-                copy=open("/osgpool/halld/tbritton/REQUESTED_FAIL_MAILS/email_"+str(order['ID'])+".log", "w+")
-                copy.write('The log information is reproduced below:\n\n\n'+str("There was a problem with the RCDB query provided")+'\n\n\nErrors:\n\n\n'+str(e))
-                copy.close()
-            except Exception as me:
-                print(me)
-                pass
-            return ["Problem with rcdb query",-1,e]
-
-        #print(runtable)
-        
-        #RunNumber=str(runList[0][0])
+        #rcdb_db = rcdb.RCDBProvider("mysql://rcdb@hallddb.jlab.org/rcdb")
+        #runList=rcdb_db.select_runs(str(query_to_do),order["RunNumLow"],order["RunNumHigh"]).get_values(['event_count'],True)
 
         RunNumber=str(order["RunNumLow"])#str(runList[0][0])
     
@@ -727,7 +718,7 @@ def TestProject(ID,versionSet,commands_to_call=""):
     my_env=None
     print(versionSet)
     if(versionSet != ""):
-        my_env=source("/group/halld/Software/build_scripts/gluex_env_jlab.sh /group/halld/www/halldweb/html/halld_versions/"+versionSet)
+        my_env=source("/group/halld/Software/build_scripts/gluex_env_jlab.sh /group/halld/www/halldweb/html/dist/"+versionSet)
         my_env["MCWRAPPER_CENTRAL"]=MCWRAPPER_BOT_HOME
 
     #print(my_env)
@@ -745,7 +736,7 @@ def TestProject(ID,versionSet,commands_to_call=""):
     
     #print [p.returncode,errors,output]
     output=str(output).replace('\\n', '\n')
-    errors=str(errors).replace('\\n', '\n')
+    
     STATUS=output.find("Successfully completed")
     
 
@@ -893,29 +884,18 @@ def WriteConfig(ID):
     query = "SELECT * FROM Project WHERE ID="+str(ID)
     curs.execute(query) 
     rows=curs.fetchall()
-    newLoc=CheckGenConfig(rows[0])
-    WritePayloadConfigString(rows[0],newLoc)
-    #status = subprocess.call("cp "+MCWRAPPER_BOT_HOME+"/examples/SWIFShell.config ./MCDispatched_"+str(ID)+".config", shell=True)
-    #WritePayloadConfig(rows[0],"True")
 
-def WritePayloadConfig(order,foundConfig,jobID=-1):
-    if jobID==-1:
-        MCconfig_file= open("MCDispatched_"+str(order['ID'])+".config","a")
-    else:
-        MCconfig_file= open("MCDispatched_"+str(jobID)+".config","a")
+    status = subprocess.call("cp "+MCWRAPPER_BOT_HOME+"/examples/SWIFShell.config ./MCDispatched_"+str(ID)+".config", shell=True)
+    WritePayloadConfig(rows[0],"True")
 
+def WritePayloadConfig(order,foundConfig):
+    
+    MCconfig_file= open("MCDispatched_"+str(order['ID'])+".config","a")
     MCconfig_file.write("PROJECT="+str(order["Exp"])+"\n")
 
     if str(order["Exp"]) == "CPP":
         MCconfig_file.write("VARIATION=mc_cpp"+"\n")
         MCconfig_file.write("FLUX_TO_GEN=cobrems"+"\n")
-    elif str(order["Exp"]) == "JEF":
-        MCconfig_file.write("VARIATION=mc_JEF"+"\n")
-        MCconfig_file.write("FLUX_TO_GEN=cobrems"+"\n")
-        MCconfig_file.write("eBEAM_ENERGY=11.6"+"\n")
-        MCconfig_file.write("eBEAM_CURRENT=0.35"+"\n")
-        MCconfig_file.write("RADIATOR_THICKNESS=50.e-06"+"\n")
-        MCconfig_file.write("COHERENT_PEAK=8.6"+"\n")
 
     splitlist=order["OutputLocation"].split("/")
     MCconfig_file.write("WORKFLOW_NAME="+splitlist[len(splitlist)-2]+"\n")
@@ -967,50 +947,27 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
     MCconfig_file.write("DATA_OUTPUT_BASE_DIR=/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/"+str(outputstring)+"\n")
     #print "FOUND CONFIG="+foundConfig
 
-    if(order["RunNumLow"] != order["RunNumHigh"]):
-        query_to_do="@is_production and @status_approved"
-
-        if("recon-2018" in order["VersionSet"]):
-            query_to_do="@is_2018production and @status_approved"
-
-        if("recon-2019" in order["VersionSet"]):
-            query_to_do="@is_dirc_production and @status_approved"
-    
-        if(order["RCDBQuery"] != ""):
-            query_to_do=order["RCDBQuery"]
-    
-    if(query_to_do != ""):
-        MCconfig_file.write("RCDB_QUERY="+query_to_do+"\n")
+    if(order["RCDBQuery"] != ""):
+        MCconfig_file.write("RCDB_QUERY="+order["RCDBQuery"]+"\n")
 
     if(order["ReactionLines"] != ""):
-        if(order["ReactionLines"][0:5] == "file:"):
-            jana_config_file=order["ReactionLines"][5:]
-            print("scp "+jana_config_file+" "+"/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config")
-            subprocess.call("scp "+"tbritton@ifarm1801-ib:"+jana_config_file+" "+"/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config",shell=True)
-            update_str="Update Project Set ReactionLines='file:/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config' where ID="+str(order["ID"])
-            print(update_str)
-            curs.execute(update_str)
-            conn.commit()
+        jana_config_file=open("/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config","w")
+        janaplugins="PLUGINS danarest,monitoring_hists,mcthrown_tree"
+        if(order["ReactionLines"]):
+            janaplugins+=",ReactionFilter\n"+order["ReactionLines"]
         else:
-            jana_config_file=open("/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config","w")
-            janaplugins="PLUGINS danarest,monitoring_hists,mcthrown_tree"
-            if(order["ReactionLines"]):
-                janaplugins+=",ReactionFilter\n"+order["ReactionLines"]
-            else:
-                janaplugins+="\n"
-            jana_config_file.write(janaplugins)
-            jana_config_file.close()
-
-
+            janaplugins+="\n"
+        jana_config_file.write(janaplugins)
+        jana_config_file.close()
         MCconfig_file.write("CUSTOM_PLUGINS=file:/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config\n")
 
     
-    MCconfig_file.write("ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"+str(order["VersionSet"])+"\n")
+    MCconfig_file.write("ENVIRONMENT_FILE=/group/halld/www/halldweb/html/dist/"+str(order["VersionSet"])+"\n")
     print("ADD ANAVER TO PAYLOAD?")
     print(str(order["ANAVersionSet"]))
     if(order["ANAVersionSet"] != None and order["ANAVersionSet"] != "None" ):
         print("ADDING ANNAVER")
-        MCconfig_file.write("ANA_ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"+str(order["ANAVersionSet"])+"\n")
+        MCconfig_file.write("ANA_ENVIRONMENT_FILE=/group/halld/www/halldweb/html/dist/"+str(order["ANAVersionSet"])+"\n")
     MCconfig_file.close()
 
 def DispatchToOSG(ID,order,PERCENT):
@@ -1046,109 +1003,6 @@ def DispatchToOSG(ID,order,PERCENT):
     print(command)
     status = subprocess.call(command, shell=True)
     
-def WritePayloadConfigString(order,foundConfig):
-    config_str=""
-
-    config_str+="PROJECT="+str(order["Exp"])+"\n"
-
-    if str(order["Exp"]) == "CPP":
-        config_str+="VARIATION=mc_cpp"+"\n"
-        config_str+="FLUX_TO_GEN=cobrems"+"\n"
-    elif str(order["Exp"]) == "JEF":
-        config_str+="VARIATION=mc_JEF"+"\n"
-        config_str+="FLUX_TO_GEN=cobrems"+"\n"
-        config_str+="eBEAM_ENERGY=11.6"+"\n"
-        config_str+="eBEAM_CURRENT=0.35"+"\n"
-        config_str+="RADIATOR_THICKNESS=50.e-06"+"\n"
-        config_str+="COHERENT_PEAK=8.6"+"\n"    
-
-    splitlist=order["OutputLocation"].split("/")
-    config_str+="WORKFLOW_NAME="+splitlist[len(splitlist)-2]+"\n"
-    config_str+=order["Config_Stub"]+"\n"
-    MinE=str(order["GenMinE"])
-    if len(MinE) > 5:
-        cutnum=len(MinE)-5
-        MinE = MinE[:-cutnum]
-    MaxE=str(order["GenMaxE"])
-    if len(MaxE) > 5:
-        cutnum=len(MaxE)-5
-        MaxE = MaxE[:-cutnum]
-    config_str+="GEN_MIN_ENERGY="+MinE+"\n"
-    config_str+="GEN_MAX_ENERGY="+MaxE+"\n"
-
-    if str(order["GenFlux"]) == "cobrems":
-        config_str+="FLUX_TO_GEN=cobrems"+"\n"
-
-    if order["CoherentPeak"] is not None :
-        config_str+="COHERENT_PEAK="+str(order["CoherentPeak"])+"\n"
-
-    if str(order["Generator"]) == "file:":
-        if foundConfig == "True":
-            config_str+="GENERATOR="+str(order["Generator"])+"/"+str(order["Generator_Config"])+"\n"
-        else:
-            config_str+="GENERATOR="+str(order["Generator"])+"/"+foundConfig+"\n"
-    else:
-        config_str+="GENERATOR="+str(order["Generator"])+"\n"
-        #print(order["Generator_Config"])
-        if foundConfig=="True":
-            config_str+="GENERATOR_CONFIG="+str(order["Generator_Config"])+"\n"
-        else:
-            config_str+="GENERATOR_CONFIG="+foundConfig+"\n"
-
-
-    if(order["CoherentPeak"] != None):
-        config_str+="COHERENT_PEAK="+str(order["CoherentPeak"])+"\n"
-    else:
-        config_str+="COHERENT_PEAK=rcdb"+"\n"
-
-    config_str+="GEANT_VERSION="+str(order["GeantVersion"])+"\n"
-    config_str+="NOSECONDARIES="+str(abs(order["GeantSecondaries"]-1))+"\n"
-    config_str+="BKG="+str(order["BKG"])+"\n"
-    #print(order["OutputLocation"])
-    splitLoc=str(order["OutputLocation"]).split("/")
-    #print(splitLoc)
-    outputstring="/".join(splitLoc[7:-1])
-    #order["OutputLocation"]).split("/")[7]
-    config_str+="DATA_OUTPUT_BASE_DIR=/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/"+str(outputstring)+"\n"
-    #print "FOUND CONFIG="+foundConfig
-
-    if(order["RunNumLow"] != order["RunNumHigh"]):
-        query_to_do="@is_production and @status_approved"
-
-        if("recon-2018" in order["VersionSet"]):
-            query_to_do="@is_2018production and @status_approved"
-
-        if("recon-2019" in order["VersionSet"]):
-            query_to_do="@is_dirc_production and @status_approved"
-    
-        if(order["RCDBQuery"] != ""):
-            query_to_do=order["RCDBQuery"]
-
-    config_str+="RCDB_QUERY="+query_to_do+"\n"
-        
-
-    if(order["ReactionLines"] != ""):
-        if(order["ReactionLines"][0:5] != "file:"):
-            #jana_config_file=open("/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config","w")
-            janaplugins="PLUGINS danarest,monitoring_hists,mcthrown_tree"
-            if(order["ReactionLines"]):
-                janaplugins+=",ReactionFilter\n"+order["ReactionLines"]
-            else:
-                janaplugins+="\n"
-            #jana_config_file.write(janaplugins)
-            #jana_config_file.close()
-        config_str+="CUSTOM_PLUGINS=file:/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config\n"
-
-    
-    config_str+="ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"+str(order["VersionSet"])+"\n"
-    #print("ADD ANAVER TO PAYLOAD?")
-    #print(str(order["ANAVersionSet"]))
-    if(order["ANAVersionSet"] != None and order["ANAVersionSet"] != "None" ):
-        #print("ADDING ANNAVER")
-        config_str+="ANA_ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"+str(order["ANAVersionSet"])+"\n"
-    #print("---------------------------------")
-    print(config_str)
-    return config_str
 
 def main(argv):
     #print(argv)

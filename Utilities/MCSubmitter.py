@@ -98,15 +98,15 @@ def WritePayloadConfig(order,foundConfig,batch_system):
         MCconfig_file.write("RCDB_QUERY="+order["RCDBQuery"]+"\n")
 
     if(order["ReactionLines"] != ""):
-
-        jana_config_file=open("/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config","w")
-        janaplugins="PLUGINS danarest,monitoring_hists,mcthrown_tree"
-        if(order["ReactionLines"]):
-            janaplugins+=",ReactionFilter\n"+order["ReactionLines"]
-        else:
-            janaplugins+="\n"
-        jana_config_file.write(janaplugins)
-        jana_config_file.close()
+        if(order["ReactionLines"][0:5] != "file:"):
+            jana_config_file=open("/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config","w")
+            janaplugins="PLUGINS danarest,monitoring_hists,mcthrown_tree"
+            if(order["ReactionLines"]):
+                janaplugins+=",ReactionFilter\n"+order["ReactionLines"]
+            else:
+                janaplugins+="\n"
+            jana_config_file.write(janaplugins)
+            jana_config_file.close()
 
 
         if batch_system == "OSG":
@@ -224,7 +224,7 @@ def decideSystem(row):
 def main(argv):
     #print(argv)
 
-    Block_size=10
+    Block_size=100
     int_i=0
     more_sub=True
     rows=[]
@@ -254,7 +254,7 @@ def main(argv):
                 print("=============================================================")
                 query = "SELECT UName,RunNumber,FileNumber,Tested,NumEvts,BKG,Notified,Jobs.ID,Project_ID,Priority,IsActive from Jobs,Project,Users where Tested=1 && Notified is NULL && IsActive=1 && Jobs.ID not in (Select Job_ID from Attempts) and Project_ID = Project.ID and Uname = name order by Priority desc limit "+str(Block_size)
                 if(Block_size==1):
-                    query = "SELECT UName,RunNumber,FileNumber,Tested,NumEvts,BKG,Notified,Jobs.ID,Project_ID,Priority from Jobs,Project,Users where Tested=1 && Notified is NULL && Jobs.ID not in (Select Job_ID from Attempts) and Project_ID = Project.ID and Uname = name order by Priority desc"
+                    query = "SELECT UName,RunNumber,FileNumber,Tested,NumEvts,BKG,Notified,Jobs.ID,Project_ID,Priority from Jobs,Project,Users where Tested=1 && Notified is NULL && Jobs.ID not in (Select Job_ID from Attempts) and Project_ID = Project.ID and Uname = name order by Project_ID asc" #Priority desc"
 
                 
                 print("Query:", query)
