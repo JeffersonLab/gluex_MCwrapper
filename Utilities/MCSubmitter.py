@@ -244,11 +244,12 @@ def main(argv):
         except Exception as e:
             print(e)
             pass
+
         querysubmitters="SELECT MAX(ID) FROM MCSubmitter;"
         curs.execute(querysubmitters)
         lastid = curs.fetchall()
         try:    
-            while more_sub and int_i<1000:
+            while more_sub:# and int_i<1000:
                 rows=[]
                 int_i+=1
                 print("=============================================================")

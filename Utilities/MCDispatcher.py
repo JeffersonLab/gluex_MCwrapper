@@ -462,6 +462,9 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
     WritePayloadConfig(order,newLoc)
     RunNumber=str(order["RunNumLow"])
 
+    output="Dispatch_Failure"
+    errors="Dispatch_Failure"
+
     print(str(index)+":  "+"Wrote Payload")
     print("original RCDB QUERY:", order["RCDBQuery"])
     if(order["RunNumLow"] != order["RunNumHigh"]):
@@ -478,32 +481,42 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
     
         print("RCDB_QUERY IS: "+str(query_to_do))
         rcdb_db = rcdb.RCDBProvider("mysql://rcdb@hallddb.jlab.org/rcdb")
-        runList=rcdb_db.select_runs(str(query_to_do),order["RunNumLow"],order["RunNumHigh"]).get_values(['event_count'],True)
-        print("RunList:",runList)
-        RunNumber=str(runList[0][0])#str(order["RunNumLow"])
+
+        try:
+            runList=rcdb_db.select_runs(str(query_to_do),order["RunNumLow"],order["RunNumHigh"]).get_values(['event_count'],True)
+            print("RunList:",runList)
+            RunNumber=str(runList[0][0])#str(order["RunNumLow"])
+        except Exception as e:
+            print(e)
+            output=e
+            errors=e
+            RunNumber=-1
+            pass
+        
     
     #if(order["ReactionLines"][0:5]=="file:")
     #if order["RunNumLow"] != order["RunNumHigh"] :
     #    RunNumber = RunNumber + "-" + str(order["RunNumHigh"])
-
-    cleangen=1
-    if order["SaveGeneration"]==1:
-        cleangen=0
-
-    cleangeant=1
-    if order["SaveGeant"]==1:
-        cleangeant=0
     
-    cleansmear=1
-    if order["SaveSmear"]==1:
-        cleansmear=0
-    
-    cleanrecon=1
-    if order["SaveReconstruction"]==1:
-        cleanrecon=0
+    if RunNumber != -1:
+        cleangen=1
+        if order["SaveGeneration"]==1:
+            cleangen=0
 
-    command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched_"+str(ID)+".config "+str(RunNumber)+" "+str(500)+" per_file=250000 base_file_number=0"+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=0"
-    print(command)
+        cleangeant=1
+        if order["SaveGeant"]==1:
+            cleangeant=0
+    
+        cleansmear=1
+        if order["SaveSmear"]==1:
+            cleansmear=0
+    
+        cleanrecon=1
+        if order["SaveReconstruction"]==1:
+            cleanrecon=0
+
+        command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched_"+str(ID)+".config "+str(RunNumber)+" "+str(500)+" per_file=250000 base_file_number=0"+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=0"
+        print(command)
     STATUS=-1
     # print (command+command2).split(" ")
     my_env=None
@@ -520,18 +533,19 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
         del my_env[""]
         my_env[absorbed[0]]=absorbed[1]
     #print(my_env)
-    p = Popen(commands_to_call+command, env=my_env ,stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True)
+    if RunNumber != -1:
+        p = Popen(commands_to_call+command, env=my_env ,stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True)
+    
     #print p
     #print "p defined"
-    output, errors = p.communicate()
+        output, errors = p.communicate()
     
     #print [p.returncode,errors,output]
-    output=str(output).replace('\\n', '\n')
-    errors=str(errors).replace('\\n', '\n')
+        output=str(output).replace('\\n', '\n')
+        errors=str(errors).replace('\\n', '\n')
 
-    STATUS=output.find("Successfully completed")
-    if(str(ID)=="1130" or str(ID)=="1132"):
-        STATUS=1
+        STATUS=output.find("Successfully completed")
+    
 
     if(STATUS!=-1):
         updatequery="UPDATE Project SET Tested=1"+" WHERE ID="+str(ID)+";"
@@ -556,8 +570,15 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
     #results_array=results_q.get()
     #results_array[index]=[output,STATUS,errors,row]
     #results_q.put(results_array)
-
+    
+    
     status=[output,STATUS,errors]
+    #status=["RCDB QUERY: "+query_to_do+" is invalid",STATUS,"RCDB QUERY: "+query_to_do+" is invalid"]
+
+
+    #if output=="Dispatch_Failure" and errors=="Dispatch_Failure":
+    #    status=[output,STATUS,errors]
+
     if(status[1]!=-1):
         #print "TEST success"
         #EMAIL SUCCESS AND DISPATCH
@@ -597,7 +618,7 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
             log.write("this was broke: \n" + str(status[0]))
             log.close()
 
-    return [output,STATUS,errors]
+    return status#[output,STATUS,errors]
 
 def TestProject(ID,versionSet,commands_to_call=""):
 

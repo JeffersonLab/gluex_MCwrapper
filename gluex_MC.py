@@ -48,8 +48,8 @@ try:
 except:
         pass
 
-MCWRAPPER_VERSION="2.5.2"
-MCWRAPPER_DATE="4/01/21"
+MCWRAPPER_VERSION="2.6.0"
+MCWRAPPER_DATE="4/14/21"
 
 
 #====================================================
@@ -387,7 +387,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
         f.write("transfer_output_files = "+str(RUNNUM)+"_"+str(FILENUM)+"\n")
         f.write("transfer_output_remaps = "+"\""+str(RUNNUM)+"_"+str(FILENUM)+"="+DATA_OUTPUT_BASE_DIR+"\""+"\n")
 
-        f.write("queue\n")
+        f.write("queue 1\n")
         f.close()
         
         JOBNAME=JOBNAME.replace(".","p")
