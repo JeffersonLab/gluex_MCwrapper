@@ -43,7 +43,7 @@ import glob
 import hddm_s
 import socket
 try:
-        dbcnx = mysql.connector.connect(user='mcuser', database='gluex_mc_test', host='hallddb.jlab.org')
+        dbcnx = mysql.connector.connect(user='mcuser', database='gluex_mc', host='hallddb.jlab.org')
         dbcursor = dbcnx.cursor()
 except:
         pass
