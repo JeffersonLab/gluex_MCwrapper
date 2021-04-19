@@ -43,13 +43,13 @@ import glob
 import hddm_s
 import socket
 try:
-        dbcnx = mysql.connector.connect(user='mcuser', database='gluex_mc', host='hallddb.jlab.org')
+        dbcnx = mysql.connector.connect(user='mcuser', database='gluex_mc_test', host='hallddb.jlab.org')
         dbcursor = dbcnx.cursor()
 except:
         pass
 
 MCWRAPPER_VERSION="2.6.0"
-MCWRAPPER_DATE="4/14/21"
+MCWRAPPER_DATE="4/19/21"
 
 
 #====================================================
@@ -58,6 +58,15 @@ MCWRAPPER_DATE="4/14/21"
 #if project ID is greater than 0 then it is a project ID and this call is going to record a new job (NOT ACTUALLY MAKING THE ATTEMPT)
 #if project ID == 0 then it is neither and just scrape the batch_ID....do nothing.  Note: this scheme requires the first id in the tables to be 1 and not 0)
 #====================================================
+def BundleJob(job_id):
+        bundle_query="select ID,FileNumber from Jobs where Project_ID in (SELECT Project_ID from Jobs where ID="+str(job_id)+") and RunNumber in (SELECT RunNumber from Jobs where ID="+str(job_id)+") and NumEvts in (SELECT NumEvts from Jobs where ID="+str(job_id)+") and IsActive=1;"
+        dbcursor.execute(bundle_query)
+        alljobs = dbcursor.fetchall()
+        print("count:",len(alljobs))
+        print(alljobs)
+        return alljobs
+
+
 
 def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID):
         STUBNAME=""
@@ -92,7 +101,7 @@ def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,N
         # script with options command
         add_command += " -fail-save-dir "+DATA_OUTPUT_BASE_DIR
 
-        add_command += " "+SCRIPT  +" "+ getCommandString(COMMAND)
+        add_command += " "+SCRIPT  +" "+ getCommandString(COMMAND,"SWIF")
 
         if(VERBOSE == True):
                 print( "job add command is \n" + str(add_command))
@@ -178,7 +187,7 @@ def  qsub_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NC
                 f.write("NNODES=\\ \n")    
        
                 # f.write("trap \'\' 2 9 15 \n" )
-                f.write(shell_to_use+" "+SCRIPT_TO_RUN+" "+getCommandString(COMMAND)+"\n" )
+                f.write(shell_to_use+" "+SCRIPT_TO_RUN+" "+getCommandString(COMMAND,"PBS")+"\n" )
                 f.write("exit 0\n")
                 f.close()
 
@@ -220,7 +229,7 @@ def  condor_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, 
 
         f=open('MCcondor.submit','w')
         f.write("Executable = "+SCRIPT_TO_RUN+"\n") 
-        f.write("Arguments  = "+getCommandString(COMMAND)+"\n")
+        f.write("Arguments  = "+getCommandString(COMMAND,"CONDOR")+"\n")
         f.write("Error      = "+DATA_OUTPUT_BASE_DIR+"/log/"+"error_"+JOBNAME+".log\n")
         f.write("Output      = "+DATA_OUTPUT_BASE_DIR+"/log/"+"out_"+JOBNAME+".log\n")
         f.write("Log = "+DATA_OUTPUT_BASE_DIR+"/log/"+"CONDOR_"+JOBNAME+".log\n")
@@ -257,13 +266,34 @@ def  condor_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, 
 #if project ID is greater than 0 then it is a project ID and this call is going to record a new job (NOT ACTUALLY MAKING THE ATTEMPT)
 #if project ID == 0 then it is neither and just scrape the batch_ID....do nothing.  Note: this scheme requires the first id in the tables to be 1 and not 0)
 #====================================================
-def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID ):
+def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID,bundled ):
         ship_random_triggers=False
         STUBNAME=""
         if(COMMAND['custom_tag_string'] != "I_dont_have_one"):
                 STUBNAME=COMMAND['custom_tag_string']+"_"
         # PREPARE NAMES
-        STUBNAME = STUBNAME+str(RUNNUM) + "_" + str(FILENUM)
+        STUBNAME = STUBNAME+str(RUNNUM)
+        
+
+        numJobsInBundle=1
+        bundledJobs=[]
+        #print("PROJID:",str(PROJECT_ID))
+        #print("TO BUNDLE:",bundled)
+        if(int(PROJECT_ID)<0 and bundled):
+
+                bundledJobs=BundleJob(-1*int(PROJECT_ID))
+                numJobsInBundle=len(bundledJobs)
+        elif(int(PROJECT_ID)<0 and not bundled):
+                bundledJobs=[[-1*int(PROJECT_ID),FILENUM]]
+                numJobsInBundle=len(bundledJobs)
+
+        #print("FOUND JOBS:",bundledJobs)
+        #print("LENGTH: ",numJobsInBundle)
+        if(numJobsInBundle==1):
+                STUBNAME=STUBNAME+ "_" + str(FILENUM)
+        else:
+                STUBNAME=STUBNAME+ "_$(Process)"
+
         JOBNAME = WORKFLOW + "_" + STUBNAME
 
         mkdircom="mkdir -p "+DATA_OUTPUT_BASE_DIR+"/log/"
@@ -358,7 +388,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
         f.write("universe = vanilla"+"\n")
         f.write("Executable = "+os.environ.get('MCWRAPPER_CENTRAL')+"/osg-container.sh"+"\n") 
         #f.write("Arguments  = "+SCRIPT_TO_RUN+" "+COMMAND+"\n")
-        f.write("Arguments  = "+"./"+script_to_use+" "+getCommandString(COMMAND_parts)+"\n")
+        f.write("Arguments  = "+"./"+script_to_use+" "+getCommandString(COMMAND_parts,"OSG",numJobsInBundle)+"\n")
         f.write("Requirements = (HAS_SINGULARITY == TRUE) && (HAS_CVMFS_oasis_opensciencegrid_org == True)"+"\n") 
         #f.write("Requirements = (HAS_SINGULARITY == TRUE) && (HAS_CVMFS_oasis_opensciencegrid_org == True) && (GLIDEIN_SITE=!=\"UConn\") && (GLIDEIN_SITE=!=\"Cedar\")"+"\n")
 #        f.write("Requirements = (HAS_SINGULARITY == TRUE) && (HAS_CVMFS_oasis_opensciencegrid_org == True) && (GLIDEIN_SITE==\"UConn\")"+"\n") 
@@ -373,6 +403,10 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
         f.write('concurrency_limits = GluexProduction'+"\n")
         f.write('on_exit_remove = true'+"\n")
         f.write('on_exit_hold = false'+"\n")
+
+        #STUBNAME = STUBNAME+str(RUNNUM) + "_" + str(FILENUM)
+        #JOBNAME = WORKFLOW + "_" + STUBNAME
+
         f.write("Error      = "+DATA_OUTPUT_BASE_DIR+"/log/"+"error_"+JOBNAME+".log\n")
         f.write("output      = "+DATA_OUTPUT_BASE_DIR+"/log/"+"out_"+JOBNAME+".log\n")
         f.write("log = "+LOG_DIR+"/log/"+"OSG_"+JOBNAME+".log\n")
@@ -384,12 +418,18 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
                 f.write("request_memory = 4.0GB"+"\n")
         #f.write("transfer_input_files = "+ENVFILE+"\n")
         f.write("transfer_input_files = "+SCRIPT_TO_RUN+", "+ENVFILE+additional_passins+"\n")
-        f.write("transfer_output_files = "+str(RUNNUM)+"_"+str(FILENUM)+"\n")
-        f.write("transfer_output_remaps = "+"\""+str(RUNNUM)+"_"+str(FILENUM)+"="+DATA_OUTPUT_BASE_DIR+"\""+"\n")
 
-        f.write("queue 1\n")
+        if(numJobsInBundle==1):
+                f.write("transfer_output_files = "+str(RUNNUM)+"_"+str(FILENUM)+"\n")
+                f.write("transfer_output_remaps = "+"\""+str(RUNNUM)+"_"+str(FILENUM)+"="+DATA_OUTPUT_BASE_DIR+"\""+"\n")
+        else:
+                f.write("transfer_output_files = "+str(RUNNUM)+"_$(Process)"+"\n")
+                f.write("transfer_output_remaps = "+"\""+str(RUNNUM)+"_$(Process)"+"="+DATA_OUTPUT_BASE_DIR+"\""+"\n")
+
+        f.write("queue "+str(numJobsInBundle)+"\n")
         f.close()
         
+
         JOBNAME=JOBNAME.replace(".","p")
         #"condor_submit -batch-name "+WORKFLOW+" MCcondor.submit"
         #add_command="condor_submit -name "+JOBNAME+" MCOSG_"+str(PROJECT_ID)+".submit"
@@ -409,23 +449,9 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
                 print(jobSubout)
                 idnumline=jobSubout.split("\n")[1].split(".")[0].split(" ")
                 
-                if(len(idnumline) == 6 ):
-                        SWIF_ID_NUM=str(idnumline[5])+".0"
-                #1 job(s) submitted to cluster 425013.
-                #***********************
-                #THE FOLLOWING IF CHECKS IF THE ASSIGNED BATCH ID HAS BEEN ASSIGNED BEFORE FROM SCOSG16
-                #THIS OCCURED BEFORE CAUSING UNIQUENESS TO BE VIOLATED AND REQUIRING ~8K JOBS TO BE SCRUBBED
-                #***********************
-                if int(PROJECT_ID) !=0:
-                        findmyjob="SELECT * FROM Attempts where BatchJobID='"+str(SWIF_ID_NUM)+"' && BatchSystem='OSG';"
-                        dbcursor.execute(findmyjob)
-                        MYJOB = dbcursor.fetchall()
 
-                        if len(MYJOB) != 0:
-                                #SELECT DISTINCT Project_ID FROM Jobs where ID in (select Job_ID from Attempts WHERE BatchSystem='OSG' GROUP BY BatchJobID HAVING COUNT(Job_ID)>1 ORDER BY BatchJobID DESC);
-                                print "THE TIMELINE HAS BEEN FRACTURED. TERMINATING SUBMITS AND SHUTTING THE ROBOT DOWN!!!"
-                                f=open("/osgpool/halld/tbritton/.ALLSTOP","x")
-                                exit(1)
+                #1 job(s) submitted to cluster 425013.
+               
 
                 status = subprocess.call('rm -f MCOSG_'+str(PROJECT_ID)+'.submit', shell=True)
                 status = subprocess.call('rm -f /tmp/MCOSG_'+str(PROJECT_ID)+'.submit', shell=True)
@@ -438,8 +464,32 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
                 recordJob(PROJECT_ID,RUNNUM,FILENUM,SWIF_ID_NUM,COMMAND['num_events'])
                 #recordFirstAttempt(PROJECT_ID,RUNNUM,FILENUM,"OSG",SWIF_ID_NUM,COMMAND['num_events'],NCORES,"Unset")
         elif int(PROJECT_ID) < 0:
-                print "A NEW ATTEMPT"
-                recordAttempt(abs(int(PROJECT_ID)),RUNNUM,FILENUM,"OSG",SWIF_ID_NUM,COMMAND['num_events'],NCORES,"Unset")
+                if(int(idnumline[0])==numJobsInBundle):
+                        #print "A NEW SET OF ATTEMPTS"
+                        #print("JOBS BUNDLE:",bundledJobs)
+                        for job in bundledJobs:
+                                #***********************
+                                #THE FOLLOWING IF CHECKS IF THE ASSIGNED BATCH ID HAS BEEN ASSIGNED BEFORE FROM SCOSG16
+                                #THIS OCCURED BEFORE CAUSING UNIQUENESS TO BE VIOLATED AND REQUIRING ~8K JOBS TO BE SCRUBBED
+                                #***********************
+                                print("JOB:",job)
+                                SWIF_ID_NUM=str(idnumline[5])+".0"
+                                if(numJobsInBundle>1):
+                                        SWIF_ID_NUM=str(idnumline[5])+"."+str(job[1])
+
+                                if int(PROJECT_ID) !=0:
+                                        findmyjob="SELECT * FROM Attempts where BatchJobID='"+str(SWIF_ID_NUM)+"' && BatchSystem='OSG';"
+                                        dbcursor.execute(findmyjob)
+                                        MYJOB = dbcursor.fetchall()
+
+                                if len(MYJOB) != 0:
+                                        #SELECT DISTINCT Project_ID FROM Jobs where ID in (select Job_ID from Attempts WHERE BatchSystem='OSG' GROUP BY BatchJobID HAVING COUNT(Job_ID)>1 ORDER BY BatchJobID DESC);
+                                        print "THE TIMELINE HAS BEEN FRACTURED. TERMINATING SUBMITS AND SHUTTING THE ROBOT DOWN!!!"
+                                        f=open("/osgpool/halld/tbritton/.ALLSTOP","x")
+                                        exit(1)
+
+                                
+                                recordAttempt(int(job[0]),RUNNUM,job[1],"OSG",SWIF_ID_NUM,COMMAND['num_events'],NCORES,"Unset")
 
 
 #====================================================
@@ -462,7 +512,7 @@ def JSUB_add_job(VERBOSE, WORKFLOW, PROJECT,TRACK, RUNNUM, FILENUM, SCRIPT_TO_RU
         f.write("<Project name=\""+PROJECT+"\"/>"+"\n")
         f.write("<Track name=\""+TRACK+"\"/>"+"\n")
         f.write("<Name name=\""+JOBNAME+"\"/>"+"\n")
-        f.write("<Command><![CDATA[ "+SCRIPT_TO_RUN+" "+getCommandString(COMMAND)+" ]></Command>"+"\n")
+        f.write("<Command><![CDATA[ "+SCRIPT_TO_RUN+" "+getCommandString(COMMAND,"JSUB")+" ]></Command>"+"\n")
         f.write("<Job> </Job>"+"\n")
         f.write("</Request>"+"\n")
 
@@ -503,7 +553,7 @@ def  SLURMcont_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAN
         
         #f.write("srun "+SCRIPT_TO_RUN+" "+COMMAND+"\n")
         #/group/halld/www/halldweb/html/dist/gluex_centos7.img /cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest
-        f.write("module use /apps/modulefiles; module load singularity/3.4.0; singularity exec --bind /cvmfs --bind /work/osgpool/ --bind /work/halld --bind /cache/halld --bind /work/halld2 /cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest $MCWRAPPER_CENTRAL/MakeMC.sh "+getCommandString(COMMAND)+"\n")
+        f.write("module use /apps/modulefiles; module load singularity/3.4.0; singularity exec --bind /cvmfs --bind /work/osgpool/ --bind /work/halld --bind /cache/halld --bind /work/halld2 /cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest $MCWRAPPER_CENTRAL/MakeMC.sh "+getCommandString(COMMAND,"SBATCH_SLURM")+"\n")
 
         f.close()
         
@@ -550,7 +600,7 @@ def  SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, N
         
         #f.write("srun "+SCRIPT_TO_RUN+" "+COMMAND+"\n")
         #/group/halld/www/halldweb/html/dist/gluex_centos7.img /cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest
-        f.write(SCRIPT_TO_RUN+" "+getCommandString(COMMAND)+"\n")
+        f.write(SCRIPT_TO_RUN+" "+getCommandString(COMMAND,"SLURM")+"\n")
 
         f.close()
         
@@ -648,9 +698,11 @@ def recordAttempt(JOB_ID,RUNNO,FILENO,BatchSYS,BatchJobID, NUMEVTS,NCORES, RAM):
 #if a new MakeMC script came around this is where you would add an if and conform to its requirements
 #the COMMAND dictionary expects ALL the KEYS
 #====================================================
-def getCommandString(COMMAND):
-        return COMMAND['batchrun']+" "+COMMAND['environment_file']+" "+COMMAND['ana_environment_file']+" "+COMMAND['generator_config']+" "+COMMAND['output_directory']+" "+COMMAND['run_number']+" "+COMMAND['file_number']+" "+COMMAND['num_events']+" "+COMMAND['jana_calib_context']+" "+COMMAND['jana_calibtime']+" "+COMMAND['do_gen']+" "+COMMAND['do_geant']+" "+COMMAND['do_mcsmear']+" "+COMMAND['do_recon']+" "+COMMAND['clean_gen']+" "+COMMAND['clean_geant']+" "+COMMAND['clean_mcsmear']+" "+COMMAND['clean_recon']+" "+COMMAND['batch_system']+" "+COMMAND['num_cores']+" "+COMMAND['generator']+" "+COMMAND['geant_version']+" "+COMMAND['background_to_include']+" "+COMMAND['custom_Gcontrol']+" "+COMMAND['eBeam_energy']+" "+COMMAND['coherent_peak']+" "+COMMAND['min_generator_energy']+" "+COMMAND['max_generator_energy']+" "+COMMAND['custom_tag_string']+" "+COMMAND['custom_plugins']+" "+COMMAND['events_per_file']+" "+COMMAND['running_directory']+" "+COMMAND['ccdb_sqlite_path']+" "+COMMAND['rcdb_sqlite_path']+" "+COMMAND['background_tagger_only']+" "+COMMAND['radiator_thickness']+" "+COMMAND['background_rate']+" "+COMMAND['random_background_tag']+" "+COMMAND['recon_calibtime']+" "+COMMAND['no_geant_secondaries']+" "+COMMAND['mcwrapper_version']+" "+COMMAND['no_bcal_sipm_saturation']+" "+COMMAND['flux_to_generate']+" "+COMMAND['flux_histogram']+" "+COMMAND['polarization_to_generate']+" "+COMMAND['polarization_histogram']+" "+COMMAND['eBeam_current']+" "+COMMAND['experiment']+" "+COMMAND['num_rand_trigs']+" "+COMMAND['location']+" "+COMMAND['generator_post']+" "+COMMAND['generator_post_config']+" "+COMMAND['geant_vertex_area']+" "+COMMAND['geant_vertex_length']+" "+COMMAND['mcsmear_notag']
-
+def getCommandString(COMMAND,USER,numbundled=1):
+        if(USER=="OSG" and numbundled!=1):
+                return COMMAND['batchrun']+" "+COMMAND['environment_file']+" "+COMMAND['ana_environment_file']+" "+COMMAND['generator_config']+" "+COMMAND['output_directory']+" "+COMMAND['run_number']+" "+"$(Process)"+" "+COMMAND['num_events']+" "+COMMAND['jana_calib_context']+" "+COMMAND['jana_calibtime']+" "+COMMAND['do_gen']+" "+COMMAND['do_geant']+" "+COMMAND['do_mcsmear']+" "+COMMAND['do_recon']+" "+COMMAND['clean_gen']+" "+COMMAND['clean_geant']+" "+COMMAND['clean_mcsmear']+" "+COMMAND['clean_recon']+" "+COMMAND['batch_system']+" "+COMMAND['num_cores']+" "+COMMAND['generator']+" "+COMMAND['geant_version']+" "+COMMAND['background_to_include']+" "+COMMAND['custom_Gcontrol']+" "+COMMAND['eBeam_energy']+" "+COMMAND['coherent_peak']+" "+COMMAND['min_generator_energy']+" "+COMMAND['max_generator_energy']+" "+COMMAND['custom_tag_string']+" "+COMMAND['custom_plugins']+" "+COMMAND['events_per_file']+" "+COMMAND['running_directory']+" "+COMMAND['ccdb_sqlite_path']+" "+COMMAND['rcdb_sqlite_path']+" "+COMMAND['background_tagger_only']+" "+COMMAND['radiator_thickness']+" "+COMMAND['background_rate']+" "+COMMAND['random_background_tag']+" "+COMMAND['recon_calibtime']+" "+COMMAND['no_geant_secondaries']+" "+COMMAND['mcwrapper_version']+" "+COMMAND['no_bcal_sipm_saturation']+" "+COMMAND['flux_to_generate']+" "+COMMAND['flux_histogram']+" "+COMMAND['polarization_to_generate']+" "+COMMAND['polarization_histogram']+" "+COMMAND['eBeam_current']+" "+COMMAND['experiment']+" "+COMMAND['num_rand_trigs']+" "+COMMAND['location']+" "+COMMAND['generator_post']+" "+COMMAND['generator_post_config']+" "+COMMAND['geant_vertex_area']+" "+COMMAND['geant_vertex_length']+" "+COMMAND['mcsmear_notag']
+        else:
+                return COMMAND['batchrun']+" "+COMMAND['environment_file']+" "+COMMAND['ana_environment_file']+" "+COMMAND['generator_config']+" "+COMMAND['output_directory']+" "+COMMAND['run_number']+" "+COMMAND['file_number']+" "+COMMAND['num_events']+" "+COMMAND['jana_calib_context']+" "+COMMAND['jana_calibtime']+" "+COMMAND['do_gen']+" "+COMMAND['do_geant']+" "+COMMAND['do_mcsmear']+" "+COMMAND['do_recon']+" "+COMMAND['clean_gen']+" "+COMMAND['clean_geant']+" "+COMMAND['clean_mcsmear']+" "+COMMAND['clean_recon']+" "+COMMAND['batch_system']+" "+COMMAND['num_cores']+" "+COMMAND['generator']+" "+COMMAND['geant_version']+" "+COMMAND['background_to_include']+" "+COMMAND['custom_Gcontrol']+" "+COMMAND['eBeam_energy']+" "+COMMAND['coherent_peak']+" "+COMMAND['min_generator_energy']+" "+COMMAND['max_generator_energy']+" "+COMMAND['custom_tag_string']+" "+COMMAND['custom_plugins']+" "+COMMAND['events_per_file']+" "+COMMAND['running_directory']+" "+COMMAND['ccdb_sqlite_path']+" "+COMMAND['rcdb_sqlite_path']+" "+COMMAND['background_tagger_only']+" "+COMMAND['radiator_thickness']+" "+COMMAND['background_rate']+" "+COMMAND['random_background_tag']+" "+COMMAND['recon_calibtime']+" "+COMMAND['no_geant_secondaries']+" "+COMMAND['mcwrapper_version']+" "+COMMAND['no_bcal_sipm_saturation']+" "+COMMAND['flux_to_generate']+" "+COMMAND['flux_histogram']+" "+COMMAND['polarization_to_generate']+" "+COMMAND['polarization_histogram']+" "+COMMAND['eBeam_current']+" "+COMMAND['experiment']+" "+COMMAND['num_rand_trigs']+" "+COMMAND['location']+" "+COMMAND['generator_post']+" "+COMMAND['generator_post_config']+" "+COMMAND['geant_vertex_area']+" "+COMMAND['geant_vertex_length']+" "+COMMAND['mcsmear_notag']
 def LoadCCDB():
         sqlite_connect_str = "mysql://ccdb_user@hallddb.jlab.org/ccdb"
         provider = ccdb.AlchemyProvider()                           # this class has all CCDB manipulation functions
@@ -872,6 +924,7 @@ def main(argv):
 
         PROJECT_ID=0 #internally used when needed
         IS_SUBMITTER=0
+        TO_BUNDLE=False
         #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         VERSION  = "mc"
         CALIBTIME="notime"
@@ -1169,12 +1222,19 @@ def main(argv):
                         if flag[0]=="submitter":
                                 argfound=1
                                 IS_SUBMITTER=str(flag[1])
+                        if flag[0]=="tobundle":
+                                argfound=1
+                                #print("found tobundle",str(flag[1]))
+                                if(str(flag[1])=="1"):
+                                        TO_BUNDLE=True
                         if argfound==0:
                                 print( "WARNING OPTION: "+argu+" NOT FOUND!")
                 
         if DATA_OUTPUT_BASE_DIR == "UNKNOWN_LOCATION":
                 print( "I doubt that the system will find "+DATA_OUTPUT_BASE_DIR+" so I am saving you the embarassment and stopping this")
                 return
+
+        print("WILL BE BUNDLED",TO_BUNDLE)
 
         name_breakdown=GENCONFIG.split("/")
         CHANNEL = name_breakdown[len(name_breakdown)-1].split(".")[0]
@@ -1331,7 +1391,7 @@ def main(argv):
                                 elif BATCHSYS.upper()=="CONDOR":
                                         condor_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, PROJECT_ID, CONDOR_MAGIC )
                                 elif BATCHSYS.upper()=="OSG":
-                                        OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
+                                        OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID,TO_BUNDLE )
                                 elif BATCHSYS.upper()=="SLURMCONT":
                                         SLURMcont_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
                                 elif BATCHSYS.upper()=="SLURM":
@@ -1432,7 +1492,7 @@ def main(argv):
                                         if BGFOLD == "Random" or BGFOLD=="DEFAULT" or BGFOLD[0:3] == "loc":
                                                 RANDOM_NUM_EVT=GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,runs[0])
                                                 COMMAND_dict['num_rand_trigs']=str(RANDOM_NUM_EVT)
-                                        COMMAND=getCommandString(COMMAND_dict) #str(BATCHRUN)+" "+ENVFILE+" "+GENCONFIG+" "+str(outdir)+" "+str(runs[0])+" "+str(BASEFILENUM+FILENUM_this_run+-1)+" "+str(num_this_file)+" "+str(VERSION)+" "+str(CALIBTIME)+" "+str(GENR)+" "+str(GEANT)+" "+str(SMEAR)+" "+str(RECON)+" "+str(CLEANGENR)+" "+str(CLEANGEANT)+" "+str(CLEANSMEAR)+" "+str(CLEANRECON)+" "+str(BATCHSYS)+" "+str(NCORES).split(':')[-1]+" "+str(GENERATOR)+" "+str(GEANTVER)+" "+str(BGFOLD)+" "+str(CUSTOM_GCONTROL)+" "+str(eBEAM_ENERGY)+" "+str(COHERENT_PEAK)+" "+str(MIN_GEN_ENERGY)+" "+str(MAX_GEN_ENERGY)+" "+str(TAGSTR)+" "+str(CUSTOM_PLUGINS)+" "+str(PERFILE)+" "+str(RUNNING_DIR)+" "+str(ccdbSQLITEPATH)+" "+str(rcdbSQLITEPATH)+" "+str(BGTAGONLY)+" "+str(RADIATOR_THICKNESS)+" "+str(BGRATE)+" "+str(RANDBGTAG)+" "+str(RECON_CALIBTIME)+" "+str(NOSECONDARIES)+" "+str(MCWRAPPER_VERSION)+" "+str(NOSIPMSATURATION)+" "+str(FLUX_TO_GEN)+" "+str(FLUX_HIST)+" "+str(POL_TO_GEN)+" "+str(POL_HIST)+" "+str(eBEAM_CURRENT)+" "+str(PROJECT)
+                                        COMMAND=getCommandString(COMMAND_dict,"NONSUB") #str(BATCHRUN)+" "+ENVFILE+" "+GENCONFIG+" "+str(outdir)+" "+str(runs[0])+" "+str(BASEFILENUM+FILENUM_this_run+-1)+" "+str(num_this_file)+" "+str(VERSION)+" "+str(CALIBTIME)+" "+str(GENR)+" "+str(GEANT)+" "+str(SMEAR)+" "+str(RECON)+" "+str(CLEANGENR)+" "+str(CLEANGEANT)+" "+str(CLEANSMEAR)+" "+str(CLEANRECON)+" "+str(BATCHSYS)+" "+str(NCORES).split(':')[-1]+" "+str(GENERATOR)+" "+str(GEANTVER)+" "+str(BGFOLD)+" "+str(CUSTOM_GCONTROL)+" "+str(eBEAM_ENERGY)+" "+str(COHERENT_PEAK)+" "+str(MIN_GEN_ENERGY)+" "+str(MAX_GEN_ENERGY)+" "+str(TAGSTR)+" "+str(CUSTOM_PLUGINS)+" "+str(PERFILE)+" "+str(RUNNING_DIR)+" "+str(ccdbSQLITEPATH)+" "+str(rcdbSQLITEPATH)+" "+str(BGTAGONLY)+" "+str(RADIATOR_THICKNESS)+" "+str(BGRATE)+" "+str(RANDBGTAG)+" "+str(RECON_CALIBTIME)+" "+str(NOSECONDARIES)+" "+str(MCWRAPPER_VERSION)+" "+str(NOSIPMSATURATION)+" "+str(FLUX_TO_GEN)+" "+str(FLUX_HIST)+" "+str(POL_TO_GEN)+" "+str(POL_HIST)+" "+str(eBEAM_CURRENT)+" "+str(PROJECT)
                                         
                                         
                                         if BATCHRUN == 0 or BATCHSYS.upper()=="NULL":
@@ -1454,7 +1514,7 @@ def main(argv):
                                                         elif BATCHSYS.upper()=="CONDOR":
                                                                 condor_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, PROJECT_ID, CONDOR_MAGIC )
                                                         elif BATCHSYS.upper()=="OSG":
-                                                                OSG_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID)
+                                                                OSG_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID, TO_BUNDLE)
                                                         elif BATCHSYS.upper()=="SLURMCONT":
                                                                 SLURM_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
                                                         elif BATCHSYS.upper()=="SLURM":
@@ -1482,7 +1542,7 @@ def main(argv):
                                         RANDOM_NUM_EVT=GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,RUNNUM)
                                         COMMAND_dict['num_rand_trigs']=str(RANDOM_NUM_EVT)
 
-                                COMMAND=getCommandString(COMMAND_dict) #str(BATCHRUN)+" "+ENVFILE+" "+GENCONFIG+" "+str(outdir)+" "+str(RUNNUM)+" "+str(BASEFILENUM+FILENUM+-1)+" "+str(num)+" "+str(VERSION)+" "+str(CALIBTIME)+" "+str(GENR)+" "+str(GEANT)+" "+str(SMEAR)+" "+str(RECON)+" "+str(CLEANGENR)+" "+str(CLEANGEANT)+" "+str(CLEANSMEAR)+" "+str(CLEANRECON)+" "+str(BATCHSYS).upper()+" "+str(NCORES).split(':')[-1]+" "+str(GENERATOR)+" "+str(GEANTVER)+" "+str(BGFOLD)+" "+str(CUSTOM_GCONTROL)+" "+str(eBEAM_ENERGY)+" "+str(COHERENT_PEAK)+" "+str(MIN_GEN_ENERGY)+" "+str(MAX_GEN_ENERGY)+" "+str(TAGSTR)+" "+str(CUSTOM_PLUGINS)+" "+str(PERFILE)+" "+str(RUNNING_DIR)+" "+str(ccdbSQLITEPATH)+" "+str(rcdbSQLITEPATH)+" "+str(BGTAGONLY)+" "+str(RADIATOR_THICKNESS)+" "+str(BGRATE)+" "+str(RANDBGTAG)+" "+str(RECON_CALIBTIME)+" "+str(NOSECONDARIES)+" "+str(MCWRAPPER_VERSION)+" "+str(NOSIPMSATURATION)+" "+str(FLUX_TO_GEN)+" "+str(FLUX_HIST)+" "+str(POL_TO_GEN)+" "+str(POL_HIST)+" "+str(eBEAM_CURRENT)+" "+str(PROJECT)
+                                COMMAND=getCommandString(COMMAND_dict,"INTERACTIVE") #str(BATCHRUN)+" "+ENVFILE+" "+GENCONFIG+" "+str(outdir)+" "+str(RUNNUM)+" "+str(BASEFILENUM+FILENUM+-1)+" "+str(num)+" "+str(VERSION)+" "+str(CALIBTIME)+" "+str(GENR)+" "+str(GEANT)+" "+str(SMEAR)+" "+str(RECON)+" "+str(CLEANGENR)+" "+str(CLEANGEANT)+" "+str(CLEANSMEAR)+" "+str(CLEANRECON)+" "+str(BATCHSYS).upper()+" "+str(NCORES).split(':')[-1]+" "+str(GENERATOR)+" "+str(GEANTVER)+" "+str(BGFOLD)+" "+str(CUSTOM_GCONTROL)+" "+str(eBEAM_ENERGY)+" "+str(COHERENT_PEAK)+" "+str(MIN_GEN_ENERGY)+" "+str(MAX_GEN_ENERGY)+" "+str(TAGSTR)+" "+str(CUSTOM_PLUGINS)+" "+str(PERFILE)+" "+str(RUNNING_DIR)+" "+str(ccdbSQLITEPATH)+" "+str(rcdbSQLITEPATH)+" "+str(BGTAGONLY)+" "+str(RADIATOR_THICKNESS)+" "+str(BGRATE)+" "+str(RANDBGTAG)+" "+str(RECON_CALIBTIME)+" "+str(NOSECONDARIES)+" "+str(MCWRAPPER_VERSION)+" "+str(NOSIPMSATURATION)+" "+str(FLUX_TO_GEN)+" "+str(FLUX_HIST)+" "+str(POL_TO_GEN)+" "+str(POL_HIST)+" "+str(eBEAM_CURRENT)+" "+str(PROJECT)
                
                                
                                 #either call MakeMC.csh or add a job depending on swif flag
@@ -1504,7 +1564,7 @@ def main(argv):
                                                 elif BATCHSYS.upper()=="CONDOR":
                                                         condor_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, PROJECT_ID, CONDOR_MAGIC )
                                                 elif BATCHSYS.upper()=="OSG":
-                                                        OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
+                                                        OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID, TO_BUNDLE )
                                                 elif BATCHSYS.upper()=="SLURMCONT":
                                                         SLURMcont_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
                                                 elif BATCHSYS.upper()=="SLURM":
