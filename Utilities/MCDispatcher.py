@@ -382,8 +382,8 @@ def CheckGenConfig(order):
     #print name
     #print(fileSTR)
     copyTo="/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"
-    if(os.path.isfile(fileSTR)==False and socket.gethostname() == "scosg16.jlab.org" ):
-        print("File not found and on scosg16")
+    if(os.path.isfile(fileSTR)==False and (socket.gethostname() == "scosg16.jlab.org" or socket.gethostname() == "scosg20.jlab.org") ):
+        print("File not found and on submit node")
         #copyTo="/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"
         print("scp tbritton@ifarm1801-ib:"+fileSTR.lstrip()+" "+copyTo+str(ID)+"_"+name)
         subprocess.call("scp tbritton@ifarm1801-ib:"+fileSTR+" "+copyTo+str(ID)+"_"+name,shell=True)
@@ -392,8 +392,8 @@ def CheckGenConfig(order):
         order["Generator_Config"]=copyTo+str(ID)+"_"+name
         print("returning",copyTo+str(ID)+"_"+name)
         return copyTo+str(ID)+"_"+name
-    elif(os.path.isfile(fileSTR)==True and socket.gethostname() == "scosg16.jlab.org" ):
-        print("File found and on scosg16")
+    elif(os.path.isfile(fileSTR)==True and (socket.gethostname() == "scosg16.jlab.org" or  socket.gethostname() == "scosg20.jlab.org") ):
+        print("File found and on submit node")
         #copyTo="/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"
         #print("scp tbritton@ifarm1801-ib:"+fileSTR+" "+copyTo+str(ID)+"_"+name)
         #subprocess.call("scp tbritton@ifarm1801-ib:"+fileSTR+" "+copyTo+str(ID)+"_"+name,shell=True)
@@ -402,8 +402,8 @@ def CheckGenConfig(order):
         
         order["Generator_Config"]=copyTo+str(ID)+"_"+name #copyTo+name
         return copyTo+str(ID)+"_"+name
-    elif os.path.isfile(fileSTR)==False and socket.gethostname() != "scosg16.jlab.org":
-        print("File not found and not on scosg16")
+    elif os.path.isfile(fileSTR)==False and (socket.gethostname() != "scosg16.jlab.org" or socket.gethostname() != "scosg20.jlab.org"):
+        print("File not found and not on submit node ")
         return copyTo+str(ID)+"_"+name
 
     return "True"
@@ -1004,12 +1004,34 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
     if(order["ReactionLines"] != ""):
         if(order["ReactionLines"][0:5] == "file:"):
             jana_config_file=order["ReactionLines"][5:]
-            print("scp "+jana_config_file+" "+"/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config")
+
+            print("scp "+"tbritton@ifarm1801-ib:"+jana_config_file+" "+"/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config")
             subprocess.call("scp "+"tbritton@ifarm1801-ib:"+jana_config_file+" "+"/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config",shell=True)
-            update_str="Update Project Set ReactionLines='file:/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config' where ID="+str(order["ID"])
-            print(update_str)
-            curs.execute(update_str)
-            conn.commit()
+            
+
+            if(os.path.exists("/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config")):
+                update_str="Update Project Set ReactionLines='file:/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config' where ID="+str(order["ID"])
+                print(update_str)
+                curs.execute(update_str)
+                conn.commit()
+            else:
+                print("could not copy file",jana_config_file)
+                
+                msg = EmailMessage()
+                msg.set_content("Could not test the project because MCwrapper-bot could not copy the following file: "+jana_config_file+"\n This may be do to a lack of permissions for tbritton to read from the containing directory or the file itself may not exist.\n Shortly you will receive a second email that the actual test has failed, please use the link contained in the second email to correct this problem.")
+
+                # me == the sender's email address                                                                                                                                                                                 
+                # you == the recipient's email address                                                                                                                                                                             
+                msg['Subject'] = 'GlueX MC Request #'+str(order['ID'])+' Could not be tested properly'
+                msg['From'] = 'MCwrapper-bot'
+                msg['To'] = str(order['Email'])
+
+                # Send the message via our own SMTP server.                                                                                                                                                                        
+                s = smtplib.SMTP('localhost')
+                s.send_message(msg)
+                s.quit()
+                pass
+
         else:
             jana_config_file=open("/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config","w")
             janaplugins="PLUGINS danarest,monitoring_hists,mcthrown_tree"
