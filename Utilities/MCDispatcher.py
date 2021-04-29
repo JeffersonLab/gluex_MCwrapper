@@ -291,8 +291,6 @@ def RetryJobsFromProject(ID, countLim):
 #        if(SYS == "OSG"):
         #TREAT LIKE NEW PROJECT WITH JUST THE JOB
 
-
-
 def RetryJob(ID,AllOSG=False):
     #query = "SELECT * FROM Attempts WHERE Job_ID="+str(ID)
     query= "SELECT Attempts.*,Max(Attempts.Creation_Time) FROM Attempts,Jobs WHERE Attempts.Job_ID = "+str(ID)
@@ -334,7 +332,8 @@ def RetryJob(ID,AllOSG=False):
         #print "OSG JOB FOUND"
         status = subprocess.call("cp "+MCWRAPPER_BOT_HOME+"/examples/OSGShell.config ./MCDispatched_"+str(ID)+".config", shell=True)
         WritePayloadConfig(proj[0],"True",ID)
-        command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched_"+str(ID)+".config "+str(job[0]["RunNumber"])+" "+str(job[0]["NumEvts"])+" per_file=20000 base_file_number="+str(job[0]["FileNumber"])+" generate="+str(proj[0]["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(proj[0]["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(proj[0]["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(proj[0]["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid=-"+str(ID)+" batch=1 tobundle=0"
+        per_file_num=2*int(job[0]["NumEvts"])
+        command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched_"+str(ID)+".config "+str(job[0]["RunNumber"])+" "+str(job[0]["NumEvts"])+" per_file="+str(per_file_num)+"  base_file_number="+str(job[0]["FileNumber"])+" generate="+str(proj[0]["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(proj[0]["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(proj[0]["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(proj[0]["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid=-"+str(ID)+" batch=1 tobundle=0"
         print(command)
         status = subprocess.call(command, shell=True)
 
@@ -901,7 +900,16 @@ def DispatchToSWIF(ID,order,PERCENT):
         #print updatequery
         curs.execute(updatequery)
         conn.commit()
-        command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched_"+str(ID)+".config "+str(RunNumber)+" "+str(NumEventsToProduce)+" per_file=50000 base_file_number="+str(FileNumber_NewJob)+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=2 tobundle=0"
+        per_file_num=50000
+        get_perfile_q="SELECT PerFile from Generator_perfiles where GenName=\""+order["Generator"]+"\";"
+        curs.execute(get_perfile_q) 
+        rows=curs.fetchall()
+        try:
+            per_file_num=rows[0]["PerFile"]
+        Except exception as e:
+            print(e)
+            pass
+        command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched_"+str(ID)+".config "+str(RunNumber)+" "+str(NumEventsToProduce)+" per_file="+str(per_file_num) +" base_file_number="+str(FileNumber_NewJob)+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=2 tobundle=0"
         print(command)
         status = subprocess.call(command, shell=True)
     else:
@@ -1083,7 +1091,16 @@ def DispatchToOSG(ID,order,PERCENT):
     #print updatequery
     curs.execute(updatequery)
     conn.commit()
-    command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched_"+str(ID)+".config "+str(RunNumber)+" "+str(order["NumEvents"])+" per_file=20000 base_file_number="+str(0)+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" logdir=/osgpool/halld/tbritton/REQUESTEDMC_LOGS/"+order["OutputLocation"].split("/")[7]+" batch=1 tobundle=0"
+    per_file_num=20000
+    get_perfile_q="SELECT PerFile from Generator_perfiles where GenName=\""+order["Generator"]+"\";"
+    curs.execute(get_perfile_q) 
+    rows=curs.fetchall()
+    try:
+        per_file_num=rows[0]["PerFile"]
+    Except exception as e:
+        print(e)
+        pass
+    command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched_"+str(ID)+".config "+str(RunNumber)+" "+str(order["NumEvents"])+" per_file="+str(per_file_num)+" base_file_number="+str(0)+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" logdir=/osgpool/halld/tbritton/REQUESTEDMC_LOGS/"+order["OutputLocation"].split("/")[7]+" batch=1 tobundle=0"
     print(command)
     status = subprocess.call(command, shell=True)
     
