@@ -652,11 +652,11 @@ if [[ "$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" == 
 			exit 1000
 		    fi
 
-			if [[ "$BATCHSYS" == "OSG" && "$MAKE_MC_USING_XROOTD" == "1" && $RANDOM_TRIG_NUM_EVT == -1 ]]; then
-			echo "something went wrong with initialization"
-			echo "Could not find mix-in file "$bkglocstring
-			exit 1000
-		    fi
+			#if [[ "$BATCHSYS" == "OSG" && "$MAKE_MC_USING_XROOTD" == "1" && $RANDOM_TRIG_NUM_EVT == -1 ]]; then
+			#echo "something went wrong with initialization"
+			#echo "Could not find mix-in file "$bkglocstring
+			#exit 1000
+		    #fi
 fi
 
 
@@ -1412,6 +1412,11 @@ fi
 	   		rm count.py
 	   else
 			totalnum=$RANDOM_TRIG_NUM_EVT
+	   fi
+
+	   if [[$totalnum == -1]]; then
+			echo "could not count file. exiting"
+			exit 230
 	   fi
 		fold_skip_num=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
 		echo "skipping: "$fold_skip_num
