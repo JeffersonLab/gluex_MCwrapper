@@ -49,7 +49,7 @@ except:
         pass
 
 MCWRAPPER_VERSION="2.6.0"
-MCWRAPPER_DATE="4/23/21"
+MCWRAPPER_DATE="4/28/21"
 
 
 #====================================================
@@ -1599,8 +1599,8 @@ def GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,RUNNUM):
 
                 path_base="/work/osgpool/halld/random_triggers/"
 
-                if socket.gethostname() == "scosg16.jlab.org" or ocket.gethostname() == "scosg20.jlab.org":
-                        path_base="/osgpool/halld/random_triggers/"
+                #if socket.gethostname() == "scosg16.jlab.org" or socket.gethostname() == "scosg20.jlab.org":
+                #        path_base="/osgpool/halld/random_triggers/"
                 
                 if Style=="Random":
                         path_base=path_base+RANDBGTAG+"/"

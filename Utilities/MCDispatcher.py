@@ -906,7 +906,7 @@ def DispatchToSWIF(ID,order,PERCENT):
         rows=curs.fetchall()
         try:
             per_file_num=rows[0]["PerFile"]
-        Except exception as e:
+        except Exception as e:
             print(e)
             pass
         command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched_"+str(ID)+".config "+str(RunNumber)+" "+str(NumEventsToProduce)+" per_file="+str(per_file_num) +" base_file_number="+str(FileNumber_NewJob)+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=2 tobundle=0"
@@ -1097,7 +1097,7 @@ def DispatchToOSG(ID,order,PERCENT):
     rows=curs.fetchall()
     try:
         per_file_num=rows[0]["PerFile"]
-    Except exception as e:
+    except Exception as e:
         print(e)
         pass
     command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched_"+str(ID)+".config "+str(RunNumber)+" "+str(order["NumEvents"])+" per_file="+str(per_file_num)+" base_file_number="+str(0)+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" logdir=/osgpool/halld/tbritton/REQUESTEDMC_LOGS/"+order["OutputLocation"].split("/")[7]+" batch=1 tobundle=0"
