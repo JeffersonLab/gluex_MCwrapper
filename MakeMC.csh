@@ -1316,7 +1316,6 @@ endif
 			grep -v "/particle/" $STANDARD_NAME.conf >> control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 		else if ( $GENERATOR == "geantBEAM" ) then
 			sed -i 's/INFILE/cINFILE/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-			sed -i 's/BEAM/cBEAM/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 			sed -i 's/TEMPSKIP/'0'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 			grep -v "/GENBEAM/" $STANDARD_NAME.conf >> control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 		else
