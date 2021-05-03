@@ -1417,7 +1417,9 @@ fi
 	#	fi
 	#fi
 	#fi
-
+if [[ "$GENERATOR" == "geantBEAM" ]]; then
+  	echo "SKIP RUNNING MCSMEAR AND RECONSTRUCTION"
+else
 	if [[ !("$GENR" == "0" && "$GEANT" == "0" && "$SMEAR" == "0") ]]; then
 	echo "RUNNING MCSMEAR"
 	if [[ "$GENR" == "0" && "$GEANT" == "0" ]]; then
@@ -1658,7 +1660,7 @@ fi
 			rm jana_config.cfg
 			rm ana_jana.cfg
 		fi
-
+fi
 		if [[ "$CLEANGEANT" == "1" && "$GEANT" == "1" ]]; then
 		    rm $STANDARD_NAME'_geant'$GEANTVER'.hddm'
 		    rm control.in
