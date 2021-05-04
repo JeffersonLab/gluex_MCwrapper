@@ -124,6 +124,7 @@ def WritePayloadConfig(order,foundConfig,batch_system):
     MCconfig_file.close()
 
 def SubmitList(SubList,job_IDs_submitted):
+    print("Submitting SubList")
     for row in SubList:
         print("Row",row)
                 
@@ -135,7 +136,7 @@ def SubmitList(SubList,job_IDs_submitted):
         curs.execute(bundle_query)
         alljobs = curs.fetchall()
 
-        print(alljobs)
+        print("bundled:",len(alljobs))
         if(len(alljobs)>1):
             bundled=True
         projinfo_q="SELECT * FROM Project where ID="+str(row['Project_ID'])

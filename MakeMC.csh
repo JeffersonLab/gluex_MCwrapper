@@ -681,7 +681,10 @@ if ( "$GENR" != "0" ) then
 				echo "something went wrong with initialization"
 				exit 1
 			else
-				echo `grep KINE $CONFIG_FILE | awk '{print $2}' `
+				
+				echo "particle_gun error checking"
+				echo "particle gun firing particle: "`grep KINE $CONFIG_FILE | awk '{print $2}' `
+
 				if ( `grep "^[^c]" | grep KINE $CONFIG_FILE | awk '{print $2}' ` < 100 && `grep "^[^c]" | grep KINE $CONFIG_FILE | wc -w` > 3 ) then
 					echo "ERROR THETA AND PHI APPEAR TO BE SET BUT WILL BE IGNORED.  PLEASE REMOVE THESE SETTINGS FROM:"$CONFIG_FILE" AND RESUBMIT."
 					echo "something went wrong with initialization"
@@ -1310,6 +1313,7 @@ endif
 	    	sed -i 's/TEMPSKIP/'$skip_num'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 
 		else if ( $GENERATOR == "particle_gun" ) then
+			echo "doing seds"
 			sed -i 's/INFILE/cINFILE/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 			sed -i 's/BEAM/cBEAM/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 			sed -i 's/TEMPSKIP/'0'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in

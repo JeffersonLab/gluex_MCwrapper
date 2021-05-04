@@ -49,7 +49,7 @@ except:
         pass
 
 MCWRAPPER_VERSION="2.6.0"
-MCWRAPPER_DATE="4/28/21"
+MCWRAPPER_DATE="05/04/21"
 
 
 #====================================================
@@ -467,11 +467,19 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
                 if(int(idnumline[0])==numJobsInBundle):
                         #print "A NEW SET OF ATTEMPTS"
                         #print("JOBS BUNDLE:",bundledJobs)
+                        transactions_Array=[]
+                        trans_block_count=0
+                        transaction_stub="INSERT INTO Attempts (Job_ID,Creation_Time,BatchSystem,BatchJobID,Status,WallTime,CPUTime,ThreadsRequested,RAMRequested, RAMUsed) VALUES "
+                        transaction_str=transaction_stub
                         for job in bundledJobs:
                                 #***********************
                                 #THE FOLLOWING IF CHECKS IF THE ASSIGNED BATCH ID HAS BEEN ASSIGNED BEFORE FROM SCOSG16
                                 #THIS OCCURED BEFORE CAUSING UNIQUENESS TO BE VIOLATED AND REQUIRING ~8K JOBS TO BE SCRUBBED
                                 #***********************
+                                if(trans_block_count % 500 == 0 and trans_block_count != 0):
+                                        transactions_Array.append(transaction_str[:-2])
+                                        transaction_str=transaction_stub
+
                                 print("JOB:",job)
                                 SWIF_ID_NUM=str(idnumline[5])+".0"
                                 if(numJobsInBundle>1):
@@ -488,9 +496,16 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
                                         f=open("/osgpool/halld/tbritton/.ALLSTOP","x")
                                         exit(1)
 
-                                
+                                transaction_str+=Build_recordAttemptString(int(job[0]),RUNNUM,job[1],"OSG",SWIF_ID_NUM,COMMAND['num_events'],NCORES,"Unset")+", "
                                 recordAttempt(int(job[0]),RUNNUM,job[1],"OSG",SWIF_ID_NUM,COMMAND['num_events'],NCORES,"Unset")
 
+                        if(transaction_str != transaction_stub):
+                                transactions_Array.append(transaction_str[:-2])
+                        
+                        
+                        for transaction in transactions_Array:
+                                print(transaction)
+                                #Transact_recordAttempt(transaction)
 
 #====================================================
 #Takes in a few pertinant pieces of info.  Submits to the JSUB
@@ -671,6 +686,27 @@ def recordFirstAttempt(PROJECT_ID,RUNNO,FILENO,BatchSYS,BatchJobID, NUMEVTS,NCOR
 #====================================================
 #This function attaches itself directly to the passed in JOB_ID and inserts a new job
 #====================================================
+def Transact_recordAttempt(trans_string):
+        dbcursor.execute(trans_string)
+        dbcnx.commit()
+
+def Build_recordAttemptString(JOB_ID,RUNNO,FILENO,BatchSYS,BatchJobID, NUMEVTS,NCORES, RAM):
+        findmyjob="SELECT * FROM Jobs WHERE ID="+str(JOB_ID)
+        #print findmyjob
+        dbcursor.execute(findmyjob)
+        MYJOB = dbcursor.fetchall()
+
+        #print MYJOB
+
+        if len(MYJOB) != 1:
+                print "I either can't find a job or too many jobs might be mine"
+                exit(1)
+
+        Job_ID=MYJOB[0][0]
+
+        addAttempt="("+str(JOB_ID)+", NOW(), "+str("'"+BatchSYS+"'")+", "+str(BatchJobID)+", 'Created', 0, 0, "+str(NCORES)+", "+str("'"+RAM+"'")+", '0'"+");"
+        return addAttempt
+
 def recordAttempt(JOB_ID,RUNNO,FILENO,BatchSYS,BatchJobID, NUMEVTS,NCORES, RAM):
         #print "RECORDING ATTEMPT"
         #print JOB_ID
