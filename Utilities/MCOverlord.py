@@ -834,7 +834,7 @@ def main(argv):
 
         runnum=0
         runmax=-1
-        spawnNum=20
+        spawnNum=10
         numOverRide=False
 
         if(len(argv) !=0):
@@ -863,6 +863,7 @@ def main(argv):
                     Monitoring_assignments=array_split(Alljobs,spawnNum)
                     spawns=[]
                     for i in range(0,spawnNum):
+                        time.sleep(random.randint(1,spawnNum))
                         print("block "+str(i))
                         print(len(Monitoring_assignments[i]))
                         p=Process(target=checkOSG,args=(Monitoring_assignments[i],))
@@ -873,6 +874,7 @@ def main(argv):
                         
                     for i in range(0,len(spawns)):
                         #print("join "+str(i))
+                        time.sleep(random.randint(1,spawnNum))
                         spawns[i].start()
                         
                     #time.sleep(2)

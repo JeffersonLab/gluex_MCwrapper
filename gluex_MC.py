@@ -497,7 +497,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
                                         exit(1)
 
                                 transaction_str+=Build_recordAttemptString(int(job[0]),RUNNUM,job[1],"OSG",SWIF_ID_NUM,COMMAND['num_events'],NCORES,"Unset")+", "
-                                recordAttempt(int(job[0]),RUNNUM,job[1],"OSG",SWIF_ID_NUM,COMMAND['num_events'],NCORES,"Unset")
+                                #recordAttempt(int(job[0]),RUNNUM,job[1],"OSG",SWIF_ID_NUM,COMMAND['num_events'],NCORES,"Unset")
 
                         if(transaction_str != transaction_stub):
                                 transactions_Array.append(transaction_str[:-2])
@@ -505,7 +505,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
                         
                         for transaction in transactions_Array:
                                 print(transaction)
-                                #Transact_recordAttempt(transaction)
+                                Transact_recordAttempt(transaction)
 
 #====================================================
 #Takes in a few pertinant pieces of info.  Submits to the JSUB
