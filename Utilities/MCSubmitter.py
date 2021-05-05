@@ -183,7 +183,7 @@ def SubmitList(SubList,job_IDs_submitted):
 
 def decideSystem(row):
 
-    #return "OSG"
+    return "OSG"
     command="condor_q | grep 'Total for tbritton'" #"condor_q | grep tbritton"
     print(command)
     jobSubout=""

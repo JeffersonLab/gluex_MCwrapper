@@ -56,12 +56,16 @@ def RecallAll():
             command="condor_rm "+str(row["BatchJobID"])
             cmd=Popen(command.split(" "),stdout=PIPE,stderr=PIPE)
             out, err = cmd.communicate()
+            #print(out)
+            #print(err)
             print(str(err,"utf-8"))
             if("not found" in str(err,"utf-8")):
                 print("clear "+str(row["BatchJobID"]))
                 updatequery="UPDATE Attempts SET Status=\"3\" where BatchJobID=\""+str(row["BatchJobID"])+"\""
                 curs.execute(updatequery)
                 conn.commit()
+            if("Failed to end classad" in str(err,"utf-8")):
+                break
             #subprocess.call(command,shell=True)
 
 def DeclareAllComplete():

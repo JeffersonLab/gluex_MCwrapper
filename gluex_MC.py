@@ -504,7 +504,6 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
                         
                         
                         for transaction in transactions_Array:
-                                print(transaction)
                                 Transact_recordAttempt(transaction)
 
 #====================================================
@@ -687,7 +686,8 @@ def recordFirstAttempt(PROJECT_ID,RUNNO,FILENO,BatchSYS,BatchJobID, NUMEVTS,NCOR
 #This function attaches itself directly to the passed in JOB_ID and inserts a new job
 #====================================================
 def Transact_recordAttempt(trans_string):
-        dbcursor.execute(trans_string)
+        print(trans_string)
+        dbcursor.execute(trans_string)#,multi=True)
         dbcnx.commit()
 
 def Build_recordAttemptString(JOB_ID,RUNNO,FILENO,BatchSYS,BatchJobID, NUMEVTS,NCORES, RAM):
@@ -704,7 +704,7 @@ def Build_recordAttemptString(JOB_ID,RUNNO,FILENO,BatchSYS,BatchJobID, NUMEVTS,N
 
         Job_ID=MYJOB[0][0]
 
-        addAttempt="("+str(JOB_ID)+", NOW(), "+str("'"+BatchSYS+"'")+", "+str(BatchJobID)+", 'Created', 0, 0, "+str(NCORES)+", "+str("'"+RAM+"'")+", '0'"+");"
+        addAttempt="("+str(JOB_ID)+", NOW(), "+str("'"+BatchSYS+"'")+", "+str(BatchJobID)+", 'Created', 0, 0, "+str(NCORES)+", "+str("'"+RAM+"'")+", '0'"+")"
         return addAttempt
 
 def recordAttempt(JOB_ID,RUNNO,FILENO,BatchSYS,BatchJobID, NUMEVTS,NCORES, RAM):
