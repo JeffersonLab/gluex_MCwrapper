@@ -49,8 +49,8 @@ except:
         pass
 
 MCWRAPPER_VERSION="2.6.0"
-MCWRAPPER_DATE="05/12/21"
-#test
+MCWRAPPER_DATE="05/11/21"
+
 #====================================================
 #Takes in a few pertinant pieces of info.  Creates (if needed) a swif workflow and adds a job to it.
 #if project ID is less than 0 its an attempt ID and is recorded as such
