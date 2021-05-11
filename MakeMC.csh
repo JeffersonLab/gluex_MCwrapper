@@ -1398,6 +1398,9 @@ endif
 			set MCSMEAR_Flags="$MCSMEAR_Flags"" -t"
 		endif
 
+		if ( "$GENERATOR" == "geantBEAM" ) then
+			echo "SKIP RUNNING MCSMEAR AND RECONSTRUCTION"
+		else
 		if ( !("$GENR" == "0" && "$GEANT" == "0" && "$SMEAR" == "0" ) ) then
 		echo "RUNNING MCSMEAR"
 		if ( "$GENR" == "0" && "$GEANT" == "0" ) then
@@ -1470,6 +1473,7 @@ endif
 			echo "status code: "$mcsmear_return_code
 			exit $mcsmear_return_code
 		endif
+		endif
 
 	    #run reconstruction
 	    if ( "$CLEANGENR" == "1" ) then
@@ -1497,6 +1501,7 @@ endif
 					rm $STANDARD_NAME.hddm
 				endif
 	    endif
+
 
 		if ( ! -f ./$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' ) then
 			echo "An hddm file was not created by mcsmear.  Terminating MC production.  Please consult logs to diagnose"
@@ -1634,7 +1639,7 @@ endif
 					rm ana_jana.cfg
 
 				endif
-
+endif #close geantBEAM if
 				if ( "$CLEANGEANT" == "1" && "$GEANT" == "1" ) then
 		   		rm $STANDARD_NAME'_geant'$GEANTVER'.hddm'
 		   		rm control.in
