@@ -336,7 +336,15 @@ def RetryJob(ID,AllOSG=False):
         #print "OSG JOB FOUND"
         status = subprocess.call("cp "+MCWRAPPER_BOT_HOME+"/examples/OSGShell.config ./MCDispatched_"+str(ID)+".config", shell=True)
         WritePayloadConfig(proj[0],"True",ID)
-        per_file_num=2*int(job[0]["NumEvts"])
+        per_file_num=20000
+        get_perfile_q="SELECT PerFile from Generator_perfiles where GenName=\""+str(proj[0]["Generator"])+"\";"
+        curs.execute(get_perfile_q) 
+        genrow=curs.fetchall()
+        try:
+            per_file_num=genrow[0]["PerFile"]
+        except Exception as e:
+            print(e)
+            pass
         command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched_"+str(ID)+".config "+str(job[0]["RunNumber"])+" "+str(job[0]["NumEvts"])+" per_file="+str(per_file_num)+"  base_file_number="+str(job[0]["FileNumber"])+" generate="+str(proj[0]["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(proj[0]["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(proj[0]["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(proj[0]["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid=-"+str(ID)+" batch=1 tobundle=0"
         print(command)
         status = subprocess.call(command, shell=True)
@@ -923,6 +931,7 @@ def WriteConfig(ID):
     query = "SELECT * FROM Project WHERE ID="+str(ID)
     curs.execute(query) 
     rows=curs.fetchall()
+    print(rows)
     newLoc=CheckGenConfig(rows[0])
     WritePayloadConfigString(rows[0],newLoc)
     #status = subprocess.call("cp "+MCWRAPPER_BOT_HOME+"/examples/SWIFShell.config ./MCDispatched_"+str(ID)+".config", shell=True)

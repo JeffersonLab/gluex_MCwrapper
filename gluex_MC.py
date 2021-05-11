@@ -49,7 +49,7 @@ except:
         pass
 
 MCWRAPPER_VERSION="2.6.0"
-MCWRAPPER_DATE="05/04/21"
+MCWRAPPER_DATE="05/11/21"
 
 
 #====================================================
