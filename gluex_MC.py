@@ -49,9 +49,8 @@ except:
         pass
 
 MCWRAPPER_VERSION="2.6.0"
-MCWRAPPER_DATE="05/11/21"
-
-
+MCWRAPPER_DATE="05/12/21"
+#test
 #====================================================
 #Takes in a few pertinant pieces of info.  Creates (if needed) a swif workflow and adds a job to it.
 #if project ID is less than 0 its an attempt ID and is recorded as such
@@ -492,7 +491,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
 
                                 if len(MYJOB) != 0:
                                         #SELECT DISTINCT Project_ID FROM Jobs where ID in (select Job_ID from Attempts WHERE BatchSystem='OSG' GROUP BY BatchJobID HAVING COUNT(Job_ID)>1 ORDER BY BatchJobID DESC);
-                                        print "THE TIMELINE HAS BEEN FRACTURED. TERMINATING SUBMITS AND SHUTTING THE ROBOT DOWN!!!"
+                                        print("THE TIMELINE HAS BEEN FRACTURED. TERMINATING SUBMITS AND SHUTTING THE ROBOT DOWN!!!")
                                         f=open("/osgpool/halld/tbritton/.ALLSTOP","x")
                                         exit(1)
 
@@ -646,7 +645,7 @@ def split_file_on_run_number(infname):
                 evt = rec.getReconstructedPhysicsEvent()
                 if evt.runNo not in fout:
                         outfname = "{0}_run{1}.hddm".format(infname[:-5],evt.runNo)
-                        print "Creating output file {0} ...".format(outfname)
+                        print("Creating output file {0} ...".format(outfname))
                         fout[evt.runNo] = hddm_r.ostream(outfname)
                         outevts[evt.runNo] = 0
                 else:
@@ -672,14 +671,14 @@ def recordFirstAttempt(PROJECT_ID,RUNNO,FILENO,BatchSYS,BatchJobID, NUMEVTS,NCOR
         MYJOB = dbcursor.fetchall()
 
         if len(MYJOB) != 1:
-                print "I either can't find a job or too many jobs might be mine"
+                print("I either can't find a job or too many jobs might be mine")
                 exit(1)
 
         Job_ID=MYJOB[0][0]
 
         addAttempt="INSERT INTO Attempts (Job_ID,Creation_Time,BatchSystem,BatchJobID,Status,WallTime,CPUTime,ThreadsRequested,RAMRequested, RAMUsed) VALUES ("+str(Job_ID)+", NOW(), "+str("'"+BatchSYS+"'")+", "+str(BatchJobID)+", 'Created', 0, 0, "+str(NCORES)+", "+str("'"+RAM+"'")+", '0'"+");"
 
-        print addAttempt
+        print(addAttempt)
         dbcursor.execute(addAttempt)
         dbcnx.commit()
 #====================================================
@@ -699,7 +698,7 @@ def Build_recordAttemptString(JOB_ID,RUNNO,FILENO,BatchSYS,BatchJobID, NUMEVTS,N
         #print MYJOB
 
         if len(MYJOB) != 1:
-                print "I either can't find a job or too many jobs might be mine"
+                print("I either can't find a job or too many jobs might be mine")
                 exit(1)
 
         Job_ID=MYJOB[0][0]
@@ -718,13 +717,13 @@ def recordAttempt(JOB_ID,RUNNO,FILENO,BatchSYS,BatchJobID, NUMEVTS,NCORES, RAM):
         #print MYJOB
 
         if len(MYJOB) != 1:
-                print "I either can't find a job or too many jobs might be mine"
+                print("I either can't find a job or too many jobs might be mine")
                 exit(1)
 
         Job_ID=MYJOB[0][0]
 
         addAttempt="INSERT INTO Attempts (Job_ID,Creation_Time,BatchSystem,BatchJobID,Status,WallTime,CPUTime,ThreadsRequested,RAMRequested, RAMUsed) VALUES ("+str(JOB_ID)+", NOW(), "+str("'"+BatchSYS+"'")+", "+str(BatchJobID)+", 'Created', 0, 0, "+str(NCORES)+", "+str("'"+RAM+"'")+", '0'"+");"
-        print addAttempt
+        print(addAttempt)
         dbcursor.execute(addAttempt)
         dbcnx.commit()
 
@@ -788,7 +787,7 @@ def calcFluxCCDB(ccdb_conn, run, emin, emax):
         elif converterThickness == "Be 750um":
                 converterLength = 750e-6
         else:
-                print "Unknown converter thickness"
+                print("Unknown converter thickness")
                 sys.exit(0)
 
         berilliumRL = 35.28e-2 # 35.28 cm
@@ -817,7 +816,7 @@ def calcFluxCCDB(ccdb_conn, run, emin, emax):
 		PS_accept_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/pair_spectrometer/lumi/PS_accept", run[0], VARIATION, CALIBTIME)
 	        PS_accept = PS_accept_assignment.constant_set.data_table
         except:
-                print "Missing flux for run number = %d, skipping generation" % run[0]
+                print("Missing flux for run number = %d, skipping generation" % run[0])
 		return -1.0
 
         # PS acceptance correction
@@ -1174,7 +1173,7 @@ def main(argv):
                                 FLUX_HIST=fluxbits[1]
                         elif ( len(fluxbits) == 1):
                                 if( str(fluxbits[0]).upper()=="COBREMS"): # COBREM calculation
-					FLUX_TO_GEN="cobrems"
+                                        FLUX_TO_GEN="cobrems"
                 elif str(parts[0]).upper()=="POL_TO_GEN":
                         polbits=rm_comments[0].strip().split(":")
                         if( len(polbits) == 2 ):
@@ -1182,8 +1181,8 @@ def main(argv):
                                 POL_HIST=polbits[1]
                         elif (len(polbits)==1):
                                 POL_TO_GEN=polbits[0]
-				if (FLUX_TO_GEN == "cobrems"):
-					POL_HIST="cobrems"
+                                if (FLUX_TO_GEN == "cobrems"):
+                                        POL_HIST="cobrems"
 
                 else:
                         print( "unknown config parameter!! "+str(parts[0]))
@@ -1411,11 +1410,11 @@ def main(argv):
                         os.system(str(SCRIPT_TO_RUN)+" "+COMMAND)
                 else:
                         if PROJECT_ID != 0:
-                                print "SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(RUNNUM)+" && FileNumber="+str(BASEFILENUM)+" && NumEvts="+str(EVTS)
+                                print("SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(RUNNUM)+" && FileNumber="+str(BASEFILENUM)+" && NumEvts="+str(EVTS))
                                 findmyjob="SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(RUNNUM)+" && FileNumber="+str(BASEFILENUM)+" && NumEvts="+str(EVTS)
                                 dbcursor.execute(findmyjob)
                                 MYJOB = dbcursor.fetchall() 
-                                print len(MYJOB) 
+                                print(len(MYJOB) )
                         if len(MYJOB) == 0:
                                 if BATCHSYS.upper()=="SWIF":
                                         #status = subprocess.call("swif create "+WORKFLOW,shell=True)
@@ -1468,7 +1467,7 @@ def main(argv):
                                 print( str(runlow)+"-->"+str(runhigh))
 
                         query_to_do="@is_production and @status_approved"
-                        print "RCDB_QUERY IS: "+str(RCDB_QUERY)
+                        print("RCDB_QUERY IS: "+str(RCDB_QUERY))
                         if(RCDB_QUERY!=""):
                                 query_to_do=RCDB_QUERY
 
@@ -1536,11 +1535,11 @@ def main(argv):
                                                 os.system(str(SCRIPT_TO_RUN)+" "+getCommandString(COMMAND_dict))
                                         else:
                                                 if PROJECT_ID != 0:
-                                                        print "SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(runs[0])+" && FileNumber="+str(BASEFILENUM+FILENUM_this_run+-1)+" && NumEvts="+str(num_this_file)
+                                                        print("SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(runs[0])+" && FileNumber="+str(BASEFILENUM+FILENUM_this_run+-1)+" && NumEvts="+str(num_this_file))
                                                         findmyjob="SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(runs[0])+" && FileNumber="+str(BASEFILENUM+FILENUM_this_run+-1)+" && NumEvts="+str(num_this_file)
                                                         dbcursor.execute(findmyjob)
                                                         MYJOB = dbcursor.fetchall()
-                                                        print len(MYJOB) 
+                                                        print(len(MYJOB))
                                                 if len(MYJOB) == 0:
                                                         if BATCHSYS.upper()=="SWIF":
                                                                 #status = subprocess.call("swif create "+WORKFLOW,shell=True)
@@ -1586,11 +1585,11 @@ def main(argv):
                                         os.system(str(SCRIPT_TO_RUN)+" "+COMMAND)
                                 else:
                                         if PROJECT_ID != 0:
-                                                print "SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(RUNNUM)+" && FileNumber="+str(BASEFILENUM+FILENUM+-1)+" && NumEvts="+str(num)
+                                                print("SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(RUNNUM)+" && FileNumber="+str(BASEFILENUM+FILENUM+-1)+" && NumEvts="+str(num))
                                                 findmyjob="SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(RUNNUM)+" && FileNumber="+str(BASEFILENUM+FILENUM+-1)+" && NumEvts="+str(num)
                                                 dbcursor.execute(findmyjob)
                                                 MYJOB = dbcursor.fetchall() 
-                                                print len(MYJOB) 
+                                                print(len(MYJOB))
                                         if len(MYJOB) == 0:
                                                 if BATCHSYS.upper()=="SWIF":
                                                         #status = subprocess.call("swif create "+WORKFLOW,shell=True)
@@ -1649,11 +1648,11 @@ def GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,RUNNUM):
 
                 formattedRUNNUM=formattedRUNNUM+str(RUNNUM)
                 path_base=path_base+"run"+formattedRUNNUM+"_random.hddm"
-                print path_base
+                print(path_base)
                 realpath=os.path.realpath(path_base)
 
                 if not os.path.isfile(realpath):
-                        print "can't find file to scan."
+                        print("can't find file to scan.")
                         return -1
 
                 queryrand="SELECT Num_Events FROM Randoms WHERE Style=\""+Style+"\" && Tag=\""+RANDBGTAG+"\""+" && Run_Number="+str(RUNNUM)+" && Path=\""+str(realpath)+"\""
@@ -1662,7 +1661,7 @@ def GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,RUNNUM):
                 matches = dbcursor.fetchall()
                 #print matches
                 if len(matches) == 0:
-                        print "Attempting to scan and tag this random trigger file"
+                        print("Attempting to scan and tag this random trigger file")
                         
 
                         Size=os.stat(realpath).st_size

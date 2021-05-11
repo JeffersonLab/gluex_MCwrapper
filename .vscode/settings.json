@@ -45,5 +45,6 @@
         "typeindex": "cpp",
         "typeinfo": "cpp"
     },
-    "editor.renderWhitespace": "all"
+    "editor.renderWhitespace": "all",
+    "python.pythonPath": "/usr/bin/python3"
 }
