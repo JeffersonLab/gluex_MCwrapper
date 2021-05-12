@@ -703,7 +703,7 @@ if ( "$GENR" != "0" ) then
 				exit 1
 			else
 				echo `grep GENBEAM $CONFIG_FILE | awk '{print $2}' `
-				if ( `grep "^[^c]" | grep GENBEAM $CONFIG_FILE | awk '{print $2}' ` != "'precol'" && `grep "^[^c]" | grep GENBEAM $CONFIG_FILE | awk '{print $2}' ` != "'postcol'" && `grep "^[^c]" | grep GENBEAM $CONFIG_FILE | awk '{print $2}' ` != "'postconv'" ) then
+				if ( `grep "^[^c]" | grep GENBEAM $CONFIG_FILE | awk '{print $2}' ` != "'precol'" && `grep "^[^c]" | grep GENBEAM $CONFIG_FILE | awk '{print $2}' ` != "'postcol'" && `grep "^[^c]" | grep GENBEAM $CONFIG_FILE | awk '{print $2}' ` != "'postconv'" && `grep "^[^c]" | grep GENBEAM $CONFIG_FILE | awk '{print $2}' ` != "'BHgen'" ) then
 					echo "ERROR GENBEAM CARD NOT VALID.  PLEASE CHANGE THE SETTING IN:"$CONFIG_FILE" AND RESUBMIT."
 					echo "something went wrong with initialization"
 					exit 1

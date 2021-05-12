@@ -731,7 +731,7 @@ if [[ "$GENR" != "0" ]]; then
 				echo "performing error checking"
 				echo "Note: this specific error checking has been disabled as it causes issues on some bash shells.  Basically if you use the GENBEAM parameters then make sure they are set correctly."
 				# echo `grep "^[^c]" | grep GENBEAM $CONFIG_FILE | awk '{print $2}' `
-				# if [[ `grep "^[^c]" | grep GENBEAM $CONFIG_FILE | awk '{print $2}' ` != "'precol'" && `grep "^[^c]" | grep GENBEAM $CONFIG_FILE | awk '{print $2}' ` != "'postcol'" && `grep "^[^c]" | grep GENBEAM $CONFIG_FILE | awk '{print $2}' ` != "'postconv'"  ]]; then
+				# if [[ `grep "^[^c]" | grep GENBEAM $CONFIG_FILE | awk '{print $2}' ` != "'precol'" && `grep "^[^c]" | grep GENBEAM $CONFIG_FILE | awk '{print $2}' ` != "'postcol'" && `grep "^[^c]" | grep GENBEAM $CONFIG_FILE | awk '{print $2}' ` != "'postconv'" && `grep "^[^c]" | grep GENBEAM $CONFIG_FILE | awk '{print $2}' ` != "'BHgen'"  ]]; then
 				# 	echo "ERROR GENBEAM CARD NOT VALID.  PLEASE CHANGE THE SETTING IN:"$CONFIG_FILE" AND RESUBMIT."
 				# 	exit 1
 				# fi
