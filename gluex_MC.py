@@ -49,7 +49,7 @@ except:
         pass
 
 MCWRAPPER_VERSION="2.6.0"
-MCWRAPPER_DATE="05/11/21"
+MCWRAPPER_DATE="06/07/21"
 #group sync test
 #====================================================
 #Takes in a few pertinant pieces of info.  Creates (if needed) a swif workflow and adds a job to it.
@@ -1401,6 +1401,7 @@ def main(argv):
 
         #The submitter grabs a single unattempted job and submits it.  Always a single runnumber
         # 
+        print(COMMAND_dict)
         if str(IS_SUBMITTER) == "1":
                 if BGFOLD == "Random" or BGFOLD=="DEFAULT" or BGFOLD[0:3] == "loc":
                         RANDOM_NUM_EVT=GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,RUNNUM)

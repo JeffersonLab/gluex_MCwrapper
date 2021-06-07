@@ -1741,7 +1741,7 @@ if [[ "$hddmfiles" != "" ]]; then
 fi
 
 cd ..
-
+rm -rf .hdds_tmp_*
 if [[ `ls $RUNNING_DIR/${RUN_NUMBER}_${FILE_NUMBER} | wc -l` == 0 ]]; then
 	rm -rf $RUNNING_DIR/${RUN_NUMBER}_${FILE_NUMBER}
 else
