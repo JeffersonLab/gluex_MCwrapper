@@ -46,7 +46,7 @@ import random
 import pipes
 import random
 
-
+MCWRAPPER_BOT_HOST_NAME=str(socket.gethostname())
 dbhost = "hallddb.jlab.org"
 dbuser = 'mcuser'
 dbpass = ''
@@ -216,7 +216,7 @@ def main(argv):
                 runnum=runnum+1
                 
                 try:
-                    queryosgjobs="SELECT * from Attempts WHERE BatchSystem='OSG' && Status !='4' && Status !='3' && Status!= '6' && Status != '5' && Status != '44';"# || (Status='4' && ExitCode != 0 && ProgramFailed is NULL) ORDER BY ID desc;"
+                    queryosgjobs="SELECT * from Attempts WHERE BatchSystem='OSG' && SubmitHost=\""+MCWRAPPER_BOT_HOST_NAME+"\" && Status !='4' && Status !='3' && Status!= '6' && Status != '5' && Status != '44';"# || (Status='4' && ExitCode != 0 && ProgramFailed is NULL) ORDER BY ID desc;"
                     #print queryosgjobs
                     dbcursor.execute(queryosgjobs)
                     Alljobs = list(dbcursor.fetchall())

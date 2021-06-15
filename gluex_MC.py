@@ -49,7 +49,8 @@ except:
         pass
 
 MCWRAPPER_VERSION="2.6.0"
-MCWRAPPER_DATE="06/07/21"
+MCWRAPPER_DATE="06/15/21"
+
 #group sync test
 #====================================================
 #Takes in a few pertinant pieces of info.  Creates (if needed) a swif workflow and adds a job to it.
@@ -468,7 +469,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
                         #print("JOBS BUNDLE:",bundledJobs)
                         transactions_Array=[]
                         trans_block_count=0
-                        transaction_stub="INSERT INTO Attempts (Job_ID,Creation_Time,BatchSystem,BatchJobID,Status,WallTime,CPUTime,ThreadsRequested,RAMRequested, RAMUsed) VALUES "
+                        transaction_stub="INSERT INTO Attempts (Job_ID,Creation_Time,BatchSystem,SubmitHost,BatchJobID,Status,WallTime,CPUTime,ThreadsRequested,RAMRequested, RAMUsed) VALUES "
                         transaction_str=transaction_stub
                         for job in bundledJobs:
                                 #***********************
@@ -495,7 +496,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
                                         f=open("/osgpool/halld/tbritton/.ALLSTOP","x")
                                         exit(1)
 
-                                transaction_str+=Build_recordAttemptString(int(job[0]),RUNNUM,job[1],"OSG",SWIF_ID_NUM,COMMAND['num_events'],NCORES,"Unset")+", "
+                                transaction_str+=Build_recordAttemptString(int(job[0]),RUNNUM,job[1],"OSG",socket.gethostname(),SWIF_ID_NUM,COMMAND['num_events'],NCORES,"Unset")+", "
                                 #recordAttempt(int(job[0]),RUNNUM,job[1],"OSG",SWIF_ID_NUM,COMMAND['num_events'],NCORES,"Unset")
 
                         if(transaction_str != transaction_stub):
@@ -676,7 +677,7 @@ def recordFirstAttempt(PROJECT_ID,RUNNO,FILENO,BatchSYS,BatchJobID, NUMEVTS,NCOR
 
         Job_ID=MYJOB[0][0]
 
-        addAttempt="INSERT INTO Attempts (Job_ID,Creation_Time,BatchSystem,BatchJobID,Status,WallTime,CPUTime,ThreadsRequested,RAMRequested, RAMUsed) VALUES ("+str(Job_ID)+", NOW(), "+str("'"+BatchSYS+"'")+", "+str(BatchJobID)+", 'Created', 0, 0, "+str(NCORES)+", "+str("'"+RAM+"'")+", '0'"+");"
+        addAttempt="INSERT INTO Attempts (Job_ID,Creation_Time,BatchSystem,HostName,BatchJobID,Status,WallTime,CPUTime,ThreadsRequested,RAMRequested, RAMUsed) VALUES ("+str(Job_ID)+", NOW(), "+str("'"+BatchSYS+"'")+", "+str(socket.gethostname())+", "+str(BatchJobID)+", 'Created', 0, 0, "+str(NCORES)+", "+str("'"+RAM+"'")+", '0'"+");"
 
         print(addAttempt)
         dbcursor.execute(addAttempt)
@@ -722,7 +723,7 @@ def recordAttempt(JOB_ID,RUNNO,FILENO,BatchSYS,BatchJobID, NUMEVTS,NCORES, RAM):
 
         Job_ID=MYJOB[0][0]
 
-        addAttempt="INSERT INTO Attempts (Job_ID,Creation_Time,BatchSystem,BatchJobID,Status,WallTime,CPUTime,ThreadsRequested,RAMRequested, RAMUsed) VALUES ("+str(JOB_ID)+", NOW(), "+str("'"+BatchSYS+"'")+", "+str(BatchJobID)+", 'Created', 0, 0, "+str(NCORES)+", "+str("'"+RAM+"'")+", '0'"+");"
+        addAttempt="INSERT INTO Attempts (Job_ID,Creation_Time,BatchSystem,SubmitHost,BatchJobID,Status,WallTime,CPUTime,ThreadsRequested,RAMRequested, RAMUsed) VALUES ("+str(JOB_ID)+", NOW(), "+str("'"+BatchSYS+"'")+", "+str(socket.gethostname())+", "+str(BatchJobID)+", 'Created', 0, 0, "+str(NCORES)+", "+str("'"+RAM+"'")+", '0'"+");"
         print(addAttempt)
         dbcursor.execute(addAttempt)
         dbcnx.commit()
