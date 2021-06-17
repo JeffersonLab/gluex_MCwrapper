@@ -782,14 +782,11 @@ def calcFluxCCDB(ccdb_conn, run, emin, emax):
 
         # Conversion factors for total flux
         converterThickness = run[2]
-        converterLength = 0
-        if converterThickness == "Be 75um": # default is 75 um
-                converterLength = 75e-6
-        elif converterThickness == "Be 750um":
+        converterLength = 75e-6 # default is 75 um
+        if converterThickness == "Be 750um":
                 converterLength = 750e-6
-        else:
-                print("Unknown converter thickness")
-                sys.exit(0)
+        elif converterThickness != "Be 75um":
+                print("Unknown converter thickness for run %s: %s, assuming Be 75um" % (run[0],run[2]))
 
         berilliumRL = 35.28e-2 # 35.28 cm
         radiationLength = converterLength/berilliumRL;
