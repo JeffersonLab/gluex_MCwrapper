@@ -1531,7 +1531,7 @@ def main(argv):
                                         
                                         if BATCHRUN == 0 or BATCHSYS.upper()=="NULL":
                                                 #print str(runs[0])+" "+str(BASEFILENUM+FILENUM_this_run+-1)+" "+str(num_this_file)
-                                                os.system(str(SCRIPT_TO_RUN)+" "+getCommandString(COMMAND_dict))
+                                                os.system(str(SCRIPT_TO_RUN)+" "+getCommandString(COMMAND_dict,"INTERACTIVE"))
                                         else:
                                                 if PROJECT_ID != 0:
                                                         print("SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(runs[0])+" && FileNumber="+str(BASEFILENUM+FILENUM_this_run+-1)+" && NumEvts="+str(num_this_file))
