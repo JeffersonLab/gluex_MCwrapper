@@ -35,9 +35,9 @@ shift
 setenv CALIBTIME $1
 set wholecontext = $VERSION
 if ( "$CALIBTIME" != "notime" ) then
-set wholecontext = "variation=$VERSION calibtime=$CALIBTIME"
+	set wholecontext = "variation=$VERSION calibtime=$CALIBTIME"
 else
-set wholecontext = "variation=$VERSION"
+	set wholecontext = "variation=$VERSION"
 endif
 setenv JANA_CALIB_CONTEXT "$wholecontext"
 shift
@@ -145,8 +145,8 @@ end
 set formatted_runNumber=$formatted_runNumber$RUN_NUMBER
 
 if ( "$BATCHSYS" == "OSG" && "$BATCHRUN" == "1" ) then
-setenv USER_BC '/usr/bin/bc'
-setenv USER_STAT '/usr/bin/stat'
+	setenv USER_BC '/usr/bin/bc'
+	setenv USER_STAT '/usr/bin/stat'
 endif
 
 
@@ -182,9 +182,9 @@ endif
 if ( "$BATCHRUN" != "0"  ) then
 # ENVIRONMENT
 	echo $ENVIRONMENT
-    echo pwd=$PWD
-    mkdir -p $OUTDIR
-    mkdir -p $OUTDIR/log
+	echo pwd=$PWD
+	mkdir -p $OUTDIR
+	mkdir -p $OUTDIR/log
 endif
 
 if ( "$BATCHSYS" == "QSUB" ) then
@@ -270,134 +270,139 @@ set BGRATE_toUse="Not Needed"
 
 set gen_pre_rcdb=`echo $GENERATOR | cut -c1-4`
 if ( $gen_pre_rcdb != "file" || ( "$BGTAGONLY_OPTION" == "1" || "$BKGFOLDSTR" == "BeamPhotons" ) ) then
-set radthick="50.e-6"
+	set radthick="50.e-6"
 
-if ( "$RADIATOR_THICKNESS" != "rcdb" || ( "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" ) ) then
-    set radthick=$RADIATOR_THICKNESS
-else
-	set words = `rcnd $RUN_NUMBER radiator_type | sed 's/ / /g' `
-	foreach word ($words:q)
+	if ( "$RADIATOR_THICKNESS" != "rcdb" || ( "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" ) ) then
+		set radthick=$RADIATOR_THICKNESS
+	else
+		set words = `rcnd $RUN_NUMBER radiator_type | sed 's/ / /g' `
 
-		if ( $word != "number" ) then
+		if ( $words == "" ) then 
+			echo "radiator_type not in rcdb for run "$RUN_NUMBER". Using default value..."
+		else
+			foreach word ($words:q)
 
-			if ( "$word" == "3x10-4" ) then
-				set radthick="30e-6"
-				end
-			else
-				set removedum = `echo $word:q | sed 's/um/ /g'`
+				if ( $word != "number" ) then
 
-				if ( $removedum != $word:q ) then
-					set radthick = `echo $removedum e-6 | tr -d '[:space:]'`
+					if ( "$word" == "3x10-4" ) then
+						set radthick="30e-6"
+						end
+					else
+						set removedum = `echo $word:q | sed 's/um/ /g'`
+
+						if ( $removedum != $word:q ) then
+							set radthick = `echo $removedum e-6 | tr -d '[:space:]'`
+						endif
+					endif
 				endif
-			endif
+			end
 		endif
-	end
-endif
-echo "Radiator thickness set..."
-set polarization_angle=`rcnd $RUN_NUMBER polarization_angle | awk '{print $1}'`
-
-if ( "$polarization_angle" == "" ) then
-	set poldir=`rcnd $RUN_NUMBER polarization_direction | awk '{print $1}'`
-	if ( "$poldir" == "PARA" ) then
-		set polarization_angle="0.0"
-	else if ( "$poldir" == "PERP" ) then
-		set polarization_angle="90.0"
-	else
-		set polarization_angle="-1.0"
 	endif
-endif
+	echo "Radiator thickness set..."
+	set polarization_angle=`rcnd $RUN_NUMBER polarization_angle | awk '{print $1}'`
 
-echo "Polarization angle set..."
-set elecE=0
-set variation=$VERSION
+	if ( "$polarization_angle" == "" ) then
+		set poldir=`rcnd $RUN_NUMBER polarization_direction | awk '{print $1}'`
+		if ( "$poldir" == "PARA" ) then
+			set polarization_angle="0.0"
+		else if ( "$poldir" == "PERP" ) then
+			set polarization_angle="90.0"
+		else
+			set polarization_angle="-1.0"
+		endif
+	endif
 
-if ( $CALIBTIME != "notime" ) then
-set variation=$variation":"$CALIBTIME
-endif
+	echo "Polarization angle set..."
+	set elecE=0
+	set variation=$VERSION
+
+	if ( $CALIBTIME != "notime" ) then
+		set variation=$variation":"$CALIBTIME
+	endif
 
 
-set ccdbelece="`ccdb dump PHOTON_BEAM/endpoint_energy:${RUN_NUMBER}:${variation} | grep -v \#`"
+	set ccdbelece="`ccdb dump PHOTON_BEAM/endpoint_energy:${RUN_NUMBER}:${variation} | grep -v \#`"
 
-#set ccdblist=($ccdbelece:as/ / /)
-echo $ccdbelece
-set elecE_text="$ccdbelece" #$ccdblist[$#ccdblist]
+	#set ccdblist=($ccdbelece:as/ / /)
+	echo $ccdbelece
+	set elecE_text="$ccdbelece" #$ccdblist[$#ccdblist]
 
-#echo "text: " $elecE_text
+	#echo "text: " $elecE_text
 
-if ( "$eBEAM_ENERGY" != "rcdb" || ( "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" )  ) then
-    set elecE=$eBEAM_ENERGY
-else if ( $elecE_text == "Run" ) then
-	set elecE=12
-else if ( $elecE_text == "-1.0" ) then
-	set elecE=12 #Should never happen
-else
-	set elecE=`echo $elecE_text`  #set elecE = `echo "$elecE_text / 1000" | $USER_BC -l ` #rcdb method
-endif
+	if ( "$eBEAM_ENERGY" != "rcdb" || ( "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" )  ) then
+    	set elecE=$eBEAM_ENERGY
+	else if ( $elecE_text == "Run" ) then
+		set elecE=12
+	else if ( $elecE_text == "-1.0" ) then
+		set elecE=12 #Should never happen
+	else
+		set elecE=`echo $elecE_text`  #set elecE = `echo "$elecE_text / 1000" | $USER_BC -l ` #rcdb method
+	endif
 
-echo "Electron beam energy set..."
+	echo "Electron beam energy set..."
 
-set copeak = 0
-set copeak_text = `rcnd $RUN_NUMBER coherent_peak | awk '{print $1}'`
+	set copeak = 0
+	set copeak_text = `rcnd $RUN_NUMBER coherent_peak | awk '{print $1}'`
 
-if ( "$COHERENT_PEAK" != "rcdb" && "$polarization_angle" == "-1.0" ) then
-	set copeak=$COHERENT_PEAK
-else
+	if ( "$COHERENT_PEAK" != "rcdb" && "$polarization_angle" == "-1.0" ) then
+		set copeak=$COHERENT_PEAK
+	else
 
-	if ( "$COHERENT_PEAK" != "rcdb" || ( "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" ) ) then
-    	set copeak=$COHERENT_PEAK
-	else if ( $copeak_text == "Run" ) then
-		set copeak=9
-	else if ( $copeak_text == "-1.0" ) then
+		if ( "$COHERENT_PEAK" != "rcdb" || ( "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" ) ) then
+    		set copeak=$COHERENT_PEAK
+		else if ( $copeak_text == "Run" ) then
+			set copeak=9
+		else if ( $copeak_text == "-1.0" ) then
+			set copeak=0
+		else
+			set copeak = `echo "$copeak_text / 1000" | $USER_BC -l `
+		endif
+	endif
+
+	if ( "$polarization_angle" == "-1.0" && "$COHERENT_PEAK" == "rcdb" ) then
 		set copeak=0
-	else
-		set copeak = `echo "$copeak_text / 1000" | $USER_BC -l `
 	endif
-endif
 
-if ( "$polarization_angle" == "-1.0" && "$COHERENT_PEAK" == "rcdb" ) then
-	set copeak=0
-endif
+	setenv COHERENT_PEAK $copeak
+	echo "Coherent peak set..."
+	#echo $copeak
+	#set copeak=`rcnd $RUN_NUMBER coherent_peak | awk '{print $1}' | sed 's/\.//g' #| awk -vFS="" -vOFS="" '{$1=$1"."}1' `
 
-setenv COHERENT_PEAK $copeak
-echo "Coherent peak set..."
-#echo $copeak
-#set copeak=`rcnd $RUN_NUMBER coherent_peak | awk '{print $1}' | sed 's/\.//g' #| awk -vFS="" -vOFS="" '{$1=$1"."}1' `
+	if ( ( "$VERSION" != "mc" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" && "$VERSION" != "mc_workfest2018" ) && "$COHERENT_PEAK" == "rcdb" ) then
+		echo "error in requesting rcdb for the coherent peak and not using variation=mc"
+		echo "something went wrong with initialization"
+		exit 1
+	endif
 
-if ( ( "$VERSION" != "mc" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" && "$VERSION" != "mc_workfest2018" ) && "$COHERENT_PEAK" == "rcdb" ) then
-	echo "error in requesting rcdb for the coherent peak and not using variation=mc"
-	echo "something went wrong with initialization"
-	exit 1
-endif
+	setenv eBEAM_ENERGY $elecE
+	echo "eBEAM energy set..."
+	if ( ( "$VERSION" != "mc" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" && "$VERSION" != "mc_workfest2018" ) && "$eBEAM_ENERGY" == "rcdb" ) then
+		echo "error in requesting rcdb for the electron beam energy and not using variation=mc"
+		exit 1
+	endif
 
-setenv eBEAM_ENERGY $elecE
-echo "eBEAM energy set..."
-if ( ( "$VERSION" != "mc" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" && "$VERSION" != "mc_workfest2018" ) && "$eBEAM_ENERGY" == "rcdb" ) then
-	echo "error in requesting rcdb for the electron beam energy and not using variation=mc"
-	exit 1
-endif
+	set colsize=`rcnd $RUN_NUMBER collimator_diameter | awk '{print $1}' | sed -r 's/.{2}$//' | sed -e 's/\.//g'`
 
-set colsize=`rcnd $RUN_NUMBER collimator_diameter | awk '{print $1}' | sed -r 's/.{2}$//' | sed -e 's/\.//g'`
+	if ( "$colsize" == "B" || "$colsize" == "R" || "$JANA_CALIB_CONTEXT" != "variation=mc" ) then
+		set colsize="50"
+	endif
+	echo "Colimator size set..."
 
-if ( "$colsize" == "B" || "$colsize" == "R" || "$JANA_CALIB_CONTEXT" != "variation=mc" ) then
-	set colsize="50"
-endif
-echo "Colimator size set..."
+	if ( "$eBEAM_CURRENT" == "rcdb" ) then
+	set beam_on_current=`rcnd $RUN_NUMBER beam_on_current | awk '{print $1}'`
 
-if ( "$eBEAM_CURRENT" == "rcdb" ) then
-set beam_on_current=`rcnd $RUN_NUMBER beam_on_current | awk '{print $1}'`
+	if ( $beam_on_current == "" || $beam_on_current == "Run" ) then
+		echo "Run $RUN_NUMBER does not have a beam_on_current.  Defaulting to beam_current."
+		set beam_on_current=`rcnd $RUN_NUMBER beam_current | awk '{print $1}'`
+	endif
 
-if ( $beam_on_current == "" || $beam_on_current == "Run" ) then
-	echo "Run $RUN_NUMBER does not have a beam_on_current.  Defaulting to beam_current."
-	set beam_on_current=`rcnd $RUN_NUMBER beam_current | awk '{print $1}'`
-endif
-
-if ( $beam_on_current == "Run" ) then
-	echo "The beam current could not be found for Run "$RUN_NUMBER".  This is most like due to the run number provided not existing in the rcdb"
-	echo "Please set eBEAM_CURRENT explicitly in MC.config..."
-	echo "something went wrong with initialization"
-	exit 1
-endif
-set beam_on_current=`echo "$beam_on_current / 1000." | $USER_BC -l`
+	if ( $beam_on_current == "Run" ) then
+		echo "The beam current could not be found for Run "$RUN_NUMBER".  This is most like due to the run number provided not existing in the rcdb"
+		echo "Please set eBEAM_CURRENT explicitly in MC.config..."
+		echo "something went wrong with initialization"
+		exit 1
+	endif
+	set beam_on_current=`echo "$beam_on_current / 1000." | $USER_BC -l`
 else
 set beam_on_current=$eBEAM_CURRENT
 endif
@@ -1737,7 +1742,7 @@ if ( "$hddmfiles" != "" ) then
 endif
 
 cd ..
-
+rm -rf .hdds_tmp_*
 if ( `ls $RUNNING_DIR/${RUN_NUMBER}_${FILE_NUMBER} | wc -l` == 0 ) then
 	rm -rf $RUNNING_DIR/${RUN_NUMBER}_${FILE_NUMBER}
 else
