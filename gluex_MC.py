@@ -49,8 +49,9 @@ except:
         pass
 
 MCWRAPPER_VERSION="2.6.0"
-MCWRAPPER_DATE="05/11/21"
+MCWRAPPER_DATE="06/18/21"
 
+#group sync test
 #====================================================
 #Takes in a few pertinant pieces of info.  Creates (if needed) a swif workflow and adds a job to it.
 #if project ID is less than 0 its an attempt ID and is recorded as such
@@ -468,7 +469,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
                         #print("JOBS BUNDLE:",bundledJobs)
                         transactions_Array=[]
                         trans_block_count=0
-                        transaction_stub="INSERT INTO Attempts (Job_ID,Creation_Time,BatchSystem,BatchJobID,Status,WallTime,CPUTime,ThreadsRequested,RAMRequested, RAMUsed) VALUES "
+                        transaction_stub="INSERT INTO Attempts (Job_ID,Creation_Time,BatchSystem,SubmitHost,BatchJobID,Status,WallTime,CPUTime,ThreadsRequested,RAMRequested, RAMUsed) VALUES "
                         transaction_str=transaction_stub
                         for job in bundledJobs:
                                 #***********************
@@ -495,7 +496,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
                                         f=open("/osgpool/halld/tbritton/.ALLSTOP","x")
                                         exit(1)
 
-                                transaction_str+=Build_recordAttemptString(int(job[0]),RUNNUM,job[1],"OSG",SWIF_ID_NUM,COMMAND['num_events'],NCORES,"Unset")+", "
+                                transaction_str+=Build_recordAttemptString(int(job[0]),RUNNUM,job[1],"OSG","'"+socket.gethostname()+"'",SWIF_ID_NUM,COMMAND['num_events'],NCORES,"Unset")+", "
                                 #recordAttempt(int(job[0]),RUNNUM,job[1],"OSG",SWIF_ID_NUM,COMMAND['num_events'],NCORES,"Unset")
 
                         if(transaction_str != transaction_stub):
@@ -676,7 +677,7 @@ def recordFirstAttempt(PROJECT_ID,RUNNO,FILENO,BatchSYS,BatchJobID, NUMEVTS,NCOR
 
         Job_ID=MYJOB[0][0]
 
-        addAttempt="INSERT INTO Attempts (Job_ID,Creation_Time,BatchSystem,BatchJobID,Status,WallTime,CPUTime,ThreadsRequested,RAMRequested, RAMUsed) VALUES ("+str(Job_ID)+", NOW(), "+str("'"+BatchSYS+"'")+", "+str(BatchJobID)+", 'Created', 0, 0, "+str(NCORES)+", "+str("'"+RAM+"'")+", '0'"+");"
+        addAttempt="INSERT INTO Attempts (Job_ID,Creation_Time,BatchSystem,HostName,BatchJobID,Status,WallTime,CPUTime,ThreadsRequested,RAMRequested, RAMUsed) VALUES ("+str(Job_ID)+", NOW(), "+str("'"+BatchSYS+"'")+", "+str(socket.gethostname())+", "+str(BatchJobID)+", 'Created', 0, 0, "+str(NCORES)+", "+str("'"+RAM+"'")+", '0'"+");"
 
         print(addAttempt)
         dbcursor.execute(addAttempt)
@@ -689,7 +690,7 @@ def Transact_recordAttempt(trans_string):
         dbcursor.execute(trans_string)#,multi=True)
         dbcnx.commit()
 
-def Build_recordAttemptString(JOB_ID,RUNNO,FILENO,BatchSYS,BatchJobID, NUMEVTS,NCORES, RAM):
+def Build_recordAttemptString(JOB_ID,RUNNO,FILENO,BatchSYS,hostname,BatchJobID, NUMEVTS,NCORES, RAM):
         findmyjob="SELECT * FROM Jobs WHERE ID="+str(JOB_ID)
         #print findmyjob
         dbcursor.execute(findmyjob)
@@ -703,7 +704,7 @@ def Build_recordAttemptString(JOB_ID,RUNNO,FILENO,BatchSYS,BatchJobID, NUMEVTS,N
 
         Job_ID=MYJOB[0][0]
 
-        addAttempt="("+str(JOB_ID)+", NOW(), "+str("'"+BatchSYS+"'")+", "+str(BatchJobID)+", 'Created', 0, 0, "+str(NCORES)+", "+str("'"+RAM+"'")+", '0'"+")"
+        addAttempt="("+str(JOB_ID)+", NOW(), "+str("'"+BatchSYS+"'")+", "+str(hostname)+", "+str(BatchJobID)+", 'Created', 0, 0, "+str(NCORES)+", "+str("'"+RAM+"'")+", '0'"+")"
         return addAttempt
 
 def recordAttempt(JOB_ID,RUNNO,FILENO,BatchSYS,BatchJobID, NUMEVTS,NCORES, RAM):
@@ -722,7 +723,7 @@ def recordAttempt(JOB_ID,RUNNO,FILENO,BatchSYS,BatchJobID, NUMEVTS,NCORES, RAM):
 
         Job_ID=MYJOB[0][0]
 
-        addAttempt="INSERT INTO Attempts (Job_ID,Creation_Time,BatchSystem,BatchJobID,Status,WallTime,CPUTime,ThreadsRequested,RAMRequested, RAMUsed) VALUES ("+str(JOB_ID)+", NOW(), "+str("'"+BatchSYS+"'")+", "+str(BatchJobID)+", 'Created', 0, 0, "+str(NCORES)+", "+str("'"+RAM+"'")+", '0'"+");"
+        addAttempt="INSERT INTO Attempts (Job_ID,Creation_Time,BatchSystem,SubmitHost,BatchJobID,Status,WallTime,CPUTime,ThreadsRequested,RAMRequested, RAMUsed) VALUES ("+str(JOB_ID)+", NOW(), "+str("'"+BatchSYS+"'")+", "+str(socket.gethostname())+", "+str(BatchJobID)+", 'Created', 0, 0, "+str(NCORES)+", "+str("'"+RAM+"'")+", '0'"+");"
         print(addAttempt)
         dbcursor.execute(addAttempt)
         dbcnx.commit()
@@ -1401,15 +1402,16 @@ def main(argv):
 
         #The submitter grabs a single unattempted job and submits it.  Always a single runnumber
         # 
+        print(COMMAND_dict)
         if str(IS_SUBMITTER) == "1":
                 if BGFOLD == "Random" or BGFOLD=="DEFAULT" or BGFOLD[0:3] == "loc":
                         RANDOM_NUM_EVT=GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,RUNNUM)
                         COMMAND_dict['num_rand_trigs']=str(RANDOM_NUM_EVT)
 
                 if BATCHRUN == 0 or BATCHSYS.upper()=="NULL":
-                        os.system(str(SCRIPT_TO_RUN)+" "+COMMAND)
+                        os.system(str(SCRIPT_TO_RUN)+" "+getCommandString(COMMAND_dict,"INTERACTIVE"))
                 else:
-                        if PROJECT_ID != 0:
+                        if PROJECT_ID != 0: #below only valid for initial atomization
                                 print("SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(RUNNUM)+" && FileNumber="+str(BASEFILENUM)+" && NumEvts="+str(EVTS))
                                 findmyjob="SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(RUNNUM)+" && FileNumber="+str(BASEFILENUM)+" && NumEvts="+str(EVTS)
                                 dbcursor.execute(findmyjob)

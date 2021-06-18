@@ -23,6 +23,7 @@ except:
 
 
 MCWRAPPER_BOT_HOME="/u/group/halld/gluex_MCwrapper/"
+MCWRAPPER_BOT_HOST_NAME=str(socket.gethostname())
 dbhost = "hallddb.jlab.org"
 dbuser = 'mcuser'
 dbpass = ''
@@ -44,7 +45,7 @@ class bcolors:
 #DELETE FROM Attempts WHERE Job_ID IN (SELECT ID FROM Jobs WHERE Project_ID=65);
 
 def RecallAll():
-    query="SELECT BatchJobID, BatchSystem from Attempts where (Status=\"2\" || Status=\"1\" || Status=\"5\") && Job_ID in (SELECT ID from Jobs where Project_ID in (SELECT ID FROM Project where Tested=2 || Tested=4 || Tested=3 ));"
+    query="SELECT BatchJobID, BatchSystem from Attempts where (Status=\"2\" || Status=\"1\" || Status=\"5\") && SubmitHost=\""+MCWRAPPER_BOT_HOST_NAME+"\" && Job_ID in (SELECT ID from Jobs where Project_ID in (SELECT ID FROM Project where Tested=2 || Tested=4 || Tested=3 ));"
     curs.execute(query)
     rows=curs.fetchall()
     print("RECALLING "+str(len(rows)))
@@ -61,7 +62,7 @@ def RecallAll():
             print(str(err,"utf-8"))
             if("not found" in str(err,"utf-8")):
                 print("clear "+str(row["BatchJobID"]))
-                updatequery="UPDATE Attempts SET Status=\"3\" where BatchJobID=\""+str(row["BatchJobID"])+"\""
+                updatequery="UPDATE Attempts SET Status=\"3\" where BatchJobID=\""+str(row["BatchJobID"])+"\""+" && SubmitHost=\""+MCWRAPPER_BOT_HOST_NAME+"\""
                 curs.execute(updatequery)
                 conn.commit()
             if("Failed to end classad" in str(err,"utf-8")):
@@ -144,6 +145,9 @@ def AutoLaunch():
     #print rows
     print("TESTING: ",rows)
 
+    print("Testing: ",len(rows))
+    if len(rows) == 0:
+        return
     spawns=[]
     results_array=[]
     for row in rows:
@@ -201,7 +205,7 @@ def RetryAllJobs(rlim=False):
         RetryJobsFromProject(row["ID"],not rlim)
 
 def RemoveAllJobs():
-    query= "SELECT * FROM Attempts WHERE ID IN (SELECT Max(ID) FROM Attempts GROUP BY Job_ID) && Job_ID IN (SELECT ID FROM Jobs WHERE IsActive=1 && Project_ID="+str(ID)+");"
+    query= "SELECT * FROM Attempts WHERE ID IN (SELECT Max(ID) FROM Attempts GROUP BY Job_ID) && SubmitHost=\""+MCWRAPPER_BOT_HOST_NAME+"\" && Job_ID IN (SELECT ID FROM Jobs WHERE IsActive=1 && Project_ID="+str(ID)+");"
     curs.execute(query) 
     rows=curs.fetchall()
     i=0
@@ -212,7 +216,7 @@ def RemoveAllJobs():
 
 def RetryJobsFromProject(ID, countLim):
     AllOSG=True
-    query= "SELECT * FROM Attempts WHERE ID IN (SELECT Max(ID) FROM Attempts GROUP BY Job_ID) && Job_ID IN (SELECT ID FROM Jobs WHERE IsActive=1 && Project_ID="+str(ID)+");"
+    query= "SELECT * FROM Attempts WHERE ID IN (SELECT Max(ID) FROM Attempts WHERE SubmitHost=\""+MCWRAPPER_BOT_HOST_NAME+"\" GROUP BY Job_ID) && Job_ID IN (SELECT ID FROM Jobs WHERE IsActive=1 && Project_ID="+str(ID)+");"
     curs.execute(query) 
     rows=curs.fetchall()
    

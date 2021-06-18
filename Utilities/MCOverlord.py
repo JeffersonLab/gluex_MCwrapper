@@ -46,7 +46,7 @@ import random
 import pipes
 import random
 
-
+MCWRAPPER_BOT_HOST_NAME=socket.gethostname()
 dbhost = "hallddb.jlab.org"
 dbuser = 'mcuser'
 dbpass = ''
@@ -206,7 +206,7 @@ def checkProjectsForCompletion(comp_assignment):
             
             if not found_AllexpFile:
                 print("FLAG LAST ATTEMPT AS SPECIAL FAIL 404")
-                GET_Attempt_to_update="SELECT * FROM Attempts WHERE Job_ID="+str(job["ID"])+" ORDER BY ID DESC;"
+                GET_Attempt_to_update="SELECT * FROM Attempts WHERE SubmitHost=\""+MCWRAPPER_BOT_HOST_NAME+"\" && Job_ID="+str(job["ID"])+" ORDER BY ID DESC;"
                 dbcursor_comp.execute(GET_Attempt_to_update)
                 Attempt_to_update=dbcursor_comp.fetchall()[0]
                 #print(Attempt_to_update)
@@ -340,7 +340,7 @@ def checkSWIF(WKflows_to_check):
             #LOOP OVER ALL JOBS IN WORKFLOW
             print(len(ReturnedJobs))
             for job in ReturnedJobs["jobs"]:
-                check_query="SELECT Job_ID,Status,ExitCode from Attempts WHERE BatchJobID="+str(job["id"])
+                check_query="SELECT Job_ID,Status,ExitCode from Attempts WHERE BatchJobID="+str(job["id"])+" && SubmitHost=\""+MCWRAPPER_BOT_HOST_NAME+"\""
                 dbcursor.execute(check_query)
                 recordedJobStatus = dbcursor.fetchall()
                 print(recordedJobStatus)
@@ -350,13 +350,13 @@ def checkSWIF(WKflows_to_check):
                 #NON RUNNING DISPATCHED JOBS ARE A SPECIAL CASE
                 if int(job["num_attempts"]) == 0:
                     #print "truncated update of attempt pre dispatch"
-                    updatejobstatus="UPDATE Attempts SET Status=\""+str(job["status"])+"\"" +" WHERE BatchJobID="+str(job["id"])
+                    updatejobstatus="UPDATE Attempts SET Status=\""+str(job["status"])+"\"" +" WHERE BatchJobID="+str(job["id"])+" && SubmitHost=\""+MCWRAPPER_BOT_HOST_NAME+"\""
                     print(updatejobstatus)
                     dbcursorSWIF.execute(updatejobstatus)
                     dbcnxSWIF.commit()
                 else:
                     #print "Update all the attempts"
-                    LoggedSWIFAttemps_query="SELECT ID from Attempts where BatchJobID="+str(job["id"])+" ORDER BY ID"
+                    LoggedSWIFAttemps_query="SELECT ID from Attempts where BatchJobID="+str(job["id"])+" && SubmitHost=\""+MCWRAPPER_BOT_HOST_NAME+"\""+" ORDER BY ID"
                     dbcursorSWIF.execute(LoggedSWIFAttemps_query)
                     LoggedSWIFAttemps=dbcursorSWIF.fetchall()
                     loggedindex=0
@@ -409,7 +409,7 @@ def checkSWIF(WKflows_to_check):
                         #SOME VODOO IF RETRY JOBS HAPPENED OUTSIDE OF THE DB
                         if loggedindex == len(LoggedSWIFAttemps):
                             print("FOUND AN ATTEMPT EXTERNALLY CREATED")
-                            GetLinkToJob_query="SELECT Job_ID FROM Attempts WHERE BatchJobID="+str(job["id"])
+                            GetLinkToJob_query="SELECT Job_ID FROM Attempts WHERE BatchJobID="+str(job["id"])+" && SubmitHost=\""+MCWRAPPER_BOT_HOST_NAME+"\""
                             #print GetLinkToJob_query
                             dbcursorSWIF.execute(GetLinkToJob_query)
                             LinkToJob=dbcursorSWIF.fetchall()
@@ -426,12 +426,12 @@ def checkSWIF(WKflows_to_check):
                             
                             #print datetime.fromtimestamp(submitTime/float(1000))
                             
-                            addFoundAttempt="INSERT INTO Attempts (Job_ID,Creation_Time,BatchSystem,BatchJobID, ThreadsRequested, RAMRequested,Start_Time) VALUES (%s,'%s','SWIF',%s,%s,%s,'%s')" % (LinkToJob[0]["Job_ID"],datetime.fromtimestamp(submitTime/float(1000)),attempt["job_id"],attempt["cpu_cores"], "'"+str(float(attempt["ram_bytes"])/float(1000000000))+"GB"+"'",Start_Time)
+                            addFoundAttempt="INSERT INTO Attempts (Job_ID,Creation_Time,BatchSystem,SubmitHost,BatchJobID, ThreadsRequested, RAMRequested,Start_Time) VALUES (%s,'%s','SWIF',%s,%s,%s,%s,'%s')" % (LinkToJob[0]["Job_ID"],MCWRAPPER_BOT_HOST_NAME,datetime.fromtimestamp(submitTime/float(1000)),attempt["job_id"],attempt["cpu_cores"], "'"+str(float(attempt["ram_bytes"])/float(1000000000))+"GB"+"'",Start_Time)
                             #print addFoundAttempt
                             dbcursorSWIF.execute(addFoundAttempt)
                             dbcnxSWIF.commit()
 
-                            LoggedSWIFAttemps_query="SELECT ID from Attempts where BatchJobID="+str(job["id"])+" ORDER BY ID"
+                            LoggedSWIFAttemps_query="SELECT ID from Attempts where BatchJobID="+str(job["id"])+" && SubmitHost=\""+MCWRAPPER_BOT_HOST_NAME+"\""+" ORDER BY ID"
                             dbcursorSWIF.execute(LoggedSWIFAttemps_query)
                             LoggedSWIFAttemps=dbcursorSWIF.fetchall()
                             #print len(LoggedSWIFAttemps)
@@ -630,9 +630,9 @@ def checkOSG(Jobs_List):
                     ipstr=ipstr[1:-1].split(":")[0]
                     RunIP=ipstr
                 #print("UPDATE")
-                updatejobstatus="UPDATE Attempts SET NumStarts="+str(NumStarts)+", Status=\""+str(JOB_STATUS)+"\", ExitCode="+ExitCode+", Start_Time="+"'"+str(datetime.fromtimestamp(float(Start_Time)))+"'"+", RunningLocation="+"'"+str(REMOTE_HOST)+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+", RunIP='"+str(RunIP)+"' WHERE BatchJobID='"+str(job["BatchJobID"])+"';"
+                updatejobstatus="UPDATE Attempts SET NumStarts="+str(NumStarts)+", Status=\""+str(JOB_STATUS)+"\", ExitCode="+ExitCode+", Start_Time="+"'"+str(datetime.fromtimestamp(float(Start_Time)))+"'"+", RunningLocation="+"'"+str(REMOTE_HOST)+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+", RunIP='"+str(RunIP)+"' WHERE BatchJobID='"+str(job["BatchJobID"])+"'"+" && SubmitHost=\""+MCWRAPPER_BOT_HOST_NAME+"\""
                 if Completed_Time != 'NULL':
-                    updatejobstatus="UPDATE Attempts SET NumStarts="+str(NumStarts)+", Status=\""+str(JOB_STATUS)+"\", ExitCode="+ExitCode+", Completed_Time='"+str(datetime.fromtimestamp(float(Completed_Time)))+"'"+", Start_Time="+"'"+str(datetime.fromtimestamp(float(Start_Time)))+"'"+", RunningLocation="+"'"+str(REMOTE_HOST)+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+", RunIP='"+str(RunIP)+"' WHERE BatchJobID='"+str(job["BatchJobID"])+"';"
+                    updatejobstatus="UPDATE Attempts SET NumStarts="+str(NumStarts)+", Status=\""+str(JOB_STATUS)+"\", ExitCode="+ExitCode+", Completed_Time='"+str(datetime.fromtimestamp(float(Completed_Time)))+"'"+", Start_Time="+"'"+str(datetime.fromtimestamp(float(Start_Time)))+"'"+", RunningLocation="+"'"+str(REMOTE_HOST)+"'"+", WallTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(WallTime.seconds))+"'"+", CPUTime="+"'"+time.strftime("%H:%M:%S",time.gmtime(CpuTime.seconds))+"'"+", RAMUsed="+"'"+RAMUSED+"'"+", Size_In="+str(TransINSize)+", RunIP='"+str(RunIP)+"' WHERE BatchJobID='"+str(job["BatchJobID"])+"'"+" && SubmitHost=\""+MCWRAPPER_BOT_HOST_NAME+"\""
 
 
                 #print updatejobstatus
@@ -652,7 +652,7 @@ def checkOSG(Jobs_List):
                 #print("================")
                 if(str(jsonOutputstr,"utf-8") == "[\n]\n"):
                     #print("nothing in history")
-                    updatejobstatus="UPDATE Attempts SET Status=\""+str(4)+"\", ExitCode="+str(999)+", ProgramFailed='condor'"+" WHERE BatchJobID='"+str(job["BatchJobID"])+"';"
+                    updatejobstatus="UPDATE Attempts SET Status=\""+str(4)+"\", ExitCode="+str(999)+", ProgramFailed='condor'"+" WHERE BatchJobID='"+str(job["BatchJobID"])+"'"+" && SubmitHost=\""+MCWRAPPER_BOT_HOST_NAME+"\""
                     #print(updatejobstatus)
                     try:
                         dbcursorOSG.execute(updatejobstatus)
@@ -800,7 +800,7 @@ def checkOSG(Jobs_List):
                     if failedProgram != 'NULL':
                         updatejobstatus=updatejobstatus+", ProgramFailed='"+str(failedProgram)+"'"
 
-                    updatejobstatus=updatejobstatus+" WHERE BatchJobID='"+str(job["BatchJobID"])+"';"
+                    updatejobstatus=updatejobstatus+" WHERE BatchJobID='"+str(job["BatchJobID"])+"'"+" && SubmitHost=\""+MCWRAPPER_BOT_HOST_NAME+"\""
                     #print(updatejobstatus)
                     try:
                         dbcursorOSG.execute(updatejobstatus)
@@ -853,7 +853,7 @@ def main(argv):
                 lastid = dbcursor.fetchall()
                 #print lastid
                 try:
-                    queryosgjobs="SELECT * from Attempts WHERE BatchSystem='OSG' && Status !='4' && Status !='3' && Status!= '6' && Status != '5';"# || (Status='4' && ExitCode != 0 && ProgramFailed is NULL) ORDER BY ID desc;"
+                    queryosgjobs="SELECT * from Attempts WHERE BatchSystem='OSG' && SubmitHost=\""+MCWRAPPER_BOT_HOST_NAME+"\" && Status !='4' && Status !='3' && Status!= '6' && Status != '5';"# || (Status='4' && ExitCode != 0 && ProgramFailed is NULL) ORDER BY ID desc;"
                     #print queryosgjobs
                     dbcursor.execute(queryosgjobs)
                     Alljobs = list(dbcursor.fetchall())
