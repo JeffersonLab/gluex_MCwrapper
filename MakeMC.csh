@@ -269,17 +269,22 @@ set BGRATE_toUse="Not Needed"
 
 
 set gen_pre_rcdb=`echo $GENERATOR | cut -c1-4`
+
 if ( $gen_pre_rcdb != "file" || ( "$BGTAGONLY_OPTION" == "1" || "$BKGFOLDSTR" == "BeamPhotons" ) ) then
 	set radthick="50.e-6"
 
 	if ( "$RADIATOR_THICKNESS" != "rcdb" || ( "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" ) ) then
 		set radthick=$RADIATOR_THICKNESS
 	else
+		
 		set words = `rcnd $RUN_NUMBER radiator_type | sed 's/ / /g' `
-
-		if ( $words == "" ) then 
+		echo $words
+		set radlen = `echo $words | wc -c`
+		echo $radlen
+		if ( $radlen == 1 ) then 
 			echo "radiator_type not in rcdb for run "$RUN_NUMBER". Using default value..."
 		else
+			
 			foreach word ($words:q)
 
 				if ( $word != "number" ) then
