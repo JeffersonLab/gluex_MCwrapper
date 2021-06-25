@@ -453,6 +453,7 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
     curs.execute(query) 
     rows=curs.fetchall()
     order=rows[0]
+    print("order", order)
     print("========================")
     print(order["Generator_Config"])
     newLoc=CheckGenConfig(order)
@@ -1010,6 +1011,8 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
     MCconfig_file.write("DATA_OUTPUT_BASE_DIR=/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/"+str(outputstring)+"\n")
     #print "FOUND CONFIG="+foundConfig
 
+
+    print("PREIF", order["VersionSet"])
     query_to_do=""
     if(order["RunNumLow"] != order["RunNumHigh"]):
         query_to_do="@is_production and @status_approved"
