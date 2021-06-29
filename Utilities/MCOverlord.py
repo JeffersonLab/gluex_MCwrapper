@@ -262,7 +262,7 @@ def checkProjectsForCompletion(comp_assignment):
             dbcursor_comp.execute(getFinalCompleteTime)
             finalTimeRes=dbcursor_comp.fetchall()
             #print "============"
-            #print finalTimeRes[0]["MAX(Completed_Time)"]
+            print("Final Time", finalTimeRes[0]["MAX(Completed_Time)"])
             updateProjectstatus="UPDATE Project SET Completed_Time="+"'"+str(finalTimeRes[0]["MAX(Completed_Time)"])+"'"+ " WHERE ID="+str(proj['ID'])+";"
             print(updateProjectstatus)
             #print "============"

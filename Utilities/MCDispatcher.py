@@ -197,12 +197,27 @@ def DispatchProject(ID,SYSTEM,PERCENT):
         print("Error: Cannot find Project with ID="+ID)
     
 def RetryAllJobs(rlim=False):
-    query= "SELECT ID FROM Project where Completed_Time is NULL && Is_Dispatched=1.0 && Tested!=2 && Tested!=4 && Tested!=-4 && Tested!=3;"
+    query= "SELECT ID,Notified FROM Project where Completed_Time is NULL && Is_Dispatched=1.0 && Tested!=2 && Tested!=4 && Tested!=-4 && Tested!=3;"
+    print(query)
     curs.execute(query) 
     rows=curs.fetchall()
     for row in rows:
-        print("Retrying Project "+str(row["ID"]))
-        RetryJobsFromProject(row["ID"],not rlim)
+        if(row["Notified"] != 1):
+            print("Retrying Project "+str(row["ID"]))
+            RetryJobsFromProject(row["ID"],not rlim)
+        else:
+            print("Attempting to clean up Completed_Time")
+            getFinalCompleteTime="SELECT MAX(Completed_Time) FROM Attempts WHERE Job_ID IN (SELECT ID FROM Jobs WHERE Project_ID="+str(row['ID'])+");"
+            print(getFinalCompleteTime)
+            curs.execute(getFinalCompleteTime)
+            finalTimeRes=curs.fetchall()
+            #print "============"
+            print("Final Time", finalTimeRes[0]["MAX(Completed_Time)"])
+            updateProjectstatus="UPDATE Project SET Completed_Time="+"'"+str(finalTimeRes[0]["MAX(Completed_Time)"])+"'"+ " WHERE ID="+str(row['ID'])+";"
+            print(updateProjectstatus)
+            #print "============"
+            curs.execute(updateProjectstatus)
+            conn.commit()
 
 def RemoveAllJobs():
     query= "SELECT * FROM Attempts WHERE ID IN (SELECT Max(ID) FROM Attempts GROUP BY Job_ID) && SubmitHost=\""+MCWRAPPER_BOT_HOST_NAME+"\" && Job_ID IN (SELECT ID FROM Jobs WHERE IsActive=1 && Project_ID="+str(ID)+");"
@@ -1267,6 +1282,7 @@ def main(argv):
             if argu == "-rlim":
                 RUNNING_LIMIT_OVERRIDE=True
 
+    print("num running", int(numprocesses_running))
     if(int(numprocesses_running) <2 or RUNNING_LIMIT_OVERRIDE ):
        
 
