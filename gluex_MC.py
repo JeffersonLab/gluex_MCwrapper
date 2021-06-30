@@ -470,7 +470,8 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
                         transactions_Array=[]
                         trans_block_count=0
                         transaction_stub="INSERT INTO Attempts (Job_ID,Creation_Time,BatchSystem,SubmitHost,BatchJobID,Status,WallTime,CPUTime,ThreadsRequested,RAMRequested, RAMUsed) VALUES "
-                        transaction_str=transaction_stub
+                        transaction_str=""
+                        print("BUNDLING!")
                         for job in bundledJobs:
                                 #***********************
                                 #THE FOLLOWING IF CHECKS IF THE ASSIGNED BATCH ID HAS BEEN ASSIGNED BEFORE FROM SCOSG16
@@ -478,32 +479,35 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
                                 #***********************
                                 if(trans_block_count % 500 == 0 and trans_block_count != 0):
                                         transactions_Array.append(transaction_str[:-2])
-                                        transaction_str=transaction_stub
+                                        transaction_str=""
 
-                                print("JOB:",job)
+                               #print("JOB:",job)
                                 SWIF_ID_NUM=str(idnumline[5])+".0"
                                 if(numJobsInBundle>1):
                                         SWIF_ID_NUM=str(idnumline[5])+"."+str(job[1])
 
-                                if int(PROJECT_ID) !=0:
-                                        findmyjob="SELECT * FROM Attempts where BatchJobID='"+str(SWIF_ID_NUM)+"' && BatchSystem='OSG';"
-                                        dbcursor.execute(findmyjob)
-                                        MYJOB = dbcursor.fetchall()
+                                #if int(PROJECT_ID) !=0:
+                                #        findmyjob="SELECT * FROM Attempts where BatchJobID='"+str(SWIF_ID_NUM)+"' && BatchSystem='OSG';"
+                                #        dbcursor.execute(findmyjob)
+                                #        MYJOB = dbcursor.fetchall()
 
-                                if len(MYJOB) != 0:
-                                        #SELECT DISTINCT Project_ID FROM Jobs where ID in (select Job_ID from Attempts WHERE BatchSystem='OSG' GROUP BY BatchJobID HAVING COUNT(Job_ID)>1 ORDER BY BatchJobID DESC);
-                                        print("THE TIMELINE HAS BEEN FRACTURED. TERMINATING SUBMITS AND SHUTTING THE ROBOT DOWN!!!")
-                                        f=open("/osgpool/halld/tbritton/.ALLSTOP","x")
-                                        exit(1)
+                                #if len(MYJOB) != 0:
+                                #        #SELECT DISTINCT Project_ID FROM Jobs where ID in (select Job_ID from Attempts WHERE BatchSystem='OSG' GROUP BY BatchJobID HAVING COUNT(Job_ID)>1 ORDER BY BatchJobID DESC);
+                                #        print("THE TIMELINE HAS BEEN FRACTURED. TERMINATING SUBMITS AND SHUTTING THE ROBOT DOWN!!!")
+                                #        f=open("/osgpool/halld/tbritton/.ALLSTOP","x")
+                                #        exit(1)
 
                                 transaction_str+=Build_recordAttemptString(int(job[0]),RUNNUM,job[1],"OSG","'"+socket.gethostname()+"'",SWIF_ID_NUM,COMMAND['num_events'],NCORES,"Unset")+", "
+                                #print(transaction_str)
                                 #recordAttempt(int(job[0]),RUNNUM,job[1],"OSG",SWIF_ID_NUM,COMMAND['num_events'],NCORES,"Unset")
 
                         if(transaction_str != transaction_stub):
-                                transactions_Array.append(transaction_str[:-2])
+                                transactions_Array.append(transaction_stub+transaction_str[:-2])
                         
-                        
+                        #print(transactions_Array)
                         for transaction in transactions_Array:
+                                print(transaction)
+                                print("===================================================")
                                 Transact_recordAttempt(transaction)
 
 #====================================================
@@ -686,23 +690,23 @@ def recordFirstAttempt(PROJECT_ID,RUNNO,FILENO,BatchSYS,BatchJobID, NUMEVTS,NCOR
 #This function attaches itself directly to the passed in JOB_ID and inserts a new job
 #====================================================
 def Transact_recordAttempt(trans_string):
-        print(trans_string)
+        #print(trans_string)
         dbcursor.execute(trans_string)#,multi=True)
         dbcnx.commit()
 
 def Build_recordAttemptString(JOB_ID,RUNNO,FILENO,BatchSYS,hostname,BatchJobID, NUMEVTS,NCORES, RAM):
-        findmyjob="SELECT * FROM Jobs WHERE ID="+str(JOB_ID)
-        #print findmyjob
-        dbcursor.execute(findmyjob)
-        MYJOB = dbcursor.fetchall()
+        #findmyjob="SELECT * FROM Jobs WHERE ID="+str(JOB_ID)
+        ##print findmyjob
+        #dbcursor.execute(findmyjob)
+        #MYJOB = dbcursor.fetchall()
 
-        #print MYJOB
+        #print MYJOB#
 
-        if len(MYJOB) != 1:
-                print("I either can't find a job or too many jobs might be mine")
-                exit(1)
+        #if len(MYJOB) != 1:
+        #        print("I either can't find a job or too many jobs might be mine")
+        #        exit(1)
 
-        Job_ID=MYJOB[0][0]
+        #Job_ID=MYJOB[0][0]
 
         addAttempt="("+str(JOB_ID)+", NOW(), "+str("'"+BatchSYS+"'")+", "+str(hostname)+", "+str(BatchJobID)+", 'Created', 0, 0, "+str(NCORES)+", "+str("'"+RAM+"'")+", '0'"+")"
         return addAttempt

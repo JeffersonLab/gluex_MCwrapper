@@ -126,7 +126,7 @@ def WritePayloadConfig(order,foundConfig,batch_system):
 def SubmitList(SubList,job_IDs_submitted):
     print("Submitting SubList")
     for row in SubList:
-        print("Row",row)
+        #print("Row",row)
                 
         if row['ID'] in job_IDs_submitted:
             continue
@@ -247,7 +247,7 @@ def decideSystem(row):
 def main(argv):
     #print(argv)
 
-    Block_size=100
+    Block_size=500
     int_i=0
     more_sub=True
     rows=[]
