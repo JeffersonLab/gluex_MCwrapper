@@ -854,7 +854,7 @@ def main(argv):
                 #print lastid
                 try:
                     queryosgjobs="SELECT * from Attempts WHERE BatchSystem='OSG' && SubmitHost=\""+MCWRAPPER_BOT_HOST_NAME+"\" && Status !='4' && Status !='3' && Status!= '6' && Status != '5';"# || (Status='4' && ExitCode != 0 && ProgramFailed is NULL) ORDER BY ID desc;"
-                    #print queryosgjobs
+                    print(queryosgjobs)
                     dbcursor.execute(queryosgjobs)
                     Alljobs = list(dbcursor.fetchall())
                     #print(Alljobs[:5])

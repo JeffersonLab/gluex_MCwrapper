@@ -49,7 +49,7 @@ except:
         pass
 
 MCWRAPPER_VERSION="2.6.0"
-MCWRAPPER_DATE="06/18/21"
+MCWRAPPER_DATE="07/08/21"
 
 #group sync test
 #====================================================
@@ -478,7 +478,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
                                 #THIS OCCURED BEFORE CAUSING UNIQUENESS TO BE VIOLATED AND REQUIRING ~8K JOBS TO BE SCRUBBED
                                 #***********************
                                 if(trans_block_count % 500 == 0 and trans_block_count != 0):
-                                        transactions_Array.append(transaction_str[:-2])
+                                        transactions_Array.append(transaction_stub+transaction_str[:-2])
                                         transaction_str=""
 
                                #print("JOB:",job)
@@ -498,10 +498,11 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
                                 #        exit(1)
 
                                 transaction_str+=Build_recordAttemptString(int(job[0]),RUNNUM,job[1],"OSG","'"+socket.gethostname()+"'",SWIF_ID_NUM,COMMAND['num_events'],NCORES,"Unset")+", "
+                                trans_block_count+=1
                                 #print(transaction_str)
                                 #recordAttempt(int(job[0]),RUNNUM,job[1],"OSG",SWIF_ID_NUM,COMMAND['num_events'],NCORES,"Unset")
 
-                        if(transaction_str != transaction_stub):
+                        if(transaction_str != ""):
                                 transactions_Array.append(transaction_stub+transaction_str[:-2])
                         
                         #print(transactions_Array)
@@ -796,8 +797,8 @@ def calcFluxCCDB(ccdb_conn, run, emin, emax):
                 sys.exit(0)
 
         berilliumRL = 35.28e-2 # 35.28 cm
-        radiationLength = converterLength/berilliumRL;
-        scale = livetime_ratio * 1./((7/9.) * radiationLength);
+        radiationLength = converterLength/berilliumRL
+        scale = livetime_ratio * 1./((7/9.) * radiationLength)
 
         photon_endpoint = array('d')
         tagm_untagged_flux = array('d')
@@ -818,14 +819,14 @@ def calcFluxCCDB(ccdb_conn, run, emin, emax):
                 tagh_untagged_flux = tagh_untagged_flux_assignment.constant_set.data_table
                 tagh_scaled_energy_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/hodoscope/scaled_energy_range", run[0], VARIATION, CALIBTIME_ENERGY)
                 tagh_scaled_energy_table = tagh_scaled_energy_assignment.constant_set.data_table
-		PS_accept_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/pair_spectrometer/lumi/PS_accept", run[0], VARIATION, CALIBTIME)
-	        PS_accept = PS_accept_assignment.constant_set.data_table
+                PS_accept_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/pair_spectrometer/lumi/PS_accept", run[0], VARIATION, CALIBTIME)
+                PS_accept = PS_accept_assignment.constant_set.data_table
         except:
                 print("Missing flux for run number = %d, skipping generation" % run[0])
-		return -1.0
+                return -1.0
 
         # PS acceptance correction
-        fPSAcceptance = TF1("PSAcceptance", PSAcceptance, 2.0, 12.0, 3);
+        fPSAcceptance = TF1("PSAcceptance", PSAcceptance, 2.0, 12.0, 3)
         fPSAcceptance.SetParameters(float(PS_accept[0][0]), float(PS_accept[0][1]), float(PS_accept[0][2]));
 
         # sum TAGM flux
