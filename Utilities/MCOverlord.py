@@ -853,7 +853,7 @@ def main(argv):
                 lastid = dbcursor.fetchall()
                 #print lastid
                 try:
-                    queryosgjobs="SELECT * from Attempts WHERE BatchSystem='OSG' && SubmitHost=\""+MCWRAPPER_BOT_HOST_NAME+"\" && Status !='4' && Status !='3' && Status!= '6' && Status != '5';"# || (Status='4' && ExitCode != 0 && ProgramFailed is NULL) ORDER BY ID desc;"
+                    queryosgjobs="SELECT * from Attempts WHERE BatchSystem='OSG' && SubmitHost=\""+MCWRAPPER_BOT_HOST_NAME+"\" && Status !='4' && Status !='3' && Status!= '6' && Status != '5';"# && Job_ID NOT IN (SELECT ID from Jobs where Project_ID=1932 );"# || (Status='4' && ExitCode != 0 && ProgramFailed is NULL) ORDER BY ID desc;"
                     print(queryosgjobs)
                     dbcursor.execute(queryosgjobs)
                     Alljobs = list(dbcursor.fetchall())
