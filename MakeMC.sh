@@ -952,7 +952,7 @@ if [[ "$GENR" != "0" ]]; then
 		#sed -i 's/TEMPCOHERENT/'$COHERENT_PEAK'/' $STANDARD_NAME.conf
 		# RUN genr8 and convert
 		genr8_new -r$formatted_runNumber -M$EVT_TO_GEN -C$GEN_MIN_ENERGY,$GEN_MAX_ENERGY -o$STANDARD_NAME.gamp < $STANDARD_NAME.conf #$config_file_name
-		generator_return_code=$status
+		generator_return_code=$?
 		gamp_2_hddm -r$formatted_runNumber -V"0 0 0 0" $STANDARD_NAME.gamp
     elif [[ "$GENERATOR" == "bggen" ]]; then
 	RANDOMnum=`bash -c 'echo $RANDOM'`
@@ -1090,7 +1090,7 @@ if [[ "$GENR" != "0" ]]; then
 	gen_omegapi -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
 	generator_return_code=$?
 	elif [[ "$GENERATOR" == "gen_vec_ps" ]]; then
-	echo "RUNNING GEN_VEC_PS" 
+	echo "RUNNING GEN_VEC_PS"
     optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
 	echo $optionals_line
 		if [[ "$polarization_angle" == "-1.0" ]]; then
@@ -1101,7 +1101,7 @@ if [[ "$GENR" != "0" ]]; then
 			sed -i 's/TEMPPOLANGLE/'$polarization_angle'/' $STANDARD_NAME.conf
 		fi
 		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
-		
+
 	echo gen_vec_ps -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY  $optionals_line
 	gen_vec_ps -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
 	generator_return_code=$?
@@ -1241,7 +1241,7 @@ if [[ "$GENR" != "0" ]]; then
 		genBH -n$EVT_TO_GEN -t$NUMTHREADS -m0.5 -e$GEN_MAX_ENERGY -r$RANDOMnum $STANDARD_NAME.hddm
 
 		sed -i 's/class="mc_s"/'class=\"s\"'/' $STANDARD_NAME.hddm
-		generator_return_code=$status
+		generator_return_code=$?
 	fi
 
 
@@ -1273,7 +1273,7 @@ if [[ "$GENERATOR_POST" != "No" ]]; then
 	if [[ "$GENERATOR_POST" == "decay_evtgen" ]]; then
 		echo decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm $STANDARD_NAME.hddm
 		decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm -upost'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.cfg $STANDARD_NAME.hddm
-		post_return_code=$status
+		post_return_code=$?
 		STANDARD_NAME=$STANDARD_NAME'_decay_evtgen'
 	fi
 
