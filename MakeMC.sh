@@ -125,6 +125,10 @@ export GENERATOR_POST=$1
 shift
 export GENERATOR_POST_CONFIG=$1
 shift
+export GENERATOR_POST_CONFIGEVT=$1
+shift
+export GENERATOR_POST_CONFIGDEC=$1
+shift
 export GEANT_VERTEXT_AREA=$1
 shift
 export GEANT_VERTEXT_LENGTH=$1
@@ -470,7 +474,7 @@ echo "Run generation step? "$GENR"  Will be cleaned?" $CLEANGENR
 echo "Flux Hist to use: " "$FLUX_TO_GEN" " : " "$FLUX_HIST"
 echo "Polarization to use: " "$POL_TO_GEN" " : " "$POL_HIST"
 echo "Using "$GENERATOR" with config: "$CONFIG_FILE
-echo "Will run "$GENERATOR_POST" postprocessing after generator with configuration: "$GENERATOR_POST_CONFIG
+echo "Will run "$GENERATOR_POST" postprocessing after generator with configuration: "$GENERATOR_POST_CONFIG", event definitions: "$GENERATOR_POST_CONFIGEVT" and decay definitions: "$GENERATOR_POST_CONFIGDEC
 echo "----------------------------------------------"
 echo "Run geant step? "$GEANT"  Will be cleaned?" $CLEANGEANT
 echo "Using geant"$GEANTVER
@@ -1266,12 +1270,21 @@ if [[ "$GENERATOR_POST" != "No" ]]; then
 	echo "RUNNING POSTPROCESSING "
 #copy config locally
 	post_return_code=-1
+	echo $GENERATOR_POST_CONFIG
+	echo $GENERATOR_POST_CONFIGEVT
+	echo $GENERATOR_POST_CONFIGDEC
 	if [[ "$GENERATOR_POST_CONFIG" != "Default" ]]; then
 		cp $GENERATOR_POST_CONFIG ./post'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.cfg
 	fi
 
 	if [[ "$GENERATOR_POST" == "decay_evtgen" ]]; then
-		echo decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm $STANDARD_NAME.hddm
+		if [[ "$GENERATOR_POST_CONFIGEVT" != "Default" ]]; then
+			export EVTGEN_PARTICLE_DEFINITIONS=$GENERATOR_POST_CONFIGEVT
+		fi
+		if [[ "$GENERATOR_POST_CONFIGDEC" != "Default" ]];then
+			export EVTGEN_DECAY_FILE=$GENERATOR_POST_CONFIGDEC
+		fi
+		echo decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm -upost'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.cfg $STANDARD_NAME.hddm
 		decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm -upost'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.cfg $STANDARD_NAME.hddm
 		post_return_code=$?
 		STANDARD_NAME=$STANDARD_NAME'_decay_evtgen'
