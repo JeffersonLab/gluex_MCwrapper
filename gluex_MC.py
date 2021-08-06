@@ -49,7 +49,7 @@ except:
         pass
 
 MCWRAPPER_VERSION="2.6.0"
-MCWRAPPER_DATE="07/08/21"
+MCWRAPPER_DATE="08/06/21"
 
 #group sync test
 #====================================================

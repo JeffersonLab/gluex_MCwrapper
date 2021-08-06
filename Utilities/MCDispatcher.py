@@ -553,6 +553,7 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
     my_env=None
     print(versionSet)
     if(versionSet != ""):
+        myclean=source("/group/halld/Software/build_scripts/gluex_env_clean.csh")
         my_env=source("/group/halld/Software/build_scripts/gluex_env_jlab.sh /group/halld/www/halldweb/html/halld_versions/"+versionSet)
         my_env["MCWRAPPER_CENTRAL"]=MCWRAPPER_BOT_HOME
 
