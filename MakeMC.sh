@@ -8,11 +8,6 @@ shift
 
 if [[ "$BATCHRUN" != "0" ]]; then
 
-#echo "HERE"
-#ls
-#echo "THERE"
-#ls ../
-
 xmltest=`echo $ENVIRONMENT | rev | cut -c -4 | rev`
 if [[ "$xmltest" == ".xml" ]]; then
 source /group/halld/Software/build_scripts/gluex_env_jlab.sh $ENVIRONMENT
@@ -1741,7 +1736,7 @@ if [[ "$hddmfiles" != "" ]]; then
 fi
 
 cd ..
-
+rm -rf .hdds_tmp_*
 if [[ `ls $RUNNING_DIR/${RUN_NUMBER}_${FILE_NUMBER} | wc -l` == 0 ]]; then
 	rm -rf $RUNNING_DIR/${RUN_NUMBER}_${FILE_NUMBER}
 else

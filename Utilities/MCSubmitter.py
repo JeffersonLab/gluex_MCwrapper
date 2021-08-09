@@ -126,7 +126,7 @@ def WritePayloadConfig(order,foundConfig,batch_system):
 def SubmitList(SubList,job_IDs_submitted):
     print("Submitting SubList")
     for row in SubList:
-        print("Row",row)
+        #print("Row",row)
                 
         if row['ID'] in job_IDs_submitted:
             continue
@@ -139,6 +139,7 @@ def SubmitList(SubList,job_IDs_submitted):
         print("bundled:",len(alljobs))
         if(len(alljobs)>1):
             bundled=True
+            
         projinfo_q="SELECT * FROM Project where ID="+str(row['Project_ID'])
         curs.execute(projinfo_q) 
         proj=curs.fetchall()
@@ -247,7 +248,7 @@ def decideSystem(row):
 def main(argv):
     #print(argv)
 
-    Block_size=100
+    Block_size=500
     int_i=0
     more_sub=True
     rows=[]
@@ -278,7 +279,7 @@ def main(argv):
                 print("=============================================================")
                 query = "SELECT UName,RunNumber,FileNumber,Tested,NumEvts,BKG,Notified,Jobs.ID,Project_ID,Priority,IsActive from Jobs,Project,Users where Tested=1 && Notified is NULL && IsActive=1 && Jobs.ID not in (Select Job_ID from Attempts) and Project_ID = Project.ID and Uname = name order by Priority desc limit "+str(Block_size)
                 if(Block_size==1):
-                    query = "SELECT UName,RunNumber,FileNumber,Tested,NumEvts,BKG,Notified,Jobs.ID,Project_ID,Priority from Jobs,Project,Users where Tested=1 && Notified is NULL && Jobs.ID not in (Select Job_ID from Attempts) and Project_ID = Project.ID and Uname = name order by Project_ID asc" #Priority desc"
+                    query = "SELECT UName,RunNumber,FileNumber,Tested,NumEvts,BKG,Notified,Jobs.ID,Project_ID,Priority from Jobs,Project,Users where Tested=1 && Notified is NULL && Jobs.ID not in (Select Job_ID from Attempts) and Project_ID = Project.ID and Uname = name order by Project_ID desc" #Priority desc"
 
                 
                 print("Query:", query)

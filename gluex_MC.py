@@ -49,8 +49,9 @@ except:
         pass
 
 MCWRAPPER_VERSION="2.6.0"
-MCWRAPPER_DATE="05/11/21"
+MCWRAPPER_DATE="08/06/21"
 
+#group sync test
 #====================================================
 #Takes in a few pertinant pieces of info.  Creates (if needed) a swif workflow and adds a job to it.
 #if project ID is less than 0 its an attempt ID and is recorded as such
@@ -468,41 +469,46 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
                         #print("JOBS BUNDLE:",bundledJobs)
                         transactions_Array=[]
                         trans_block_count=0
-                        transaction_stub="INSERT INTO Attempts (Job_ID,Creation_Time,BatchSystem,BatchJobID,Status,WallTime,CPUTime,ThreadsRequested,RAMRequested, RAMUsed) VALUES "
-                        transaction_str=transaction_stub
+                        transaction_stub="INSERT INTO Attempts (Job_ID,Creation_Time,BatchSystem,SubmitHost,BatchJobID,Status,WallTime,CPUTime,ThreadsRequested,RAMRequested, RAMUsed) VALUES "
+                        transaction_str=""
+                        print("BUNDLING!")
                         for job in bundledJobs:
                                 #***********************
                                 #THE FOLLOWING IF CHECKS IF THE ASSIGNED BATCH ID HAS BEEN ASSIGNED BEFORE FROM SCOSG16
                                 #THIS OCCURED BEFORE CAUSING UNIQUENESS TO BE VIOLATED AND REQUIRING ~8K JOBS TO BE SCRUBBED
                                 #***********************
                                 if(trans_block_count % 500 == 0 and trans_block_count != 0):
-                                        transactions_Array.append(transaction_str[:-2])
-                                        transaction_str=transaction_stub
+                                        transactions_Array.append(transaction_stub+transaction_str[:-2])
+                                        transaction_str=""
 
-                                print("JOB:",job)
+                               #print("JOB:",job)
                                 SWIF_ID_NUM=str(idnumline[5])+".0"
                                 if(numJobsInBundle>1):
                                         SWIF_ID_NUM=str(idnumline[5])+"."+str(job[1])
 
-                                if int(PROJECT_ID) !=0:
-                                        findmyjob="SELECT * FROM Attempts where BatchJobID='"+str(SWIF_ID_NUM)+"' && BatchSystem='OSG';"
-                                        dbcursor.execute(findmyjob)
-                                        MYJOB = dbcursor.fetchall()
+                                #if int(PROJECT_ID) !=0:
+                                #        findmyjob="SELECT * FROM Attempts where BatchJobID='"+str(SWIF_ID_NUM)+"' && BatchSystem='OSG';"
+                                #        dbcursor.execute(findmyjob)
+                                #        MYJOB = dbcursor.fetchall()
 
-                                if len(MYJOB) != 0:
-                                        #SELECT DISTINCT Project_ID FROM Jobs where ID in (select Job_ID from Attempts WHERE BatchSystem='OSG' GROUP BY BatchJobID HAVING COUNT(Job_ID)>1 ORDER BY BatchJobID DESC);
-                                        print("THE TIMELINE HAS BEEN FRACTURED. TERMINATING SUBMITS AND SHUTTING THE ROBOT DOWN!!!")
-                                        f=open("/osgpool/halld/tbritton/.ALLSTOP","x")
-                                        exit(1)
+                                #if len(MYJOB) != 0:
+                                #        #SELECT DISTINCT Project_ID FROM Jobs where ID in (select Job_ID from Attempts WHERE BatchSystem='OSG' GROUP BY BatchJobID HAVING COUNT(Job_ID)>1 ORDER BY BatchJobID DESC);
+                                #        print("THE TIMELINE HAS BEEN FRACTURED. TERMINATING SUBMITS AND SHUTTING THE ROBOT DOWN!!!")
+                                #        f=open("/osgpool/halld/tbritton/.ALLSTOP","x")
+                                #        exit(1)
 
-                                transaction_str+=Build_recordAttemptString(int(job[0]),RUNNUM,job[1],"OSG",SWIF_ID_NUM,COMMAND['num_events'],NCORES,"Unset")+", "
+                                transaction_str+=Build_recordAttemptString(int(job[0]),RUNNUM,job[1],"OSG","'"+socket.gethostname()+"'",SWIF_ID_NUM,COMMAND['num_events'],NCORES,"Unset")+", "
+                                trans_block_count+=1
+                                #print(transaction_str)
                                 #recordAttempt(int(job[0]),RUNNUM,job[1],"OSG",SWIF_ID_NUM,COMMAND['num_events'],NCORES,"Unset")
 
-                        if(transaction_str != transaction_stub):
-                                transactions_Array.append(transaction_str[:-2])
+                        if(transaction_str != ""):
+                                transactions_Array.append(transaction_stub+transaction_str[:-2])
                         
-                        
+                        #print(transactions_Array)
                         for transaction in transactions_Array:
+                                print(transaction)
+                                print("===================================================")
                                 Transact_recordAttempt(transaction)
 
 #====================================================
@@ -676,7 +682,7 @@ def recordFirstAttempt(PROJECT_ID,RUNNO,FILENO,BatchSYS,BatchJobID, NUMEVTS,NCOR
 
         Job_ID=MYJOB[0][0]
 
-        addAttempt="INSERT INTO Attempts (Job_ID,Creation_Time,BatchSystem,BatchJobID,Status,WallTime,CPUTime,ThreadsRequested,RAMRequested, RAMUsed) VALUES ("+str(Job_ID)+", NOW(), "+str("'"+BatchSYS+"'")+", "+str(BatchJobID)+", 'Created', 0, 0, "+str(NCORES)+", "+str("'"+RAM+"'")+", '0'"+");"
+        addAttempt="INSERT INTO Attempts (Job_ID,Creation_Time,BatchSystem,HostName,BatchJobID,Status,WallTime,CPUTime,ThreadsRequested,RAMRequested, RAMUsed) VALUES ("+str(Job_ID)+", NOW(), "+str("'"+BatchSYS+"'")+", "+str(socket.gethostname())+", "+str(BatchJobID)+", 'Created', 0, 0, "+str(NCORES)+", "+str("'"+RAM+"'")+", '0'"+");"
 
         print(addAttempt)
         dbcursor.execute(addAttempt)
@@ -685,25 +691,25 @@ def recordFirstAttempt(PROJECT_ID,RUNNO,FILENO,BatchSYS,BatchJobID, NUMEVTS,NCOR
 #This function attaches itself directly to the passed in JOB_ID and inserts a new job
 #====================================================
 def Transact_recordAttempt(trans_string):
-        print(trans_string)
+        #print(trans_string)
         dbcursor.execute(trans_string)#,multi=True)
         dbcnx.commit()
 
-def Build_recordAttemptString(JOB_ID,RUNNO,FILENO,BatchSYS,BatchJobID, NUMEVTS,NCORES, RAM):
-        findmyjob="SELECT * FROM Jobs WHERE ID="+str(JOB_ID)
-        #print findmyjob
-        dbcursor.execute(findmyjob)
-        MYJOB = dbcursor.fetchall()
+def Build_recordAttemptString(JOB_ID,RUNNO,FILENO,BatchSYS,hostname,BatchJobID, NUMEVTS,NCORES, RAM):
+        #findmyjob="SELECT * FROM Jobs WHERE ID="+str(JOB_ID)
+        ##print findmyjob
+        #dbcursor.execute(findmyjob)
+        #MYJOB = dbcursor.fetchall()
 
-        #print MYJOB
+        #print MYJOB#
 
-        if len(MYJOB) != 1:
-                print("I either can't find a job or too many jobs might be mine")
-                exit(1)
+        #if len(MYJOB) != 1:
+        #        print("I either can't find a job or too many jobs might be mine")
+        #        exit(1)
 
-        Job_ID=MYJOB[0][0]
+        #Job_ID=MYJOB[0][0]
 
-        addAttempt="("+str(JOB_ID)+", NOW(), "+str("'"+BatchSYS+"'")+", "+str(BatchJobID)+", 'Created', 0, 0, "+str(NCORES)+", "+str("'"+RAM+"'")+", '0'"+")"
+        addAttempt="("+str(JOB_ID)+", NOW(), "+str("'"+BatchSYS+"'")+", "+str(hostname)+", "+str(BatchJobID)+", 'Created', 0, 0, "+str(NCORES)+", "+str("'"+RAM+"'")+", '0'"+")"
         return addAttempt
 
 def recordAttempt(JOB_ID,RUNNO,FILENO,BatchSYS,BatchJobID, NUMEVTS,NCORES, RAM):
@@ -722,7 +728,7 @@ def recordAttempt(JOB_ID,RUNNO,FILENO,BatchSYS,BatchJobID, NUMEVTS,NCORES, RAM):
 
         Job_ID=MYJOB[0][0]
 
-        addAttempt="INSERT INTO Attempts (Job_ID,Creation_Time,BatchSystem,BatchJobID,Status,WallTime,CPUTime,ThreadsRequested,RAMRequested, RAMUsed) VALUES ("+str(JOB_ID)+", NOW(), "+str("'"+BatchSYS+"'")+", "+str(BatchJobID)+", 'Created', 0, 0, "+str(NCORES)+", "+str("'"+RAM+"'")+", '0'"+");"
+        addAttempt="INSERT INTO Attempts (Job_ID,Creation_Time,BatchSystem,SubmitHost,BatchJobID,Status,WallTime,CPUTime,ThreadsRequested,RAMRequested, RAMUsed) VALUES ("+str(JOB_ID)+", NOW(), "+str("'"+BatchSYS+"'")+", "+str(socket.gethostname())+", "+str(BatchJobID)+", 'Created', 0, 0, "+str(NCORES)+", "+str("'"+RAM+"'")+", '0'"+");"
         print(addAttempt)
         dbcursor.execute(addAttempt)
         dbcnx.commit()
@@ -735,15 +741,15 @@ def recordAttempt(JOB_ID,RUNNO,FILENO,BatchSYS,BatchJobID, NUMEVTS,NCORES, RAM):
 #====================================================
 def getCommandString(COMMAND,USER,numbundled=1):
         if(USER=="OSG" and numbundled!=1):
-                return COMMAND['batchrun']+" "+COMMAND['environment_file']+" "+COMMAND['ana_environment_file']+" "+COMMAND['generator_config']+" "+COMMAND['output_directory']+" "+COMMAND['run_number']+" "+"$(Process)"+" "+COMMAND['num_events']+" "+COMMAND['jana_calib_context']+" "+COMMAND['jana_calibtime']+" "+COMMAND['do_gen']+" "+COMMAND['do_geant']+" "+COMMAND['do_mcsmear']+" "+COMMAND['do_recon']+" "+COMMAND['clean_gen']+" "+COMMAND['clean_geant']+" "+COMMAND['clean_mcsmear']+" "+COMMAND['clean_recon']+" "+COMMAND['batch_system']+" "+COMMAND['num_cores']+" "+COMMAND['generator']+" "+COMMAND['geant_version']+" "+COMMAND['background_to_include']+" "+COMMAND['custom_Gcontrol']+" "+COMMAND['eBeam_energy']+" "+COMMAND['coherent_peak']+" "+COMMAND['min_generator_energy']+" "+COMMAND['max_generator_energy']+" "+COMMAND['custom_tag_string']+" "+COMMAND['custom_plugins']+" "+COMMAND['events_per_file']+" "+COMMAND['running_directory']+" "+COMMAND['ccdb_sqlite_path']+" "+COMMAND['rcdb_sqlite_path']+" "+COMMAND['background_tagger_only']+" "+COMMAND['radiator_thickness']+" "+COMMAND['background_rate']+" "+COMMAND['random_background_tag']+" "+COMMAND['recon_calibtime']+" "+COMMAND['no_geant_secondaries']+" "+COMMAND['mcwrapper_version']+" "+COMMAND['no_bcal_sipm_saturation']+" "+COMMAND['flux_to_generate']+" "+COMMAND['flux_histogram']+" "+COMMAND['polarization_to_generate']+" "+COMMAND['polarization_histogram']+" "+COMMAND['eBeam_current']+" "+COMMAND['experiment']+" "+COMMAND['num_rand_trigs']+" "+COMMAND['location']+" "+COMMAND['generator_post']+" "+COMMAND['generator_post_config']+" "+COMMAND['geant_vertex_area']+" "+COMMAND['geant_vertex_length']+" "+COMMAND['mcsmear_notag']
+                return COMMAND['batchrun']+" "+COMMAND['environment_file']+" "+COMMAND['ana_environment_file']+" "+COMMAND['generator_config']+" "+COMMAND['output_directory']+" "+COMMAND['run_number']+" "+"$(Process)"+" "+COMMAND['num_events']+" "+COMMAND['jana_calib_context']+" "+COMMAND['jana_calibtime']+" "+COMMAND['do_gen']+" "+COMMAND['do_geant']+" "+COMMAND['do_mcsmear']+" "+COMMAND['do_recon']+" "+COMMAND['clean_gen']+" "+COMMAND['clean_geant']+" "+COMMAND['clean_mcsmear']+" "+COMMAND['clean_recon']+" "+COMMAND['batch_system']+" "+COMMAND['num_cores']+" "+COMMAND['generator']+" "+COMMAND['geant_version']+" "+COMMAND['background_to_include']+" "+COMMAND['custom_Gcontrol']+" "+COMMAND['eBeam_energy']+" "+COMMAND['coherent_peak']+" "+COMMAND['min_generator_energy']+" "+COMMAND['max_generator_energy']+" "+COMMAND['custom_tag_string']+" "+COMMAND['custom_plugins']+" "+COMMAND['events_per_file']+" "+COMMAND['running_directory']+" "+COMMAND['ccdb_sqlite_path']+" "+COMMAND['rcdb_sqlite_path']+" "+COMMAND['background_tagger_only']+" "+COMMAND['radiator_thickness']+" "+COMMAND['background_rate']+" "+COMMAND['random_background_tag']+" "+COMMAND['recon_calibtime']+" "+COMMAND['no_geant_secondaries']+" "+COMMAND['mcwrapper_version']+" "+COMMAND['no_bcal_sipm_saturation']+" "+COMMAND['flux_to_generate']+" "+COMMAND['flux_histogram']+" "+COMMAND['polarization_to_generate']+" "+COMMAND['polarization_histogram']+" "+COMMAND['eBeam_current']+" "+COMMAND['experiment']+" "+COMMAND['num_rand_trigs']+" "+COMMAND['location']+" "+COMMAND['generator_post']+" "+COMMAND['generator_post_config']+" "+COMMAND['generator_post_configevt']+" "+COMMAND['generator_post_configdec']+" "+COMMAND['geant_vertex_area']+" "+COMMAND['geant_vertex_length']+" "+COMMAND['mcsmear_notag']
         else:
-                return COMMAND['batchrun']+" "+COMMAND['environment_file']+" "+COMMAND['ana_environment_file']+" "+COMMAND['generator_config']+" "+COMMAND['output_directory']+" "+COMMAND['run_number']+" "+COMMAND['file_number']+" "+COMMAND['num_events']+" "+COMMAND['jana_calib_context']+" "+COMMAND['jana_calibtime']+" "+COMMAND['do_gen']+" "+COMMAND['do_geant']+" "+COMMAND['do_mcsmear']+" "+COMMAND['do_recon']+" "+COMMAND['clean_gen']+" "+COMMAND['clean_geant']+" "+COMMAND['clean_mcsmear']+" "+COMMAND['clean_recon']+" "+COMMAND['batch_system']+" "+COMMAND['num_cores']+" "+COMMAND['generator']+" "+COMMAND['geant_version']+" "+COMMAND['background_to_include']+" "+COMMAND['custom_Gcontrol']+" "+COMMAND['eBeam_energy']+" "+COMMAND['coherent_peak']+" "+COMMAND['min_generator_energy']+" "+COMMAND['max_generator_energy']+" "+COMMAND['custom_tag_string']+" "+COMMAND['custom_plugins']+" "+COMMAND['events_per_file']+" "+COMMAND['running_directory']+" "+COMMAND['ccdb_sqlite_path']+" "+COMMAND['rcdb_sqlite_path']+" "+COMMAND['background_tagger_only']+" "+COMMAND['radiator_thickness']+" "+COMMAND['background_rate']+" "+COMMAND['random_background_tag']+" "+COMMAND['recon_calibtime']+" "+COMMAND['no_geant_secondaries']+" "+COMMAND['mcwrapper_version']+" "+COMMAND['no_bcal_sipm_saturation']+" "+COMMAND['flux_to_generate']+" "+COMMAND['flux_histogram']+" "+COMMAND['polarization_to_generate']+" "+COMMAND['polarization_histogram']+" "+COMMAND['eBeam_current']+" "+COMMAND['experiment']+" "+COMMAND['num_rand_trigs']+" "+COMMAND['location']+" "+COMMAND['generator_post']+" "+COMMAND['generator_post_config']+" "+COMMAND['geant_vertex_area']+" "+COMMAND['geant_vertex_length']+" "+COMMAND['mcsmear_notag']
+                return COMMAND['batchrun']+" "+COMMAND['environment_file']+" "+COMMAND['ana_environment_file']+" "+COMMAND['generator_config']+" "+COMMAND['output_directory']+" "+COMMAND['run_number']+" "+COMMAND['file_number']+" "+COMMAND['num_events']+" "+COMMAND['jana_calib_context']+" "+COMMAND['jana_calibtime']+" "+COMMAND['do_gen']+" "+COMMAND['do_geant']+" "+COMMAND['do_mcsmear']+" "+COMMAND['do_recon']+" "+COMMAND['clean_gen']+" "+COMMAND['clean_geant']+" "+COMMAND['clean_mcsmear']+" "+COMMAND['clean_recon']+" "+COMMAND['batch_system']+" "+COMMAND['num_cores']+" "+COMMAND['generator']+" "+COMMAND['geant_version']+" "+COMMAND['background_to_include']+" "+COMMAND['custom_Gcontrol']+" "+COMMAND['eBeam_energy']+" "+COMMAND['coherent_peak']+" "+COMMAND['min_generator_energy']+" "+COMMAND['max_generator_energy']+" "+COMMAND['custom_tag_string']+" "+COMMAND['custom_plugins']+" "+COMMAND['events_per_file']+" "+COMMAND['running_directory']+" "+COMMAND['ccdb_sqlite_path']+" "+COMMAND['rcdb_sqlite_path']+" "+COMMAND['background_tagger_only']+" "+COMMAND['radiator_thickness']+" "+COMMAND['background_rate']+" "+COMMAND['random_background_tag']+" "+COMMAND['recon_calibtime']+" "+COMMAND['no_geant_secondaries']+" "+COMMAND['mcwrapper_version']+" "+COMMAND['no_bcal_sipm_saturation']+" "+COMMAND['flux_to_generate']+" "+COMMAND['flux_histogram']+" "+COMMAND['polarization_to_generate']+" "+COMMAND['polarization_histogram']+" "+COMMAND['eBeam_current']+" "+COMMAND['experiment']+" "+COMMAND['num_rand_trigs']+" "+COMMAND['location']+" "+COMMAND['generator_post']+" "+COMMAND['generator_post_config']+" "+COMMAND['generator_post_configevt']+" "+COMMAND['generator_post_configdec']+" "+COMMAND['geant_vertex_area']+" "+COMMAND['geant_vertex_length']+" "+COMMAND['mcsmear_notag']
 def LoadCCDB():
         sqlite_connect_str = "mysql://ccdb_user@hallddb.jlab.org/ccdb"
         provider = ccdb.AlchemyProvider()                           # this class has all CCDB manipulation functions
         provider.connect(sqlite_connect_str)                        # use usual connection string to connect to database
         provider.authentication.current_user_name = "psflux_user"   # to have a name in logs
-        
+
         return provider
 
 def PSAcceptance(x, par):
@@ -781,18 +787,15 @@ def calcFluxCCDB(ccdb_conn, run, emin, emax):
 
         # Conversion factors for total flux
         converterThickness = run[2]
-        converterLength = 0
-        if converterThickness == "Be 75um": # default is 75 um
-                converterLength = 75e-6
-        elif converterThickness == "Be 750um":
+        converterLength = 75e-6 # default is 75 um
+        if converterThickness == "Be 750um":
                 converterLength = 750e-6
-        else:
-                print("Unknown converter thickness")
-                sys.exit(0)
+        elif converterThickness != "Be 75um":
+                print("Unknown converter thickness for run %s: %s, assuming Be 75um" % (run[0],run[2]))
 
         berilliumRL = 35.28e-2 # 35.28 cm
-        radiationLength = converterLength/berilliumRL;
-        scale = livetime_ratio * 1./((7/9.) * radiationLength);
+        radiationLength = converterLength/berilliumRL
+        scale = livetime_ratio * 1./((7/9.) * radiationLength)
 
         photon_endpoint = array('d')
         tagm_untagged_flux = array('d')
@@ -813,14 +816,14 @@ def calcFluxCCDB(ccdb_conn, run, emin, emax):
                 tagh_untagged_flux = tagh_untagged_flux_assignment.constant_set.data_table
                 tagh_scaled_energy_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/hodoscope/scaled_energy_range", run[0], VARIATION, CALIBTIME_ENERGY)
                 tagh_scaled_energy_table = tagh_scaled_energy_assignment.constant_set.data_table
-		PS_accept_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/pair_spectrometer/lumi/PS_accept", run[0], VARIATION, CALIBTIME)
-	        PS_accept = PS_accept_assignment.constant_set.data_table
+                PS_accept_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/pair_spectrometer/lumi/PS_accept", run[0], VARIATION, CALIBTIME)
+                PS_accept = PS_accept_assignment.constant_set.data_table
         except:
                 print("Missing flux for run number = %d, skipping generation" % run[0])
-		return -1.0
+                return -1.0
 
         # PS acceptance correction
-        fPSAcceptance = TF1("PSAcceptance", PSAcceptance, 2.0, 12.0, 3);
+        fPSAcceptance = TF1("PSAcceptance", PSAcceptance, 2.0, 12.0, 3)
         fPSAcceptance.SetParameters(float(PS_accept[0][0]), float(PS_accept[0][1]), float(PS_accept[0][2]));
 
         # sum TAGM flux
@@ -914,6 +917,8 @@ def main(argv):
 
         GENPOST="No"
         GENPOSTCONFIG="Default"
+        GENPOSTCONFIGEVT="Default"
+        GENPOSTCONFIGDEC="Default"
 
         eBEAM_ENERGY="rcdb"
         eBEAM_CURRENT="rcdb"
@@ -1073,6 +1078,13 @@ def main(argv):
 
                         if(len(WHOLEPOST_PARTS)==2):
                                 GENPOSTCONFIG=WHOLEPOST_PARTS[1]
+                        elif(len(WHOLEPOST_PARTS)==3):
+                                GENPOSTCONFIG=WHOLEPOST_PARTS[1]
+                                GENPOSTCONFIGEVT=WHOLEPOST_PARTS[2]
+                        elif(len(WHOLEPOST_PARTS)==4):
+                                GENPOSTCONFIG=WHOLEPOST_PARTS[1]
+                                GENPOSTCONFIGEVT=WHOLEPOST_PARTS[2]
+                                GENPOSTCONFIGDEC=WHOLEPOST_PARTS[3]
                         elif(len(WHOLEPOST_PARTS)==1):
                                 GENPOST=WHOLEPOST
 
@@ -1385,31 +1397,34 @@ def main(argv):
         COMMAND_dict['polarization_histogram']=str(POL_HIST)
         COMMAND_dict['eBeam_current']=str(eBEAM_CURRENT)
         COMMAND_dict['experiment']=str(PROJECT)
-        
+
         COMMAND_dict['num_rand_trigs']=str(RANDOM_NUM_EVT)
         COMMAND_dict['location']=str(LOCATION)
         COMMAND_dict['generator_post']=str(GENPOST)
         COMMAND_dict['generator_post_config']=str(GENPOSTCONFIG)
+        COMMAND_dict['generator_post_configevt']=str(GENPOSTCONFIGEVT)
+        COMMAND_dict['generator_post_configdec']=str(GENPOSTCONFIGDEC)
         COMMAND_dict['geant_vertex_area']=str(VERTEX_AREA)
         COMMAND_dict['geant_vertex_length']=str(VERTEX_LENGTH)
         COMMAND_dict['mcsmear_notag']=str(SMEAR_NOTAG)
-        
-        
+
+
         if(COMMAND_dict['generator'][:4]=="file:" and len(RunType) != 1):
                 print("ERROR: MCwrapper currently does not support taking a monolithic file and converting it into a range of runs.")
                 exit(1)
 
         #The submitter grabs a single unattempted job and submits it.  Always a single runnumber
-        # 
+        #
+        print(COMMAND_dict)
         if str(IS_SUBMITTER) == "1":
                 if BGFOLD == "Random" or BGFOLD=="DEFAULT" or BGFOLD[0:3] == "loc":
                         RANDOM_NUM_EVT=GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,RUNNUM)
                         COMMAND_dict['num_rand_trigs']=str(RANDOM_NUM_EVT)
 
                 if BATCHRUN == 0 or BATCHSYS.upper()=="NULL":
-                        os.system(str(SCRIPT_TO_RUN)+" "+COMMAND)
+                        os.system(str(SCRIPT_TO_RUN)+" "+getCommandString(COMMAND_dict,"INTERACTIVE"))
                 else:
-                        if PROJECT_ID != 0:
+                        if PROJECT_ID != 0: #below only valid for initial atomization
                                 print("SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(RUNNUM)+" && FileNumber="+str(BASEFILENUM)+" && NumEvts="+str(EVTS))
                                 findmyjob="SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(RUNNUM)+" && FileNumber="+str(BASEFILENUM)+" && NumEvts="+str(EVTS)
                                 dbcursor.execute(findmyjob)
@@ -1532,7 +1547,7 @@ def main(argv):
                                         
                                         if BATCHRUN == 0 or BATCHSYS.upper()=="NULL":
                                                 #print str(runs[0])+" "+str(BASEFILENUM+FILENUM_this_run+-1)+" "+str(num_this_file)
-                                                os.system(str(SCRIPT_TO_RUN)+" "+getCommandString(COMMAND_dict))
+                                                os.system(str(SCRIPT_TO_RUN)+" "+getCommandString(COMMAND_dict,"INTERACTIVE"))
                                         else:
                                                 if PROJECT_ID != 0:
                                                         print("SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(runs[0])+" && FileNumber="+str(BASEFILENUM+FILENUM_this_run+-1)+" && NumEvts="+str(num_this_file))
