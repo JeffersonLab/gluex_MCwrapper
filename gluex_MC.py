@@ -338,6 +338,23 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
                 additional_passins+=COMMAND_parts['generator'][5:]+", "
                 COMMAND_parts['generator']="file:../"+filegen_parts[len(filegen_parts)-1] #"file:/srv/"+filegen_parts[len(filegen_parts)-1]
 
+        if COMMAND_parts['generator_post_config'] != "Default":
+                gen_post_config_parts=COMMAND_parts['generator_post_config'].split("/")
+                gen_post_config_to_use=gen_post_config_parts[len(gen_post_config_parts)-1]
+                additional_passins+=COMMAND_parts['generator_post_config']+", "
+                COMMAND_parts['generator_post_config']="../"+gen_post_config_to_use #"/srv/"+gen_post_config_to_use
+
+        if COMMAND_parts['generator_post_configevt'] != "Default":
+                gen_post_configevt_parts=COMMAND_parts['generator_post_configevt'].split("/")
+                gen_post_configevt_to_use=gen_post_configevt_parts[len(gen_post_configevt_parts)-1]
+                additional_passins+=COMMAND_parts['generator_post_configevt']+", "
+                COMMAND_parts['generator_post_configevt']="../"+gen_post_configevt_to_use #"/srv/"+gen_post_configevt_to_use
+
+        if COMMAND_parts['generator_post_configdec'] != "Default":
+                gen_post_configdec_parts=COMMAND_parts['generator_post_configdec'].split("/")
+                gen_post_configdec_to_use=gen_post_configdec_parts[len(gen_post_configdec_parts)-1]
+                additional_passins+=COMMAND_parts['generator_post_configdec']+", "
+                COMMAND_parts['generator_post_configdec']="../"+gen_post_configdec_to_use #"/srv/"+gen_post_configdec_to_use
 
         if (COMMAND_parts['background_to_include'] == "Random" and COMMAND_parts['num_rand_trigs'] == -1 ) or COMMAND_parts['background_to_include'][:4] == "loc:" or ship_random_triggers:
                 formattedRUNNUM=""
