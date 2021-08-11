@@ -8,9 +8,9 @@
 #      the number of events to be generated per file (except for any remainder) can be set by "per_file=xxxx" default: 1000
 #
 #      If the user does not want genr8, geant, smearing, reconstruction to be performed the sequence will be terminated at the first instance of genr8=0,geant=0,mcsmear=0,recon=0 default: all on
-#      Similarly, if the user wishes to retain the files created by any step you can supply the cleangenr8=0, cleangeant=0, cleanmcsmear=0, or cleanrecon=0 options.  By default all but the reconstruction files #      are cleaned. 
+#      Similarly, if the user wishes to retain the files created by any step you can supply the cleangenr8=0, cleangeant=0, cleanmcsmear=0, or cleanrecon=0 options.  By default all but the reconstruction files #      are cleaned.
 #
-#      The reconstruction step is multi-threaded, for this step, if enabled, the script will use 4 threads.  This threading can be changed with the "numthreads=xxx" option 
+#      The reconstruction step is multi-threaded, for this step, if enabled, the script will use 4 threads.  This threading can be changed with the "numthreads=xxx" option
 #
 #      By default the job will run interactively in the local directory.  If the user wishes to submit the jobs to swif the option "swif=1" must be supplied.
 #
@@ -29,7 +29,7 @@ from ccdb.cmd.console_context import ConsoleContext
 import ccdb.path_utils
 from ccdb import Directory, TypeTable, Assignment, ConstantSet
 from array import array
-from datetime import datetime 
+from datetime import datetime
 from ROOT import TF1
 import mysql.connector
 import time
@@ -74,7 +74,7 @@ def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,N
                 STUBNAME=COMMAND['custom_tag_string']+"_"
         # PREPARE NAMES
         STUBNAME = STUBNAME+str(RUNNO) + "_" + str(FILENO)
-        
+
         JOBNAME = WORKFLOW + "_" + STUBNAME
 
         # CREATE ADD-JOB COMMAND
@@ -83,7 +83,7 @@ def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,N
 
         mkdircom="mkdir -p "+DATA_OUTPUT_BASE_DIR+"/log/"
         status = subprocess.call(mkdircom, shell=True)
-        
+
 
         add_command = "swif add-job -workflow " + WORKFLOW #+ " -name " + JOBNAME
         # project/track
@@ -123,7 +123,7 @@ def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,N
                 jobSubout=subprocess.check_output(add_command.split(" "))
                 print(jobSubout)
                 idnumline=jobSubout.split("\n")[0].strip().split("=")
-                
+
                 if(len(idnumline) == 2 ):
                         SWIF_ID_NUM=str(idnumline[1])
 
@@ -144,11 +144,11 @@ def  qsub_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NC
                 STUBNAME=COMMAND['custom_tag_string']+"_"
         # PREPARE NAMES
         STUBNAME = STUBNAME+str(RUNNUM) + "_" + str(FILENO)
-        
+
         JOBNAME = WORKFLOW + "_" + STUBNAME
-       
+
         sub_command="qsub MCqsub.submit"
-       
+
         qsub_ml_command=""
         bits=NCORES.split(":")
         if (len(bits)==3):
@@ -179,13 +179,13 @@ def  qsub_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NC
                 f.write("#PBS"+" -l walltime="+TIMELIMIT+"\n" )
                 if (QUEUENAME != "DEF"):
                         f.write("#PBS"+" -q "+QUEUENAME+"\n" )
-                f.write("#PBS"+" -l mem="+MEMLIMIT+"\n" ) 
-                f.write("#PBS"+" -m a"+"\n" )  
+                f.write("#PBS"+" -l mem="+MEMLIMIT+"\n" )
+                f.write("#PBS"+" -m a"+"\n" )
                 f.write("#PBS"+" -p 0"+"\n" )
                 f.write("#PBS -c c=2 \n")
                 f.write("NCPU=\\ \n")
-                f.write("NNODES=\\ \n")    
-       
+                f.write("NNODES=\\ \n")
+
                 # f.write("trap \'\' 2 9 15 \n" )
                 f.write(shell_to_use+" "+SCRIPT_TO_RUN+" "+getCommandString(COMMAND,"PBS")+"\n" )
                 f.write("exit 0\n")
@@ -200,20 +200,20 @@ def  qsub_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NC
 
         status = subprocess.call(mkdircom, shell=True)
         if( int(PROJECT_ID) <=0 ):
-        
+
                 status = subprocess.call(sub_command, shell=True)
                 if ( VERBOSE == False ) :
                         status = subprocess.call("rm MCqsub.submit", shell=True)
-        
+
                 if int(PROJECT_ID) > 0:
                         recordJob(PROJECT_ID,RUNNO,FILENO,SWIF_ID_NUM,COMMAND['num_events'])
                         #recordFirstAttempt(PROJECT_ID,RUNNO,FILENO,"QSUB",SWIF_ID_NUM,COMMAND['num_events'],NCORES,MEMLIMIT)
                 elif int(PROJECT_ID) < 0:
                         recordAttempt(abs(int(PROJECT_ID)),RUNNO,FILENO,"QSUB",SWIF_ID_NUM,COMMAND['num_events'],NCORES,MEMLIMIT)
-        
+
 #====================================================
 #Takes in a few pertinant pieces of info.  Submits to condor
-#this has not been fleshed out because of OSG integration.  
+#this has not been fleshed out because of OSG integration.
 #essentially take OSG_add_job and remove the OSG specific stuff (path remapping and + flags)
 #====================================================
 def  condor_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, PROJECT_ID, CONDOR_MAGIC ):
@@ -228,7 +228,7 @@ def  condor_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, 
         mkdircom="mkdir -p "+DATA_OUTPUT_BASE_DIR+"/log/"
 
         f=open('MCcondor.submit','w')
-        f.write("Executable = "+SCRIPT_TO_RUN+"\n") 
+        f.write("Executable = "+SCRIPT_TO_RUN+"\n")
         f.write("Arguments  = "+getCommandString(COMMAND,"CONDOR")+"\n")
         f.write("Error      = "+DATA_OUTPUT_BASE_DIR+"/log/"+"error_"+JOBNAME+".log\n")
         f.write("Output      = "+DATA_OUTPUT_BASE_DIR+"/log/"+"out_"+JOBNAME+".log\n")
@@ -241,7 +241,7 @@ def  condor_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, 
 
         f.write("Queue 1\n")
         f.close()
-        
+
         JOBNAME=JOBNAME.replace(".","p")
         if( int(PROJECT_ID) <=0 ):
                 add_command="condor_submit -batch-name "+WORKFLOW+" MCcondor.submit"
@@ -273,7 +273,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
                 STUBNAME=COMMAND['custom_tag_string']+"_"
         # PREPARE NAMES
         STUBNAME = STUBNAME+str(RUNNUM)
-        
+
 
         numJobsInBundle=1
         bundledJobs=[]
@@ -311,7 +311,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
         COMMAND_parts=COMMAND#COMMAND.split(" ")
 
         COMMAND_parts['environment_file']=envfile_to_source
-        
+
         COMMAND_parts['output_directory']="./"
         COMMAND_parts['running_directory']="./"
 
@@ -337,7 +337,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
                 #print filegen_parts
                 additional_passins+=COMMAND_parts['generator'][5:]+", "
                 COMMAND_parts['generator']="file:../"+filegen_parts[len(filegen_parts)-1] #"file:/srv/"+filegen_parts[len(filegen_parts)-1]
-        
+
 
         if (COMMAND_parts['background_to_include'] == "Random" and COMMAND_parts['num_rand_trigs'] == -1 ) or COMMAND_parts['background_to_include'][:4] == "loc:" or ship_random_triggers:
                 formattedRUNNUM=""
@@ -374,7 +374,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
                 flux_to_use=COMMAND_parts['flux_to_generate']
                 additional_passins+=COMMAND_parts['flux_to_generate']+", "
                 COMMAND_parts['flux_to_generate']="../"+flux_to_use #"/srv/"+flux_to_use
-        
+
         if COMMAND_parts['polarization_to_generate']!="ccdb" and COMMAND_parts['polarization_histogram'] != "unset":
                 tpol_to_use=COMMAND_parts['polarization_to_generate']
                 additional_passins+=COMMAND_parts['polarization_to_generate']+", "
@@ -386,18 +386,18 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
 
         f=open('MCOSG_'+str(PROJECT_ID)+'.submit','w')
         f.write("universe = vanilla"+"\n")
-        f.write("Executable = "+os.environ.get('MCWRAPPER_CENTRAL')+"/osg-container.sh"+"\n") 
+        f.write("Executable = "+os.environ.get('MCWRAPPER_CENTRAL')+"/osg-container.sh"+"\n")
         #f.write("Arguments  = "+SCRIPT_TO_RUN+" "+COMMAND+"\n")
         f.write("Arguments  = "+"./"+script_to_use+" "+getCommandString(COMMAND_parts,"OSG",numJobsInBundle)+"\n")
-        f.write("Requirements = (HAS_SINGULARITY == TRUE) && (HAS_CVMFS_oasis_opensciencegrid_org == True)"+"\n") 
+        f.write("Requirements = (HAS_SINGULARITY == TRUE) && (HAS_CVMFS_oasis_opensciencegrid_org == True)"+"\n")
         #f.write("Requirements = (HAS_SINGULARITY == TRUE) && (HAS_CVMFS_oasis_opensciencegrid_org == True) && (GLIDEIN_SITE=!=\"UConn\") && (GLIDEIN_SITE=!=\"Cedar\")"+"\n")
-#        f.write("Requirements = (HAS_SINGULARITY == TRUE) && (HAS_CVMFS_oasis_opensciencegrid_org == True) && (GLIDEIN_SITE==\"UConn\")"+"\n") 
+#        f.write("Requirements = (HAS_SINGULARITY == TRUE) && (HAS_CVMFS_oasis_opensciencegrid_org == True) && (GLIDEIN_SITE==\"UConn\")"+"\n")
         #f.write('wantjobrouter=true'+"\n")
-        f.write('+SingularityImage = "/cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest"'+"\n") 
-        f.write('+SingularityBindCVMFS = True'+"\n") 
-        f.write('+SingularityAutoLoad = True'+"\n") 
-#        f.write('+CVMFSReposList = "oasis.opensciencegrid.org"'+"\n") 
-#        f.write('+DesiredSites="UConn"'+"\n") 
+        f.write('+SingularityImage = "/cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest"'+"\n")
+        f.write('+SingularityBindCVMFS = True'+"\n")
+        f.write('+SingularityAutoLoad = True'+"\n")
+#        f.write('+CVMFSReposList = "oasis.opensciencegrid.org"'+"\n")
+#        f.write('+DesiredSites="UConn"'+"\n")
         f.write('should_transfer_files = YES'+"\n")
         f.write('when_to_transfer_output = ON_EXIT'+"\n")
         f.write('concurrency_limits = GluexProduction'+"\n")
@@ -411,7 +411,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
         f.write("output      = "+DATA_OUTPUT_BASE_DIR+"/log/"+"out_"+JOBNAME+".log\n")
         f.write("log = "+LOG_DIR+"/log/"+"OSG_"+JOBNAME+".log\n")
         f.write("initialdir = "+RUNNING_DIR+"\n")
-        
+
         if DATA_OUTPUT_BASE_DIR == "/lustre/expphy/cache/halld/halld-scratch/REQUESTED_MC/wmcginle_phi_eta_gamma_more2_20190806093041am/":
                 f.write("request_memory = 5.0GB"+"\n")
         else:
@@ -428,7 +428,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
 
         f.write("queue "+str(numJobsInBundle)+"\n")
         f.close()
-        
+
 
         JOBNAME=JOBNAME.replace(".","p")
         #"condor_submit -batch-name "+WORKFLOW+" MCcondor.submit"
@@ -448,14 +448,14 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
                 jobSubout=subprocess.check_output(add_command.split(" "))
                 print(jobSubout)
                 idnumline=jobSubout.split("\n")[1].split(".")[0].split(" ")
-                
+
 
                 #1 job(s) submitted to cluster 425013.
-               
+
 
                 status = subprocess.call('rm -f MCOSG_'+str(PROJECT_ID)+'.submit', shell=True)
                 status = subprocess.call('rm -f /tmp/MCOSG_'+str(PROJECT_ID)+'.submit', shell=True)
-        
+
                 #print "DECIDING IF FIRST JOB"
                 #print PROJECT_ID
 
@@ -504,7 +504,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
 
                         if(transaction_str != ""):
                                 transactions_Array.append(transaction_stub+transaction_str[:-2])
-                        
+
                         #print(transactions_Array)
                         for transaction in transactions_Array:
                                 print(transaction)
@@ -527,7 +527,7 @@ def JSUB_add_job(VERBOSE, WORKFLOW, PROJECT,TRACK, RUNNUM, FILENUM, SCRIPT_TO_RU
 
         f=open('MCJSUB.submit','w')
         f.write("<Request>"+"\n")
-        
+
         f.write("<Project name=\""+PROJECT+"\"/>"+"\n")
         f.write("<Track name=\""+TRACK+"\"/>"+"\n")
         f.write("<Name name=\""+JOBNAME+"\"/>"+"\n")
@@ -536,7 +536,7 @@ def JSUB_add_job(VERBOSE, WORKFLOW, PROJECT,TRACK, RUNNUM, FILENUM, SCRIPT_TO_RU
         f.write("</Request>"+"\n")
 
         f.close()
-        
+
         exit(1)
 #====================================================
 #Takes in a few pertinant pieces of info.  Submits to SLURM
@@ -569,13 +569,13 @@ def  SLURMcont_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAN
         f.write("#SBATCH -p production"+"\n")
         f.write("#SBATCH -o "+DATA_OUTPUT_BASE_DIR+"/log/"+JOBNAME+".out\n")
         f.write("#SBATCH -e "+DATA_OUTPUT_BASE_DIR+"/log/"+JOBNAME+".err\n")
-        
+
         #f.write("srun "+SCRIPT_TO_RUN+" "+COMMAND+"\n")
         #/group/halld/www/halldweb/html/dist/gluex_centos7.img /cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest
         f.write("module use /apps/modulefiles; module load singularity/3.4.0; singularity exec --bind /cvmfs --bind /work/osgpool/ --bind /work/halld --bind /cache/halld --bind /work/halld2 /cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest $MCWRAPPER_CENTRAL/MakeMC.sh "+getCommandString(COMMAND,"SBATCH_SLURM")+"\n")
 
         f.close()
-        
+
         if( int(PROJECT_ID) <=0 ):
                 add_command="sbatch MCSLURM.submit"
                 if add_command.find(';')!=-1 or add_command.find('&')!=-1 :#THIS CHECK HELPS PROTEXT AGAINST A POTENTIAL HACK VIA CONFIG FILES
@@ -588,7 +588,7 @@ def  SLURMcont_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAN
         elif int(PROJECT_ID) < 0:
                 recordAttempt(abs(int(PROJECT_ID)),RUNNO,FILENO,"SLURM",SWIF_ID_NUM,COMMAND['num_events'],NCORES,"UnSet")
 
-        
+
         status = subprocess.call(add_command, shell=True)
         status = subprocess.call("rm MCSLURM.submit", shell=True)
 
@@ -616,13 +616,13 @@ def  SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, N
         f.write("#SBATCH -p production"+"\n")
         f.write("#SBATCH -o "+DATA_OUTPUT_BASE_DIR+"/log/"+JOBNAME+".out\n")
         f.write("#SBATCH -e "+DATA_OUTPUT_BASE_DIR+"/log/"+JOBNAME+".err\n")
-        
+
         #f.write("srun "+SCRIPT_TO_RUN+" "+COMMAND+"\n")
         #/group/halld/www/halldweb/html/dist/gluex_centos7.img /cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest
         f.write(SCRIPT_TO_RUN+" "+getCommandString(COMMAND,"SLURM")+"\n")
 
         f.close()
-        
+
         if( int(PROJECT_ID) <=0 ):
                 add_command="sbatch MCSLURM.submit"
                 if add_command.find(';')!=-1 or add_command.find('&')!=-1 :#THIS CHECK HELPS PROTEXT AGAINST A POTENTIAL HACK VIA CONFIG FILES
@@ -635,7 +635,7 @@ def  SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, N
         elif int(PROJECT_ID) < 0:
                 recordAttempt(abs(int(PROJECT_ID)),RUNNO,FILENO,"SLURM",SWIF_ID_NUM,COMMAND['num_events'],NCORES,"UnSet")
 
-        
+
         status = subprocess.call(add_command, shell=True)
         status = subprocess.call("rm MCSLURM.submit", shell=True)
 #====================================================
@@ -806,12 +806,12 @@ def calcFluxCCDB(ccdb_conn, run, emin, emax):
         try:
                 photon_endpoint_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/endpoint_energy", run[0], VARIATION, CALIBTIME_ENERGY)
                 photon_endpoint = photon_endpoint_assignment.constant_set.data_table
-                
+
                 tagm_untagged_flux_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/pair_spectrometer/lumi/tagm/untagged", run[0], VARIATION, CALIBTIME)
                 tagm_untagged_flux = tagm_untagged_flux_assignment.constant_set.data_table
                 tagm_scaled_energy_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/microscope/scaled_energy_range", run[0], VARIATION, CALIBTIME_ENERGY)
                 tagm_scaled_energy_table = tagm_scaled_energy_assignment.constant_set.data_table
-                
+
                 tagh_untagged_flux_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/pair_spectrometer/lumi/tagh/untagged", run[0], VARIATION, CALIBTIME)
                 tagh_untagged_flux = tagh_untagged_flux_assignment.constant_set.data_table
                 tagh_scaled_energy_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/hodoscope/scaled_energy_range", run[0], VARIATION, CALIBTIME_ENERGY)
@@ -830,20 +830,20 @@ def calcFluxCCDB(ccdb_conn, run, emin, emax):
         for tagm_flux, tagm_scaled_energy in zip(tagm_untagged_flux, tagm_scaled_energy_table):
                 tagm_energy = float(photon_endpoint[0][0])*(float(tagm_scaled_energy[1])+float(tagm_scaled_energy[2]))/2.
 
-                if tagm_energy < emin or tagm_energy > emax: 
+                if tagm_energy < emin or tagm_energy > emax:
                         continue
-                        
+
                 psAccept = fPSAcceptance.Eval(tagm_energy)
                 if psAccept <= 0.0:
                         continue
-                
+
                 flux = flux + float(tagm_flux[1]) * scale / psAccept
 
 	# sum TAGH flux
         for tagh_flux, tagh_scaled_energy in zip(tagh_untagged_flux, tagh_scaled_energy_table):
                 tagh_energy = float(photon_endpoint[0][0])*(float(tagh_scaled_energy[1])+float(tagh_scaled_energy[2]))/2.
 
-                if tagh_energy < emin or tagh_energy > emax: 
+                if tagh_energy < emin or tagh_energy > emax:
                         continue
 
                 psAccept = fPSAcceptance.Eval(tagh_energy)
@@ -853,7 +853,7 @@ def calcFluxCCDB(ccdb_conn, run, emin, emax):
                 flux = flux + float(tagh_flux[1]) * scale / psAccept
 
         return flux
-        
+
 def showhelp():
         helpstring= "variation=%s where %s is a valid jana_calib_context variation string (default is \"mc\")\n"
         helpstring+= " per_file=%i where %i is the number of events you want per file/job (default is 10000)\n"
@@ -872,7 +872,7 @@ def showhelp():
         return helpstring
 
 ########################################################## MAIN ##########################################################
-        
+
 def main(argv):
         parser_usage = "gluex_MC.py config_file Run_Number/Range num_events [all other options]\n\n where [all other options] are:\n\n "
         parser_usage += showhelp()
@@ -908,7 +908,7 @@ def main(argv):
 
         DATA_OUTPUT_BASE_DIR    = "UNKNOWN_LOCATION"#your desired output location
         RCDB_QUERY=""
-       
+
         ENVFILE = "my-environment-file" #change this to your own environment file
         ANAENVFILE = "no_Analysis_env"
 
@@ -936,7 +936,7 @@ def main(argv):
         ccdbSQLITEPATH="no_sqlite"
         rcdbSQLITEPATH="no_sqlite"
 
-        GEANTVER = 4        
+        GEANTVER = 4
         VERTEX_AREA="ccdb"
         VERTEX_LENGTH="29.5"
         BGFOLD="DEFAULT"
@@ -985,7 +985,7 @@ def main(argv):
         SHELL_TO_USE="csh"
         MYJOB=[]
         LOCATION="auto"
-        
+
         #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         #loop over config file and set the "parameters"
         #The following could be replaced with a better built in parser
@@ -1003,24 +1003,24 @@ def main(argv):
                 if len(parts)==1:
                         #print "Warning! No Sets given"
                         continue
-                
+
                 if len(parts)>2 and str(parts[0]).upper() != "VARIATION" and str(parts[0]).upper() != "RCDB_QUERY":
                         print( "warning! I am going to have a really difficult time with:")
                         print( line)
                         print( "I'm going to just ignore it and hope it isn't a problem....")
                         continue
-                        
-                        
+
+
                 rm_comments=[]
                 if len(parts)>1:
                         rm_comments=parts[len(parts)-1].split("#")
-                        
+
                 j=-1
                 for i in parts:
                         j=j+1
                         i=i.strip()
                         parts[j]=i
-                
+
                 if str(parts[0]).upper()=="VERBOSE" :
                         if rm_comments[0].strip().upper()=="TRUE" or rm_comments[0].strip() == "1":
                                 VERBOSE=True
@@ -1054,13 +1054,13 @@ def main(argv):
                 elif str(parts[0]).upper()=="VERTEX_VOLUME" :
                         WHOLEVERT=rm_comments[0].strip()
                         WHOLEVERT_split=WHOLEVERT.split(":")
-                        
+
                         if (len(WHOLEVERT_split)==1):
                                 VERTEX_LENGTH=WHOLEVERT_split[0]
                         elif (len(WHOLEVERT_split)==2):
                                 VERTEX_AREA=WHOLEVERT_split[0]
                                 VERTEX_LENGTH=WHOLEVERT_split[1]
-                        
+
                 elif str(parts[0]).upper()=="WORKFLOW_NAME" :
                         WORKFLOW=rm_comments[0].strip()
                         if WORKFLOW.find(';')!=-1 or WORKFLOW.find('&')!=-1 :#THIS CHECK HELPS PROTECT AGAINST A POTENTIAL HACK IN WORKFLOW NAMES
@@ -1160,7 +1160,7 @@ def main(argv):
                         else:
                                 print("VARIATION improperly set and is not parseable.  Please configure the VARIATION properly in",CONFIG_FILE)
                                 exit(1)
-                        
+
                         #print("ver/calib:",VERSION,CALIBTIME[0])
                         if VERSION=="" or len(VERSION.split(" ")) != 1 or CALIBTIME=="timegoeshere": #or (CALIBTIME != "notime" and not (CALIBTIME[0]).isnumeric())
                                 print("VARIATION improperly set.  Please configure the VARIATION properly in",CONFIG_FILE)
@@ -1198,12 +1198,12 @@ def main(argv):
 
                 else:
                         print( "unknown config parameter!! "+str(parts[0]))
-        
-        
+
+
         LOG_DIR = DATA_OUTPUT_BASE_DIR  #set LOG_DIR=DATA_OUTPUT_BASE_DIR
         if(GENCONFIG==""):
                 GENCONFIG = "NA"
-        #loop over command line arguments 
+        #loop over command line arguments
         for argu in args:
                 argfound=0
                 flag=argu.split("=")
@@ -1276,7 +1276,7 @@ def main(argv):
                                         TO_BUNDLE=True
                         if argfound==0:
                                 print( "WARNING OPTION: "+argu+" NOT FOUND!")
-                
+
         if DATA_OUTPUT_BASE_DIR == "UNKNOWN_LOCATION":
                 print( "I doubt that the system will find "+DATA_OUTPUT_BASE_DIR+" so I am saving you the embarassment and stopping this")
                 return
@@ -1292,7 +1292,7 @@ def main(argv):
         else:
                 print( "Creating "+WORKFLOW+" to simulate "+args[2]+" "+CHANNEL+" Events")
         # CREATE WORKFLOW
-       
+
         #username = getpass.getuser()
         #print(username)
         #exit
@@ -1305,14 +1305,14 @@ def main(argv):
         SCRIPT_TO_RUN=os.environ.get('MCWRAPPER_CENTRAL')
 
         script_to_use = "/MakeMC.csh"
-        
+
         loginSHELL=environ['SHELL'].split("/")
 
         if loginSHELL[len(loginSHELL)-1]=="bash" or ( BATCHSYS.upper() == "OSG" and int(BATCHRUN) != 0) or SHELL_TO_USE=="bash" :
                 script_to_use = "/MakeMC.sh"
         elif loginSHELL[len(loginSHELL)-1]=="zsh" or SHELL_TO_USE=="zcsh":
                 script_to_use = "/MakeMC.sh"
-        
+
         SCRIPT_TO_RUN+=script_to_use
 
         if ".jlab.org" in socket.gethostname() :
@@ -1324,7 +1324,7 @@ def main(argv):
         #if (BATCHSYS.upper() == "OSG" or BATCHSYS.upper() == "SWIF") and int(BATCHRUN) != 0 and ccdbSQLITEPATH=="no_sqlite":
         if (BATCHSYS.upper() == "OSG") and int(BATCHRUN) != 0 and ccdbSQLITEPATH=="no_sqlite":
                 ccdbSQLITEPATH="batch_default"
-        
+
         if (BATCHSYS.upper() == "SWIF") and int(BATCHRUN) != 0 and ccdbSQLITEPATH=="no_sqlite":
                 ccdbSQLITEPATH="jlab_batch_default"
                 LOCATION="JLAB"
@@ -1337,7 +1337,7 @@ def main(argv):
                 return
 
         outdir=DATA_OUTPUT_BASE_DIR
-        
+
         #if local run set out directory to cwd
         if outdir[len(outdir)-1] != "/" :
                 outdir+= "/"
@@ -1347,7 +1347,7 @@ def main(argv):
         #need two loops 1) for when RUNNUM is a number and 2) when it contains a "-" as in 11366-11555 or RunPeriod2017-02
         # for 2) use rcdb to get a list of the runs of a runperiod and amount of data.  Normalize number of events. Loop through list calling with the runnumbers from rcdb and their normalized num_events*requested events
         RunType=str(RUNNUM).split("-")
-        
+
 
         COMMAND_dict={'batchrun':str(BATCHRUN)}
         COMMAND_dict['environment_file']=ENVFILE
@@ -1428,7 +1428,7 @@ def main(argv):
                                 print("SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(RUNNUM)+" && FileNumber="+str(BASEFILENUM)+" && NumEvts="+str(EVTS))
                                 findmyjob="SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(RUNNUM)+" && FileNumber="+str(BASEFILENUM)+" && NumEvts="+str(EVTS)
                                 dbcursor.execute(findmyjob)
-                                MYJOB = dbcursor.fetchall() 
+                                MYJOB = dbcursor.fetchall()
                                 print(len(MYJOB) )
                         if len(MYJOB) == 0:
                                 if BATCHSYS.upper()=="SWIF":
@@ -1499,7 +1499,7 @@ def main(argv):
                                         fluxes.append(0)
                                         break
                                 event_sum = event_sum + runs[1]
-                                
+
                                 # compute flux in generated beam energy range
                                 flux = calcFluxCCDB(ccdb_conn, runs, float(MIN_GEN_ENERGY), float(MAX_GEN_ENERGY)) / 1.e9
                                 fluxes.append(flux)
@@ -1519,7 +1519,7 @@ def main(argv):
                                 sum2=sum2+int(((flux/flux_sum)*EVTS)+.5)
                                 #print(runs[0],num_events_this_run)
                                 #continue
-                        
+
                                 if num_events_this_run == 0:
                                         continue
 
@@ -1532,7 +1532,7 @@ def main(argv):
 
                                         if FILENUM_this_run == FILES_TO_GEN_this_run +1:
                                                 num_this_file=REMAINING_GEN_this_run
-                                
+
                                         if num_this_file == 0:
                                                 continue
 
@@ -1543,8 +1543,8 @@ def main(argv):
                                                 RANDOM_NUM_EVT=GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,runs[0])
                                                 COMMAND_dict['num_rand_trigs']=str(RANDOM_NUM_EVT)
                                         COMMAND=getCommandString(COMMAND_dict,"NONSUB") #str(BATCHRUN)+" "+ENVFILE+" "+GENCONFIG+" "+str(outdir)+" "+str(runs[0])+" "+str(BASEFILENUM+FILENUM_this_run+-1)+" "+str(num_this_file)+" "+str(VERSION)+" "+str(CALIBTIME)+" "+str(GENR)+" "+str(GEANT)+" "+str(SMEAR)+" "+str(RECON)+" "+str(CLEANGENR)+" "+str(CLEANGEANT)+" "+str(CLEANSMEAR)+" "+str(CLEANRECON)+" "+str(BATCHSYS)+" "+str(NCORES).split(':')[-1]+" "+str(GENERATOR)+" "+str(GEANTVER)+" "+str(BGFOLD)+" "+str(CUSTOM_GCONTROL)+" "+str(eBEAM_ENERGY)+" "+str(COHERENT_PEAK)+" "+str(MIN_GEN_ENERGY)+" "+str(MAX_GEN_ENERGY)+" "+str(TAGSTR)+" "+str(CUSTOM_PLUGINS)+" "+str(PERFILE)+" "+str(RUNNING_DIR)+" "+str(ccdbSQLITEPATH)+" "+str(rcdbSQLITEPATH)+" "+str(BGTAGONLY)+" "+str(RADIATOR_THICKNESS)+" "+str(BGRATE)+" "+str(RANDBGTAG)+" "+str(RECON_CALIBTIME)+" "+str(NOSECONDARIES)+" "+str(MCWRAPPER_VERSION)+" "+str(NOSIPMSATURATION)+" "+str(FLUX_TO_GEN)+" "+str(FLUX_HIST)+" "+str(POL_TO_GEN)+" "+str(POL_HIST)+" "+str(eBEAM_CURRENT)+" "+str(PROJECT)
-                                        
-                                        
+
+
                                         if BATCHRUN == 0 or BATCHSYS.upper()=="NULL":
                                                 #print str(runs[0])+" "+str(BASEFILENUM+FILENUM_this_run+-1)+" "+str(num_this_file)
                                                 os.system(str(SCRIPT_TO_RUN)+" "+getCommandString(COMMAND_dict,"INTERACTIVE"))
@@ -1569,12 +1569,12 @@ def main(argv):
                                                                 SLURM_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
                                                         elif BATCHSYS.upper()=="SLURM":
                                                                 SLURM_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
-                
+
                 else:
                         #if FILES_TO_GEN >= 500 and ( ccdbSQLITEPATH == "no_sqlite" or rcdbSQLITEPATH == "no_sqlite"):
                         #        print( "This job has >500 subjobs and risks ddosing the servers.  Please use sqlite or request again with a larger per file. ")
                         #        return
-                        
+
                         for FILENUM in range(1, FILES_TO_GEN + 2):
                                 num=PERFILE
                                 #last file gets the remainder
@@ -1593,8 +1593,8 @@ def main(argv):
                                         COMMAND_dict['num_rand_trigs']=str(RANDOM_NUM_EVT)
 
                                 COMMAND=getCommandString(COMMAND_dict,"INTERACTIVE") #str(BATCHRUN)+" "+ENVFILE+" "+GENCONFIG+" "+str(outdir)+" "+str(RUNNUM)+" "+str(BASEFILENUM+FILENUM+-1)+" "+str(num)+" "+str(VERSION)+" "+str(CALIBTIME)+" "+str(GENR)+" "+str(GEANT)+" "+str(SMEAR)+" "+str(RECON)+" "+str(CLEANGENR)+" "+str(CLEANGEANT)+" "+str(CLEANSMEAR)+" "+str(CLEANRECON)+" "+str(BATCHSYS).upper()+" "+str(NCORES).split(':')[-1]+" "+str(GENERATOR)+" "+str(GEANTVER)+" "+str(BGFOLD)+" "+str(CUSTOM_GCONTROL)+" "+str(eBEAM_ENERGY)+" "+str(COHERENT_PEAK)+" "+str(MIN_GEN_ENERGY)+" "+str(MAX_GEN_ENERGY)+" "+str(TAGSTR)+" "+str(CUSTOM_PLUGINS)+" "+str(PERFILE)+" "+str(RUNNING_DIR)+" "+str(ccdbSQLITEPATH)+" "+str(rcdbSQLITEPATH)+" "+str(BGTAGONLY)+" "+str(RADIATOR_THICKNESS)+" "+str(BGRATE)+" "+str(RANDBGTAG)+" "+str(RECON_CALIBTIME)+" "+str(NOSECONDARIES)+" "+str(MCWRAPPER_VERSION)+" "+str(NOSIPMSATURATION)+" "+str(FLUX_TO_GEN)+" "+str(FLUX_HIST)+" "+str(POL_TO_GEN)+" "+str(POL_HIST)+" "+str(eBEAM_CURRENT)+" "+str(PROJECT)
-               
-                               
+
+
                                 #either call MakeMC.csh or add a job depending on swif flag
                                 if BATCHRUN == 0 or BATCHSYS.upper()=="NULL":
                                         os.system(str(SCRIPT_TO_RUN)+" "+COMMAND)
@@ -1603,7 +1603,7 @@ def main(argv):
                                                 print("SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(RUNNUM)+" && FileNumber="+str(BASEFILENUM+FILENUM+-1)+" && NumEvts="+str(num))
                                                 findmyjob="SELECT ID FROM Jobs WHERE Project_ID="+str(PROJECT_ID)+" && RunNumber="+str(RUNNUM)+" && FileNumber="+str(BASEFILENUM+FILENUM+-1)+" && NumEvts="+str(num)
                                                 dbcursor.execute(findmyjob)
-                                                MYJOB = dbcursor.fetchall() 
+                                                MYJOB = dbcursor.fetchall()
                                                 print(len(MYJOB))
                                         if len(MYJOB) == 0:
                                                 if BATCHSYS.upper()=="SWIF":
@@ -1619,9 +1619,9 @@ def main(argv):
                                                         SLURMcont_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
                                                 elif BATCHSYS.upper()=="SLURM":
                                                         SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
-                                                
 
-                                        
+
+
                 if BATCHRUN == 1 and BATCHSYS.upper() == "SWIF":
                         print( "All Jobs created.  Please call \"swif run "+WORKFLOW+"\" to run")
                 elif BATCHRUN == 2 and BATCHSYS.upper()=="SWIF":
@@ -1632,7 +1632,7 @@ def main(argv):
                 dbcnx.close()
         except Exception as e:
                 print(e)
-                pass        
+                pass
 
         print("ending gluex_MC.py")
 
@@ -1651,12 +1651,12 @@ def GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,RUNNUM):
 
                 #if socket.gethostname() == "scosg16.jlab.org" or socket.gethostname() == "scosg20.jlab.org":
                 #        path_base="/osgpool/halld/random_triggers/"
-                
+
                 if Style=="Random":
                         path_base=path_base+RANDBGTAG+"/"
                 else:
                         path_base=BGFOLD[4:]
-                
+
                 formattedRUNNUM=""
                 for i in range(len(str(RUNNUM)),6):
                         formattedRUNNUM+="0"
@@ -1677,7 +1677,7 @@ def GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,RUNNUM):
                 #print matches
                 if len(matches) == 0:
                         print("Attempting to scan and tag this random trigger file")
-                        
+
 
                         Size=os.stat(realpath).st_size
                         Count=CountFile(realpath)
@@ -1699,7 +1699,7 @@ def GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,RUNNUM):
                                 if match[0] != value:
                                         print("AMBIGUOUS!")
                                         return -1
-                        
+
                         return value
         except Exception as e:
                 print(e)
