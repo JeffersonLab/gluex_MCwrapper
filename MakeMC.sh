@@ -1279,10 +1279,12 @@ if [[ "$GENERATOR_POST" != "No" ]]; then
 
 	if [[ "$GENERATOR_POST" == "decay_evtgen" ]]; then
 		if [[ "$GENERATOR_POST_CONFIGEVT" != "Default" ]]; then
-			export EVTGEN_PARTICLE_DEFINITIONS=$GENERATOR_POST_CONFIGEVT
+      cp $GENERATOR_POST_CONFIGEVT ./postevt'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.cfg
+			export EVTGEN_PARTICLE_DEFINITIONS=$PWD/postevt'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.cfg
 		fi
 		if [[ "$GENERATOR_POST_CONFIGDEC" != "Default" ]];then
-			export EVTGEN_DECAY_FILE=$GENERATOR_POST_CONFIGDEC
+      cp $GENERATOR_POST_CONFIGDEC ./postdec'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.cfg
+			export EVTGEN_DECAY_FILE=$PWD/postdec'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.cfg
 		fi
 		echo decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm -upost'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.cfg $STANDARD_NAME.hddm
 		decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm -upost'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.cfg $STANDARD_NAME.hddm
