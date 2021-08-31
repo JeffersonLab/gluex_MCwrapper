@@ -1016,6 +1016,7 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
     else:
         MCconfig_file.write("COHERENT_PEAK=rcdb"+"\n")
 
+
     MCconfig_file.write("GEANT_VERSION="+str(order["GeantVersion"])+"\n")
     MCconfig_file.write("NOSECONDARIES="+str(abs(order["GeantSecondaries"]-1))+"\n")
     MCconfig_file.write("BKG="+str(order["BKG"])+"\n")
