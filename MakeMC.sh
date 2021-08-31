@@ -1301,7 +1301,6 @@ if [[ "$GENERATOR_POST" != "No" ]]; then
 		echo decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm -upost'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf $STANDARD_NAME.hddm
 		decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm -upost'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf $STANDARD_NAME.hddm
 		post_return_code=$?
-    OLD_STANDARD_NAME=$STANDARD_NAME
 		STANDARD_NAME=$STANDARD_NAME'_decay_evtgen'
 	fi
 
@@ -1407,8 +1406,8 @@ fi
 
   		if [[ $gen_pre != "file" ]]; then
           if [[ "$GENERATOR_POST" != "No" ]]; then
-              #STANDARD_NAME changed
-    	    	  grep "/particle/" $OLD_STANDARD_NAME.conf >> run.mac
+              #STANDARD_NAME changed, remove '_decay_evtgen' for the search
+              grep "/particle/" $(echo $STANDARD_NAME.conf | sed 's/_decay_evtgen//g') >> run.mac
           else
               grep "/particle/" $STANDARD_NAME.conf >> run.mac
           fi
