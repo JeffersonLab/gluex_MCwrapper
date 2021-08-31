@@ -1294,6 +1294,7 @@ if ( "$GENERATOR_POST" != "No" ) then
 		echo decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm -upost'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.cfg $STANDARD_NAME.hddm
 		decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm -upost'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.cfg $STANDARD_NAME.hddm
 		set post_return_code=$status
+		set OLD_STANDARD_NAME=$STANDARD_NAME
 		set STANDARD_NAME=$STANDARD_NAME'_decay_evtgen'
 	endif
 	#do if/elses for running
@@ -1403,7 +1404,12 @@ endif
 	    	rm -f run.mac
 
 			if ( $gen_pre != "file" ) then
-				grep "/particle/" $STANDARD_NAME.conf >>! run.mac
+				if ( "$GENERATOR_POST" != "No" ) then
+					#STANDARD_NAME changed
+					grep "/particle/" $OLD_STANDARD_NAME.conf >>! run.mac
+				else
+					grep "/particle/" $STANDARD_NAME.conf >>! run.mac
+				endif
 			endif
 	    	echo "/run/beamOn $EVT_TO_GEN" >>! run.mac
 	    	echo "exit" >>! run.mac
