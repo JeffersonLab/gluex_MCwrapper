@@ -164,7 +164,7 @@ def main(argv):
     getTotalSizeOut()
     #getUserProjectPercent()
     #getAttemptsTimes()
-    getStartAndLength()
+    #getStartAndLength()
         
         
     conn.close()

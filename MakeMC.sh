@@ -717,7 +717,7 @@ if [[ "$GENR" != "0" ]]; then
 				#fi
 			fi
 		fi
-
+		generator_return_code=0
   elif [[ "$GENERATOR" == "geantBEAM" ]]; then
 		echo "bypassing generation"
 		echo "using" $CONFIG_FILE
