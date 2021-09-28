@@ -695,7 +695,7 @@ if ( "$GENR" != "0" ) then
 				echo "something went wrong with initialization"
 				exit 1
 			else
-				
+
 				echo "particle_gun error checking"
 				echo "particle gun firing particle: "`grep KINE $CONFIG_FILE | awk '{print $2}' `
 
@@ -1098,7 +1098,6 @@ if ( "$GENR" != "0" ) then
 			sed -i 's/TEMPPOLFRAC/'.4'/' $STANDARD_NAME.conf
 			sed -i 's/TEMPPOLANGLE/'$polarization_angle'/' $STANDARD_NAME.conf
 		endif
-		
 		echo $optionals_line
 		echo gen_vec_ps -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY  $optionals_line
 		gen_vec_ps -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
