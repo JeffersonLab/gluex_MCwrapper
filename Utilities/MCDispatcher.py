@@ -22,7 +22,7 @@ except:
     pass
 
 
-MCWRAPPER_BOT_HOME="/u/group/halld/gluex_MCwrapper/"
+MCWRAPPER_BOT_HOME="/scigroup/mcwrapper/gluex_MCwrapper/"
 MCWRAPPER_BOT_HOST_NAME=str(socket.gethostname())
 dbhost = "hallddb.jlab.org"
 dbuser = 'mcuser'
@@ -197,12 +197,27 @@ def DispatchProject(ID,SYSTEM,PERCENT):
         print("Error: Cannot find Project with ID="+ID)
     
 def RetryAllJobs(rlim=False):
-    query= "SELECT ID FROM Project where Completed_Time is NULL && Is_Dispatched=1.0 && Tested!=2 && Tested!=4 && Tested!=-4 && Tested!=3;"
+    query= "SELECT ID,Notified FROM Project where Completed_Time is NULL && Is_Dispatched=1.0 && Tested!=2 && Tested!=4 && Tested!=-4 && Tested!=3;"
+    print(query)
     curs.execute(query) 
     rows=curs.fetchall()
     for row in rows:
-        print("Retrying Project "+str(row["ID"]))
-        RetryJobsFromProject(row["ID"],not rlim)
+        if(row["Notified"] != 1):
+            print("Retrying Project "+str(row["ID"]))
+            RetryJobsFromProject(row["ID"],not rlim)
+        else:
+            print("Attempting to clean up Completed_Time")
+            getFinalCompleteTime="SELECT MAX(Completed_Time) FROM Attempts WHERE Job_ID IN (SELECT ID FROM Jobs WHERE Project_ID="+str(row['ID'])+");"
+            print(getFinalCompleteTime)
+            curs.execute(getFinalCompleteTime)
+            finalTimeRes=curs.fetchall()
+            #print "============"
+            print("Final Time", finalTimeRes[0]["MAX(Completed_Time)"])
+            updateProjectstatus="UPDATE Project SET Completed_Time="+"'"+str(finalTimeRes[0]["MAX(Completed_Time)"])+"'"+ " WHERE ID="+str(row['ID'])+";"
+            print(updateProjectstatus)
+            #print "============"
+            curs.execute(updateProjectstatus)
+            conn.commit()
 
 def RemoveAllJobs():
     query= "SELECT * FROM Attempts WHERE ID IN (SELECT Max(ID) FROM Attempts GROUP BY Job_ID) && SubmitHost=\""+MCWRAPPER_BOT_HOST_NAME+"\" && Job_ID IN (SELECT ID FROM Jobs WHERE IsActive=1 && Project_ID="+str(ID)+");"
@@ -216,7 +231,8 @@ def RemoveAllJobs():
 
 def RetryJobsFromProject(ID, countLim):
     AllOSG=True
-    query= "SELECT * FROM Attempts WHERE ID IN (SELECT Max(ID) FROM Attempts WHERE SubmitHost=\""+MCWRAPPER_BOT_HOST_NAME+"\" GROUP BY Job_ID) && Job_ID IN (SELECT ID FROM Jobs WHERE IsActive=1 && Project_ID="+str(ID)+");"
+    #query= "SELECT * FROM Attempts WHERE ID IN (SELECT Max(ID) FROM Attempts WHERE SubmitHost=\""+MCWRAPPER_BOT_HOST_NAME+"\" GROUP BY Job_ID) && Job_ID IN (SELECT ID FROM Jobs WHERE IsActive=1 && Project_ID="+str(ID)+");"
+    query= "SELECT * FROM Attempts WHERE ID IN (SELECT Max(ID) FROM Attempts WHERE SubmitHost is not NULL GROUP BY Job_ID) && Job_ID IN (SELECT ID FROM Jobs WHERE IsActive=1 && Project_ID="+str(ID)+");"
     curs.execute(query) 
     rows=curs.fetchall()
    
@@ -453,6 +469,7 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
     curs.execute(query) 
     rows=curs.fetchall()
     order=rows[0]
+    print("order", order)
     print("========================")
     print(order["Generator_Config"])
     newLoc=CheckGenConfig(order)
@@ -530,26 +547,38 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
         if order["SaveReconstruction"]==1:
             cleanrecon=0
 
-        command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched_"+str(ID)+".config "+str(RunNumber)+" "+str(500)+" per_file=250000 base_file_number=0"+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=0 tobundle=0"
+        pwd=os.getcwd()
+        command=MCWRAPPER_BOT_HOME+"/gluex_MC.py "+pwd+"/"+"MCDispatched_"+str(ID)+".config "+str(RunNumber)+" "+str(500)+" per_file=250000 base_file_number=0"+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=0 tobundle=0"
         print(command)
     STATUS=-1
     # print (command+command2).split(" ")
     my_env=None
     print(versionSet)
-    if(versionSet != ""):
-        my_env=source("/group/halld/Software/build_scripts/gluex_env_jlab.sh /group/halld/www/halldweb/html/halld_versions/"+versionSet)
-        my_env["MCWRAPPER_CENTRAL"]=MCWRAPPER_BOT_HOME
+    #if(versionSet != ""):
+    #    myclean=source("/group/halld/Software/build_scripts/gluex_env_clean.csh")
+    #    my_env=source("/group/halld/Software/build_scripts/gluex_env_jlab.sh /group/halld/www/halldweb/html/halld_versions/"+versionSet)
+    #    my_env["MCWRAPPER_CENTRAL"]=MCWRAPPER_BOT_HOME
 
     #print(my_env)
-    if "" in my_env:
-        split_kv=my_env[""].split("\n")
-        absorbed=split_kv[len(split_kv)-1].split("=")
-        print(absorbed)
-        del my_env[""]
-        my_env[absorbed[0]]=absorbed[1]
+    #if "" in my_env:
+    #    split_kv=my_env[""].split("\n")
+    #    absorbed=split_kv[len(split_kv)-1].split("=")
+    #    print(absorbed)
+    #    del my_env[""]
+    #    my_env[absorbed[0]]=absorbed[1]
     #print(my_env)
+    
+    f=open('TestProject_runscript_'+str(ID)+'.sh','w')
+    f.write("#!/bin/bash -l"+"\n")
+    f.write("export SHELL=/bin/bash"+"\n")
+    f.write("source /group/halld/Software/build_scripts/gluex_env_jlab.sh /group/halld/www/halldweb/html/halld_versions/"+versionSet+"\n")
+    f.write("export MCWRAPPER_CENTRAL="+MCWRAPPER_BOT_HOME+"\n")
+    f.write(command)
+    f.close()
+    
+    print("singularity exec --cleanenv --bind "+pwd+":"+pwd+" --bind /osgpool/halld/tbritton:/osgpool/halld/tbritton --bind /group/halld/:/group/halld/ --bind /scigroup/mcwrapper/gluex_MCwrapper:/scigroup/mcwrapper/gluex_MCwrapper /cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest /bin/sh "+pwd+"/TestProject_runscript_"+str(ID)+".sh")
     if RunNumber != -1:
-        p = Popen(commands_to_call+command, env=my_env ,stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True)
+        p = Popen("singularity exec --cleanenv --bind "+pwd+":"+pwd+" --bind /osgpool/halld/tbritton:/osgpool/halld/tbritton --bind /group/halld/:/group/halld/ --bind /scigroup/mcwrapper/gluex_MCwrapper:/scigroup/mcwrapper/gluex_MCwrapper /cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest /bin/sh "+pwd+"/TestProject_runscript_"+str(ID)+".sh", env=my_env ,stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True)
     
     #print p
     #print "p defined"
@@ -598,6 +627,7 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
         #print "TEST success"
         #EMAIL SUCCESS AND DISPATCH
         #print("YAY TESTED")
+        print(MCWRAPPER_BOT_HOME+"/Utilities/MCDispatcher.py dispatch -rlim -sys OSG "+str(row['ID']))
         subprocess.call(MCWRAPPER_BOT_HOME+"/Utilities/MCDispatcher.py dispatch -rlim -sys OSG "+str(row['ID']),shell=True)
     else:
         #print("BOO TESTED")
@@ -753,25 +783,38 @@ def TestProject(ID,versionSet,commands_to_call=""):
     if order["SaveReconstruction"]==1:
         cleanrecon=0
 
-    command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched_"+str(ID)+".config "+str(RunNumber)+" "+str(500)+" per_file=250000 base_file_number=0"+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=0 tobundle=0"
+    pwd=os.getcwd()
+    command=MCWRAPPER_BOT_HOME+"/gluex_MC.py "+pwd+"/MCDispatched_"+str(ID)+".config "+str(RunNumber)+" "+str(500)+" per_file=250000 base_file_number=0"+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=0 tobundle=0"
     print(command)
     STATUS=-1
     # print (command+command2).split(" ")
     my_env=None
-    print(versionSet)
-    if(versionSet != ""):
-        my_env=source("/group/halld/Software/build_scripts/gluex_env_jlab.sh /group/halld/www/halldweb/html/halld_versions/"+versionSet)
-        my_env["MCWRAPPER_CENTRAL"]=MCWRAPPER_BOT_HOME
+    #print(versionSet)
+    #if(versionSet != ""):
+    #    my_env=source("/group/halld/Software/build_scripts/gluex_env_jlab.sh /group/halld/www/halldweb/html/halld_versions/"+versionSet)
+    #    my_env["MCWRAPPER_CENTRAL"]=MCWRAPPER_BOT_HOME
 
     #print(my_env)
-    if "" in my_env:
-        split_kv=my_env[""].split("\n")
-        absorbed=split_kv[len(split_kv)-1].split("=")
-        print(absorbed)
-        del my_env[""]
-        my_env[absorbed[0]]=absorbed[1]
+    #if "" in my_env:
+    #    split_kv=my_env[""].split("\n")
+    #    absorbed=split_kv[len(split_kv)-1].split("=")
+    #    print(absorbed)
+    #    del my_env[""]
+    #    my_env[absorbed[0]]=absorbed[1]
     #print(my_env)
-    p = Popen(commands_to_call+command, env=my_env ,stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True)
+    f=open('TestProject_runscript_'+str(ID)+'.sh','w')
+    f.write("#!/bin/bash -l"+"\n")
+    f.write("export SHELL=/bin/bash"+"\n")
+    f.write("source /group/halld/Software/build_scripts/gluex_env_jlab.sh /group/halld/www/halldweb/html/halld_versions/"+versionSet+"\n")
+    f.write("export MCWRAPPER_CENTRAL="+MCWRAPPER_BOT_HOME+"\n")
+    f.write(command)
+    f.close()
+
+   
+    print("singularity exec --cleanenv --bind "+pwd+":"+pwd+" --bind /osgpool/halld/tbritton:/osgpool/halld/tbritton --bind /group/halld/:/group/halld/ --bind /scigroup/mcwrapper/gluex_MCwrapper:/scigroup/mcwrapper/gluex_MCwrapper /cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest /bin/sh "+pwd+"/TestProject_runscript_"+str(ID)+".sh")
+    if RunNumber != -1:
+        p = Popen("singularity exec --cleanenv --bind "+pwd+":"+pwd+" --bind /osgpool/halld/tbritton:/osgpool/halld/tbritton --bind /group/halld/:/group/halld/ --bind /scigroup/mcwrapper/gluex_MCwrapper:/scigroup/mcwrapper/gluex_MCwrapper /cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest /bin/sh "+pwd+"/TestProject_runscript_"+str(ID)+".sh", env=my_env ,stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True)
+    
     #print p
     #print "p defined"
     output, errors = p.communicate()
@@ -999,6 +1042,7 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
     else:
         MCconfig_file.write("COHERENT_PEAK=rcdb"+"\n")
 
+
     MCconfig_file.write("GEANT_VERSION="+str(order["GeantVersion"])+"\n")
     MCconfig_file.write("NOSECONDARIES="+str(abs(order["GeantSecondaries"]-1))+"\n")
     MCconfig_file.write("BKG="+str(order["BKG"])+"\n")
@@ -1010,6 +1054,8 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
     MCconfig_file.write("DATA_OUTPUT_BASE_DIR=/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/"+str(outputstring)+"\n")
     #print "FOUND CONFIG="+foundConfig
 
+
+    print("PREIF", order["VersionSet"])
     query_to_do=""
     if(order["RunNumLow"] != order["RunNumHigh"]):
         query_to_do="@is_production and @status_approved"
@@ -1080,6 +1126,7 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
     MCconfig_file.close()
 
 def DispatchToOSG(ID,order,PERCENT):
+    print("Dispatching to OSG")
     status = subprocess.call("cp "+MCWRAPPER_BOT_HOME+"/examples/OSGShell.config ./MCDispatched_"+str(ID)+".config", shell=True)
     WritePayloadConfig(order,"True")
 
@@ -1264,6 +1311,7 @@ def main(argv):
             if argu == "-rlim":
                 RUNNING_LIMIT_OVERRIDE=True
 
+    print("num running", int(numprocesses_running))
     if(int(numprocesses_running) <2 or RUNNING_LIMIT_OVERRIDE ):
        
 

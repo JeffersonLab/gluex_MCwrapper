@@ -8,11 +8,6 @@ shift
 
 if [[ "$BATCHRUN" != "0" ]]; then
 
-#echo "HERE"
-#ls
-#echo "THERE"
-#ls ../
-
 xmltest=`echo $ENVIRONMENT | rev | cut -c -4 | rev`
 if [[ "$xmltest" == ".xml" ]]; then
 source /group/halld/Software/build_scripts/gluex_env_jlab.sh $ENVIRONMENT
@@ -130,6 +125,10 @@ export GENERATOR_POST=$1
 shift
 export GENERATOR_POST_CONFIG=$1
 shift
+export GENERATOR_POST_CONFIGEVT=$1
+shift
+export GENERATOR_POST_CONFIGDEC=$1
+shift
 export GEANT_VERTEXT_AREA=$1
 shift
 export GEANT_VERTEXT_LENGTH=$1
@@ -155,7 +154,7 @@ flength_count=$((`echo $FILE_NUMBER | wc -c` - 1))
 export XRD_RANDOMS_URL=root://sci-xrootd.jlab.org//osgpool/halld/
 
 if [[ "$MCWRAPPER_RUN_LOCATION" == "JLAB" || `hostname` == *'.jlab.org'* ]]; then
-	export XRD_RANDOMS_URL=root://sci-xrootd-ib.qcd.jlab.org//osgpool/halld/
+	#export XRD_RANDOMS_URL=root://sci-xrootd-ib.qcd.jlab.org//osgpool/halld/
 	export RUNNING_DIR="./"
 fi
 
@@ -475,7 +474,7 @@ echo "Run generation step? "$GENR"  Will be cleaned?" $CLEANGENR
 echo "Flux Hist to use: " "$FLUX_TO_GEN" " : " "$FLUX_HIST"
 echo "Polarization to use: " "$POL_TO_GEN" " : " "$POL_HIST"
 echo "Using "$GENERATOR" with config: "$CONFIG_FILE
-echo "Will run "$GENERATOR_POST" postprocessing after generator with configuration: "$GENERATOR_POST_CONFIG
+echo "Will run "$GENERATOR_POST" postprocessing after generator with configuration: "$GENERATOR_POST_CONFIG", event definitions: "$GENERATOR_POST_CONFIGEVT" and decay definitions: "$GENERATOR_POST_CONFIGDEC
 echo "----------------------------------------------"
 echo "Run geant step? "$GEANT"  Will be cleaned?" $CLEANGEANT
 echo "Using geant"$GEANTVER
@@ -676,9 +675,9 @@ if [[ "$GENR" != "0" ]]; then
 
 	gen_pre=`echo $GENERATOR | cut -c1-4`
 
-    if [[ "$gen_pre" != "file" && "$GENERATOR" != "genr8" && "$GENERATOR" != "bggen" && "$GENERATOR" != "genEtaRegge" && "$GENERATOR" != "gen_2pi_amp" && "$GENERATOR" != "gen_pi0" && "$GENERATOR" != "gen_2pi_primakoff" && "$GENERATOR" != "gen_2pi0_primakoff" && "$GENERATOR" != "gen_omega_3pi" && "$GENERATOR" != "gen_omegapi" && "$GENERATOR" != "gen_2k" && "$GENERATOR" != "bggen_jpsi" && "$GENERATOR" != "gen_ee" && "$GENERATOR" != "gen_ee_hb" && "$GENERATOR" != "particle_gun" && "$GENERATOR" != "geantBEAM" && "$GENERATOR" != "bggen_phi_ee" && "$GENERATOR" != "genBH" && "$GENERATOR" != "gen_omega_radiative" && "$GENERATOR" != "gen_amp" && "$GENERATOR" != "genr8_new" && "$GENERATOR" != "gen_compton" && "$GENERATOR" != "gen_npi" && "$GENERATOR" != "gen_compton_simple" && "$GENERATOR" != "gen_primex_eta_he4" && "$GENERATOR" != "gen_whizard" && "$GENERATOR" != "mc_gen" ]]; then
+    if [[ "$gen_pre" != "file" && "$GENERATOR" != "genr8" && "$GENERATOR" != "bggen" && "$GENERATOR" != "genEtaRegge" && "$GENERATOR" != "gen_2pi_amp" && "$GENERATOR" != "gen_pi0" && "$GENERATOR" != "gen_2pi_primakoff" && "$GENERATOR" != "gen_2pi0_primakoff" && "$GENERATOR" != "gen_omega_3pi" && "$GENERATOR" != "gen_omegapi" && "$GENERATOR" != "gen_2k" && "$GENERATOR" != "bggen_jpsi" && "$GENERATOR" != "gen_ee" && "$GENERATOR" != "gen_ee_hb" && "$GENERATOR" != "particle_gun" && "$GENERATOR" != "geantBEAM" && "$GENERATOR" != "bggen_phi_ee" && "$GENERATOR" != "genBH" && "$GENERATOR" != "gen_omega_radiative" && "$GENERATOR" != "gen_amp" && "$GENERATOR" != "genr8_new" && "$GENERATOR" != "gen_compton" && "$GENERATOR" != "gen_npi" && "$GENERATOR" != "gen_compton_simple" && "$GENERATOR" != "gen_primex_eta_he4" && "$GENERATOR" != "gen_whizard" && "$GENERATOR" != "mc_gen" && "$GENERATOR" != "gen_vec_ps" ]]; then
 		echo "NO VALID GENERATOR GIVEN"
-		echo "only [genr8, bggen, genEtaRegge, gen_2pi_amp, gen_pi0, gen_omega_3pi, gen_2k, bggen_jpsi, gen_ee, gen_ee_hb,  bggen_phi_ee, particle_gun, geantBEAM, genBH, gen_omega_radiative, gen_amp, gen_compton, gen_npi, gen_compton_simple, gen_primex_eta_he4, gen_whizard, gen_omegapi, mc_gen] are supported"
+		echo "only [genr8, bggen, genEtaRegge, gen_2pi_amp, gen_pi0, gen_omega_3pi, gen_2k, bggen_jpsi, gen_ee, gen_ee_hb,  bggen_phi_ee, particle_gun, geantBEAM, genBH, gen_omega_radiative, gen_amp, gen_compton, gen_npi, gen_compton_simple, gen_primex_eta_he4, gen_whizard, gen_omegapi, mc_gen, gen_vec_ps] are supported"
 		exit 1
     fi
 
@@ -718,7 +717,7 @@ if [[ "$GENR" != "0" ]]; then
 				#fi
 			fi
 		fi
-
+		generator_return_code=0
   elif [[ "$GENERATOR" == "geantBEAM" ]]; then
 		echo "bypassing generation"
 		echo "using" $CONFIG_FILE
@@ -843,6 +842,10 @@ if [[ "$GENR" != "0" ]]; then
 		echo "configuring gen_omegapi"
 		STANDARD_NAME="gen_omegapi_"$STANDARD_NAME
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
+	elif [[ "$GENERATOR" == "gen_vec_ps" ]]; then
+		echo "configuring gen_vec_ps"
+		STANDARD_NAME="gen_vec_ps_"$STANDARD_NAME
+		cp $CONFIG_FILE ./$STANDARD_NAME.conf
 	elif [[ "$GENERATOR" == "gen_omega_radiative" ]]; then
 		echo "configuring gen_omega_radiative"
 		STANDARD_NAME="gen_omega_radiative_"$STANDARD_NAME
@@ -953,7 +956,7 @@ if [[ "$GENR" != "0" ]]; then
 		#sed -i 's/TEMPCOHERENT/'$COHERENT_PEAK'/' $STANDARD_NAME.conf
 		# RUN genr8 and convert
 		genr8_new -r$formatted_runNumber -M$EVT_TO_GEN -C$GEN_MIN_ENERGY,$GEN_MAX_ENERGY -o$STANDARD_NAME.gamp < $STANDARD_NAME.conf #$config_file_name
-		generator_return_code=$status
+		generator_return_code=$?
 		gamp_2_hddm -r$formatted_runNumber -V"0 0 0 0" $STANDARD_NAME.gamp
     elif [[ "$GENERATOR" == "bggen" ]]; then
 	RANDOMnum=`bash -c 'echo $RANDOM'`
@@ -1089,6 +1092,22 @@ if [[ "$GENR" != "0" ]]; then
 
 	echo gen_omegapi -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY  $optionals_line
 	gen_omegapi -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
+	generator_return_code=$?
+	elif [[ "$GENERATOR" == "gen_vec_ps" ]]; then
+	echo "RUNNING GEN_VEC_PS"
+    optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
+	echo $optionals_line
+		if [[ "$polarization_angle" == "-1.0" ]]; then
+			sed -i 's/TEMPPOLFRAC/'0'/' $STANDARD_NAME.conf
+			sed -i 's/TEMPPOLANGLE/'0'/' $STANDARD_NAME.conf
+		else
+			sed -i 's/TEMPPOLFRAC/'.4'/' $STANDARD_NAME.conf
+			sed -i 's/TEMPPOLANGLE/'$polarization_angle'/' $STANDARD_NAME.conf
+		fi
+		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
+
+	echo gen_vec_ps -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY  $optionals_line
+	gen_vec_ps -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
 	generator_return_code=$?
 	elif [[ "$GENERATOR" == "gen_omega_radiative" ]]; then
 	echo "RUNNING GEN_OMEGA_RADIATIVE"
@@ -1226,7 +1245,7 @@ if [[ "$GENR" != "0" ]]; then
 		genBH -n$EVT_TO_GEN -t$NUMTHREADS -m0.5 -e$GEN_MAX_ENERGY -r$RANDOMnum $STANDARD_NAME.hddm
 
 		sed -i 's/class="mc_s"/'class=\"s\"'/' $STANDARD_NAME.hddm
-		generator_return_code=$status
+		generator_return_code=$?
 	fi
 
 
@@ -1251,14 +1270,23 @@ if [[ "$GENERATOR_POST" != "No" ]]; then
 	echo "RUNNING POSTPROCESSING "
 #copy config locally
 	post_return_code=-1
+	echo $GENERATOR_POST_CONFIG
+	echo $GENERATOR_POST_CONFIGEVT
+	echo $GENERATOR_POST_CONFIGDEC
 	if [[ "$GENERATOR_POST_CONFIG" != "Default" ]]; then
 		cp $GENERATOR_POST_CONFIG ./post'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.cfg
 	fi
 
 	if [[ "$GENERATOR_POST" == "decay_evtgen" ]]; then
-		echo decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm $STANDARD_NAME.hddm
+		if [[ "$GENERATOR_POST_CONFIGEVT" != "Default" ]]; then
+			export EVTGEN_PARTICLE_DEFINITIONS=$GENERATOR_POST_CONFIGEVT
+		fi
+		if [[ "$GENERATOR_POST_CONFIGDEC" != "Default" ]];then
+			export EVTGEN_DECAY_FILE=$GENERATOR_POST_CONFIGDEC
+		fi
+		echo decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm -upost'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.cfg $STANDARD_NAME.hddm
 		decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm -upost'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.cfg $STANDARD_NAME.hddm
-		post_return_code=$status
+		post_return_code=$?
 		STANDARD_NAME=$STANDARD_NAME'_decay_evtgen'
 	fi
 

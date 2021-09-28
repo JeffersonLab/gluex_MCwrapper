@@ -35,9 +35,9 @@ shift
 setenv CALIBTIME $1
 set wholecontext = $VERSION
 if ( "$CALIBTIME" != "notime" ) then
-set wholecontext = "variation=$VERSION calibtime=$CALIBTIME"
+	set wholecontext = "variation=$VERSION calibtime=$CALIBTIME"
 else
-set wholecontext = "variation=$VERSION"
+	set wholecontext = "variation=$VERSION"
 endif
 setenv JANA_CALIB_CONTEXT "$wholecontext"
 shift
@@ -125,6 +125,10 @@ setenv GENERATOR_POST $1
 shift
 setenv GENERATOR_POST_CONFIG $1
 shift
+setenv GENERATOR_POST_CONFIGEVT $1
+shift
+setenv GENERATOR_POST_CONFIGDEC $1
+shift
 setenv GEANT_VERTEXT_AREA $1
 shift
 setenv GEANT_VERTEXT_LENGTH $1
@@ -145,15 +149,15 @@ end
 set formatted_runNumber=$formatted_runNumber$RUN_NUMBER
 
 if ( "$BATCHSYS" == "OSG" && "$BATCHRUN" == "1" ) then
-setenv USER_BC '/usr/bin/bc'
-setenv USER_STAT '/usr/bin/stat'
+	setenv USER_BC '/usr/bin/bc'
+	setenv USER_STAT '/usr/bin/stat'
 endif
 
 
 setenv XRD_RANDOMS_URL root://sci-xrootd.jlab.org//osgpool/halld/
 
 if ( "$MCWRAPPER_RUN_LOCATION" == "JLAB" || `hostname` =~ '*.jlab.org' ) then
-	setenv XRD_RANDOMS_URL root://sci-xrootd-ib.qcd.jlab.org//osgpool/halld/
+#	setenv XRD_RANDOMS_URL root://sci-xrootd-ib.qcd.jlab.org//osgpool/halld/
 	setenv RUNNING_DIR "./"
 endif
 
@@ -182,9 +186,9 @@ endif
 if ( "$BATCHRUN" != "0"  ) then
 # ENVIRONMENT
 	echo $ENVIRONMENT
-    echo pwd=$PWD
-    mkdir -p $OUTDIR
-    mkdir -p $OUTDIR/log
+	echo pwd=$PWD
+	mkdir -p $OUTDIR
+	mkdir -p $OUTDIR/log
 endif
 
 if ( "$BATCHSYS" == "QSUB" ) then
@@ -269,135 +273,145 @@ set BGRATE_toUse="Not Needed"
 
 
 set gen_pre_rcdb=`echo $GENERATOR | cut -c1-4`
+
 if ( $gen_pre_rcdb != "file" || ( "$BGTAGONLY_OPTION" == "1" || "$BKGFOLDSTR" == "BeamPhotons" ) ) then
-set radthick="50.e-6"
+	set radthick="50.e-6"
 
-if ( "$RADIATOR_THICKNESS" != "rcdb" || ( "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" ) ) then
-    set radthick=$RADIATOR_THICKNESS
-else
-	set words = `rcnd $RUN_NUMBER radiator_type | sed 's/ / /g' `
-	foreach word ($words:q)
+	if ( "$RADIATOR_THICKNESS" != "rcdb" || ( "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" ) ) then
+		set radthick=$RADIATOR_THICKNESS
+	else
+		
+		set words = `rcnd $RUN_NUMBER radiator_type | sed 's/ / /g' `
+		echo $words
+		set radlen = `echo $words | wc -c`
+		echo $radlen
+		if ( $radlen == 1 ) then 
+			echo "radiator_type not in rcdb for run "$RUN_NUMBER". Using default value..."
+		else
+			
+			foreach word ($words:q)
 
-		if ( $word != "number" ) then
+				if ( $word != "number" ) then
 
-			if ( "$word" == "3x10-4" ) then
-				set radthick="30e-6"
-				end
-			else
-				set removedum = `echo $word:q | sed 's/um/ /g'`
+					if ( "$word" == "3x10-4" ) then
+						set radthick="30e-6"
+						end
+					else
+						set removedum = `echo $word:q | sed 's/um/ /g'`
 
-				if ( $removedum != $word:q ) then
-					set radthick = `echo $removedum e-6 | tr -d '[:space:]'`
+						if ( $removedum != $word:q ) then
+							set radthick = `echo $removedum e-6 | tr -d '[:space:]'`
+						endif
+					endif
 				endif
-			endif
+			end
 		endif
-	end
-endif
-echo "Radiator thickness set..."
-set polarization_angle=`rcnd $RUN_NUMBER polarization_angle | awk '{print $1}'`
-
-if ( "$polarization_angle" == "" ) then
-	set poldir=`rcnd $RUN_NUMBER polarization_direction | awk '{print $1}'`
-	if ( "$poldir" == "PARA" ) then
-		set polarization_angle="0.0"
-	else if ( "$poldir" == "PERP" ) then
-		set polarization_angle="90.0"
-	else
-		set polarization_angle="-1.0"
 	endif
-endif
+	echo "Radiator thickness set..."
+	set polarization_angle=`rcnd $RUN_NUMBER polarization_angle | awk '{print $1}'`
 
-echo "Polarization angle set..."
-set elecE=0
-set variation=$VERSION
+	if ( "$polarization_angle" == "" ) then
+		set poldir=`rcnd $RUN_NUMBER polarization_direction | awk '{print $1}'`
+		if ( "$poldir" == "PARA" ) then
+			set polarization_angle="0.0"
+		else if ( "$poldir" == "PERP" ) then
+			set polarization_angle="90.0"
+		else
+			set polarization_angle="-1.0"
+		endif
+	endif
 
-if ( $CALIBTIME != "notime" ) then
-set variation=$variation":"$CALIBTIME
-endif
+	echo "Polarization angle set..."
+	set elecE=0
+	set variation=$VERSION
+
+	if ( $CALIBTIME != "notime" ) then
+		set variation=$variation":"$CALIBTIME
+	endif
 
 
-set ccdbelece="`ccdb dump PHOTON_BEAM/endpoint_energy:${RUN_NUMBER}:${variation} | grep -v \#`"
+	set ccdbelece="`ccdb dump PHOTON_BEAM/endpoint_energy:${RUN_NUMBER}:${variation} | grep -v \#`"
 
-#set ccdblist=($ccdbelece:as/ / /)
-echo $ccdbelece
-set elecE_text="$ccdbelece" #$ccdblist[$#ccdblist]
+	#set ccdblist=($ccdbelece:as/ / /)
+	echo $ccdbelece
+	set elecE_text="$ccdbelece" #$ccdblist[$#ccdblist]
 
-#echo "text: " $elecE_text
+	#echo "text: " $elecE_text
 
-if ( "$eBEAM_ENERGY" != "rcdb" || ( "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" )  ) then
-    set elecE=$eBEAM_ENERGY
-else if ( $elecE_text == "Run" ) then
-	set elecE=12
-else if ( $elecE_text == "-1.0" ) then
-	set elecE=12 #Should never happen
-else
-	set elecE=`echo $elecE_text`  #set elecE = `echo "$elecE_text / 1000" | $USER_BC -l ` #rcdb method
-endif
+	if ( "$eBEAM_ENERGY" != "rcdb" || ( "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" )  ) then
+    	set elecE=$eBEAM_ENERGY
+	else if ( $elecE_text == "Run" ) then
+		set elecE=12
+	else if ( $elecE_text == "-1.0" ) then
+		set elecE=12 #Should never happen
+	else
+		set elecE=`echo $elecE_text`  #set elecE = `echo "$elecE_text / 1000" | $USER_BC -l ` #rcdb method
+	endif
 
-echo "Electron beam energy set..."
+	echo "Electron beam energy set..."
 
-set copeak = 0
-set copeak_text = `rcnd $RUN_NUMBER coherent_peak | awk '{print $1}'`
+	set copeak = 0
+	set copeak_text = `rcnd $RUN_NUMBER coherent_peak | awk '{print $1}'`
 
-if ( "$COHERENT_PEAK" != "rcdb" && "$polarization_angle" == "-1.0" ) then
-	set copeak=$COHERENT_PEAK
-else
+	if ( "$COHERENT_PEAK" != "rcdb" && "$polarization_angle" == "-1.0" ) then
+		set copeak=$COHERENT_PEAK
+	else
 
-	if ( "$COHERENT_PEAK" != "rcdb" || ( "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" ) ) then
-    	set copeak=$COHERENT_PEAK
-	else if ( $copeak_text == "Run" ) then
-		set copeak=9
-	else if ( $copeak_text == "-1.0" ) then
+		if ( "$COHERENT_PEAK" != "rcdb" || ( "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" ) ) then
+    		set copeak=$COHERENT_PEAK
+		else if ( $copeak_text == "Run" ) then
+			set copeak=9
+		else if ( $copeak_text == "-1.0" ) then
+			set copeak=0
+		else
+			set copeak = `echo "$copeak_text / 1000" | $USER_BC -l `
+		endif
+	endif
+
+	if ( "$polarization_angle" == "-1.0" && "$COHERENT_PEAK" == "rcdb" ) then
 		set copeak=0
-	else
-		set copeak = `echo "$copeak_text / 1000" | $USER_BC -l `
 	endif
-endif
 
-if ( "$polarization_angle" == "-1.0" && "$COHERENT_PEAK" == "rcdb" ) then
-	set copeak=0
-endif
+	setenv COHERENT_PEAK $copeak
+	echo "Coherent peak set..."
+	#echo $copeak
+	#set copeak=`rcnd $RUN_NUMBER coherent_peak | awk '{print $1}' | sed 's/\.//g' #| awk -vFS="" -vOFS="" '{$1=$1"."}1' `
 
-setenv COHERENT_PEAK $copeak
-echo "Coherent peak set..."
-#echo $copeak
-#set copeak=`rcnd $RUN_NUMBER coherent_peak | awk '{print $1}' | sed 's/\.//g' #| awk -vFS="" -vOFS="" '{$1=$1"."}1' `
+	if ( ( "$VERSION" != "mc" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" && "$VERSION" != "mc_workfest2018" ) && "$COHERENT_PEAK" == "rcdb" ) then
+		echo "error in requesting rcdb for the coherent peak and not using variation=mc"
+		echo "something went wrong with initialization"
+		exit 1
+	endif
 
-if ( ( "$VERSION" != "mc" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" && "$VERSION" != "mc_workfest2018" ) && "$COHERENT_PEAK" == "rcdb" ) then
-	echo "error in requesting rcdb for the coherent peak and not using variation=mc"
-	echo "something went wrong with initialization"
-	exit 1
-endif
+	setenv eBEAM_ENERGY $elecE
+	echo "eBEAM energy set..."
+	if ( ( "$VERSION" != "mc" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" && "$VERSION" != "mc_workfest2018" ) && "$eBEAM_ENERGY" == "rcdb" ) then
+		echo "error in requesting rcdb for the electron beam energy and not using variation=mc"
+		exit 1
+	endif
 
-setenv eBEAM_ENERGY $elecE
-echo "eBEAM energy set..."
-if ( ( "$VERSION" != "mc" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" && "$VERSION" != "mc_workfest2018" ) && "$eBEAM_ENERGY" == "rcdb" ) then
-	echo "error in requesting rcdb for the electron beam energy and not using variation=mc"
-	exit 1
-endif
+	set colsize=`rcnd $RUN_NUMBER collimator_diameter | awk '{print $1}' | sed -r 's/.{2}$//' | sed -e 's/\.//g'`
 
-set colsize=`rcnd $RUN_NUMBER collimator_diameter | awk '{print $1}' | sed -r 's/.{2}$//' | sed -e 's/\.//g'`
+	if ( "$colsize" == "B" || "$colsize" == "R" || "$JANA_CALIB_CONTEXT" != "variation=mc" ) then
+		set colsize="50"
+	endif
+	echo "Colimator size set..."
 
-if ( "$colsize" == "B" || "$colsize" == "R" || "$JANA_CALIB_CONTEXT" != "variation=mc" ) then
-	set colsize="50"
-endif
-echo "Colimator size set..."
+	if ( "$eBEAM_CURRENT" == "rcdb" ) then
+	set beam_on_current=`rcnd $RUN_NUMBER beam_on_current | awk '{print $1}'`
 
-if ( "$eBEAM_CURRENT" == "rcdb" ) then
-set beam_on_current=`rcnd $RUN_NUMBER beam_on_current | awk '{print $1}'`
+	if ( $beam_on_current == "" || $beam_on_current == "Run" ) then
+		echo "Run $RUN_NUMBER does not have a beam_on_current.  Defaulting to beam_current."
+		set beam_on_current=`rcnd $RUN_NUMBER beam_current | awk '{print $1}'`
+	endif
 
-if ( $beam_on_current == "" || $beam_on_current == "Run" ) then
-	echo "Run $RUN_NUMBER does not have a beam_on_current.  Defaulting to beam_current."
-	set beam_on_current=`rcnd $RUN_NUMBER beam_current | awk '{print $1}'`
-endif
-
-if ( $beam_on_current == "Run" ) then
-	echo "The beam current could not be found for Run "$RUN_NUMBER".  This is most like due to the run number provided not existing in the rcdb"
-	echo "Please set eBEAM_CURRENT explicitly in MC.config..."
-	echo "something went wrong with initialization"
-	exit 1
-endif
-set beam_on_current=`echo "$beam_on_current / 1000." | $USER_BC -l`
+	if ( $beam_on_current == "Run" ) then
+		echo "The beam current could not be found for Run "$RUN_NUMBER".  This is most like due to the run number provided not existing in the rcdb"
+		echo "Please set eBEAM_CURRENT explicitly in MC.config..."
+		echo "something went wrong with initialization"
+		exit 1
+	endif
+	set beam_on_current=`echo "$beam_on_current / 1000." | $USER_BC -l`
 else
 set beam_on_current=$eBEAM_CURRENT
 endif
@@ -457,7 +471,7 @@ echo "Run generation step? "$GENR"  Will be cleaned?" $CLEANGENR
 echo "Flux Hist to use: " "$FLUX_TO_GEN" " : " "$FLUX_HIST"
 echo "Polarization to use: " "$POL_TO_GEN" " : " "$POL_HIST"
 echo "Using "$GENERATOR"  with config: "$CONFIG_FILE
-echo "Will run "$GENERATOR_POST" postprocessing after generator with configuration: "$GENERATOR_POST_CONFIG
+echo "Will run "$GENERATOR_POST" postprocessing after generator with configuration: "$GENERATOR_POST_CONFIG", event definitions: "$GENERATOR_POST_CONFIGEVT" and decay definitions: "$GENERATOR_POST_CONFIGDEC
 echo "----------------------------------------------"
 echo "Run geant step? "$GEANT"  Will be cleaned?" $CLEANGEANT
 echo "Using geant"$GEANTVER
@@ -652,9 +666,9 @@ if ( "$GENR" != "0" ) then
 
     set gen_pre=`echo $GENERATOR | cut -c1-4`
 
-    if ( "$gen_pre" != "file" && "$GENERATOR" != "genr8" && "$GENERATOR" != "bggen" && "$GENERATOR" != "genEtaRegge" && "$GENERATOR" != "gen_2pi_amp" && "$GENERATOR" != "gen_pi0" && "$GENERATOR" != "gen_2pi_primakoff" && "$GENERATOR" != "gen_2pi0_primakoff" && "$GENERATOR" != "gen_omega_3pi" && "$GENERATOR" != "gen_omegapi" && "$GENERATOR" != "gen_2k" && "$GENERATOR" != "bggen_jpsi" && "$GENERATOR" != "gen_ee" && "$GENERATOR" != "gen_ee_hb" && "$GENERATOR" != "particle_gun" && "$GENERATOR" != "geantBEAM" && "$GENERATOR" != "bggen_phi_ee" && "$GENERATOR" != "genBH" && "$GENERATOR" != "gen_omega_radiative" && "$GENERATOR" != "gen_amp" && "$GENERATOR" != "genr8_new" && "$GENERATOR" != "gen_compton" && "$GENERATOR" != "gen_npi" && "$GENERATOR" != "gen_compton_simple" && "$GENERATOR" != "gen_primex_eta_he4" && "$GENERATOR" != "gen_whizard" && "$GENERATOR" != "mc_gen") then
+    if ( "$gen_pre" != "file" && "$GENERATOR" != "genr8" && "$GENERATOR" != "bggen" && "$GENERATOR" != "genEtaRegge" && "$GENERATOR" != "gen_2pi_amp" && "$GENERATOR" != "gen_pi0" && "$GENERATOR" != "gen_2pi_primakoff" && "$GENERATOR" != "gen_2pi0_primakoff" && "$GENERATOR" != "gen_omega_3pi" && "$GENERATOR" != "gen_omegapi" && "$GENERATOR" != "gen_2k" && "$GENERATOR" != "bggen_jpsi" && "$GENERATOR" != "gen_ee" && "$GENERATOR" != "gen_ee_hb" && "$GENERATOR" != "particle_gun" && "$GENERATOR" != "geantBEAM" && "$GENERATOR" != "bggen_phi_ee" && "$GENERATOR" != "genBH" && "$GENERATOR" != "gen_omega_radiative" && "$GENERATOR" != "gen_amp" && "$GENERATOR" != "genr8_new" && "$GENERATOR" != "gen_compton" && "$GENERATOR" != "gen_npi" && "$GENERATOR" != "gen_compton_simple" && "$GENERATOR" != "gen_primex_eta_he4" && "$GENERATOR" != "gen_whizard" && "$GENERATOR" != "mc_gen" && "$GENERATOR" != "gen_vec_ps") then
 		echo "NO VALID GENERATOR GIVEN"
-		echo "only [genr8, bggen, genEtaRegge, gen_2pi_amp, gen_pi0, gen_omega_3pi, gen_2k, bggen_jpsi, gen_ee , gen_ee_hb, bggen_phi_ee, particle_gun, geantBEAM, genBH, gen_omega_radiative, gen_amp, gen_compton, gen_npi, gen_compton_simple, gen_primex_eta_he4, gen_whizard, gen_omegapi, mc_gen] are supported"
+		echo "only [genr8, bggen, genEtaRegge, gen_2pi_amp, gen_pi0, gen_omega_3pi, gen_2k, bggen_jpsi, gen_ee , gen_ee_hb, bggen_phi_ee, particle_gun, geantBEAM, genBH, gen_omega_radiative, gen_amp, gen_compton, gen_npi, gen_compton_simple, gen_primex_eta_he4, gen_whizard, gen_omegapi, mc_gen, gen_vec_ps] are supported"
 		echo "something went wrong with initialization"
 		exit 1
     endif
@@ -819,6 +833,10 @@ if ( "$GENR" != "0" ) then
 	else if ( "$GENERATOR" == "gen_omegapi" ) then
 		echo "configuring gen_omegapi"
 		set STANDARD_NAME="gen_omegapi_"$STANDARD_NAME
+		cp $CONFIG_FILE ./$STANDARD_NAME.conf
+	else if ( "$GENERATOR" == "gen_vec_ps" ) then
+		echo "configuring gen_vec_ps"
+		set STANDARD_NAME="gen_vec_ps_"$STANDARD_NAME
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
 	else if ( "$GENERATOR" == "gen_omega_radiative" ) then
 		echo "configuring gen_omega_radiative"
@@ -1068,6 +1086,23 @@ if ( "$GENR" != "0" ) then
 		echo gen_omegapi -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY  $optionals_line
 		gen_omegapi -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
 		set generator_return_code=$status
+	else if ( "$GENERATOR" == "gen_vec_ps" ) then
+		echo "RUNNING GEN_VEC_PS" 
+		set optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
+
+		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
+		if ( "$polarization_angle" == "-1.0" ) then
+			sed -i 's/TEMPPOLFRAC/'0'/' $STANDARD_NAME.conf
+			sed -i 's/TEMPPOLANGLE/'0'/' $STANDARD_NAME.conf
+		else
+			sed -i 's/TEMPPOLFRAC/'.4'/' $STANDARD_NAME.conf
+			sed -i 's/TEMPPOLANGLE/'$polarization_angle'/' $STANDARD_NAME.conf
+		endif
+		
+		echo $optionals_line
+		echo gen_vec_ps -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY  $optionals_line
+		gen_vec_ps -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
+		set generator_return_code=$status
 	else if ( "$GENERATOR" == "gen_omega_radiative" ) then
 		echo "RUNNING GEN_OMEGA_radiative"
     	set optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
@@ -1241,12 +1276,20 @@ if ( "$GENERATOR_POST" != "No" ) then
 #copy config locally
 	set post_return_code=-1
 	echo $GENERATOR_POST_CONFIG
+	echo $GENERATOR_POST_CONFIGEVT
+	echo $GENERATOR_POST_CONFIGDEC
 	if ( "$GENERATOR_POST_CONFIG" != "Default" ) then
 		cp $GENERATOR_POST_CONFIG ./post'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.cfg
 	endif
 
 	if ( "$GENERATOR_POST" == "decay_evtgen" ) then
-		echo decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm $STANDARD_NAME.hddm
+		if ( "$GENERATOR_POST_CONFIGEVT" != "Default" ) then
+			setenv EVTGEN_PARTICLE_DEFINITIONS $GENERATOR_POST_CONFIGEVT
+		endif
+		if ( "$GENERATOR_POST_CONFIGDEC" != "Default" ) then
+			setenv EVTGEN_DECAY_FILE $GENERATOR_POST_CONFIGDEC
+		endif
+		echo decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm -upost'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.cfg $STANDARD_NAME.hddm
 		decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm -upost'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.cfg $STANDARD_NAME.hddm
 		set post_return_code=$status
 		set STANDARD_NAME=$STANDARD_NAME'_decay_evtgen'

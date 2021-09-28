@@ -126,7 +126,7 @@ def WritePayloadConfig(order,foundConfig,batch_system):
 def SubmitList(SubList,job_IDs_submitted):
     print("Submitting SubList")
     for row in SubList:
-        print("Row",row)
+        #print("Row",row)
                 
         if row['ID'] in job_IDs_submitted:
             continue
@@ -139,6 +139,7 @@ def SubmitList(SubList,job_IDs_submitted):
         print("bundled:",len(alljobs))
         if(len(alljobs)>1):
             bundled=True
+            
         projinfo_q="SELECT * FROM Project where ID="+str(row['Project_ID'])
         curs.execute(projinfo_q) 
         proj=curs.fetchall()
@@ -163,7 +164,7 @@ def SubmitList(SubList,job_IDs_submitted):
 
         system_to_run_on=decideSystem(row)
 
-        MCWRAPPER_BOT_HOME="/u/group/halld/gluex_MCwrapper/"
+        MCWRAPPER_BOT_HOME="/scigroup/mcwrapper/gluex_MCwrapper/"
         if system_to_run_on == "OSG":
             status = subprocess.call("cp "+MCWRAPPER_BOT_HOME+"/examples/OSGShell.config ./MCSubDispatched.config", shell=True)
         elif system_to_run_on == "SWIF":
@@ -183,6 +184,7 @@ def SubmitList(SubList,job_IDs_submitted):
 
         command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCSubDispatched.config "+str(RunNumber)+" "+str(row["NumEvts"])+" per_file="+str(per_file_num)+" base_file_number="+str(row["FileNumber"])+" generate="+str(proj[0]["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(proj[0]["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(proj[0]["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(proj[0]["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid=-"+str(row['ID'])+" logdir=/osgpool/halld/tbritton/REQUESTEDMC_LOGS/"+proj[0]["OutputLocation"].split("/")[7]+" batch=2 submitter=1 tobundle=1"
         print(command)
+        #status = subprocess.call("printenv > /tmp/Submitter_env")
         status = subprocess.call(command, shell=True)
 
         for job in alljobs:
@@ -247,7 +249,7 @@ def decideSystem(row):
 def main(argv):
     #print(argv)
 
-    Block_size=100
+    Block_size=500
     int_i=0
     more_sub=True
     rows=[]
@@ -259,7 +261,7 @@ def main(argv):
     #print(args)
 
     job_IDs_submitted=[]
-
+    print(numprocesses_running)
     if(int(numprocesses_running) <3):
         try:
             curs.execute("INSERT INTO MCSubmitter (Host,StartTime,Status) VALUES ('"+str(socket.gethostname())+"', NOW(), 'Running' )")
@@ -272,13 +274,13 @@ def main(argv):
         curs.execute(querysubmitters)
         lastid = curs.fetchall()
         try:    
-            while more_sub:# and int_i<1000:
+            while more_sub:# and int_i<1:
                 rows=[]
                 int_i+=1
                 print("=============================================================")
                 query = "SELECT UName,RunNumber,FileNumber,Tested,NumEvts,BKG,Notified,Jobs.ID,Project_ID,Priority,IsActive from Jobs,Project,Users where Tested=1 && Notified is NULL && IsActive=1 && Jobs.ID not in (Select Job_ID from Attempts) and Project_ID = Project.ID and Uname = name order by Priority desc limit "+str(Block_size)
                 if(Block_size==1):
-                    query = "SELECT UName,RunNumber,FileNumber,Tested,NumEvts,BKG,Notified,Jobs.ID,Project_ID,Priority from Jobs,Project,Users where Tested=1 && Notified is NULL && Jobs.ID not in (Select Job_ID from Attempts) and Project_ID = Project.ID and Uname = name order by Project_ID asc" #Priority desc"
+                    query = "SELECT UName,RunNumber,FileNumber,Tested,NumEvts,BKG,Notified,Jobs.ID,Project_ID,Priority from Jobs,Project,Users where Tested=1 && Notified is NULL && Jobs.ID not in (Select Job_ID from Attempts) and Project_ID = Project.ID and Uname = name order by Project_ID desc" #Priority desc"
 
                 
                 print("Query:", query)

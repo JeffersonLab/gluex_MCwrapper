@@ -45,6 +45,7 @@ from multiprocessing import Process
 import random
 import pipes
 import random
+import shutil
 
 MCWRAPPER_BOT_HOST_NAME=socket.gethostname()
 dbhost = "hallddb.jlab.org"
@@ -151,7 +152,7 @@ def checkProjectsForCompletion(comp_assignment):
         #print cpt
         #print(proj)
         
-        #print("Files to move:",filesToMove)
+        print("Files to move:",files)
         #DISTINCT ID ------in query below
         TOTCompletedQuery ="SELECT * From Jobs inner join Attempts on Attempts.job_id = Jobs.id WHERE Project_ID="+str(proj['ID'])+" && IsActive=1 and Attempts.ExitCode = 0 && (Attempts.Status ='4' || Attempts.Status='succeeded') && Attempts.ExitCode IS NOT NULL and Attempts.id = (select max(id) from Attempts Attempts2 where Attempts2.job_id = Jobs.id);"
   #"SELECT * From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1 && ID in (SELECT DISTINCT Job_ID FROM Attempts WHERE ExitCode = 0 && (Status ='4' || Status='succeeded')  && ExitCode rIS NOT NULL ORDER BY ID DESC LIMIT 1);" 
@@ -235,24 +236,25 @@ def checkProjectsForCompletion(comp_assignment):
         TOTJobs="SELECT ID From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1;"
         dbcursor_comp.execute(TOTJobs)
         AllActiveJobs=dbcursor_comp.fetchall()
-        #print("=====================")
-        #print("Project ID:",proj['ID'])
-        #print("Output location:",proj['OutputLocation'])
-        #print("Jobs Fulfilled:",len(fulfilledJobs)-len(nullify_list))
-        #print("Total jobs:",len(AllActiveJobs))
-        #print("TO MOVE: "+str(filesToMove))
+        print("=====================")
+        print("Project ID:",proj['ID'])
+        print("Output location:",proj['OutputLocation'])
+        print("Jobs Fulfilled:",len(fulfilledJobs)-len(nullify_list))
+        print("Total jobs:",len(AllActiveJobs))
+        print("TO MOVE: "+str(filesToMove))
+        print("---------------------")
         if(len(AllActiveJobs)==0):
             continue
         totalSubmitted="SELECT SUM(NumEvts) from Jobs where Project_ID="+str(proj['ID'])
         dbcursor_comp.execute(totalSubmitted)
         submitted_evtNum=dbcursor_comp.fetchall()
-        #print("Number of events submitted:",submitted_evtNum[0]["SUM(NumEvts)"])
-        #print("Number of events requested:",proj["NumEvents"])
-        #print("All jobs fulfilled?",(len(fulfilledJobs)-len(nullify_list))==len(AllActiveJobs))
-        #print("Are there any jobs?",len(AllActiveJobs) != 0)
-        #print("All files moved?",filesToMove ==0)
-        #print("Total Project fullfilled?",submitted_evtNum[0]["SUM(NumEvts)"] >= proj["NumEvents"]-len(AllActiveJobs))
-        #print("=====================")
+        print("Number of events submitted:",submitted_evtNum[0]["SUM(NumEvts)"])
+        print("Number of events requested:",proj["NumEvents"])
+        print("All jobs fulfilled?",(len(fulfilledJobs)-len(nullify_list))==len(AllActiveJobs))
+        print("Are there any jobs?",len(AllActiveJobs) != 0)
+        print("All files moved?",filesToMove ==0)
+        print("Total Project fullfilled?",submitted_evtNum[0]["SUM(NumEvts)"] >= proj["NumEvents"]-len(AllActiveJobs))
+        print("=====================")
         #need -len(AllActiveJobs for when Run number need 0 events and it round to nearest NOT up in num events
         if((len(fulfilledJobs)-len(nullify_list))==len(AllActiveJobs) and len(AllActiveJobs) != 0 and filesToMove ==0 and submitted_evtNum[0]["SUM(NumEvts)"] >= proj["NumEvents"]-len(AllActiveJobs)):
             print(proj['ID'],"DONE")
@@ -262,7 +264,7 @@ def checkProjectsForCompletion(comp_assignment):
             dbcursor_comp.execute(getFinalCompleteTime)
             finalTimeRes=dbcursor_comp.fetchall()
             #print "============"
-            #print finalTimeRes[0]["MAX(Completed_Time)"]
+            print("Final Time", finalTimeRes[0]["MAX(Completed_Time)"])
             updateProjectstatus="UPDATE Project SET Completed_Time="+"'"+str(finalTimeRes[0]["MAX(Completed_Time)"])+"'"+ " WHERE ID="+str(proj['ID'])+";"
             print(updateProjectstatus)
             #print "============"
@@ -853,35 +855,37 @@ def main(argv):
                 lastid = dbcursor.fetchall()
                 #print lastid
                 try:
-                    queryosgjobs="SELECT * from Attempts WHERE BatchSystem='OSG' && SubmitHost=\""+MCWRAPPER_BOT_HOST_NAME+"\" && Status !='4' && Status !='3' && Status!= '6' && Status != '5';"# || (Status='4' && ExitCode != 0 && ProgramFailed is NULL) ORDER BY ID desc;"
-                    #print queryosgjobs
+                    queryosgjobs="SELECT * from Attempts WHERE BatchSystem='OSG' && SubmitHost=\""+MCWRAPPER_BOT_HOST_NAME+"\" && Status !='4' && Status !='3' && Status!= '6' && Status != '5';"# && Job_ID NOT IN (SELECT ID from Jobs where Project_ID=1932 );"# || (Status='4' && ExitCode != 0 && ProgramFailed is NULL) ORDER BY ID desc;"
+                    print(queryosgjobs)
                     dbcursor.execute(queryosgjobs)
                     Alljobs = list(dbcursor.fetchall())
                     #print(Alljobs[:5])
                     random.shuffle(Alljobs)
                     #print(Alljobs[:5])
-                    Monitoring_assignments=array_split(Alljobs,spawnNum)
-                    spawns=[]
-                    for i in range(0,spawnNum):
-                        time.sleep(random.randint(1,spawnNum))
-                        print("block "+str(i))
-                        print(len(Monitoring_assignments[i]))
-                        p=Process(target=checkOSG,args=(Monitoring_assignments[i],))
-                        p.daemon = True
-                        spawns.append(p)
-                        
-                        #p.join()
-                        
-                    for i in range(0,len(spawns)):
-                        #print("join "+str(i))
-                        time.sleep(random.randint(1,spawnNum))
-                        spawns[i].start()
-                        
-                    #time.sleep(2)
-                    for i in range(0,len(spawns)):
-                        if spawns[i].is_alive():
+                    if(len(Alljobs) !=0 ):
+
+                        Monitoring_assignments=array_split(Alljobs,spawnNum)
+                        spawns=[]
+                        for i in range(0,spawnNum):
+                            time.sleep(random.randint(1,spawnNum))
+                            print("block "+str(i))
+                            print(len(Monitoring_assignments[i]))
+                            p=Process(target=checkOSG,args=(Monitoring_assignments[i],))
+                            p.daemon = True
+                            spawns.append(p)
+
+                            #p.join()
+
+                        for i in range(0,len(spawns)):
                             #print("join "+str(i))
-                            spawns[i].join()
+                            time.sleep(random.randint(1,spawnNum))
+                            spawns[i].start()
+
+                        #time.sleep(2)
+                        for i in range(0,len(spawns)):
+                            if spawns[i].is_alive():
+                                #print("join "+str(i))
+                                spawns[i].join()
 
                     #if(numOverRide == False): #INSURE OVERRIDE NEVER CAUSES THE VODOO TO CAUSE A RACE CONDITION
                     #    print("CHECKING SWIF ON MAIN")
@@ -895,11 +899,16 @@ def main(argv):
                     print("CHECKING GLOBALS ON MAIN")
                     #UpdateOutputSize() broken without lustre mounted
                     #MULTI PROCESS THIS? MAYBE 5-10 processes
-                    comp_spawnnum=20
+                    comp_spawnnum=5
                     OutstandingProjectsQuery="SELECT * FROM Project WHERE (Is_Dispatched != '0' && Tested != '-1' && Tested != '2' ) && Notified is NULL"
                     dbcursor.execute(OutstandingProjectsQuery)
                     OutstandingProjects=dbcursor.fetchall()
-                    completion_assignments=array_split(OutstandingProjects,comp_spawnnum)
+                    if(comp_spawnnum>0):
+                        completion_assignments=array_split(OutstandingProjects,comp_spawnnum)
+                    
+                    if(len(OutstandingProjects)<comp_spawnnum):
+                        comp_spawnnum=len(OutstandingProjects)
+
                     comp_spawns=[]
 
                     for i in range(0,comp_spawnnum):
@@ -917,7 +926,8 @@ def main(argv):
                             #print("join "+str(i))
                             comp_spawns[i].join()
 
-                    #checkProjectsForCompletion()
+                    if(comp_spawnnum==0):
+                        checkProjectsForCompletion(OutstandingProjects)
                     dbcursor.execute("UPDATE MCOverlord SET EndTime=NOW(), Status=\"Success\" where ID="+str(lastid[0]["MAX(ID)"]))
                     dbcnx.commit()
                     #break
