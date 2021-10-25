@@ -1277,19 +1277,33 @@ if ( "$GENERATOR_POST" != "No" ) then
 	echo $GENERATOR_POST_CONFIG
 	echo $GENERATOR_POST_CONFIGEVT
 	echo $GENERATOR_POST_CONFIGDEC
-	if ( "$GENERATOR_POST_CONFIG" != "Default" ) then
-		cp $GENERATOR_POST_CONFIG ./post'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.cfg
+	if ( "$GENERATOR_POST_CONFIG" != "default" ) then
+		cp $GENERATOR_POST_CONFIG ./post'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf
+		if ( ! -f ./post'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf ) then
+			echo "Couldn't copy $GENERATOR_POST_CONFIG. Exit."
+      exit 1
+		endif
 	endif
 
 	if ( "$GENERATOR_POST" == "decay_evtgen" ) then
-		if ( "$GENERATOR_POST_CONFIGEVT" != "Default" ) then
-			setenv EVTGEN_PARTICLE_DEFINITIONS $GENERATOR_POST_CONFIGEVT
+		if ( "$GENERATOR_POST_CONFIGEVT" != "default" ) then
+			cp $GENERATOR_POST_CONFIGEVT ./postevt'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf
+			if ( ! -f ./postevt'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf ) then
+				echo "Couldn't copy $GENERATOR_POST_CONFIGEVT. Exit."
+	      exit 1
+			endif
+			setenv EVTGEN_PARTICLE_DEFINITIONS $PWD/postevt'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf
 		endif
-		if ( "$GENERATOR_POST_CONFIGDEC" != "Default" ) then
-			setenv EVTGEN_DECAY_FILE $GENERATOR_POST_CONFIGDEC
+		if ( "$GENERATOR_POST_CONFIGDEC" != "default" ) then
+			cp $GENERATOR_POST_CONFIGDEC ./postdec'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf
+			if ( ! -f ./postdec'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf ) then
+				echo "Couldn't copy $GENERATOR_POST_CONFIGDEC. Exit."
+	      exit 1
+			endif
+			setenv EVTGEN_DECAY_FILE $PWD/postdec'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf
 		endif
-		echo decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm -upost'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.cfg $STANDARD_NAME.hddm
-		decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm -upost'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.cfg $STANDARD_NAME.hddm
+		echo decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm -upost'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf $STANDARD_NAME.hddm
+		decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm -upost'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf $STANDARD_NAME.hddm
 		set post_return_code=$status
 		set STANDARD_NAME=$STANDARD_NAME'_decay_evtgen'
 	endif
@@ -1400,7 +1414,12 @@ endif
 	    	rm -f run.mac
 
 			if ( $gen_pre != "file" ) then
-				grep "/particle/" $STANDARD_NAME.conf >>! run.mac
+				if ( "$GENERATOR_POST" != "No" ) then
+					#STANDARD_NAME changed, remove '_decay_evtgen' for the search
+					grep "/particle/" `echo $STANDARD_NAME.conf | sed 's/_decay_evtgen//g'` >>! run.mac
+				else
+					grep "/particle/" $STANDARD_NAME.conf >>! run.mac
+				endif
 			endif
 	    	echo "/run/beamOn $EVT_TO_GEN" >>! run.mac
 	    	echo "exit" >>! run.mac

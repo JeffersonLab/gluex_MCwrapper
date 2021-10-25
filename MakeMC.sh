@@ -717,7 +717,7 @@ if [[ "$GENR" != "0" ]]; then
 				#fi
 			fi
 		fi
-		generator_return_code=0
+    generator_return_code=0
   elif [[ "$GENERATOR" == "geantBEAM" ]]; then
 		echo "bypassing generation"
 		echo "using" $CONFIG_FILE
@@ -1273,19 +1273,33 @@ if [[ "$GENERATOR_POST" != "No" ]]; then
 	echo $GENERATOR_POST_CONFIG
 	echo $GENERATOR_POST_CONFIGEVT
 	echo $GENERATOR_POST_CONFIGDEC
-	if [[ "$GENERATOR_POST_CONFIG" != "Default" ]]; then
-		cp $GENERATOR_POST_CONFIG ./post'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.cfg
+	if [[ "$GENERATOR_POST_CONFIG" != "default" ]]; then
+		cp $GENERATOR_POST_CONFIG ./post'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf
+    if [[ ! -f ./post'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf ]]; then
+      echo "Couldn't copy $GENERATOR_POST_CONFIG. Exit."
+      exit 1
+    fi
 	fi
 
 	if [[ "$GENERATOR_POST" == "decay_evtgen" ]]; then
-		if [[ "$GENERATOR_POST_CONFIGEVT" != "Default" ]]; then
-			export EVTGEN_PARTICLE_DEFINITIONS=$GENERATOR_POST_CONFIGEVT
+		if [[ "$GENERATOR_POST_CONFIGEVT" != "default" ]]; then
+      cp $GENERATOR_POST_CONFIGEVT ./postevt'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf
+      if [[ ! -f ./postevt'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf ]]; then
+        echo "Couldn't copy $GENERATOR_POST_CONFIGEVT. Exit."
+        exit 1
+      fi
+			export EVTGEN_PARTICLE_DEFINITIONS=$PWD/postevt'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf
 		fi
-		if [[ "$GENERATOR_POST_CONFIGDEC" != "Default" ]];then
-			export EVTGEN_DECAY_FILE=$GENERATOR_POST_CONFIGDEC
+		if [[ "$GENERATOR_POST_CONFIGDEC" != "default" ]];then
+      cp $GENERATOR_POST_CONFIGDEC ./postdec'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf
+      if [[ ! -f ./postdec'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf ]]; then
+        echo "Couldn't copy $GENERATOR_POST_CONFIGDEC. Exit."
+        exit 1
+      fi
+			export EVTGEN_DECAY_FILE=$PWD/postdec'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf
 		fi
-		echo decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm -upost'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.cfg $STANDARD_NAME.hddm
-		decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm -upost'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.cfg $STANDARD_NAME.hddm
+		echo decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm -upost'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf $STANDARD_NAME.hddm
+		decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm -upost'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf $STANDARD_NAME.hddm
 		post_return_code=$?
 		STANDARD_NAME=$STANDARD_NAME'_decay_evtgen'
 	fi
@@ -1390,9 +1404,14 @@ fi
 	    #make run.mac then call it below
 	    rm -f run.mac
 
-		if [[ $gen_pre != "file" ]]; then
-	    	grep "/particle/" $STANDARD_NAME.conf >> run.mac
-		fi
+  		if [[ $gen_pre != "file" ]]; then
+          if [[ "$GENERATOR_POST" != "No" ]]; then
+              #STANDARD_NAME changed, remove '_decay_evtgen' for the search
+              grep "/particle/" $(echo $STANDARD_NAME.conf | sed 's/_decay_evtgen//g') >> run.mac
+          else
+              grep "/particle/" $STANDARD_NAME.conf >> run.mac
+          fi
+  		fi
 	    echo "/run/beamOn $EVT_TO_GEN" >> run.mac
 	    echo "exit" >> run.mac
 

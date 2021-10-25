@@ -932,9 +932,9 @@ def main(argv):
         GENCONFIG = "NA"
 
         GENPOST="No"
-        GENPOSTCONFIG="Default"
-        GENPOSTCONFIGEVT="Default"
-        GENPOSTCONFIGDEC="Default"
+        GENPOSTCONFIG="default"
+        GENPOSTCONFIGEVT="default"
+        GENPOSTCONFIGDEC="default"
 
         eBEAM_ENERGY="rcdb"
         eBEAM_CURRENT="rcdb"
@@ -1093,14 +1093,14 @@ def main(argv):
                         GENPOST=WHOLEPOST_PARTS[0]
 
                         if(len(WHOLEPOST_PARTS)==2):
-                                GENPOSTCONFIG=WHOLEPOST_PARTS[1]
+                                GENPOSTCONFIG="default" if WHOLEPOST_PARTS[1].lower()=="default" else WHOLEPOST_PARTS[1]
                         elif(len(WHOLEPOST_PARTS)==3):
-                                GENPOSTCONFIG=WHOLEPOST_PARTS[1]
-                                GENPOSTCONFIGEVT=WHOLEPOST_PARTS[2]
+                                GENPOSTCONFIG="default" if WHOLEPOST_PARTS[1].lower()=="default" else WHOLEPOST_PARTS[1]
+                                GENPOSTCONFIGEVT="default" if WHOLEPOST_PARTS[2].lower()=="default" else WHOLEPOST_PARTS[2]
                         elif(len(WHOLEPOST_PARTS)==4):
-                                GENPOSTCONFIG=WHOLEPOST_PARTS[1]
-                                GENPOSTCONFIGEVT=WHOLEPOST_PARTS[2]
-                                GENPOSTCONFIGDEC=WHOLEPOST_PARTS[3]
+                                GENPOSTCONFIG="default" if WHOLEPOST_PARTS[1].lower()=="default" else WHOLEPOST_PARTS[1]
+                                GENPOSTCONFIGEVT="default" if WHOLEPOST_PARTS[2].lower()=="default" else WHOLEPOST_PARTS[2]
+                                GENPOSTCONFIGDEC="default" if WHOLEPOST_PARTS[3].lower()=="default" else WHOLEPOST_PARTS[3]
                         elif(len(WHOLEPOST_PARTS)==1):
                                 GENPOST=WHOLEPOST
 
