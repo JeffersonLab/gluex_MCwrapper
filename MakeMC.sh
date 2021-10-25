@@ -1462,6 +1462,7 @@ else
 		mcsmear_return_code=$?
 	elif [[ "$BKGFOLDSTR" == "DEFAULT" || "$BKGFOLDSTR" == "Random" ]]; then
 		rm -f count.py
+		echo "RANDOM TRIGGER TOTAL EVENTS: " $RANDOM_TRIG_NUM_EVT
 		if [[ $RANDOM_TRIG_NUM_EVT == -1 ]]; then
 	   		echo "import hddm_s" > count.py
 	   		echo "print(sum(1 for r in hddm_s.istream('$bkglocstring')))" >> count.py
@@ -1470,8 +1471,8 @@ else
 	   else
 			totalnum=$RANDOM_TRIG_NUM_EVT
 	   fi
-
-	   if [[$totalnum == -1]]; then
+		echo "TOTAL NUM SET:" $totalnum
+	   if [[ $totalnum == -1 ]]; then
 			echo "could not count file. exiting"
 			exit 230
 	   fi

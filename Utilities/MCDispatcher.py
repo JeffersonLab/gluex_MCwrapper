@@ -458,7 +458,8 @@ def source(script, update=True):
 
 
 def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
-    
+    skip_Test=False
+
     mktestdir="mkdir -p TestProj_"+str(ID)
     subprocess.call(mktestdir,shell=True)
     os.chdir("./TestProj_"+str(ID))
@@ -481,6 +482,10 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
         rows=curs.fetchall()
         order=rows[0]
 
+
+    output="Dispatch_Failure"
+    errors="Dispatch_Failure"
+    STATUS=-1
     if(order["RunNumHigh"] != order["RunNumLow"] and order["Generator"]=="file:"):
         updatequery="UPDATE Project SET Tested=-1"+" WHERE ID="+str(ID)+";"
         curs.execute(updatequery)
@@ -491,69 +496,73 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
 
         return ["oh no!!!",-1,"MCwrapper cannot currently handle an input file with many run numbers properly"]
 
-    WritePayloadConfig(order,newLoc)
-    RunNumber=str(order["RunNumLow"])
+    if(not order["VersionSet"]):
+        skip_Test=True
+        output="oh no!!!"
+        errors="Somehow a versionSet was not selected.  Please edit the submission via the link to select a version set."
 
-    output="Dispatch_Failure"
-    errors="Dispatch_Failure"
 
-    print(str(index)+":  "+"Wrote Payload")
-    print("original RCDB QUERY:", order["RCDBQuery"])
-    if(order["RunNumLow"] != order["RunNumHigh"]):
-        query_to_do="@is_production and @status_approved"
+    if(not skip_Test):
+        WritePayloadConfig(order,newLoc)
+        RunNumber=str(order["RunNumLow"])
 
-        if("recon-2018" in order["VersionSet"]):
-            query_to_do="@is_2018production and @status_approved"
+        print(str(index)+":  "+"Wrote Payload")
+        print("original RCDB QUERY:", order["RCDBQuery"])
+        if(order["RunNumLow"] != order["RunNumHigh"]):
+            query_to_do="@is_production and @status_approved"
 
-        if("recon-2019" in order["VersionSet"]):
-            query_to_do="@is_dirc_production and @status_approved"
+            if("recon-2018" in order["VersionSet"]):
+                query_to_do="@is_2018production and @status_approved"
+
+            if("recon-2019" in order["VersionSet"]):
+                query_to_do="@is_dirc_production and @status_approved"
     
-        if(order["RCDBQuery"] != ""):
-            query_to_do=order["RCDBQuery"]
+            if(order["RCDBQuery"] != ""):
+                query_to_do=order["RCDBQuery"]
     
-        print("RCDB_QUERY IS: "+str(query_to_do))
-        rcdb_db = rcdb.RCDBProvider("mysql://rcdb@hallddb.jlab.org/rcdb")
+            print("RCDB_QUERY IS: "+str(query_to_do))
+            rcdb_db = rcdb.RCDBProvider("mysql://rcdb@hallddb.jlab.org/rcdb")
 
-        try:
-            runList=rcdb_db.select_runs(str(query_to_do),order["RunNumLow"],order["RunNumHigh"]).get_values(['event_count'],True)
-            print("RunList:",runList)
-            RunNumber=str(runList[0][0])#str(order["RunNumLow"])
-        except Exception as e:
-            print(e)
-            output=e
-            errors=e
-            RunNumber=-1
-            pass
+            try:
+                runList=rcdb_db.select_runs(str(query_to_do),order["RunNumLow"],order["RunNumHigh"]).get_values(['event_count'],True)
+                print("RunList:",runList)
+                RunNumber=str(runList[0][0])#str(order["RunNumLow"])
+            except Exception as e:
+                print(e)
+                output=e
+                errors=e
+                RunNumber=-1
+                pass
         
     
     #if(order["ReactionLines"][0:5]=="file:")
     #if order["RunNumLow"] != order["RunNumHigh"] :
     #    RunNumber = RunNumber + "-" + str(order["RunNumHigh"])
     
-    if RunNumber != -1:
-        cleangen=1
-        if order["SaveGeneration"]==1:
-            cleangen=0
+        if RunNumber != -1:
+            cleangen=1
+            if order["SaveGeneration"]==1:
+                cleangen=0
 
-        cleangeant=1
-        if order["SaveGeant"]==1:
-            cleangeant=0
+            cleangeant=1
+            if order["SaveGeant"]==1:
+                cleangeant=0
     
-        cleansmear=1
-        if order["SaveSmear"]==1:
-            cleansmear=0
+            cleansmear=1
+            if order["SaveSmear"]==1:
+                cleansmear=0
     
-        cleanrecon=1
-        if order["SaveReconstruction"]==1:
-            cleanrecon=0
+            cleanrecon=1
+            if order["SaveReconstruction"]==1:
+                cleanrecon=0
 
-        pwd=os.getcwd()
-        command=MCWRAPPER_BOT_HOME+"/gluex_MC.py "+pwd+"/"+"MCDispatched_"+str(ID)+".config "+str(RunNumber)+" "+str(500)+" per_file=250000 base_file_number=0"+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=0 tobundle=0"
-        print(command)
-    STATUS=-1
+            pwd=os.getcwd()
+            command=MCWRAPPER_BOT_HOME+"/gluex_MC.py "+pwd+"/"+"MCDispatched_"+str(ID)+".config "+str(RunNumber)+" "+str(500)+" per_file=250000 base_file_number=0"+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=0 tobundle=0"
+            print(command)
+        
     # print (command+command2).split(" ")
-    my_env=None
-    print(versionSet)
+        my_env=None
+        print(versionSet)
     #if(versionSet != ""):
     #    myclean=source("/group/halld/Software/build_scripts/gluex_env_clean.csh")
     #    my_env=source("/group/halld/Software/build_scripts/gluex_env_jlab.sh /group/halld/www/halldweb/html/halld_versions/"+versionSet)
@@ -568,21 +577,21 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
     #    my_env[absorbed[0]]=absorbed[1]
     #print(my_env)
     
-    f=open('TestProject_runscript_'+str(ID)+'.sh','w')
-    f.write("#!/bin/bash -l"+"\n")
-    f.write("export SHELL=/bin/bash"+"\n")
-    f.write("source /group/halld/Software/build_scripts/gluex_env_jlab.sh /group/halld/www/halldweb/html/halld_versions/"+versionSet+"\n")
-    f.write("export MCWRAPPER_CENTRAL="+MCWRAPPER_BOT_HOME+"\n")
-    f.write(command)
-    f.close()
+        f=open('TestProject_runscript_'+str(ID)+'.sh','w')
+        f.write("#!/bin/bash -l"+"\n")
+        f.write("export SHELL=/bin/bash"+"\n")
+        f.write("source /group/halld/Software/build_scripts/gluex_env_jlab.sh /group/halld/www/halldweb/html/halld_versions/"+versionSet+"\n")
+        f.write("export MCWRAPPER_CENTRAL="+MCWRAPPER_BOT_HOME+"\n")
+        f.write(command)
+        f.close()
     
-    print("singularity exec --cleanenv --bind "+pwd+":"+pwd+" --bind /osgpool/halld/tbritton:/osgpool/halld/tbritton --bind /group/halld/:/group/halld/ --bind /scigroup/mcwrapper/gluex_MCwrapper:/scigroup/mcwrapper/gluex_MCwrapper /cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest /bin/sh "+pwd+"/TestProject_runscript_"+str(ID)+".sh")
-    if RunNumber != -1:
-        p = Popen("singularity exec --cleanenv --bind "+pwd+":"+pwd+" --bind /osgpool/halld/tbritton:/osgpool/halld/tbritton --bind /group/halld/:/group/halld/ --bind /scigroup/mcwrapper/gluex_MCwrapper:/scigroup/mcwrapper/gluex_MCwrapper /cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest /bin/sh "+pwd+"/TestProject_runscript_"+str(ID)+".sh", env=my_env ,stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True)
+        print("singularity exec --cleanenv --bind "+pwd+":"+pwd+" --bind /osgpool/halld/tbritton:/osgpool/halld/tbritton --bind /group/halld/:/group/halld/ --bind /scigroup/mcwrapper/gluex_MCwrapper:/scigroup/mcwrapper/gluex_MCwrapper /cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest /bin/sh "+pwd+"/TestProject_runscript_"+str(ID)+".sh")
+        if RunNumber != -1:
+            p = Popen("singularity exec --cleanenv --bind "+pwd+":"+pwd+" --bind /osgpool/halld/tbritton:/osgpool/halld/tbritton --bind /group/halld/:/group/halld/ --bind /scigroup/mcwrapper/gluex_MCwrapper:/scigroup/mcwrapper/gluex_MCwrapper /cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest /bin/sh "+pwd+"/TestProject_runscript_"+str(ID)+".sh", env=my_env ,stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True)
     
     #print p
     #print "p defined"
-        output, errors = p.communicate()
+            output, errors = p.communicate()
     
     #print [p.returncode,errors,output]
         output=str(output).replace('\\n', '\n')

@@ -167,6 +167,7 @@ def checkProjectsForCompletion(comp_assignment):
         rootLoc=proj['OutputLocation'].split("REQUESTED_MC")[1]#.replace("/","")
         nullify_list=[]
         
+        print("CHECKING FILES")
         for job in fulfilledJobs:
             #print("Data already Verified?",job['DataVerified'])
             if(job['DataVerified'] !=0 ):
@@ -194,13 +195,14 @@ def checkProjectsForCompletion(comp_assignment):
             
             found_AllexpFile=True
 
-            
+            files_not_found=[]
             for expFile in Expected_returned_files:
                 #print(expFile)
                 #print("checking for",expFile,"@",rootLoc)
                 found=CheckForFile(rootLoc,expFile)
                 if not found:
                     print(expFile+"   NOT FOUND!!!!")
+                    files_not_found.append(expFile)
                     found_AllexpFile=False
                     break
                 
@@ -215,6 +217,23 @@ def checkProjectsForCompletion(comp_assignment):
                 print(Update_q)
                 dbcursor_comp.execute(Update_q)
                 dbcnx_comp.commit()
+
+                failed_prog_string=""
+                for fi in files_not_found:
+                    if(failed_prog_string==""):
+                        failed_prog_string="["
+                    failed_prog_string+=fi+","
+
+                if(failed_prog_string!=""):
+                        failed_prog_string=failed_prog_string[:-1]
+                        failed_prog_string+="]"
+
+                if(failed_prog_string!=""):
+                    flistUpdate_q="Update Attempts Set ProgramFailed=\""+failed_prog_string+"\""+" where ID="+str(Attempt_to_update["ID"])
+                    print(flistUpdate_q)
+                    dbcursor_comp.execute(flistUpdate_q)
+                    dbcnx_comp.commit()
+
                 nullify_list.append(job["ID"]) 
             else:
                 #print("data has been verified")
@@ -835,8 +854,8 @@ def array_split(lst,n):
 def main(argv):
 
         runnum=0
-        runmax=-1
-        spawnNum=10
+        runmax=1
+        spawnNum=1#10
         numOverRide=False
 
         if(len(argv) !=0):
