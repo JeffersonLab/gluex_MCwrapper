@@ -927,9 +927,9 @@ def main(argv):
         GENCONFIG = "NA"
 
         GENPOST="No"
-        GENPOSTCONFIG="default"
-        GENPOSTCONFIGEVT="default"
-        GENPOSTCONFIGDEC="default"
+        GENPOSTCONFIG="Default"
+        GENPOSTCONFIGEVT="Default"
+        GENPOSTCONFIGDEC="Default"
 
         eBEAM_ENERGY="rcdb"
         eBEAM_CURRENT="rcdb"
