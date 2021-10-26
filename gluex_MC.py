@@ -30,7 +30,6 @@ import ccdb.path_utils
 from ccdb import Directory, TypeTable, Assignment, ConstantSet
 from array import array
 from datetime import datetime
-from ROOT import TF1
 import mysql.connector
 import time
 import os
@@ -768,15 +767,14 @@ def LoadCCDB():
 
         return provider
 
-def PSAcceptance(x, par):
+def PSAcceptance(x, par0, par1, par2):
+    min = par1
+    max = par2
 
-    min = par[1]
-    max = par[2]
-
-    if x[0] > 2.*min and x[0] < min + max:
-        return par[0]*(1-2.*min/x[0])
-    elif x[0] >= min + max:
-        return par[0]*(2.*max/x[0] - 1)
+    if x > 2.*min and x < min + max:
+        return par0*(1-2.*min/x)
+    elif x >= min + max:
+        return par0*(2.*max/x - 1)
 
     return 0.
 
@@ -838,9 +836,6 @@ def calcFluxCCDB(ccdb_conn, run, emin, emax):
                 print("Missing flux for run number = %d, skipping generation" % run[0])
                 return -1.0
 
-        # PS acceptance correction
-        fPSAcceptance = TF1("PSAcceptance", PSAcceptance, 2.0, 12.0, 3)
-        fPSAcceptance.SetParameters(float(PS_accept[0][0]), float(PS_accept[0][1]), float(PS_accept[0][2]));
 
         # sum TAGM flux
         for tagm_flux, tagm_scaled_energy in zip(tagm_untagged_flux, tagm_scaled_energy_table):
@@ -849,7 +844,7 @@ def calcFluxCCDB(ccdb_conn, run, emin, emax):
                 if tagm_energy < emin or tagm_energy > emax:
                         continue
 
-                psAccept = fPSAcceptance.Eval(tagm_energy)
+                psAccept = PSAcceptance(tagm_energy, float(PS_accept[0][0]), float(PS_accept[0][1]), float(PS_accept[0][2]))
                 if psAccept <= 0.0:
                         continue
 
@@ -862,7 +857,7 @@ def calcFluxCCDB(ccdb_conn, run, emin, emax):
                 if tagh_energy < emin or tagh_energy > emax:
                         continue
 
-                psAccept = fPSAcceptance.Eval(tagh_energy)
+                psAccept = PSAcceptance(tagh_energy, float(PS_accept[0][0]), float(PS_accept[0][1]), float(PS_accept[0][2]))
                 if psAccept <= 0.0:
                         continue
 
@@ -1323,7 +1318,7 @@ def main(argv):
         script_to_use = "/MakeMC.csh"
 
         loginSHELL="bash"
-        
+
         try:
                 loginSHELL=environ['SHELL'].split("/")
         except:
@@ -1673,7 +1668,7 @@ def GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,RUNNUM):
 
                 path_base="/work/osgpool/halld/random_triggers/"
 
-                
+
 
                 if Style=="Random":
                         path_base=path_base+RANDBGTAG+"/"
@@ -1695,7 +1690,7 @@ def GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,RUNNUM):
                 print("final path base:",path_base)
                 realpath=os.path.realpath(path_base)
                 print("real path:",realpath)
-                
+
 
                 queryrand="SELECT Num_Events FROM Randoms WHERE Style=\""+Style+"\" && Tag=\""+RANDBGTAG+"\""+" && Run_Number="+str(RUNNUM)#+" && Path=\""+str(realpath)+"\""
                 print(queryrand)
