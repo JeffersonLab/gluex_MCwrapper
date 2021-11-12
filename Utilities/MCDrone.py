@@ -56,6 +56,7 @@ def DroneDo(id):
 
         try:
                 drone_directive=os.environ["MCWRAPPER_CENTRAL"]+"/Utilities/MCDispatcher.py autolaunch"
+                print(drone_directive)
                 retcode=subprocess.call(drone_directive.split(" "))
         except subprocess.CalledProcessError as exc:
                 dbcursor.execute("UPDATE MCDrone SET Status='Fail' where ID="+str(id))
@@ -71,9 +72,9 @@ def main(argv):
         numOverRide=False
 
         if(len(argv) !=0):
-		    numOverRide=True
+                numOverRide=True
         
-        numprocesses_running=subprocess.check_output(["echo `ps all -u tbritton | grep MCDrone.py | grep -v grep | wc -l`"], shell=True)
+        numprocesses_running=subprocess.check_output(["echo `ps all -u tbritton | grep MCDrone.py | grep -v grep | wc -l`"], shell=True).strip()
 
         print(int(numprocesses_running))
         ALLSTOP=False
@@ -81,25 +82,28 @@ def main(argv):
             print("ALL STOP DETECTED")
             ALLSTOP=True
 
-        if( (int(numprocesses_running) <2 or numOverRide) and not ALLSTOP):
-            dbcursor.execute("INSERT INTO MCDrone (Host,StartTime,Status) VALUES ('"+str(socket.gethostname())+"', NOW(), 'Running' )")
-            dbcnx.commit()
-            queryoverlords="SELECT MAX(ID) FROM MCDrone;"
-            dbcursor.execute(queryoverlords)
-            lastid = dbcursor.fetchall()
+        print("number of running processes",int(numprocesses_running))
+        if( (int(numprocesses_running) < 2 or numOverRide) and not ALLSTOP):
+                print("RUNNING")
+                dbcursor.execute("INSERT INTO MCDrone (Host,StartTime,Status) VALUES ('"+str(socket.gethostname())+"', NOW(), 'Running' )")
+                dbcnx.commit()
+                queryoverlords="SELECT MAX(ID) FROM MCDrone;"
+                dbcursor.execute(queryoverlords)
+                lastid = dbcursor.fetchall()
             
-            try:
-                DroneDo(lastid[0]["MAX(ID)"])
-                dbcursor.execute("UPDATE MCDrone SET EndTime=NOW(), Status='Success' where ID="+str(lastid[0]["MAX(ID)"]))
-                dbcnx.commit()
-            except Exception as e:
-                print(e)
-                dbcursor.execute("UPDATE MCDrone SET Status='Fail' where ID="+str(lastid[0]["MAX(ID)"]))
-                dbcnx.commit()
-                pass
+                try:
+                        print("TRYING")
+                        DroneDo(lastid[0]["MAX(ID)"])
+                        dbcursor.execute("UPDATE MCDrone SET EndTime=NOW(), Status='Success' where ID="+str(lastid[0]["MAX(ID)"]))
+                        dbcnx.commit()
+                except Exception as e:
+                        print(e)
+                        dbcursor.execute("UPDATE MCDrone SET Status='Fail' where ID="+str(lastid[0]["MAX(ID)"]))
+                        dbcnx.commit()
+                        pass
 
 
-        dbcnx.close()
+                dbcnx.close()
               
 if __name__ == "__main__":
    main(sys.argv[1:])

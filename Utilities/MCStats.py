@@ -124,7 +124,7 @@ def getUserProjectPercent():
 
         #plt.annotate(label, xy=(x,y), rotation=angle, ha=ha, va=va, size=8)
 
-    plt.show()
+    #plt.show()
 
 def getAttemptsTimes():
     query= "SELECT UNIX_TIMESTAMP(Start_Time),UNIX_TIMESTAMP(Completed_Time) From Attempts;"
@@ -140,7 +140,7 @@ def getAttemptsTimes():
     fig, ax = plt.subplots(1,1)
     
     ax.hist(wallTimes, bins=50, color='lightblue')
-    plt.show()
+    #plt.show()
 
 def getStartAndLength():
     query= "SELECT UNIX_TIMESTAMP(Start_Time),CPUTime From Attempts where CPUTime != 0;"
@@ -155,16 +155,16 @@ def getStartAndLength():
 
 
     print(totaltime)
-    fig, ax = plt.subplots(1,1)
+    #fig, ax = plt.subplots(1,1)
     
-    ax.hist(Starttimes, bins=6, color='lightblue')
-    plt.show()
+    #ax.hist(Starttimes, bins=6, color='lightblue')
+    #plt.show()
 
 def main(argv):
     getTotalSizeOut()
-    getUserProjectPercent()
-    getAttemptsTimes()
-    getStartAndLength()
+    #getUserProjectPercent()
+    #getAttemptsTimes()
+    #getStartAndLength()
         
         
     conn.close()

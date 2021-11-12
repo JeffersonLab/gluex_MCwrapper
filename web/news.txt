@@ -1,3 +1,0 @@
-INFO
-NEWS TICKER
-The MCwrapper universe will soon contain a news ticker.  Look for it for information related to jobs, or scheduled downtime and the like

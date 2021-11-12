@@ -53,7 +53,8 @@ except:
         pass
 
 def DroneDo():
-        MCWRAPPER_BOT_HOME="/u/group/halld/gluex_MCwrapper/"
+        MCWRAPPER_BOT_HOME="/scigroup/mcwrapper/gluex_MCwrapper/"
+        print(MCWRAPPER_BOT_HOME+"/Utilities/MCMover.csh")
         retcode=subprocess.check_output([MCWRAPPER_BOT_HOME+"/Utilities/MCMover.csh"],shell=True)
         print(retcode)
 
