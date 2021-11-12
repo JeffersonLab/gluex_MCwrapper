@@ -48,7 +48,7 @@ except:
         pass
 
 MCWRAPPER_VERSION="2.6.0"
-MCWRAPPER_DATE="10/25/21"
+MCWRAPPER_DATE="11/12/21"
 
 #group sync test
 #====================================================
@@ -256,6 +256,7 @@ def  condor_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, 
         elif int(PROJECT_ID) < 0:
                 recordAttempt(abs(int(PROJECT_ID)),RUNNO,FILENUM,"Condor",SWIF_ID_NUM,COMMAND['num_events'],NCORES,"UnSet")
 
+
 #====================================================
 #Takes in a few pertinant pieces of info.  Submits to the OSG
 #This involves a lot of string manipulation first to remap the passed locations to /srv/
@@ -264,6 +265,7 @@ def  condor_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, 
 #if project ID == 0 then it is neither and just scrape the batch_ID....do nothing.  Note: this scheme requires the first id in the tables to be 1 and not 0)
 #====================================================
 def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID,bundled ):
+        
         ship_random_triggers=False
         STUBNAME=""
         if(COMMAND['custom_tag_string'] != "I_dont_have_one"):

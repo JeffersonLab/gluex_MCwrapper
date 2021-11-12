@@ -152,10 +152,10 @@ def checkProjectsForCompletion(comp_assignment):
         #print cpt
         #print(proj)
         
-        print("Files to move:",files)
+        #print("Files to move:",files)
         #DISTINCT ID ------in query below
         TOTCompletedQuery ="SELECT * From Jobs inner join Attempts on Attempts.job_id = Jobs.id WHERE Project_ID="+str(proj['ID'])+" && IsActive=1 and Attempts.ExitCode = 0 && (Attempts.Status ='4' || Attempts.Status='succeeded') && Attempts.ExitCode IS NOT NULL and Attempts.id = (select max(id) from Attempts Attempts2 where Attempts2.job_id = Jobs.id);"
-  #"SELECT * From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1 && ID in (SELECT DISTINCT Job_ID FROM Attempts WHERE ExitCode = 0 && (Status ='4' || Status='succeeded')  && ExitCode rIS NOT NULL ORDER BY ID DESC LIMIT 1);" 
+        #"SELECT * From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1 && ID in (SELECT DISTINCT Job_ID FROM Attempts WHERE ExitCode = 0 && (Status ='4' || Status='succeeded')  && ExitCode rIS NOT NULL ORDER BY ID DESC LIMIT 1);" 
         dbcursor_comp.execute(TOTCompletedQuery)
         fulfilledJobs=dbcursor_comp.fetchall()
         #print(fulfilledJobs)
@@ -178,20 +178,26 @@ def checkProjectsForCompletion(comp_assignment):
                 STANDARD_NAME=proj['Generator']+'_'+STANDARD_NAME
             #print(STANDARD_NAME)
 
+            #check if postprocessor is being run
+            postproc_append=""
+            #print(proj)
+            if(proj['GenPostProcessing'] != None):
+                postproc_append="_"+proj['GenPostProcessing'].split(":")[0]
+
             Expected_returned_files=[]
             
             if(str(proj['RunGeneration'])=="1" and str(proj['SaveGeneration'])=="1"):
-                Expected_returned_files.append(STANDARD_NAME+".hddm")
+                Expected_returned_files.append(STANDARD_NAME+postproc_append+".hddm")
 
             if(str(proj['RunGeant'])=="1" and str(proj['SaveGeant'])=="1"):
-                Expected_returned_files.append(STANDARD_NAME+'_geant'+str(proj['GeantVersion'])+'.hddm')
+                Expected_returned_files.append(STANDARD_NAME+'_geant'+str(proj['GeantVersion'])+postproc_append+'.hddm')
 
             if(str(proj['RunSmear'])=="1" and str(proj['SaveSmear'])=="1"):
-                Expected_returned_files.append(STANDARD_NAME+'_geant'+str(proj['GeantVersion'])+'_smeared.hddm')
+                Expected_returned_files.append(STANDARD_NAME+'_geant'+str(proj['GeantVersion'])+'_smeared'+postproc_append+'.hddm')
             
             if(str(proj['RunReconstruction'])=="1" and str(proj['SaveReconstruction'])=="1"):
-                Expected_returned_files.append('dana_rest_'+STANDARD_NAME+'.hddm')
-                Expected_returned_files.append('hd_root_'+STANDARD_NAME+'.root')
+                Expected_returned_files.append('dana_rest_'+STANDARD_NAME+postproc_append+'.hddm')
+                Expected_returned_files.append('hd_root_'+STANDARD_NAME+postproc_append+'.root')
             
             found_AllexpFile=True
 
@@ -581,7 +587,12 @@ def checkOSG(Jobs_List):
             
             statuscommand="condor_q "+str(job["BatchJobID"])+" -json"
             #print("Checking status:",statuscommand)
-            jsonOutputstr=subprocess.check_output(statuscommand.split(" "))
+            try:
+                jsonOutputstr=subprocess.check_output(statuscommand.split(" "))
+            except Exception as e:
+                print("Error:",statuscommand)
+                print("Error:",e)
+                continue
             #print "================"
             #print(jsonOutputstr)
             #print "================"
@@ -657,14 +668,24 @@ def checkOSG(Jobs_List):
 
 
                 #print updatejobstatus
-                dbcursorOSG.execute(updatejobstatus)
-                dbcnxOSG.commit()
+                try:
+                    dbcursorOSG.execute(updatejobstatus)
+                    dbcnxOSG.commit()
+                except Exception as e:
+                    print("Error:",updatejobstatus)
+                    print("Error:",e)
+                    continue
             else:
                 #print "looking up history"
                 #print(str(os.getpid())+" condor_history")
                 historystatuscommand="condor_history -limit 1 "+str(job["BatchJobID"])+" -json"
                 print(historystatuscommand)
-                jsonOutputstr=subprocess.check_output(historystatuscommand.split(" "))
+                try:
+                    jsonOutputstr=subprocess.check_output(historystatuscommand.split(" "))
+                except Exception as e:
+                    print("Error:",historystatuscommand)
+                    print("Error:",e)
+                    continue
                 #historystatuscommand_exitcode ="condor_history -limit 1 "+str(job["BatchJobID"])+" -json | grep Exit"
                 #exitCode_out=subprocess.check_output(historystatuscommand_exitcode.split(" "))
                
@@ -854,8 +875,8 @@ def array_split(lst,n):
 def main(argv):
 
         runnum=0
-        runmax=1
-        spawnNum=1#10
+        runmax=-1
+        spawnNum=10
         numOverRide=False
 
         if(len(argv) !=0):
@@ -889,9 +910,11 @@ def main(argv):
                             time.sleep(random.randint(1,spawnNum))
                             print("block "+str(i))
                             print(len(Monitoring_assignments[i]))
-                            p=Process(target=checkOSG,args=(Monitoring_assignments[i],))
-                            p.daemon = True
-                            spawns.append(p)
+                            if(len(Monitoring_assignments[i]) !=0 ):
+                                p=Process(target=checkOSG,args=(Monitoring_assignments[i],))
+                                p.daemon = True
+                                spawns.append(p)
+                            
 
                             #p.join()
 

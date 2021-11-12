@@ -82,6 +82,9 @@ def WritePayloadConfig(order,foundConfig,batch_system):
             subprocess.call(scp_order,shell=True)
             MCconfig_file.write("GENERATOR_CONFIG="+str(location)+"\n")
 
+    if order["GenPostProcessing"] != None and order["GenPostProcessing"] != "":
+        MCconfig_file.write("GENERATOR_POSTPROCESS="+str(order["GenPostProcessing"])+"\n")
+
     MCconfig_file.write("GEANT_VERSION="+str(order["GeantVersion"])+"\n")
     MCconfig_file.write("NOSECONDARIES="+str(abs(order["GeantSecondaries"]-1))+"\n")
     MCconfig_file.write("BKG="+str(order["BKG"])+"\n")

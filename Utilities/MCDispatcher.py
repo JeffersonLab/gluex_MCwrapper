@@ -18,7 +18,8 @@ try:
     import smtplib                                                                                                                                                                          
     from email.message import EmailMessage
     from multiprocessing import Process, Queue
-except:
+except Exception as e:
+    print("ERROR:",e)
     pass
 
 
@@ -1029,8 +1030,10 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
     if str(order["GenFlux"]) == "cobrems":
         MCconfig_file.write("FLUX_TO_GEN=cobrems"+"\n")
 
-    if order["CoherentPeak"] is not None :
+    if(order["CoherentPeak"] != None):
         MCconfig_file.write("COHERENT_PEAK="+str(order["CoherentPeak"])+"\n")
+    else:
+        MCconfig_file.write("COHERENT_PEAK=rcdb"+"\n")
 
     if str(order["Generator"]) == "file:":
         if foundConfig == "True":
@@ -1045,11 +1048,46 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
         else:
             MCconfig_file.write("GENERATOR_CONFIG="+foundConfig+"\n")
 
+    if(order["GenPostProcessing"] != None and order["GenPostProcessing"] != ""):
+        fileError=False
+        parseGenPostProcessing=order["GenPostProcessing"].split(":")
+        newGenPost_str=parseGenPostProcessing[0]
+        
+        for i in range(1,len(parseGenPostProcessing)):
+            if parseGenPostProcessing[i] != "Default":
+                print("scp "+"tbritton@ifarm1801-ib:"+parseGenPostProcessing[i]+" "+"/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_genpost_"+str(i)+".config")
+                subprocess.call("scp "+"tbritton@ifarm1801-ib:"+parseGenPostProcessing[i]+" "+"/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_genpost_"+str(i)+".config", shell=True)
+                if( os.path.exists("/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_genpost_"+str(i)+".config")):
+                    newGenPost_str+=":/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_genpost_"+str(i)+".config"
+                else:
+                    print("Error:",parseGenPostProcessing[i] ,"not found")
+                    fileError=True
+            else:
+                newGenPost_str+=":Default"
 
-    if(order["CoherentPeak"] != None):
-        MCconfig_file.write("COHERENT_PEAK="+str(order["CoherentPeak"])+"\n")
-    else:
-        MCconfig_file.write("COHERENT_PEAK=rcdb"+"\n")
+        if fileError==False:
+            #update database genpost
+            update_str="UPDATE Project SET GenPostProcessing='"+newGenPost_str+"' WHERE ID="+str(order["ID"])
+            print(update_str)
+            curs.execute(update_str)
+            conn.commit()
+        else:
+            print("Could not find one or more generator post processing files!")
+            msg = EmailMessage()
+            msg.set_content("Could not test the project because MCwrapper-bot could not copy the following file: "+jana_config_file+"\n This may be do to a lack of permissions for tbritton to read from the containing directory or the file itself may not exist.\n Shortly you will receive a second email that the actual test has failed, please use the link contained in the second email to correct this problem.")
+
+            # me == the sender's email address                                                                                                                                                                                 
+            # you == the recipient's email address                                                                                                                                                                             
+            msg['Subject'] = 'GlueX MC Request #'+str(order['ID'])+' Could not be tested properly'
+            msg['From'] = 'MCwrapper-bot'
+            msg['To'] = str(order['Email'])
+
+            # Send the message via our own SMTP server.                                                                                                                                                                        
+            s = smtplib.SMTP('localhost')
+            s.send_message(msg)
+            s.quit()
+            pass
+        MCconfig_file.write("GENERATOR_POSTPROCESS="+str(newGenPost_str)+"\n")
 
 
     MCconfig_file.write("GEANT_VERSION="+str(order["GeantVersion"])+"\n")
@@ -1231,6 +1269,10 @@ def WritePayloadConfigString(order,foundConfig):
         config_str+="COHERENT_PEAK="+str(order["CoherentPeak"])+"\n"
     else:
         config_str+="COHERENT_PEAK=rcdb"+"\n"
+
+    if(order["GenPostProcessing"] != None and order["GenPostProcessing"] != ""):
+        config_str+="GEN_POST_PROCESSING="+str(order["GenPostProcessing"])+"\n"
+    
 
     config_str+="GEANT_VERSION="+str(order["GeantVersion"])+"\n"
     config_str+="NOSECONDARIES="+str(abs(order["GeantSecondaries"]-1))+"\n"
