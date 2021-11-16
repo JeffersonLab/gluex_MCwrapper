@@ -47,8 +47,8 @@ try:
 except:
         pass
 
-MCWRAPPER_VERSION="2.6.0"
-MCWRAPPER_DATE="11/12/21"
+MCWRAPPER_VERSION="2.6.1"
+MCWRAPPER_DATE="11/16/21"
 
 #group sync test
 #====================================================
@@ -1090,14 +1090,14 @@ def main(argv):
                         GENPOST=WHOLEPOST_PARTS[0]
 
                         if(len(WHOLEPOST_PARTS)==2):
-                                GENPOSTCONFIG="default" if WHOLEPOST_PARTS[1].lower()=="default" else WHOLEPOST_PARTS[1]
+                                GENPOSTCONFIG="Default" if WHOLEPOST_PARTS[1].lower()=="default" else WHOLEPOST_PARTS[1]
                         elif(len(WHOLEPOST_PARTS)==3):
-                                GENPOSTCONFIG="default" if WHOLEPOST_PARTS[1].lower()=="default" else WHOLEPOST_PARTS[1]
-                                GENPOSTCONFIGEVT="default" if WHOLEPOST_PARTS[2].lower()=="default" else WHOLEPOST_PARTS[2]
+                                GENPOSTCONFIG="Default" if WHOLEPOST_PARTS[1].lower()=="default" else WHOLEPOST_PARTS[1]
+                                GENPOSTCONFIGEVT="Default" if WHOLEPOST_PARTS[2].lower()=="default" else WHOLEPOST_PARTS[2]
                         elif(len(WHOLEPOST_PARTS)==4):
-                                GENPOSTCONFIG="default" if WHOLEPOST_PARTS[1].lower()=="default" else WHOLEPOST_PARTS[1]
-                                GENPOSTCONFIGEVT="default" if WHOLEPOST_PARTS[2].lower()=="default" else WHOLEPOST_PARTS[2]
-                                GENPOSTCONFIGDEC="default" if WHOLEPOST_PARTS[3].lower()=="default" else WHOLEPOST_PARTS[3]
+                                GENPOSTCONFIG="Default" if WHOLEPOST_PARTS[1].lower()=="default" else WHOLEPOST_PARTS[1]
+                                GENPOSTCONFIGEVT="Default" if WHOLEPOST_PARTS[2].lower()=="default" else WHOLEPOST_PARTS[2]
+                                GENPOSTCONFIGDEC="Default" if WHOLEPOST_PARTS[3].lower()=="default" else WHOLEPOST_PARTS[3]
                         elif(len(WHOLEPOST_PARTS)==1):
                                 GENPOST=WHOLEPOST
 

@@ -181,7 +181,7 @@ def checkProjectsForCompletion(comp_assignment):
             #check if postprocessor is being run
             postproc_append=""
             #print(proj)
-            if(proj['GenPostProcessing'] != None):
+            if(proj['GenPostProcessing'] != None and proj['GenPostProcessing'] != ""):
                 postproc_append="_"+proj['GenPostProcessing'].split(":")[0]
 
             Expected_returned_files=[]
