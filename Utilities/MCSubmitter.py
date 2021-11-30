@@ -2,6 +2,7 @@
 import MySQLdb
 import sys
 import datetime
+import time
 import os.path
 from optparse import OptionParser
 import subprocess
@@ -128,10 +129,17 @@ def WritePayloadConfig(order,foundConfig,batch_system):
 
 def SubmitList(SubList,job_IDs_submitted):
     print("Submitting SubList")
-    for row in SubList:
+    row_index=0
+    list_to_Submit=list(SubList)
+    #print("element 0 is "+str(list_to_Submit[0]))
+    print("Submitting >= "+str(len(list_to_Submit))+" jobs")
+    while row_index < len(list_to_Submit):
+        print("on row "+str(row_index),"out of",str(len(list_to_Submit)))
+    #for row in SubList:
         #print("Row",row)
-                
+        row=list_to_Submit[row_index]
         if row['ID'] in job_IDs_submitted:
+            row_index+=1
             continue
 
         bundled=False
@@ -193,8 +201,33 @@ def SubmitList(SubList,job_IDs_submitted):
         for job in alljobs:
             job_IDs_submitted.append(job['ID'])
         
-        if(bundled):
-            break
+        print("Submitted",job_IDs_submitted)
+        
+        #remove all jobs from list in bundle
+        copy_of_list_to_Submit=list_to_Submit.copy()
+        print("length of list to submit",len(copy_of_list_to_Submit))
+        iter_index=0
+        for job in copy_of_list_to_Submit:
+            #print("on index",iter_index)
+            #print("job",job)
+            if job['ID'] in job_IDs_submitted:
+                #print(list_to_Submit.index(job))
+                index=list_to_Submit.index(job)
+                #print("removing",index)
+                list_to_Submit.pop(index)
+                row_index=-1
+                #SubList.remove(job)
+            #else:
+            #    print(iter_index,"not in list")
+            #print("modifying indexes")
+            iter_index+=1
+            
+            #print("done modifying indexes")
+
+        #exit(1)
+        row_index+=1
+        #if(bundled):
+        #    break
 
 def decideSystem(row):
 
@@ -278,12 +311,16 @@ def main(argv):
         lastid = curs.fetchall()
         try:    
             while more_sub:# and int_i<1:
+                #sleep 1 second
+                #time.sleep(1)
+                
                 rows=[]
                 int_i+=1
                 print("=============================================================")
-                query = "SELECT UName,RunNumber,FileNumber,Tested,NumEvts,BKG,Notified,Jobs.ID,Project_ID,Priority,IsActive from Jobs,Project,Users where Tested=1 && Notified is NULL && IsActive=1 && Jobs.ID not in (Select Job_ID from Attempts) and Project_ID = Project.ID and Uname = name order by Priority desc limit "+str(Block_size)
+                query="SELECT UName,RunNumber,FileNumber,Tested,NumEvts,BKG,Notified,Jobs.ID,Project_ID,Priority,IsActive from Jobs,Project,Users where Tested=1 && Notified is NULL && IsActive=1 && Jobs.ID not in (Select Job_ID from Attempts) and Project_ID = Project.ID and Users.id = Project.user_id order by Priority desc limit "+str(Block_size)+";"
+                #query = "SELECT UName,RunNumber,FileNumber,Tested,NumEvts,BKG,Notified,Jobs.ID,Project_ID,Priority,IsActive from Jobs,Project,Users where Tested=1 && Notified is NULL && IsActive=1 && Jobs.ID not in (Select Job_ID from Attempts) and Project_ID = Project.ID and Users.id = Project.user_id order by Priority desc limit "+str(Block_size)
                 if(Block_size==1):
-                    query = "SELECT UName,RunNumber,FileNumber,Tested,NumEvts,BKG,Notified,Jobs.ID,Project_ID,Priority from Jobs,Project,Users where Tested=1 && Notified is NULL && Jobs.ID not in (Select Job_ID from Attempts) and Project_ID = Project.ID and Uname = name order by Project_ID desc" #Priority desc"
+                    query ="SELECT UName,RunNumber,FileNumber,Tested,NumEvts,BKG,Notified,Jobs.ID,Project_ID,Priority,IsActive from Jobs,Project,Users where Tested=1 && Notified is NULL && IsActive=1 && Jobs.ID not in (Select Job_ID from Attempts) and Project_ID = Project.ID and Users.id = Project.user_id order by Priority desc;"
 
                 
                 print("Query:", query)

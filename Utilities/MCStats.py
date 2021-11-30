@@ -69,7 +69,7 @@ def getTotalSizeOut():
     print(sum/1000000000000)
     print("T")
 
-def getUserProjectPercent():
+def getUserProjectPercent(graph=True):
     query= "SELECT UName From Project;"
     curs.execute(query) 
     rows=curs.fetchall()
@@ -93,7 +93,7 @@ def getUserProjectPercent():
             userlist.append(proj['UName']+"_1")
 
     print(userlist)
-
+    proj_sum=0
     sizes=[]
     labels=[]
     for user in userlist:
@@ -101,30 +101,35 @@ def getUserProjectPercent():
         print(userparse[0]+" | "+str(float(userparse[1])))#/float(sum))
         sizes.append(userparse[1])
         labels.append(userparse[0])
+        proj_sum+=float(userparse[1])
 
-    fig1, ax1 = plt.subplots()
-    l = ax1.pie(sizes, labels=labels, autopct='%1.1f%%',shadow=True, startangle=90, radius=10000,labeldistance=1.1) #labels=labels, plt.legend(patches, labels, loc='left center', bbox_to_anchor=(-0.1, 1.),fontsize=8)
-    ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+    print(len(userlist),proj_sum)
 
-    for label, t in zip(labels, l[1]):
-        x, y = t.get_position()
-        angle = int(math.degrees(math.atan2(y, x)))
-        ha = "left"
-        va = "bottom"
 
-        if angle > 90:
-            angle -= 180
+    if graph:
+        fig1, ax1 = plt.subplots()
+        l = ax1.pie(sizes, labels=labels, autopct='%1.1f%%',shadow=True, startangle=90, radius=10000,labeldistance=1.1) #labels=labels, plt.legend(patches, labels, loc='left center', bbox_to_anchor=(-0.1, 1.),fontsize=8)
+        ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
 
-        if angle < 0:
-            va = "top"
-
-        if -45 <= angle <= 0:
-            ha = "right"
+        for label, t in zip(labels, l[1]):
+            x, y = t.get_position()
+            angle = int(math.degrees(math.atan2(y, x)))
+            ha = "left"
             va = "bottom"
 
-        #plt.annotate(label, xy=(x,y), rotation=angle, ha=ha, va=va, size=8)
+            if angle > 90:
+                angle -= 180
 
-    #plt.show()
+            if angle < 0:
+                va = "top"
+
+            if -45 <= angle <= 0:
+                ha = "right"
+                va = "bottom"
+
+            #plt.annotate(label, xy=(x,y), rotation=angle, ha=ha, va=va, size=8)
+
+        #plt.show()
 
 def getAttemptsTimes():
     query= "SELECT UNIX_TIMESTAMP(Start_Time),UNIX_TIMESTAMP(Completed_Time) From Attempts;"
@@ -161,8 +166,8 @@ def getStartAndLength():
     #plt.show()
 
 def main(argv):
-    getTotalSizeOut()
-    #getUserProjectPercent()
+    #getTotalSizeOut()
+    getUserProjectPercent(False)
     #getAttemptsTimes()
     #getStartAndLength()
         

@@ -167,7 +167,7 @@ def checkProjectsForCompletion(comp_assignment):
         rootLoc=proj['OutputLocation'].split("REQUESTED_MC")[1]#.replace("/","")
         nullify_list=[]
         
-        print("CHECKING FILES")
+        print("CHECKING FILES",proj['ID'])
         for job in fulfilledJobs:
             #print("Data already Verified?",job['DataVerified'])
             if(job['DataVerified'] !=0 ):

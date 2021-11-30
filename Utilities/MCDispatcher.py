@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 try:
     import rcdb
-except:
+except Exception as e:
+    print("IMPORT ERROR:",e)
     pass
 import MySQLdb
 import sys
@@ -632,7 +633,7 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
 
     #if output=="Dispatch_Failure" and errors=="Dispatch_Failure":
     #    status=[output,STATUS,errors]
-
+    print("status:",status)
     if(status[1]!=-1):
         #print "TEST success"
         #EMAIL SUCCESS AND DISPATCH
@@ -772,7 +773,16 @@ def TestProject(ID,versionSet,commands_to_call=""):
         #RunNumber=str(runList[0][0])
 
         RunNumber=str(order["RunNumLow"])#str(runList[0][0])
-    
+        try:
+            runList=rcdb_db.select_runs(str(query_to_do),order["RunNumLow"],order["RunNumHigh"]).get_values(['event_count'],True)
+            print("RunList:",runList)
+            RunNumber=str(runList[0][0])#str(order["RunNumLow"])
+        except Exception as e:
+            print(e)
+            output=e
+            errors=e
+            RunNumber=-1
+            pass    
 
     #if order["RunNumLow"] != order["RunNumHigh"] :
     #    RunNumber = RunNumber + "-" + str(order["RunNumHigh"])
@@ -1048,23 +1058,35 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
         else:
             MCconfig_file.write("GENERATOR_CONFIG="+foundConfig+"\n")
 
+    print("post genconfig!",order["GenPostProcessing"])
+    
     if(order["GenPostProcessing"] != None and order["GenPostProcessing"] != ""):
         fileError=False
         parseGenPostProcessing=order["GenPostProcessing"].split(":")
         newGenPost_str=parseGenPostProcessing[0]
-        
+        print("newGenPost_str",newGenPost_str)
         for i in range(1,len(parseGenPostProcessing)):
+            print("parseGenPostProcessing[i]",parseGenPostProcessing[i])
             if parseGenPostProcessing[i] != "Default":
                 print("scp "+"tbritton@ifarm1801-ib:"+parseGenPostProcessing[i]+" "+"/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_genpost_"+str(i)+".config")
-                subprocess.call("scp "+"tbritton@ifarm1801-ib:"+parseGenPostProcessing[i]+" "+"/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_genpost_"+str(i)+".config", shell=True)
+                try:
+                    subprocess.call("scp "+"tbritton@ifarm1801-ib:"+parseGenPostProcessing[i]+" "+"/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_genpost_"+str(i)+".config", shell=True)
+                except Exception as e:
+                    print("Error:",e)
+                    pass
+
+                print("checking for config file:","/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_genpost_"+str(i)+".config")
                 if( os.path.exists("/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_genpost_"+str(i)+".config")):
                     newGenPost_str+=":/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_genpost_"+str(i)+".config"
+                    fileError=False
                 else:
                     print("Error:",parseGenPostProcessing[i] ,"not found")
                     fileError=True
             else:
                 newGenPost_str+=":Default"
-
+       
+        print("file Error:",fileError)
+        #exit(1)
         if fileError==False:
             #update database genpost
             update_str="UPDATE Project SET GenPostProcessing='"+newGenPost_str+"' WHERE ID="+str(order["ID"])
@@ -1074,7 +1096,7 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
         else:
             print("Could not find one or more generator post processing files!")
             msg = EmailMessage()
-            msg.set_content("Could not test the project because MCwrapper-bot could not copy the following file: "+jana_config_file+"\n This may be do to a lack of permissions for tbritton to read from the containing directory or the file itself may not exist.\n Shortly you will receive a second email that the actual test has failed, please use the link contained in the second email to correct this problem.")
+            msg.set_content("Could not test the project because MCwrapper-bot could not copy the following file: "+parseGenPostProcessing[i]+"\n This may be do to a lack of permissions for tbritton to read from the containing directory or the file itself may not exist.\n Shortly you will receive a second email that the actual test has failed, please use the link contained in the second email to correct this problem.")
 
             # me == the sender's email address                                                                                                                                                                                 
             # you == the recipient's email address                                                                                                                                                                             
@@ -1086,7 +1108,11 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
             s = smtplib.SMTP('localhost')
             s.send_message(msg)
             s.quit()
-            pass
+
+            update_status_query="UPDATE Project SET Tested=-1 WHERE ID="+str(order["ID"])
+            curs.execute(update_status_query)
+            conn.commit()
+            return
         MCconfig_file.write("GENERATOR_POSTPROCESS="+str(newGenPost_str)+"\n")
 
 
