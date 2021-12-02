@@ -409,11 +409,14 @@ def CancelJob(ID):
 def CheckGenConfig(order):
     ID=order["ID"]
     print("checking/getting the generator config for project:",str(ID))
-    fileSTR=order["Generator_Config"].lstrip()
+    fileSTR=order["Generator_Config"].strip()
     file_split=fileSTR.split("/")
     name=file_split[len(file_split)-1]
     #print name
     #print(fileSTR)
+    #print("looking for generator config:",fileSTR)
+    #print("os.path.isfile("+fileSTR+")")
+    #print("is file:",os.path.isfile(fileSTR))
     copyTo="/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"
     if(os.path.isfile(fileSTR)==False and (socket.gethostname() == "scosg16.jlab.org" or socket.gethostname() == "scosg20.jlab.org") ):
         print("File not found and on submit node")

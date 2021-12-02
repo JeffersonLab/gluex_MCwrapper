@@ -285,7 +285,7 @@ def decideSystem(row):
 def main(argv):
     #print(argv)
 
-    Block_size=500
+    Block_size=1000
     int_i=0
     more_sub=True
     rows=[]
