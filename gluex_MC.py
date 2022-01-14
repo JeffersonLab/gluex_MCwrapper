@@ -48,7 +48,7 @@ except:
         pass
 
 MCWRAPPER_VERSION="2.6.1"
-MCWRAPPER_DATE="11/16/21"
+MCWRAPPER_DATE="01/14/22"
 
 #group sync test
 #====================================================
@@ -403,7 +403,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
         f=open('MCOSG_'+str(PROJECT_ID)+'.submit','w')
         f.write("universe = vanilla"+"\n")
         f.write("Executable = "+os.environ.get('MCWRAPPER_CENTRAL')+"/osg-container.sh"+"\n")
-        f.write('+Project = "gluex"'+"\n")
+        f.write('+ProjectName = "gluex"'+"\n")
         #f.write("Arguments  = "+SCRIPT_TO_RUN+" "+COMMAND+"\n")
         f.write("Arguments  = "+"./"+script_to_use+" "+getCommandString(COMMAND_parts,"OSG",numJobsInBundle)+"\n")
         f.write("Requirements = (HAS_SINGULARITY == TRUE) && (HAS_CVMFS_oasis_opensciencegrid_org == True)"+"\n")
@@ -412,6 +412,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
         #f.write('wantjobrouter=true'+"\n")
         f.write('+SingularityImage = "/cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest"'+"\n")
         f.write('+SingularityBindCVMFS = True'+"\n")
+        f.write('+UNDESIRED_Sites = "Purdue-Geddes"'+"\n")
         f.write('+SingularityAutoLoad = True'+"\n")
 #        f.write('+CVMFSReposList = "oasis.opensciencegrid.org"'+"\n")
 #        f.write('+DesiredSites="UConn"'+"\n")

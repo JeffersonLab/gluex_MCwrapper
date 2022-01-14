@@ -1317,7 +1317,7 @@ if [[ "$GENERATOR_POST" != "No" ]]; then
 fi
 
 
-    if [[ "$GEANT" != "0" ]]; then
+if [[ "$GEANT" != "0" ]]; then
 	echo "RUNNING GEANT"$GEANTVER
 
 	if [[ `echo $eBEAM_ENERGY | grep -o "\." | wc -l` == 0 ]]; then
@@ -1467,7 +1467,8 @@ fi
 if [[ "$GENERATOR" == "geantBEAM" ]]; then
   	echo "SKIP RUNNING MCSMEAR AND RECONSTRUCTION"
 else
-	if [[ !("$GENR" == "0" && "$GEANT" == "0" && "$SMEAR" == "0") ]]; then
+	#check if config file ends in .evio to decide whether or not smear needs to be run for conversion of simulation for reconstruction
+	if [[ !("$GENR" == "0" && "$GEANT" == "0" && "$SMEAR" == "0" && "$CONFIG_FILE" != *.evio ) ]]; then
 	echo "RUNNING MCSMEAR"
 	if [[ "$GENR" == "0" && "$GEANT" == "0" ]]; then
 		echo $GENERATOR
@@ -1572,6 +1573,7 @@ else
 		fi
 
 	fi
+
 	    if [[ "$RECON" != "0" ]]; then
 		echo "RUNNING RECONSTRUCTION"
 		file_to_recon=$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm'

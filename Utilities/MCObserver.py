@@ -149,7 +149,7 @@ def checkJobFilesForCompletion(comp_assignment):
 
         Expected_returned_files=[]
             
-        if(str(proj['RunGeneration'])=="1" and str(proj['SaveGeneration'])=="1"):
+        if(str(proj['RunGeneration'])=="1" and str(proj['SaveGeneration'])=="1" and str(proj['Generator'])!="particle_gun"):
             Expected_returned_files.append(STANDARD_NAME+postproc_append+".hddm")
 
         if(str(proj['RunGeant'])=="1" and str(proj['SaveGeant'])=="1"):

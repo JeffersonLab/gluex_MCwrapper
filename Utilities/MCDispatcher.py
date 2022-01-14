@@ -513,6 +513,7 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
 
         print(str(index)+":  "+"Wrote Payload")
         print("original RCDB QUERY:", order["RCDBQuery"])
+        query_to_do=order["RCDBQuery"]
         if(order["RunNumLow"] != order["RunNumHigh"]):
             query_to_do="@is_production and @status_approved"
 
@@ -590,14 +591,15 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
         f.write(command)
         f.close()
     
+
+        output="Error in rcdb query"
+        errors="Error in rcdb query:"+str(query_to_do)
         print("singularity exec --cleanenv --bind "+pwd+":"+pwd+" --bind /osgpool/halld/tbritton:/osgpool/halld/tbritton --bind /group/halld/:/group/halld/ --bind /scigroup/mcwrapper/gluex_MCwrapper:/scigroup/mcwrapper/gluex_MCwrapper /cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest /bin/sh "+pwd+"/TestProject_runscript_"+str(ID)+".sh")
         if RunNumber != -1:
             p = Popen("singularity exec --cleanenv --bind "+pwd+":"+pwd+" --bind /osgpool/halld/tbritton:/osgpool/halld/tbritton --bind /group/halld/:/group/halld/ --bind /scigroup/mcwrapper/gluex_MCwrapper:/scigroup/mcwrapper/gluex_MCwrapper /cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest /bin/sh "+pwd+"/TestProject_runscript_"+str(ID)+".sh", env=my_env ,stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True)
-    
-    #print p
-    #print "p defined"
             output, errors = p.communicate()
     
+
     #print [p.returncode,errors,output]
         output=str(output).replace('\\n', '\n')
         errors=str(errors).replace('\\n', '\n')
@@ -650,10 +652,11 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
         try:
             print("MAILING\n")
             msg = EmailMessage()
-
+            print(status[0])
+            print(status[2])
             msg.set_content('Your Project ID '+str(row['ID'])+' failed the test.  Please correct this issue by following the link: '+'https://halldweb.jlab.org/gluex_sim/SubmitSim.html?prefill='+str(row['ID'])+'&mod=1'+'.  Do NOT resubmit this request.  Write tbritton@jlab.org for additional assistance\n\n The log information is reproduced below:\n\n\n'+str(status[0])+'\n\n\nErrors:\n\n\n'+str(status[2]))
             print("SET CONTENT")
-            msg['Subject'] = 'Project ID #'+str(row['ID'])+' Failed to test properly'
+            msg['Subject'] = 'MC Project ID #'+str(row['ID'])+' Failed to test properly'
             print("SET SUB")
             msg['From'] = str('MCwrapper-bot')
             print("SET FROM")
@@ -730,15 +733,19 @@ def TestProject(ID,versionSet,commands_to_call=""):
     
         print("RCDB_QUERY IS: "+str(query_to_do))
         #print("run selecting currently broken.  RCDB: 'basestring' not defined.  Testing first runnumber only")
-        rcdbdb = rcdb.RCDBProvider("mysql://rcdb@hallddb.jlab.org/rcdb")
+        rcdb_db = rcdb.RCDBProvider("mysql://rcdb@hallddb.jlab.org/rcdb")
         try:
             print(str(query_to_do)+" | "+str(int(order["RunNumLow"]))+" | "+str(int(order["RunNumHigh"])))
+            runList=rcdb_db.select_runs(str(query_to_do),order["RunNumLow"],order["RunNumHigh"]).get_values(['event_count'],True)
+            print("RunList:",runList)
+            RunNumber=str(runList[0][0])
             #runtable = rcdbdb.select_runs(str(query_to_do),int(order["RunNumLow"]),int(order["RunNumHigh"])).get_values(['event_count'],True)
         
         
         except Exception as e:
-            print(e)
+            
             updatequery="UPDATE Project SET Tested=-1"+" WHERE ID="+str(ID)+";"
+            print(updatequery)
             curs.execute(updatequery)
             conn.commit()
         
@@ -747,7 +754,8 @@ def TestProject(ID,versionSet,commands_to_call=""):
             try:
                 print("MAILING\n")
                 msg = EmailMessage()
-
+                e="RCDB Query failed: "+str(query_to_do)+"\n"
+                print("Errors:",e)
                 msg.set_content('Your Project ID '+str(order['ID'])+' failed the test.  Please correct this issue by following the link: '+'https://halldweb.jlab.org/gluex_sim/SubmitSim.html?prefill='+str(order['ID'])+'&mod=1'+'.  Do NOT resubmit this request.  Write tbritton@jlab.org for additional assistance\n\n The log information is reproduced below:\n\n\n'+str("There was a problem with the RCDB query provided")+'\n\n\nErrors:\n\n\n'+str(e))
                 print("SET CONTENT")
                 msg['Subject'] = 'Project ID #'+str(order['ID'])+' Failed to test properly'
@@ -775,17 +783,18 @@ def TestProject(ID,versionSet,commands_to_call=""):
         
         #RunNumber=str(runList[0][0])
 
-        RunNumber=str(order["RunNumLow"])#str(runList[0][0])
-        try:
-            runList=rcdb_db.select_runs(str(query_to_do),order["RunNumLow"],order["RunNumHigh"]).get_values(['event_count'],True)
-            print("RunList:",runList)
-            RunNumber=str(runList[0][0])#str(order["RunNumLow"])
-        except Exception as e:
-            print(e)
-            output=e
-            errors=e
-            RunNumber=-1
-            pass    
+        
+        
+        #try:
+        #    runList=rcdb_db.select_runs(str(query_to_do),order["RunNumLow"],order["RunNumHigh"]).get_values(['event_count'],True)
+        #    print("RunList:",runList)
+        #    RunNumber=str(runList[0][0])#str(order["RunNumLow"])
+        #except Exception as e:
+        #    print(e)
+        #    output=e
+        #    errors=e
+        #    RunNumber=-1
+        #    pass    
 
     #if order["RunNumLow"] != order["RunNumHigh"] :
     #    RunNumber = RunNumber + "-" + str(order["RunNumHigh"])
@@ -1070,7 +1079,7 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
         print("newGenPost_str",newGenPost_str)
         for i in range(1,len(parseGenPostProcessing)):
             print("parseGenPostProcessing[i]",parseGenPostProcessing[i])
-            if parseGenPostProcessing[i] != "Default":
+            if parseGenPostProcessing[i].strip() != "Default":
                 print("scp "+"tbritton@ifarm1801-ib:"+parseGenPostProcessing[i]+" "+"/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_genpost_"+str(i)+".config")
                 try:
                     subprocess.call("scp "+"tbritton@ifarm1801-ib:"+parseGenPostProcessing[i]+" "+"/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_genpost_"+str(i)+".config", shell=True)

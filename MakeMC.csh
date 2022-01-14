@@ -1462,7 +1462,9 @@ endif
 		if ( "$GENERATOR" == "geantBEAM" ) then
 			echo "SKIP RUNNING MCSMEAR AND RECONSTRUCTION"
 		else
-		if ( !("$GENR" == "0" && "$GEANT" == "0" && "$SMEAR" == "0" ) ) then
+
+		#check if CONFIG_FILE ends with ".evio"
+		if ( !("$GENR" == "0" && "$GEANT" == "0" && "$SMEAR" == "0" && "$CONFIG_FILE" !~ ".evio" ) ) then
 		echo "RUNNING MCSMEAR"
 		if ( "$GENR" == "0" && "$GEANT" == "0" ) then
 		echo $GENERATOR
