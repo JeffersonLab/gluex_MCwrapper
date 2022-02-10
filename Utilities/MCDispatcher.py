@@ -419,7 +419,7 @@ def CheckGenConfig(order):
     #print("is file:",os.path.isfile(fileSTR))
     copyTo="/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"
     if(os.path.isfile(fileSTR)==False and (socket.gethostname() == "scosg16.jlab.org" or socket.gethostname() == "scosg20.jlab.org") ):
-        print("File not found and on submit node")
+        print("File not found and on submit node, attempting to copy to "+copyTo)
         #copyTo="/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"
         print("scp tbritton@ifarm1801-ib:"+fileSTR.lstrip()+" "+copyTo+str(ID)+"_"+name)
         subprocess.call("scp tbritton@ifarm1801-ib:"+fileSTR+" "+copyTo+str(ID)+"_"+name,shell=True)
