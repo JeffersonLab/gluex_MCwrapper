@@ -1035,6 +1035,7 @@ def main(argv):
         TRACK      = "simulation"     # https://scicomp.jlab.org/docs/batch_job_tracks
         ACCOUNT    = "halld"          # https://scicomp.jlab.org/scicomp/slurmJob/slurmAccount
         PARTITION  = "ifarm"          # https://scicomp.jlab.org/scicomp/slurmJob/slurmInfo
+        EXPERIMENT = "GlueX"          # GlueX or CPP
         CONDOR_MAGIC = []
         # RESOURCES for swif jobs
         NCORES     = "8"               # Number of CPU cores
@@ -1116,6 +1117,8 @@ def main(argv):
                         TRACK=rm_comments[0].strip()
                 elif str(parts[0]).upper()=="PARTITION" :
                         PARTITION=rm_comments[0].strip()
+                elif str(parts[0]).upper()=="EXPERIMENT" :
+                        EXPERIMENT=rm_comments[0].strip()
                 elif str(parts[0]).upper()=="NCORES" :
                         NCORES=rm_comments[0].strip()
                 elif str(parts[0]).upper()=="DISK" :
@@ -1284,6 +1287,8 @@ def main(argv):
                 else:
                         print( "unknown config parameter!! "+str(parts[0]))
 
+        if EXPERIMENT == "GlueX" and PROJECT != "gluex": #set EXPERIMENT if not set and not GlueX
+                EXPERIMENT = PROJECT
 
         LOG_DIR = DATA_OUTPUT_BASE_DIR  #set LOG_DIR=DATA_OUTPUT_BASE_DIR
         if(GENCONFIG==""):
@@ -1489,7 +1494,7 @@ def main(argv):
         COMMAND_dict['polarization_to_generate']=str(POL_TO_GEN)
         COMMAND_dict['polarization_histogram']=str(POL_HIST)
         COMMAND_dict['eBeam_current']=str(eBEAM_CURRENT)
-        COMMAND_dict['experiment']=str(PROJECT)
+        COMMAND_dict['experiment']=str(EXPERIMENT)
 
         COMMAND_dict['num_rand_trigs']=str(RANDOM_NUM_EVT)
         COMMAND_dict['location']=str(LOCATION)
