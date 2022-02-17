@@ -532,7 +532,15 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
             try:
                 runList=rcdb_db.select_runs(str(query_to_do),order["RunNumLow"],order["RunNumHigh"]).get_values(['event_count'],True)
                 print("RunList:",runList)
-                RunNumber=str(runList[0][0])#str(order["RunNumLow"])
+                #str(order["RunNumLow"])
+                if runList == [[]]:
+                    print("No runs found for this query")
+                    output="oh no!!!"
+                    errors="No runs found for this query"
+                    RunNumber=-1
+                else:
+                    RunNumber=str(runList[0][0])
+               
             except Exception as e:
                 print(e)
                 output=e
@@ -544,7 +552,7 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
     #if(order["ReactionLines"][0:5]=="file:")
     #if order["RunNumLow"] != order["RunNumHigh"] :
     #    RunNumber = RunNumber + "-" + str(order["RunNumHigh"])
-    
+        pwd=os.getcwd()
         if RunNumber != -1:
             cleangen=1
             if order["SaveGeneration"]==1:
@@ -562,7 +570,7 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
             if order["SaveReconstruction"]==1:
                 cleanrecon=0
 
-            pwd=os.getcwd()
+            
             command=MCWRAPPER_BOT_HOME+"/gluex_MC.py "+pwd+"/"+"MCDispatched_"+str(ID)+".config "+str(RunNumber)+" "+str(500)+" per_file=250000 base_file_number=0"+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=0 tobundle=0"
             print(command)
         
@@ -582,14 +590,17 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
     #    del my_env[""]
     #    my_env[absorbed[0]]=absorbed[1]
     #print(my_env)
-    
-        f=open('TestProject_runscript_'+str(ID)+'.sh','w')
-        f.write("#!/bin/bash -l"+"\n")
-        f.write("export SHELL=/bin/bash"+"\n")
-        f.write("source /group/halld/Software/build_scripts/gluex_env_jlab.sh /group/halld/www/halldweb/html/halld_versions/"+versionSet+"\n")
-        f.write("export MCWRAPPER_CENTRAL="+MCWRAPPER_BOT_HOME+"\n")
-        f.write(command)
-        f.close()
+        try:
+            f=open('TestProject_runscript_'+str(ID)+'.sh','w')
+            f.write("#!/bin/bash -l"+"\n")
+            f.write("export SHELL=/bin/bash"+"\n")
+            f.write("source /group/halld/Software/build_scripts/gluex_env_jlab.sh /group/halld/www/halldweb/html/halld_versions/"+versionSet+"\n")
+            f.write("export MCWRAPPER_CENTRAL="+MCWRAPPER_BOT_HOME+"\n")
+            f.write(command)
+            f.close()
+        except Exception as e:
+            print(e)
+            pass
     
 
         output="Error in rcdb query"

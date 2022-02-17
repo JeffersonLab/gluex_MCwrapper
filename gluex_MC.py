@@ -48,7 +48,7 @@ except:
         pass
 
 MCWRAPPER_VERSION="2.6.1"
-MCWRAPPER_DATE="01/14/22"
+MCWRAPPER_DATE="02/17/22"
 
 #group sync test
 #====================================================
@@ -1814,7 +1814,7 @@ def GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,RUNNUM):
                         dbcursor.execute(addquery)
                         dbcnx.commit()
                         print("COUNT: "+str(Count))
-                        os.system("rm /tmp/"+RANDBGTAG+"/run"+formattedRUNNUM)
+                        os.system("rm -f /tmp/"+RANDBGTAG+"/run"+formattedRUNNUM)
                         return Count
                 elif len(matches) == 1:
                         print("Matched a file!")
