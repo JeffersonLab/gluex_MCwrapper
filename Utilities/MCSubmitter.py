@@ -139,6 +139,7 @@ def SubmitList(SubList,job_IDs_submitted):
         #print("Row",row)
         row=list_to_Submit[row_index]
         if row['ID'] in job_IDs_submitted:
+            print("Job "+str(row['ID'])+" already submitted")
             row_index+=1
             continue
 

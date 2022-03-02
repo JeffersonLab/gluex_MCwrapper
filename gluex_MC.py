@@ -1814,7 +1814,7 @@ def GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,RUNNUM):
                         dbcursor.execute(addquery)
                         dbcnx.commit()
                         print("COUNT: "+str(Count))
-                        os.system("rm -f /tmp/"+RANDBGTAG+"/run"+formattedRUNNUM)
+                        os.system("rm -f /tmp/"+RANDBGTAG+"/run"+formattedRUNNUM+"_random.hddm")
                         return Count
                 elif len(matches) == 1:
                         print("Matched a file!")
