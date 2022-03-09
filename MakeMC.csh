@@ -644,6 +644,7 @@ if ( "$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" == "
 		endif
 	endif
 
+
   if ( ! -f $bkglocstring && "$MAKE_MC_USING_XROOTD" == "0" ) then
 		echo "something went wrong with initialization"
 		echo "Could not find mix-in file "$bkglocstring
@@ -1277,7 +1278,7 @@ if ( "$GENERATOR_POST" != "No" ) then
 	echo $GENERATOR_POST_CONFIG
 	echo $GENERATOR_POST_CONFIGEVT
 	echo $GENERATOR_POST_CONFIGDEC
-	if ( "$GENERATOR_POST_CONFIG" != "default" ) then
+	if ( "$GENERATOR_POST_CONFIG" != "Default" ) then
 		cp $GENERATOR_POST_CONFIG ./post'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf
 		if ( ! -f ./post'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf ) then
 			echo "Couldn't copy $GENERATOR_POST_CONFIG. Exit."
@@ -1286,7 +1287,7 @@ if ( "$GENERATOR_POST" != "No" ) then
 	endif
 
 	if ( "$GENERATOR_POST" == "decay_evtgen" ) then
-		if ( "$GENERATOR_POST_CONFIGEVT" != "default" ) then
+		if ( "$GENERATOR_POST_CONFIGEVT" != "Default" ) then
 			cp $GENERATOR_POST_CONFIGEVT ./postevt'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf
 			if ( ! -f ./postevt'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf ) then
 				echo "Couldn't copy $GENERATOR_POST_CONFIGEVT. Exit."
@@ -1294,7 +1295,7 @@ if ( "$GENERATOR_POST" != "No" ) then
 			endif
 			setenv EVTGEN_PARTICLE_DEFINITIONS $PWD/postevt'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf
 		endif
-		if ( "$GENERATOR_POST_CONFIGDEC" != "default" ) then
+		if ( "$GENERATOR_POST_CONFIGDEC" != "Default" ) then
 			cp $GENERATOR_POST_CONFIGDEC ./postdec'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf
 			if ( ! -f ./postdec'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf ) then
 				echo "Couldn't copy $GENERATOR_POST_CONFIGDEC. Exit."
@@ -1462,7 +1463,9 @@ endif
 		if ( "$GENERATOR" == "geantBEAM" ) then
 			echo "SKIP RUNNING MCSMEAR AND RECONSTRUCTION"
 		else
-		if ( !("$GENR" == "0" && "$GEANT" == "0" && "$SMEAR" == "0" ) ) then
+
+		#check if CONFIG_FILE ends with ".evio"
+		if ( !("$GENR" == "0" && "$GEANT" == "0" && "$SMEAR" == "0" && "$CONFIG_FILE" !~ ".evio" ) ) then
 		echo "RUNNING MCSMEAR"
 		if ( "$GENR" == "0" && "$GEANT" == "0" ) then
 		echo $GENERATOR

@@ -141,20 +141,26 @@ def checkJobFilesForCompletion(comp_assignment):
             STANDARD_NAME=proj['Generator']+'_'+STANDARD_NAME
             #print(STANDARD_NAME)
 
+        #check if postprocessor is being run
+        postproc_append=""
+        if(proj['GenPostProcessing'] != None and proj['GenPostProcessing'] != ""):
+            print("Postprocessing:",proj['GenPostProcessing'])
+            postproc_append="_"+proj['GenPostProcessing'].split(":")[0]
+
         Expected_returned_files=[]
             
-        if(str(proj['RunGeneration'])=="1" and str(proj['SaveGeneration'])=="1"):
-            Expected_returned_files.append(STANDARD_NAME+".hddm")
+        if(str(proj['RunGeneration'])=="1" and str(proj['SaveGeneration'])=="1" and str(proj['Generator'])!="particle_gun"):
+            Expected_returned_files.append(STANDARD_NAME+postproc_append+".hddm")
 
         if(str(proj['RunGeant'])=="1" and str(proj['SaveGeant'])=="1"):
-            Expected_returned_files.append(STANDARD_NAME+'_geant'+str(proj['GeantVersion'])+'.hddm')
+            Expected_returned_files.append(STANDARD_NAME+'_geant'+str(proj['GeantVersion'])+postproc_append+'.hddm')
 
         if(str(proj['RunSmear'])=="1" and str(proj['SaveSmear'])=="1"):
-            Expected_returned_files.append(STANDARD_NAME+'_geant'+str(proj['GeantVersion'])+'_smeared.hddm')
+            Expected_returned_files.append(STANDARD_NAME+'_geant'+str(proj['GeantVersion'])+'_smeared'+postproc_append+'.hddm')
             
         if(str(proj['RunReconstruction'])=="1" and str(proj['SaveReconstruction'])=="1"):
-            Expected_returned_files.append('dana_rest_'+STANDARD_NAME+'.hddm')
-            Expected_returned_files.append('hd_root_'+STANDARD_NAME+'.root')
+            Expected_returned_files.append('dana_rest_'+STANDARD_NAME+postproc_append+'.hddm')
+            Expected_returned_files.append('hd_root_'+STANDARD_NAME+postproc_append+'.root')
             
         found_AllexpFile=True
 
@@ -229,9 +235,11 @@ def main(argv):
                         time.sleep(random.randint(1,spawnNum))
                         print("block "+str(i))
                         print(len(Monitoring_assignments[i]))
-                        p=Process(target=checkJobFilesForCompletion,args=(Monitoring_assignments[i],))
-                        p.daemon = True
-                        spawns.append(p)
+                        if(len(Monitoring_assignments[i])>0):
+                            p=Process(target=checkJobFilesForCompletion,args=(Monitoring_assignments[i],))
+                            p.daemon = True
+                            spawns.append(p)
+                        
                         
                         #p.join()
                         
