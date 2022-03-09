@@ -1034,7 +1034,7 @@ def main(argv):
         PROJECT    = "gluex"          # http://scicomp.jlab.org/scicomp/#/projects
         TRACK      = "simulation"     # https://scicomp.jlab.org/docs/batch_job_tracks
         ACCOUNT    = "halld"          # https://scicomp.jlab.org/scicomp/slurmJob/slurmAccount
-        PARTITION  = "ifarm"          # https://scicomp.jlab.org/scicomp/slurmJob/slurmInfo
+        PARTITION  = "production"          # https://scicomp.jlab.org/scicomp/slurmJob/slurmInfo
         EXPERIMENT = "GlueX"          # GlueX or CPP
         CONDOR_MAGIC = []
         # RESOURCES for swif jobs
