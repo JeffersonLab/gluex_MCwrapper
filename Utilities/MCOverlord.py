@@ -190,10 +190,10 @@ def checkProjectsForCompletion(comp_assignment):
                 Expected_returned_files.append(STANDARD_NAME+postproc_append+".hddm")
 
             if(str(proj['RunGeant'])=="1" and str(proj['SaveGeant'])=="1"):
-                Expected_returned_files.append(STANDARD_NAME+'_geant'+str(proj['GeantVersion'])+postproc_append+'.hddm')
+                Expected_returned_files.append(STANDARD_NAME+postproc_append+'_geant'+str(proj['GeantVersion'])+'.hddm')
 
             if(str(proj['RunSmear'])=="1" and str(proj['SaveSmear'])=="1"):
-                Expected_returned_files.append(STANDARD_NAME+'_geant'+str(proj['GeantVersion'])+'_smeared'+postproc_append+'.hddm')
+                Expected_returned_files.append(STANDARD_NAME+postproc_append+'_geant'+str(proj['GeantVersion'])+'_smeared'+'.hddm')
             
             if(str(proj['RunReconstruction'])=="1" and str(proj['SaveReconstruction'])=="1"):
                 Expected_returned_files.append('dana_rest_'+STANDARD_NAME+postproc_append+'.hddm')
