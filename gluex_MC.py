@@ -48,7 +48,7 @@ except:
         pass
 
 MCWRAPPER_VERSION="2.6.1"
-MCWRAPPER_DATE="03/09/22"
+MCWRAPPER_DATE="03/10/22"
 
 #group sync test
 #====================================================
@@ -475,7 +475,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
         #f.write("Requirements = (HAS_SINGULARITY == TRUE) && (HAS_CVMFS_oasis_opensciencegrid_org == True) && (GLIDEIN_SITE=!=\"UConn\") && (GLIDEIN_SITE=!=\"Cedar\")"+"\n")
 #        f.write("Requirements = (HAS_SINGULARITY == TRUE) && (HAS_CVMFS_oasis_opensciencegrid_org == True) && (GLIDEIN_SITE==\"UConn\")"+"\n")
         #f.write('wantjobrouter=true'+"\n")
-        f.write('+SingularityImage = "/cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest"'+"\n")
+        f.write('+SingularityImage = "/cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_prod:v1"'+"\n")
         f.write('+SingularityBindCVMFS = True'+"\n")
         f.write('+UNDESIRED_Sites = "Purdue-Geddes"'+"\n")
         f.write('+SingularityAutoLoad = True'+"\n")
@@ -642,7 +642,7 @@ def  SLURMcont_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAN
         f=open('MCSLURM.submit','w')
         f.write("#!/bin/bash -l"+"\n")
         f.write("#SBATCH -J "+JOBNAME+"\n")
-        #f.write("#SBATCH --image=/cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest"+"\n")
+        #f.write("#SBATCH --image=/cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_prod:v1"+"\n")
         f.write("#SBATCH --nodes=1"+"\n")
         f.write("#SBATCH --time="+TIMELIMIT+"\n")
         f.write("#SBATCH --tasks-per-node=1"+"\n")
@@ -654,8 +654,8 @@ def  SLURMcont_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAN
         f.write("#SBATCH -e "+DATA_OUTPUT_BASE_DIR+"/log/"+JOBNAME+".err\n")
 
         #f.write("srun "+SCRIPT_TO_RUN+" "+COMMAND+"\n")
-        #/group/halld/www/halldweb/html/dist/gluex_centos7.img /cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest
-        f.write("module use /apps/modulefiles; module load singularity/3.4.0; singularity exec --bind /cvmfs --bind /work/osgpool/ --bind /work/halld --bind /cache/halld --bind /work/halld2 /cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest $MCWRAPPER_CENTRAL/MakeMC.sh "+getCommandString(COMMAND,"SBATCH_SLURM")+"\n")
+        #/group/halld/www/halldweb/html/dist/gluex_centos7.img /cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_prod:v1
+        f.write("module use /apps/modulefiles; module load singularity/3.4.0; singularity exec --bind /cvmfs --bind /work/osgpool/ --bind /work/halld --bind /cache/halld --bind /work/halld2 /cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_prod:v1 $MCWRAPPER_CENTRAL/MakeMC.sh "+getCommandString(COMMAND,"SBATCH_SLURM")+"\n")
 
         f.close()
 
@@ -689,7 +689,7 @@ def  SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, N
         f=open('MCSLURM.submit','w')
         f.write("#!/bin/bash -l"+"\n")
         f.write("#SBATCH -J "+JOBNAME+"\n")
-        #f.write("#SBATCH --image=/cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest"+"\n")
+        #f.write("#SBATCH --image=/cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_prod:v1"+"\n")
         f.write("#SBATCH --nodes=1"+"\n")
         f.write("#SBATCH --time="+TIMELIMIT+"\n")
         f.write("#SBATCH --tasks-per-node=1"+"\n")
@@ -701,7 +701,7 @@ def  SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, N
         f.write("#SBATCH -e "+DATA_OUTPUT_BASE_DIR+"/log/"+JOBNAME+".err\n")
 
         #f.write("srun "+SCRIPT_TO_RUN+" "+COMMAND+"\n")
-        #/group/halld/www/halldweb/html/dist/gluex_centos7.img /cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest
+        #/group/halld/www/halldweb/html/dist/gluex_centos7.img /cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_prod:v1
         f.write(SCRIPT_TO_RUN+" "+getCommandString(COMMAND,"SLURM")+"\n")
 
         f.close()
