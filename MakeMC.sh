@@ -446,6 +446,17 @@ if [[ "$polarization_angle" == "-1.0" ]]; then
 		POL_TO_GEN=0
 fi
 fi
+
+isGreater=1
+#echo $isGreater
+isGreater=`echo $GEN_MAX_ENERGY'>'$eBEAM_ENERGY | $USER_BC -l`
+#echo $isGreater
+#echo "$isGreater"
+if [[ "$isGreater" == "1" && "$eBEAM_ENERGY" != "rcdb" ]]; then
+echo "WARNING: User requested GEN_MAX_ENERGY > eBEAM_ENERGY.  This is not possible.  Setting GEN_MAX_ENERGY to eBEAM_ENERGY..."
+export GEN_MAX_ENERGY=$eBEAM_ENERGY
+fi
+
 # PRINT INPUTS
 echo "This job has been configured to run at: " $MCWRAPPER_RUN_LOCATION" : "`hostname`
 echo "Job started: " `date`
@@ -511,16 +522,7 @@ echo `which hd_root`
 echo ""
 echo ""
 
-isGreater=1
-#echo $isGreater
-isGreater=`echo $GEN_MAX_ENERGY'>'$eBEAM_ENERGY | $USER_BC -l`
-#echo $isGreater
-#echo "$isGreater"
-if [[ "$isGreater" == "1" && "$eBEAM_ENERGY" != "rcdb" ]]; then
-echo "something went wrong with initialization"
-echo "Error: Requested Max photon energy $GEN_MAX_ENERGY is above the electron beam energy $eBEAM_ENERGY!"
-exit 1
-fi
+
 
 if [[ "$CUSTOM_GCONTROL" == "0" && "$GEANT" == "1" ]]; then
 	if [[ "$EXPERIMENT" == "GlueX" ]]; then

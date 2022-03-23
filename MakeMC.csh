@@ -443,6 +443,14 @@ if ( "$polarization_angle" == "-1.0" ) then
 		set POL_TO_GEN=0
 endif
 endif
+
+set isGreater=1
+set isGreater=`echo $GEN_MAX_ENERGY'>'$eBEAM_ENERGY | $USER_BC -l`
+
+if ( "$isGreater" == "1" && "$eBEAM_ENERGY" != "rcdb" ) then
+echo "WARNING: User requested GEN_MAX_ENERGY > eBEAM_ENERGY.  This is not possible.  Setting GEN_MAX_ENERGY to eBEAM_ENERGY..."
+set GEN_MAX_ENERGY=$eBEAM_ENERGY
+endif
 # PRINT INPUTS
 echo "This job has been configured to run at: " $MCWRAPPER_RUN_LOCATION" : "`hostname`
 echo "Job started: " `date`
@@ -505,16 +513,6 @@ echo `which mcsmear`
 echo `which hd_root`
 echo ""
 echo ""
-
-
-set isGreater=1
-set isGreater=`echo $GEN_MAX_ENERGY'>'$eBEAM_ENERGY | $USER_BC -l`
-
-if ( "$isGreater" == "1" && "$eBEAM_ENERGY" != "rcdb" ) then
-echo "something went wrong with initialization"
-echo "Error: Requested Max photon energy $GEN_MAX_ENERGY is above the electron beam energy $eBEAM_ENERGY!"
-exit 1
-endif
 
 if ( "$CUSTOM_GCONTROL" == "0" && "$GEANT" == "1" ) then
 	#echo $MCWRAPPER_CENTRAL
