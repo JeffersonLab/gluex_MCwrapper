@@ -162,6 +162,10 @@ if [[ `ps all -u tbritton | grep MCMover.csh | grep -v grep | wc -l` == 2 ]]; th
         comm -12 /tmp/input_files_list.txt /tmp/output_files_list.txt | xargs rm -v
     fi
 
+    rm -f /tmp/input_files_list.txt
+    rm -f /tmp/output_files_list.txt
+    rm -f /tmp/inputLOG_files_list.txt 
+    rm -f /tmp/outputLOG_files_list.txt
     #clean empty directories
     #find $input_dir -depth -empty -type d mmin -2880 -exec rmdir {} \;
     

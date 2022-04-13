@@ -47,8 +47,8 @@ try:
 except:
         pass
 
-MCWRAPPER_VERSION="2.6.0"
-MCWRAPPER_DATE="11/12/21"
+MCWRAPPER_VERSION="2.6.1"
+MCWRAPPER_DATE="03/10/22"
 
 #group sync test
 #====================================================
@@ -97,6 +97,71 @@ def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,N
         add_command += " -tag file_number " + str(FILENO)
         # script with options command
         add_command += " -fail-save-dir "+DATA_OUTPUT_BASE_DIR
+
+        add_command += " "+SCRIPT  +" "+ getCommandString(COMMAND,"SWIF")
+
+        if(VERBOSE == True):
+                print( "job add command is \n" + str(add_command))
+
+        if(int(NCORES)==1 and int(RAM[:-2]) >= 10 and RAM[-2:]=="GB" ):
+                print( "SciComp has a limit on RAM requested per thread, as RAM is the limiting factor.")
+                print( "This will likely cause an AUGER-SUBMIT error.")
+                print( "Please either increase NCORES or decrease RAM requested and try again.")
+                exit(1)
+        # ADD JOB
+        if add_command.find(';')!=-1 or add_command.find('&')!=-1 :#THIS CHECK HELPS PROTECT AGAINST A POTENTIAL HACK VIA CONFIG FILES
+                print( "Nice try.....you cannot use ; or &")
+                exit(1)
+        #status = subprocess.call(add_command.split(" "))
+        SWIF_ID_NUM="-1"
+
+        if( int(PROJECT_ID) <=0 ):
+                print(add_command)
+                jobSubout=subprocess.check_output(add_command.split(" "))
+                print(jobSubout)
+                idnumline=jobSubout.split("\n")[0].strip().split("=")
+
+                if(len(idnumline) == 2 ):
+                        SWIF_ID_NUM=str(idnumline[1])
+
+        if int(PROJECT_ID) > 0:
+                recordJob(PROJECT_ID,RUNNO,FILENO,SWIF_ID_NUM,COMMAND['num_events'])
+                #recordFirstAttempt(PROJECT_ID,RUNNO,FILENO,"SWIF",SWIF_ID_NUM,COMMAND['num_events'],NCORES,RAM)
+        elif int(PROJECT_ID) < 0:
+                recordAttempt(abs(int(PROJECT_ID)),RUNNO,FILENO,"SWIF",SWIF_ID_NUM,COMMAND['num_events'],NCORES,RAM)
+
+def swif2_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,ACCOUNT,PARTITION,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID):
+        STUBNAME=""
+        if(COMMAND['custom_tag_string'] != "I_dont_have_one"):
+                STUBNAME=COMMAND['custom_tag_string']+"_"
+        # PREPARE NAMES
+        STUBNAME = STUBNAME+str(RUNNO) + "_" + str(FILENO)
+
+        JOBNAME = WORKFLOW + "_" + STUBNAME
+
+        # CREATE ADD-JOB COMMAND
+        # job
+        #try removing the name specification
+
+        mkdircom="mkdir -p "+DATA_OUTPUT_BASE_DIR+"/log/"
+        status = subprocess.call(mkdircom, shell=True)
+
+
+        add_command = "swif2 add-job -workflow " + WORKFLOW #+ " -name " + JOBNAME
+        # account/partition (used to be project/track in swif)
+        add_command += " -account " + ACCOUNT + " -partition " + PARTITION
+        # resources
+        add_command += " -create -cores " + NCORES + " -disk " + DISK + " -ram " + RAM + " -time " + TIMELIMIT + " -os " + OS
+        # stdout
+        add_command += " -stdout " + DATA_OUTPUT_BASE_DIR + "/log/" + str(RUNNO) + "_stdout." + STUBNAME + ".out"
+        # stderr
+        add_command += " -stderr " + DATA_OUTPUT_BASE_DIR + "/log/" + str(RUNNO) + "_stderr." + STUBNAME + ".err"
+        # tags
+        add_command += " -tag run_number " + str(RUNNO)
+        # tags
+        add_command += " -tag file_number " + str(FILENO)
+        # script with options command
+        # add_command += " -fail-save-dir "+DATA_OUTPUT_BASE_DIR
 
         add_command += " "+SCRIPT  +" "+ getCommandString(COMMAND,"SWIF")
 
@@ -403,15 +468,16 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
         f=open('MCOSG_'+str(PROJECT_ID)+'.submit','w')
         f.write("universe = vanilla"+"\n")
         f.write("Executable = "+os.environ.get('MCWRAPPER_CENTRAL')+"/osg-container.sh"+"\n")
-        f.write('+Project = "gluex"'+"\n")
+        f.write('+ProjectName = "gluex"'+"\n")
         #f.write("Arguments  = "+SCRIPT_TO_RUN+" "+COMMAND+"\n")
         f.write("Arguments  = "+"./"+script_to_use+" "+getCommandString(COMMAND_parts,"OSG",numJobsInBundle)+"\n")
         f.write("Requirements = (HAS_SINGULARITY == TRUE) && (HAS_CVMFS_oasis_opensciencegrid_org == True)"+"\n")
         #f.write("Requirements = (HAS_SINGULARITY == TRUE) && (HAS_CVMFS_oasis_opensciencegrid_org == True) && (GLIDEIN_SITE=!=\"UConn\") && (GLIDEIN_SITE=!=\"Cedar\")"+"\n")
 #        f.write("Requirements = (HAS_SINGULARITY == TRUE) && (HAS_CVMFS_oasis_opensciencegrid_org == True) && (GLIDEIN_SITE==\"UConn\")"+"\n")
         #f.write('wantjobrouter=true'+"\n")
-        f.write('+SingularityImage = "/cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest"'+"\n")
+        f.write('+SingularityImage = "/cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_prod:v1"'+"\n")
         f.write('+SingularityBindCVMFS = True'+"\n")
+        f.write('+UNDESIRED_Sites = "Purdue-Geddes"'+"\n")
         f.write('+SingularityAutoLoad = True'+"\n")
 #        f.write('+CVMFSReposList = "oasis.opensciencegrid.org"'+"\n")
 #        f.write('+DesiredSites="UConn"'+"\n")
@@ -576,7 +642,7 @@ def  SLURMcont_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAN
         f=open('MCSLURM.submit','w')
         f.write("#!/bin/bash -l"+"\n")
         f.write("#SBATCH -J "+JOBNAME+"\n")
-        #f.write("#SBATCH --image=/cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest"+"\n")
+        #f.write("#SBATCH --image=/cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_prod:v1"+"\n")
         f.write("#SBATCH --nodes=1"+"\n")
         f.write("#SBATCH --time="+TIMELIMIT+"\n")
         f.write("#SBATCH --tasks-per-node=1"+"\n")
@@ -588,8 +654,8 @@ def  SLURMcont_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAN
         f.write("#SBATCH -e "+DATA_OUTPUT_BASE_DIR+"/log/"+JOBNAME+".err\n")
 
         #f.write("srun "+SCRIPT_TO_RUN+" "+COMMAND+"\n")
-        #/group/halld/www/halldweb/html/dist/gluex_centos7.img /cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest
-        f.write("module use /apps/modulefiles; module load singularity/3.4.0; singularity exec --bind /cvmfs --bind /work/osgpool/ --bind /work/halld --bind /cache/halld --bind /work/halld2 /cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest $MCWRAPPER_CENTRAL/MakeMC.sh "+getCommandString(COMMAND,"SBATCH_SLURM")+"\n")
+        #/group/halld/www/halldweb/html/dist/gluex_centos7.img /cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_prod:v1
+        f.write("module use /apps/modulefiles; module load singularity/3.4.0; singularity exec --bind /cvmfs --bind /work/osgpool/ --bind /work/halld --bind /cache/halld --bind /work/halld2 /cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_prod:v1 $MCWRAPPER_CENTRAL/MakeMC.sh "+getCommandString(COMMAND,"SBATCH_SLURM")+"\n")
 
         f.close()
 
@@ -623,7 +689,7 @@ def  SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, N
         f=open('MCSLURM.submit','w')
         f.write("#!/bin/bash -l"+"\n")
         f.write("#SBATCH -J "+JOBNAME+"\n")
-        #f.write("#SBATCH --image=/cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest"+"\n")
+        #f.write("#SBATCH --image=/cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_prod:v1"+"\n")
         f.write("#SBATCH --nodes=1"+"\n")
         f.write("#SBATCH --time="+TIMELIMIT+"\n")
         f.write("#SBATCH --tasks-per-node=1"+"\n")
@@ -635,7 +701,7 @@ def  SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, N
         f.write("#SBATCH -e "+DATA_OUTPUT_BASE_DIR+"/log/"+JOBNAME+".err\n")
 
         #f.write("srun "+SCRIPT_TO_RUN+" "+COMMAND+"\n")
-        #/group/halld/www/halldweb/html/dist/gluex_centos7.img /cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest
+        #/group/halld/www/halldweb/html/dist/gluex_centos7.img /cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_prod:v1
         f.write(SCRIPT_TO_RUN+" "+getCommandString(COMMAND,"SLURM")+"\n")
 
         f.close()
@@ -880,7 +946,7 @@ def showhelp():
         helpstring+= " cleangeant=[0/1] where 0 means that the geant step will not be cleaned up after use (default is 1)\n"
         helpstring+= " cleanmcsmear=[0/1] where 0 means that the mcsmear step will not be cleaned up after use (default is 1)\n"
         helpstring+= " cleanrecon=[0/1]where 0 means that the reconstruction step will not be cleaned up after running (default is 0)\n"
-        helpstring+= " batch=[0/1/2] where 1 means that jobs will be submitted, 2 will do the same as 1 but also run the workflow in the case of swif (default is 0 [interactive])\n"
+        helpstring+= " batch=[0/1/2] where 1 means that jobs will be submitted, 2 will do the same as 1 but also run the workflow in the case of swif(2) (default is 0 [interactive])\n"
         helpstring+= " logdir=[path] will direct the .out and .err files to the specified path for qsub\n"
         return helpstring
 
@@ -967,6 +1033,9 @@ def main(argv):
         # PROJECT INFO
         PROJECT    = "gluex"          # http://scicomp.jlab.org/scicomp/#/projects
         TRACK      = "simulation"     # https://scicomp.jlab.org/docs/batch_job_tracks
+        ACCOUNT    = "halld"          # https://scicomp.jlab.org/scicomp/slurmJob/slurmAccount
+        PARTITION  = "production"          # https://scicomp.jlab.org/scicomp/slurmJob/slurmInfo
+        EXPERIMENT = "GlueX"          # GlueX or CPP
         CONDOR_MAGIC = []
         # RESOURCES for swif jobs
         NCORES     = "8"               # Number of CPU cores
@@ -1039,11 +1108,17 @@ def main(argv):
                                 VERBOSE=True
                 elif str(parts[0]).upper()=="PROJECT" :
                         PROJECT=rm_comments[0].strip()
+                elif str(parts[0]).upper()=="ACCOUNT" :
+                        ACCOUNT=rm_comments[0].strip()
                 elif str(parts[0]).upper()=="CONDOR_MAGIC" :
                         #print("detected magic")
                         CONDOR_MAGIC.append(rm_comments[0].strip())
                 elif str(parts[0]).upper()=="TRACK" :
                         TRACK=rm_comments[0].strip()
+                elif str(parts[0]).upper()=="PARTITION" :
+                        PARTITION=rm_comments[0].strip()
+                elif str(parts[0]).upper()=="EXPERIMENT" :
+                        EXPERIMENT=rm_comments[0].strip()
                 elif str(parts[0]).upper()=="NCORES" :
                         NCORES=rm_comments[0].strip()
                 elif str(parts[0]).upper()=="DISK" :
@@ -1090,14 +1165,14 @@ def main(argv):
                         GENPOST=WHOLEPOST_PARTS[0]
 
                         if(len(WHOLEPOST_PARTS)==2):
-                                GENPOSTCONFIG="default" if WHOLEPOST_PARTS[1].lower()=="default" else WHOLEPOST_PARTS[1]
+                                GENPOSTCONFIG="Default" if WHOLEPOST_PARTS[1].lower()=="default" else WHOLEPOST_PARTS[1]
                         elif(len(WHOLEPOST_PARTS)==3):
-                                GENPOSTCONFIG="default" if WHOLEPOST_PARTS[1].lower()=="default" else WHOLEPOST_PARTS[1]
-                                GENPOSTCONFIGEVT="default" if WHOLEPOST_PARTS[2].lower()=="default" else WHOLEPOST_PARTS[2]
+                                GENPOSTCONFIG="Default" if WHOLEPOST_PARTS[1].lower()=="default" else WHOLEPOST_PARTS[1]
+                                GENPOSTCONFIGEVT="Default" if WHOLEPOST_PARTS[2].lower()=="default" else WHOLEPOST_PARTS[2]
                         elif(len(WHOLEPOST_PARTS)==4):
-                                GENPOSTCONFIG="default" if WHOLEPOST_PARTS[1].lower()=="default" else WHOLEPOST_PARTS[1]
-                                GENPOSTCONFIGEVT="default" if WHOLEPOST_PARTS[2].lower()=="default" else WHOLEPOST_PARTS[2]
-                                GENPOSTCONFIGDEC="default" if WHOLEPOST_PARTS[3].lower()=="default" else WHOLEPOST_PARTS[3]
+                                GENPOSTCONFIG="Default" if WHOLEPOST_PARTS[1].lower()=="default" else WHOLEPOST_PARTS[1]
+                                GENPOSTCONFIGEVT="Default" if WHOLEPOST_PARTS[2].lower()=="default" else WHOLEPOST_PARTS[2]
+                                GENPOSTCONFIGDEC="Default" if WHOLEPOST_PARTS[3].lower()=="default" else WHOLEPOST_PARTS[3]
                         elif(len(WHOLEPOST_PARTS)==1):
                                 GENPOST=WHOLEPOST
 
@@ -1212,6 +1287,8 @@ def main(argv):
                 else:
                         print( "unknown config parameter!! "+str(parts[0]))
 
+        if EXPERIMENT == "GlueX" and PROJECT != "gluex": #set EXPERIMENT if not set and not GlueX
+                EXPERIMENT = PROJECT
 
         LOG_DIR = DATA_OUTPUT_BASE_DIR  #set LOG_DIR=DATA_OUTPUT_BASE_DIR
         if(GENCONFIG==""):
@@ -1346,6 +1423,9 @@ def main(argv):
         if (BATCHSYS.upper() == "SWIF") and int(BATCHRUN) != 0 and ccdbSQLITEPATH=="no_sqlite":
                 ccdbSQLITEPATH="jlab_batch_default"
                 LOCATION="JLAB"
+        if (BATCHSYS.upper() == "SWIF2") and int(BATCHRUN) != 0 and ccdbSQLITEPATH=="no_sqlite":
+                ccdbSQLITEPATH="jlab_batch_default"
+                LOCATION="JLAB"
         #if (BATCHSYS.upper() == "OSG" or BATCHSYS.upper() == "SWIF") and int(BATCHRUN) != 0 and rcdbSQLITEPATH=="no_sqlite":
         if (BATCHSYS.upper() == "OSG" ) and int(BATCHRUN) != 0 and rcdbSQLITEPATH=="no_sqlite":
                 rcdbSQLITEPATH="batch_default"
@@ -1414,7 +1494,7 @@ def main(argv):
         COMMAND_dict['polarization_to_generate']=str(POL_TO_GEN)
         COMMAND_dict['polarization_histogram']=str(POL_HIST)
         COMMAND_dict['eBeam_current']=str(eBEAM_CURRENT)
-        COMMAND_dict['experiment']=str(PROJECT)
+        COMMAND_dict['experiment']=str(EXPERIMENT)
 
         COMMAND_dict['num_rand_trigs']=str(RANDOM_NUM_EVT)
         COMMAND_dict['location']=str(LOCATION)
@@ -1453,6 +1533,11 @@ def main(argv):
                                         #status = subprocess.call("swif create "+WORKFLOW,shell=True)
                                         swif_add_job(WORKFLOW, RUNNUM, BASEFILENUM,str(SCRIPT_TO_RUN),COMMAND_dict,VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID)
                                         swifrun = "swif run "+WORKFLOW
+                                        subprocess.call(swifrun.split(" "))
+                                elif BATCHSYS.upper()=="SWIF2":
+                                        #status = subprocess.call("swif2 create "+WORKFLOW,shell=True)
+                                        swif2_add_job(WORKFLOW, RUNNUM, BASEFILENUM,str(SCRIPT_TO_RUN),COMMAND_dict,VERBOSE,ACCOUNT,PARTITION,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID)
+                                        swifrun = "swif2 run "+WORKFLOW
                                         subprocess.call(swifrun.split(" "))
                                 elif BATCHSYS.upper()=="QSUB":
                                         qsub_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, RAM, QUEUENAME, LOG_DIR, PROJECT_ID )
@@ -1579,6 +1664,9 @@ def main(argv):
                                                         if BATCHSYS.upper()=="SWIF":
                                                                 #status = subprocess.call("swif create "+WORKFLOW,shell=True)
                                                                 swif_add_job(WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1,str(SCRIPT_TO_RUN),COMMAND_dict,VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID)
+                                                        elif BATCHSYS.upper()=="SWIF2":
+                                                                #status = subprocess.call("swif2 create "+WORKFLOW,shell=True)
+                                                                swif2_add_job(WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1,str(SCRIPT_TO_RUN),COMMAND_dict,VERBOSE,ACCOUNT,PARTITION,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID)
                                                         elif BATCHSYS.upper()=="QSUB":
                                                                 qsub_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, RAM, QUEUENAME, LOG_DIR, PROJECT_ID )
                                                         elif BATCHSYS.upper()=="CONDOR":
@@ -1629,6 +1717,9 @@ def main(argv):
                                                 if BATCHSYS.upper()=="SWIF":
                                                         #status = subprocess.call("swif create "+WORKFLOW,shell=True)
                                                         swif_add_job(WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1,str(SCRIPT_TO_RUN),COMMAND_dict,VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID)
+                                                elif BATCHSYS.upper()=="SWIF2":
+                                                        #status = subprocess.call("swif2 create "+WORKFLOW,shell=True)
+                                                        swif2_add_job(WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1,str(SCRIPT_TO_RUN),COMMAND_dict,VERBOSE,ACCOUNT,PARTITION,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID)
                                                 elif BATCHSYS.upper()=="QSUB":
                                                         qsub_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, RAM, QUEUENAME, LOG_DIR, PROJECT_ID )
                                                 elif BATCHSYS.upper()=="CONDOR":
@@ -1646,6 +1737,12 @@ def main(argv):
                         print( "All Jobs created.  Please call \"swif run "+WORKFLOW+"\" to run")
                 elif BATCHRUN == 2 and BATCHSYS.upper()=="SWIF":
                         swifrun = "swif run "+WORKFLOW
+                        subprocess.call(swifrun.split(" "))
+
+                if BATCHRUN == 1 and BATCHSYS.upper() == "SWIF2":
+                        print( "All Jobs created.  Please call \"swif2 run "+WORKFLOW+"\" to run")
+                elif BATCHRUN == 2 and BATCHSYS.upper()=="SWIF2":
+                        swifrun = "swif2 run "+WORKFLOW
                         subprocess.call(swifrun.split(" "))
 
         try:
@@ -1717,7 +1814,7 @@ def GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,RUNNUM):
                         dbcursor.execute(addquery)
                         dbcnx.commit()
                         print("COUNT: "+str(Count))
-                        os.system("rm /tmp/"+RANDBGTAG+"/run"+formattedRUNNUM)
+                        os.system("rm -f /tmp/"+RANDBGTAG+"/run"+formattedRUNNUM+"_random.hddm")
                         return Count
                 elif len(matches) == 1:
                         print("Matched a file!")

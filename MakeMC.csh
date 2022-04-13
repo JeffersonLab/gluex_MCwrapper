@@ -443,6 +443,14 @@ if ( "$polarization_angle" == "-1.0" ) then
 		set POL_TO_GEN=0
 endif
 endif
+
+set isGreater=1
+set isGreater=`echo $GEN_MAX_ENERGY'>'$eBEAM_ENERGY | $USER_BC -l`
+
+if ( "$isGreater" == "1" && "$eBEAM_ENERGY" != "rcdb" ) then
+echo "WARNING: User requested GEN_MAX_ENERGY > eBEAM_ENERGY.  This is not possible.  Setting GEN_MAX_ENERGY to eBEAM_ENERGY..."
+set GEN_MAX_ENERGY=$eBEAM_ENERGY
+endif
 # PRINT INPUTS
 echo "This job has been configured to run at: " $MCWRAPPER_RUN_LOCATION" : "`hostname`
 echo "Job started: " `date`
@@ -505,16 +513,6 @@ echo `which mcsmear`
 echo `which hd_root`
 echo ""
 echo ""
-
-
-set isGreater=1
-set isGreater=`echo $GEN_MAX_ENERGY'>'$eBEAM_ENERGY | $USER_BC -l`
-
-if ( "$isGreater" == "1" && "$eBEAM_ENERGY" != "rcdb" ) then
-echo "something went wrong with initialization"
-echo "Error: Requested Max photon energy $GEN_MAX_ENERGY is above the electron beam energy $eBEAM_ENERGY!"
-exit 1
-endif
 
 if ( "$CUSTOM_GCONTROL" == "0" && "$GEANT" == "1" ) then
 	#echo $MCWRAPPER_CENTRAL
@@ -643,6 +641,7 @@ if ( "$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" == "
 			endif
 		endif
 	endif
+
 
   if ( ! -f $bkglocstring && "$MAKE_MC_USING_XROOTD" == "0" ) then
 		echo "something went wrong with initialization"
@@ -1277,7 +1276,7 @@ if ( "$GENERATOR_POST" != "No" ) then
 	echo $GENERATOR_POST_CONFIG
 	echo $GENERATOR_POST_CONFIGEVT
 	echo $GENERATOR_POST_CONFIGDEC
-	if ( "$GENERATOR_POST_CONFIG" != "default" ) then
+	if ( "$GENERATOR_POST_CONFIG" != "Default" ) then
 		cp $GENERATOR_POST_CONFIG ./post'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf
 		if ( ! -f ./post'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf ) then
 			echo "Couldn't copy $GENERATOR_POST_CONFIG. Exit."
@@ -1286,7 +1285,7 @@ if ( "$GENERATOR_POST" != "No" ) then
 	endif
 
 	if ( "$GENERATOR_POST" == "decay_evtgen" ) then
-		if ( "$GENERATOR_POST_CONFIGEVT" != "default" ) then
+		if ( "$GENERATOR_POST_CONFIGEVT" != "Default" ) then
 			cp $GENERATOR_POST_CONFIGEVT ./postevt'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf
 			if ( ! -f ./postevt'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf ) then
 				echo "Couldn't copy $GENERATOR_POST_CONFIGEVT. Exit."
@@ -1294,7 +1293,7 @@ if ( "$GENERATOR_POST" != "No" ) then
 			endif
 			setenv EVTGEN_PARTICLE_DEFINITIONS $PWD/postevt'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf
 		endif
-		if ( "$GENERATOR_POST_CONFIGDEC" != "default" ) then
+		if ( "$GENERATOR_POST_CONFIGDEC" != "Default" ) then
 			cp $GENERATOR_POST_CONFIGDEC ./postdec'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf
 			if ( ! -f ./postdec'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf ) then
 				echo "Couldn't copy $GENERATOR_POST_CONFIGDEC. Exit."
@@ -1462,7 +1461,9 @@ endif
 		if ( "$GENERATOR" == "geantBEAM" ) then
 			echo "SKIP RUNNING MCSMEAR AND RECONSTRUCTION"
 		else
-		if ( !("$GENR" == "0" && "$GEANT" == "0" && "$SMEAR" == "0" ) ) then
+
+		#check if CONFIG_FILE ends with ".evio"
+		if ( !("$GENR" == "0" && "$GEANT" == "0" && "$SMEAR" == "0" && "$CONFIG_FILE" !~ ".evio" ) ) then
 		echo "RUNNING MCSMEAR"
 		if ( "$GENR" == "0" && "$GEANT" == "0" ) then
 		echo $GENERATOR
