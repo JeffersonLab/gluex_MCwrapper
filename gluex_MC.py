@@ -47,8 +47,8 @@ try:
 except:
         pass
 
-MCWRAPPER_VERSION="2.6.1"
-MCWRAPPER_DATE="03/10/22"
+MCWRAPPER_VERSION="2.6.2"
+MCWRAPPER_DATE="03/13/22"
 
 #group sync test
 #====================================================
@@ -1368,7 +1368,7 @@ def main(argv):
                                 print( "WARNING OPTION: "+argu+" NOT FOUND!")
 
         if DATA_OUTPUT_BASE_DIR == "UNKNOWN_LOCATION":
-                print( "I doubt that the system will find "+DATA_OUTPUT_BASE_DIR+" so I am saving you the embarassment and stopping this")
+                print( "I doubt that the system will find the output directory: "+DATA_OUTPUT_BASE_DIR+" so I am saving you the embarassment of trying and stopping this now")
                 return
 
         print("WILL BE BUNDLED",TO_BUNDLE)

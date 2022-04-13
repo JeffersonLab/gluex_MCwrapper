@@ -1028,6 +1028,7 @@ def WriteConfig(ID):
     #WritePayloadConfig(rows[0],"True")
 
 def WritePayloadConfig(order,foundConfig,jobID=-1):
+    print("writing config file based on\n",order)
     if jobID==-1:
         MCconfig_file= open("MCDispatched_"+str(order['ID'])+".config","a")
     else:
@@ -1095,15 +1096,16 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
                 try:
                     subprocess.call("scp "+"tbritton@ifarm1801-ib:"+parseGenPostProcessing[i]+" "+"/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_genpost_"+str(i)+".config", shell=True)
                 except Exception as e:
-                    print("Error:",e)
+                    print("Error in copying gen post processing file:",e)
                     pass
 
                 print("checking for config file:","/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_genpost_"+str(i)+".config")
                 if( os.path.exists("/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_genpost_"+str(i)+".config")):
                     newGenPost_str+=":/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_genpost_"+str(i)+".config"
-                    fileError=False
+                    
+                    #fileError=False
                 else:
-                    print("Error:",parseGenPostProcessing[i] ,"not found")
+                    print("Error finding a gen post processing file:",parseGenPostProcessing[i] ,"not found")
                     fileError=True
             else:
                 newGenPost_str+=":Default"
