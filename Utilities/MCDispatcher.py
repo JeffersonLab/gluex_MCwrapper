@@ -4,6 +4,7 @@ try:
 except Exception as e:
     print("IMPORT ERROR:",e)
     pass
+from telnetlib import STATUS
 import MySQLdb
 import sys
 import datetime
@@ -65,6 +66,7 @@ def RecallAll():
             if("not found" in str(err,"utf-8")):
                 print("clear "+str(row["BatchJobID"]))
                 updatequery="UPDATE Attempts SET Status=\"3\" where BatchJobID=\""+str(row["BatchJobID"])+"\""+" && SubmitHost=\""+MCWRAPPER_BOT_HOST_NAME+"\""
+                print(updatequery)
                 curs.execute(updatequery)
                 conn.commit()
             if("Failed to end classad" in str(err,"utf-8")):
@@ -206,7 +208,10 @@ def RetryAllJobs(rlim=False):
     for row in rows:
         if(row["Notified"] != 1):
             print("Retrying Project "+str(row["ID"]))
-            RetryJobsFromProject(row["ID"],not rlim)
+            if 1: #row["ID"] != 2509 and row["ID"] != 2510:
+                RetryJobsFromProject(row["ID"],not rlim)
+            else:
+                continue
         else:
             print("Attempting to clean up Completed_Time")
             getFinalCompleteTime="SELECT MAX(Completed_Time) FROM Attempts WHERE Job_ID IN (SELECT ID FROM Jobs WHERE Project_ID="+str(row['ID'])+");"
@@ -234,7 +239,8 @@ def RemoveAllJobs():
 def RetryJobsFromProject(ID, countLim):
     AllOSG=True
     #query= "SELECT * FROM Attempts WHERE ID IN (SELECT Max(ID) FROM Attempts WHERE SubmitHost=\""+MCWRAPPER_BOT_HOST_NAME+"\" GROUP BY Job_ID) && Job_ID IN (SELECT ID FROM Jobs WHERE IsActive=1 && Project_ID="+str(ID)+");"
-    query= "SELECT * FROM Attempts WHERE ID IN (SELECT Max(ID) FROM Attempts WHERE SubmitHost is not NULL GROUP BY Job_ID) && Job_ID IN (SELECT ID FROM Jobs WHERE IsActive=1 && Project_ID="+str(ID)+");"
+    #query= "SELECT * FROM Attempts WHERE ID IN (SELECT Max(ID) FROM Attempts WHERE SubmitHost is not NULL GROUP BY Job_ID) && Job_ID IN (SELECT ID FROM Jobs WHERE IsActive=1 && Project_ID="+str(ID)+");"
+    query="select Attempts.* from Jobs inner join Attempts on Attempts.Job_ID = Jobs.id and Attempts.id = (select max(id) from Attempts latest_attempts where latest_attempts.job_id = Jobs.id) where Project_ID = " +str(ID)
     curs.execute(query) 
     rows=curs.fetchall()
    
@@ -243,10 +249,11 @@ def RetryJobsFromProject(ID, countLim):
     proj=curs.fetchall()[0]
     i=0
     j=0
+    k=0
     SWIF_retry_IDs=[]
-    
+    print(len(rows),"Jobs to retry")
     for row in rows:
-        
+        print("Project",ID,"   ",k+1,"/",len(rows),":",row["Job_ID"],":",row["BatchSystem"])
         if (row["BatchSystem"]=="SWIF"):
             if((row["Status"] == "succeeded" and row["ExitCode"] != 0) or (row["Status"]=="problem" and row["ExitCode"]!="232") or (proj['Tested']==1 and row["Status"]=="canceled" ) or (proj['Tested']==1 and row["Status"]=="failed" )):
             #if(row["Status"] != "succeeded"):
@@ -291,7 +298,7 @@ def RetryJobsFromProject(ID, countLim):
                             
                 RetryJob(row["Job_ID"],AllOSG)
                 i=i+1
-        
+        k=k+1
     
     print(SWIF_retry_IDs)
     if(len(SWIF_retry_IDs)!=0 and AllOSG == False):
@@ -487,6 +494,16 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
         rows=curs.fetchall()
         order=rows[0]
 
+    already_passed_q="SELECT COUNT(*) from Jobs where Project_ID="+str(ID)
+    curs.execute(already_passed_q)
+    already_passed=curs.fetchall()
+
+    if(already_passed[0]["COUNT(*)"]>0):
+        updatequery="UPDATE Project SET Tested=1"+" WHERE ID="+str(ID)+";"
+        curs.execute(updatequery)
+        conn.commit()
+        STATUS="Success"
+    return STATUS
 
     output="Dispatch_Failure"
     errors="Dispatch_Failure"
@@ -570,8 +587,11 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
             if order["SaveReconstruction"]==1:
                 cleanrecon=0
 
-            
-            command=MCWRAPPER_BOT_HOME+"/gluex_MC.py "+pwd+"/"+"MCDispatched_"+str(ID)+".config "+str(RunNumber)+" "+str(500)+" per_file=250000 base_file_number=0"+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=0 tobundle=0"
+            test_number=500
+
+            if(order["ID"]==2531):
+                test_number=50
+            command=MCWRAPPER_BOT_HOME+"/gluex_MC.py "+pwd+"/"+"MCDispatched_"+str(ID)+".config "+str(RunNumber)+" "+str(test_number)+" per_file=250000 base_file_number=0"+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=0 tobundle=0"
             print(command)
         
     # print (command+command2).split(" ")
@@ -605,9 +625,10 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
 
         output="Error in rcdb query"
         errors="Error in rcdb query:"+str(query_to_do)
-        print("singularity exec --cleanenv --bind "+pwd+":"+pwd+" --bind /osgpool/halld/tbritton:/osgpool/halld/tbritton --bind /group/halld/:/group/halld/ --bind /scigroup/mcwrapper/gluex_MCwrapper:/scigroup/mcwrapper/gluex_MCwrapper /cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest /bin/sh "+pwd+"/TestProject_runscript_"+str(ID)+".sh")
+        sing_img="/cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_prod:v1"
+        print("singularity exec --cleanenv --bind "+pwd+":"+pwd+" --bind /osgpool/halld/tbritton:/osgpool/halld/tbritton --bind /group/halld/:/group/halld/ --bind /scigroup/mcwrapper/gluex_MCwrapper:/scigroup/mcwrapper/gluex_MCwrapper "+sing_img+" /bin/sh "+pwd+"/TestProject_runscript_"+str(ID)+".sh")
         if RunNumber != -1:
-            p = Popen("singularity exec --cleanenv --bind "+pwd+":"+pwd+" --bind /osgpool/halld/tbritton:/osgpool/halld/tbritton --bind /group/halld/:/group/halld/ --bind /scigroup/mcwrapper/gluex_MCwrapper:/scigroup/mcwrapper/gluex_MCwrapper /cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest /bin/sh "+pwd+"/TestProject_runscript_"+str(ID)+".sh", env=my_env ,stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True)
+            p = Popen("singularity exec --cleanenv --bind "+pwd+":"+pwd+" --bind /osgpool/halld/tbritton:/osgpool/halld/tbritton --bind /group/halld/:/group/halld/ --bind /scigroup/mcwrapper/gluex_MCwrapper:/scigroup/mcwrapper/gluex_MCwrapper "+ sing_img +" /bin/sh "+pwd+"/TestProject_runscript_"+str(ID)+".sh", env=my_env ,stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True)
             output, errors = p.communicate()
     
 
@@ -619,22 +640,32 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
     
 
     if(STATUS!=-1):
-        updatequery="UPDATE Project SET Tested=1"+" WHERE ID="+str(ID)+";"
-        curs.execute(updatequery)
-        conn.commit()
-        if(newLoc != "True"):
-            updateOrderquery="UPDATE Project SET Generator_Config=\""+newLoc+"\" WHERE ID="+str(ID)+";"
-            print(updateOrderquery)
-            curs.execute(updateOrderquery)
+        try:
+            updatequery="UPDATE Project SET Tested=1"+" WHERE ID="+str(ID)+";"
+            curs.execute(updatequery)
             conn.commit()
+            if(newLoc != "True"):
+                updateOrderquery="UPDATE Project SET Generator_Config=\""+newLoc+"\" WHERE ID="+str(ID)+";"
+                print(updateOrderquery)
+                curs.execute(updateOrderquery)
+                conn.commit()
+        except Exception as e:
+            print(e)
+            pass
+            #conn=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
+            #curs=conn.cursor(MySQLdb.cursors.DictCursor)
         
         print(bcolors.OKGREEN+"TEST SUCCEEDED"+bcolors.ENDC)
         print("rm -rf "+order["OutputLocation"])
         #status = subprocess.call("rm -rf "+order["OutputLocation"],shell=True)
     else:
-        updatequery="UPDATE Project SET Tested=-1"+" WHERE ID="+str(ID)+";"
-        curs.execute(updatequery)
-        conn.commit()
+        try:
+            updatequery="UPDATE Project SET Tested=-1"+" WHERE ID="+str(ID)+";"
+            curs.execute(updatequery)
+            conn.commit()
+        except Exception as e:
+            print(e)
+            pass
         
         print(bcolors.FAIL+"TEST FAILED"+bcolors.ENDC)
         print("rm -rf "+order["OutputLocation"])
@@ -679,10 +710,15 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
             #print(msg)
             print("SENDING")
             s.send_message(msg)
-            s.quit()     
-            copy=open("/osgpool/halld/tbritton/REQUESTED_FAIL_MAILS/email_"+str(row['ID'])+".log", "w+")
-            copy.write('The log information is reproduced below:\n\n\n'+str(status[0])+'\n\n\nErrors:\n\n\n'+str(status[2]))
-            copy.close()      
+            print("SENT")
+            s.quit() 
+            try:    
+                copy=open("/osgpool/halld/tbritton/REQUESTED_FAIL_MAILS/email_"+str(row['ID'])+".log", "w+")
+                copy.write('The log information is reproduced below:\n\n\n'+str(status[0])+'\n\n\nErrors:\n\n\n'+str(status[2]))
+                copy.close()
+            except Exception as e:
+                print(e)
+                pass     
             #subprocess.call("echo 'Your Project ID "+str(row['ID'])+" failed the test.  Please correct this issue by following the link: "+"https://halldweb.jlab.org/gluex_sim/SubmitSim.html?prefill="+str(row['ID'])+"&mod=1" +" .  Do NOT resubmit this request.  Write tbritton@jlab.org for additional assistance\n\n The log information is reproduced below:\n\n\n"+status[0]+"\n\n\n"+status[2]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+str(row['Email']),shell=True)
         except:
             print("UH OH MAILING")
@@ -1028,7 +1064,7 @@ def WriteConfig(ID):
     #WritePayloadConfig(rows[0],"True")
 
 def WritePayloadConfig(order,foundConfig,jobID=-1):
-    print("writing config file based on\n",order)
+    #print("writing config file based on\n",order)
     if jobID==-1:
         MCconfig_file= open("MCDispatched_"+str(order['ID'])+".config","a")
     else:

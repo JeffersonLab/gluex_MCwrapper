@@ -48,7 +48,7 @@ except:
         pass
 
 MCWRAPPER_VERSION="2.6.2"
-MCWRAPPER_DATE="03/13/22"
+MCWRAPPER_DATE="05/25/22"
 
 #group sync test
 #====================================================
@@ -471,13 +471,13 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
         f.write('+ProjectName = "gluex"'+"\n")
         #f.write("Arguments  = "+SCRIPT_TO_RUN+" "+COMMAND+"\n")
         f.write("Arguments  = "+"./"+script_to_use+" "+getCommandString(COMMAND_parts,"OSG",numJobsInBundle)+"\n")
-        f.write("Requirements = (HAS_SINGULARITY == TRUE) && (HAS_CVMFS_oasis_opensciencegrid_org == True)"+"\n")
+        f.write("Requirements = (HAS_SINGULARITY == TRUE) && (HAS_CVMFS_oasis_opensciencegrid_org == True) && (TARGET.GLIDEIN_Entry_Name =!= \"OSG_US_ODU-Ubuntu\")"+"\n")
         #f.write("Requirements = (HAS_SINGULARITY == TRUE) && (HAS_CVMFS_oasis_opensciencegrid_org == True) && (GLIDEIN_SITE=!=\"UConn\") && (GLIDEIN_SITE=!=\"Cedar\")"+"\n")
 #        f.write("Requirements = (HAS_SINGULARITY == TRUE) && (HAS_CVMFS_oasis_opensciencegrid_org == True) && (GLIDEIN_SITE==\"UConn\")"+"\n")
         #f.write('wantjobrouter=true'+"\n")
         f.write('+SingularityImage = "/cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_prod:v1"'+"\n")
         f.write('+SingularityBindCVMFS = True'+"\n")
-        f.write('+UNDESIRED_Sites = "Purdue-Geddes"'+"\n")
+        #f.write('+UNDESIRED_Sites = "OSG_US_ODU-Ubuntu"'+"\n")
         f.write('+SingularityAutoLoad = True'+"\n")
 #        f.write('+CVMFSReposList = "oasis.opensciencegrid.org"'+"\n")
 #        f.write('+DesiredSites="UConn"'+"\n")
@@ -554,7 +554,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
                         trans_block_count=0
                         transaction_stub="INSERT INTO Attempts (Job_ID,Creation_Time,BatchSystem,SubmitHost,BatchJobID,Status,WallTime,CPUTime,ThreadsRequested,RAMRequested, RAMUsed) VALUES "
                         transaction_str=""
-                        print("BUNDLING!")
+                        #print("BUNDLING!")
                         for job in bundledJobs:
                                 #***********************
                                 #THE FOLLOWING IF CHECKS IF THE ASSIGNED BATCH ID HAS BEEN ASSIGNED BEFORE FROM SCOSG16
@@ -1513,7 +1513,7 @@ def main(argv):
 
         #The submitter grabs a single unattempted job and submits it.  Always a single runnumber
         #
-        print(COMMAND_dict)
+        #print(COMMAND_dict)
         if str(IS_SUBMITTER) == "1":
                 if BGFOLD == "Random" or BGFOLD=="DEFAULT" or BGFOLD[0:3] == "loc":
                         RANDOM_NUM_EVT=GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,RUNNUM)
