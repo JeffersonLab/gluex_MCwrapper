@@ -503,7 +503,7 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
         curs.execute(updatequery)
         conn.commit()
         STATUS="Success"
-    return STATUS
+        return STATUS
 
     output="Dispatch_Failure"
     errors="Dispatch_Failure"
