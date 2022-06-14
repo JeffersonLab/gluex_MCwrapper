@@ -167,7 +167,7 @@ def checkProjectsForCompletion(comp_assignment):
         rootLoc=proj['OutputLocation'].split("REQUESTED_MC")[1]#.replace("/","")
         nullify_list=[]
         
-        print("CHECKING FILES")
+        print("CHECKING FILES",proj['ID'])
         for job in fulfilledJobs:
             #print("Data already Verified?",job['DataVerified'])
             if(job['DataVerified'] !=0 ):
@@ -181,19 +181,19 @@ def checkProjectsForCompletion(comp_assignment):
             #check if postprocessor is being run
             postproc_append=""
             #print(proj)
-            if(proj['GenPostProcessing'] != None):
+            if(proj['GenPostProcessing'] != None and proj['GenPostProcessing'] != ""):
                 postproc_append="_"+proj['GenPostProcessing'].split(":")[0]
 
             Expected_returned_files=[]
             
-            if(str(proj['RunGeneration'])=="1" and str(proj['SaveGeneration'])=="1"):
+            if(str(proj['RunGeneration'])=="1" and str(proj['SaveGeneration'])=="1" and str(proj['Generator'])!="particle_gun"):
                 Expected_returned_files.append(STANDARD_NAME+postproc_append+".hddm")
 
             if(str(proj['RunGeant'])=="1" and str(proj['SaveGeant'])=="1"):
-                Expected_returned_files.append(STANDARD_NAME+'_geant'+str(proj['GeantVersion'])+postproc_append+'.hddm')
+                Expected_returned_files.append(STANDARD_NAME+postproc_append+'_geant'+str(proj['GeantVersion'])+'.hddm')
 
             if(str(proj['RunSmear'])=="1" and str(proj['SaveSmear'])=="1"):
-                Expected_returned_files.append(STANDARD_NAME+'_geant'+str(proj['GeantVersion'])+'_smeared'+postproc_append+'.hddm')
+                Expected_returned_files.append(STANDARD_NAME+postproc_append+'_geant'+str(proj['GeantVersion'])+'_smeared'+'.hddm')
             
             if(str(proj['RunReconstruction'])=="1" and str(proj['SaveReconstruction'])=="1"):
                 Expected_returned_files.append('dana_rest_'+STANDARD_NAME+postproc_append+'.hddm')
@@ -768,7 +768,16 @@ def checkOSG(Jobs_List):
                                 attempt_BKG_parts=attempt_BKG.split(":")
                                 print(len(attempt_BKG_parts))
                                 if len(attempt_BKG_parts) != 1:
-                                    locally_found=os.path.isfile("/work/osgpool/halld/random_triggers/"+str(attempt_BKG_parts[1])+"/run"+str(thisJOB_RunNumber).zfill(6)+"_random.hddm")
+                                    locally_found=False
+                                    try:
+                                        check_out=subprocess.check_output('ssh tbritton@dtn1902 ls /osgpool/halld/random_triggers/'+str(attempt_BKG_parts[1])+"/run"+str(thisJOB_RunNumber).zfill(6)+'_random.hddm', shell=True)
+                                        print("Found:",check_out)
+                                        locally_found=True
+                                    except Exception as e:
+                                        print(e)
+                                        locally_found=False
+                                    #locally_found=os.path.isfile("/work/osgpool/halld/random_triggers/"+str(attempt_BKG_parts[1])+"/run"+str(thisJOB_RunNumber).zfill(6)+"_random.hddm")
+                                    print("is found:",locally_found)
                                     if locally_found:
                                         print("found file locally: "+str("/work/osgpool/halld/random_triggers/"+str(attempt_BKG_parts[1])+"/run"+str(thisJOB_RunNumber).zfill(6)+"_random.hddm"))
                                         response=os.system("ping -c 1 nod25.phys.uconn.edu")
@@ -788,6 +797,7 @@ def checkOSG(Jobs_List):
                                         print("6 job stat")
                                         JOB_STATUS=6
                                         deactivate_Job="UPDATE Jobs set IsActive=0 where ID="+str(job["Job_ID"])+";"
+                                        print(deactivate_Job)
                                         dbcursorOSG.execute(deactivate_Job)
                                         dbcnxOSG.commit()
                     

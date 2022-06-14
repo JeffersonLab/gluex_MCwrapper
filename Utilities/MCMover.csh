@@ -14,10 +14,14 @@ if [[ `ps all -u tbritton | grep MCMover.csh | grep -v grep | wc -l` == 2 ]]; th
     input_dir=/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/
     transfer_node=tbritton@dtn1902-ib
     LOGtransfer_node=tbritton@ifarm1901-ib
+    CONFIGtransfer_node=tbritton@ifarm1901-ib
+
     output_dir=/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/
     outputLOG_dir=/work/halld3/REQUESTED_MC/
+    outputCONFIG_dir=/work/halld3/REQUESTED_MC/
 
     outputLOG_file=outputLOG_files_list_$HOST
+    outputCONFIG_file=outputCONFIG_files_list_$HOST
     output_file=outputLOG_files_list_$HOST
     # move slag-like files in the input directory out of the way
     mkdir -pv $input_dir/slag
@@ -36,6 +40,13 @@ if [[ `ps all -u tbritton | grep MCMover.csh | grep -v grep | wc -l` == 2 ]]; th
         LOGtransArray+=("$REPLY")
     done < <(find $input_dir/ -mindepth 2 -maxdepth 2 -type d -not -name ".*" -name "log*" -print0)
     
+    CONFIGtransArray=()
+    while IFS=  read -r -d $'\0'; do
+        CONFIGtransArray+=("$REPLY")
+    done < <(find $input_dir/ -mindepth 2 -maxdepth 2 -type d -not -name ".*" -name "config*" -print0)
+
+
+
     for logdir in ${LOGtransArray[@]}
     do
         echo $logdir
@@ -96,7 +107,68 @@ if [[ `ps all -u tbritton | grep MCMover.csh | grep -v grep | wc -l` == 2 ]]; th
         comm -12 /tmp/inputLOG_files_list.txt /tmp/outputLOG_files_list.txt | xargs rm -v
     fi
 
-   
+    for configdir in ${CONFIGtransArray[@]}
+    do
+        echo $configdir
+        projpath=`echo $configdir | awk '{split($0,arr,"REQUESTEDMC_OUTPUT"); print arr[2]}'`
+        echo $projpath >> /osgpool/halld/tbritton/MCWrapper_Logs/MCWrapperMover.log
+
+        echo ssh $CONFIGtransfer_node mkdir -p $outputCONFIG_dir/$projpath/
+        
+        ssh $CONFIGtransfer_node mkdir -p $outputCONFIG_dir/$projpath/
+        
+
+        configdir2=${configdir}
+        echo chmod -R g+w $configdir2
+        ssh $CONFIGtransfer_node chmod -R g+w $outputCONFIG_dir/$projpath/
+        rsync_command="rsync --progress -pruvt $configdir/ $CONFIGtransfer_node:$outputCONFIG_dir/$projpath/" #--exclude $input_dir/slag"
+        echo $rsync_command >> /osgpool/halld/tbritton/MCWrapper_Logs/MCWrapperMover.log
+        status="255"
+        while [ "$status" -eq "255" ]
+        do
+            echo $rsync_command
+            $rsync_command
+            status="$?"
+            echo status = $status
+            sleep 1
+        done
+        ((movecount=movecount+1))
+        echo $movecount
+
+    done
+
+    echo "============================================================================================"
+    echo "ssh" $CONFIGtransfer_node "cd $outputCONFIG_dir;rm /tmp/"$outputCONFIG_file".txt; find . -type f | sort > /tmp/"$outputCONFIG_file".txt;"
+    ssh $CONFIGtransfer_node "cd $outputCONFIG_dir;rm /tmp/"$outputCONFIG_file".txt; find . -type f | sort > /tmp/"$outputCONFIG_file".txt;"
+
+    echo "OUTPUT FILE WRITTEN"
+
+    echo scp $CONFIGtransfer_node:/tmp/$outputCONFIG_file".txt" /tmp/outputCONFIG_files_list.txt
+    scp $CONFIGtransfer_node:/tmp/$outputCONFIG_file".txt" /tmp/outputCONFIG_files_list.txt
+    #echo "pwd" $PWD >> /osgpool/halld/tbritton/MCWrapper_Logs/MCWrapperMover.log
+    #find . -type f | sort > /tmp/output_files_list.txt
+    echo "cd $input_dir" >> /osgpool/halld/tbritton/MCWrapper_Logs/MCWrapperMover.log
+    cd $input_dir
+
+    echo "moving to delete" >> /osgpool/halld/tbritton/MCWrapper_Logs/MCWrapperMover.log
+    echo $PWD >> /osgpool/halld/tbritton/MCWrapper_Logs/MCWrapperMover.log
+
+    if [[ $PWD == *"/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC"* ]]; then
+        echo "oh no! did not move to input directory?!"
+        exit 1
+    fi
+
+    # make list of files in the input directory
+    find . -type f -mmin +600 | sort > /tmp/inputCONFIG_files_list.txt
+    echo "DELETING" >> /osgpool/halld/tbritton/MCWrapper_Logs/MCWrapperMover.log
+    echo `comm -12 /tmp/inputCONFIG_files_list.txt /tmp/outputCONFIG_files_list.txt` >> /osgpool/halld/tbritton/MCWrapper_Logs/MCWrapperMover.log
+    echo `comm -12 /tmp/inputCONFIG_files_list.txt /tmp/outputCONFIG_files_list.txt`
+
+    if [[ `comm -12 /tmp/inputCONFIG_files_list.txt /tmp/outputCONFIG_files_list.txt | wc -l` != 0 ]]; then
+        comm -12 /tmp/inputCONFIG_files_list.txt /tmp/outputCONFIG_files_list.txt | xargs rm -v
+    fi
+
+
     #echo ${transArray[*]} >> /osgpool/halld/tbritton/MCWrapper_Logs/MCWrapperMover.log
     for dir in ${transArray[@]}
     do
@@ -162,6 +234,10 @@ if [[ `ps all -u tbritton | grep MCMover.csh | grep -v grep | wc -l` == 2 ]]; th
         comm -12 /tmp/input_files_list.txt /tmp/output_files_list.txt | xargs rm -v
     fi
 
+    rm -f /tmp/input_files_list.txt
+    rm -f /tmp/output_files_list.txt
+    rm -f /tmp/inputLOG_files_list.txt 
+    rm -f /tmp/outputLOG_files_list.txt
     #clean empty directories
     #find $input_dir -depth -empty -type d mmin -2880 -exec rmdir {} \;
     

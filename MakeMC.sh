@@ -446,6 +446,17 @@ if [[ "$polarization_angle" == "-1.0" ]]; then
 		POL_TO_GEN=0
 fi
 fi
+
+isGreater=1
+#echo $isGreater
+isGreater=`echo $GEN_MAX_ENERGY'>'$eBEAM_ENERGY | $USER_BC -l`
+#echo $isGreater
+#echo "$isGreater"
+if [[ "$isGreater" == "1" && "$eBEAM_ENERGY" != "rcdb" ]]; then
+echo "WARNING: User requested GEN_MAX_ENERGY > eBEAM_ENERGY.  This is not possible.  Setting GEN_MAX_ENERGY to eBEAM_ENERGY..."
+export GEN_MAX_ENERGY=$eBEAM_ENERGY
+fi
+
 # PRINT INPUTS
 echo "This job has been configured to run at: " $MCWRAPPER_RUN_LOCATION" : "`hostname`
 echo "Job started: " `date`
@@ -511,16 +522,7 @@ echo `which hd_root`
 echo ""
 echo ""
 
-isGreater=1
-#echo $isGreater
-isGreater=`echo $GEN_MAX_ENERGY'>'$eBEAM_ENERGY | $USER_BC -l`
-#echo $isGreater
-#echo "$isGreater"
-if [[ "$isGreater" == "1" && "$eBEAM_ENERGY" != "rcdb" ]]; then
-echo "something went wrong with initialization"
-echo "Error: Requested Max photon energy $GEN_MAX_ENERGY is above the electron beam energy $eBEAM_ENERGY!"
-exit 1
-fi
+
 
 if [[ "$CUSTOM_GCONTROL" == "0" && "$GEANT" == "1" ]]; then
 	if [[ "$EXPERIMENT" == "GlueX" ]]; then
@@ -1298,7 +1300,7 @@ if [[ "$GENERATOR_POST" != "No" ]]; then
 	echo $GENERATOR_POST_CONFIG
 	echo $GENERATOR_POST_CONFIGEVT
 	echo $GENERATOR_POST_CONFIGDEC
-	if [[ "$GENERATOR_POST_CONFIG" != "default" ]]; then
+	if [[ "$GENERATOR_POST_CONFIG" != "Default" ]]; then
 		cp $GENERATOR_POST_CONFIG ./post'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf
     if [[ ! -f ./post'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf ]]; then
       echo "Couldn't copy $GENERATOR_POST_CONFIG. Exit."
@@ -1307,7 +1309,7 @@ if [[ "$GENERATOR_POST" != "No" ]]; then
 	fi
 
 	if [[ "$GENERATOR_POST" == "decay_evtgen" ]]; then
-		if [[ "$GENERATOR_POST_CONFIGEVT" != "default" ]]; then
+		if [[ "$GENERATOR_POST_CONFIGEVT" != "Default" ]]; then
       cp $GENERATOR_POST_CONFIGEVT ./postevt'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf
       if [[ ! -f ./postevt'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf ]]; then
         echo "Couldn't copy $GENERATOR_POST_CONFIGEVT. Exit."
@@ -1315,7 +1317,7 @@ if [[ "$GENERATOR_POST" != "No" ]]; then
       fi
 			export EVTGEN_PARTICLE_DEFINITIONS=$PWD/postevt'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf
 		fi
-		if [[ "$GENERATOR_POST_CONFIGDEC" != "default" ]];then
+		if [[ "$GENERATOR_POST_CONFIGDEC" != "Default" ]];then
       cp $GENERATOR_POST_CONFIGDEC ./postdec'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf
       if [[ ! -f ./postdec'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf ]]; then
         echo "Couldn't copy $GENERATOR_POST_CONFIGDEC. Exit."
@@ -1342,7 +1344,7 @@ if [[ "$GENERATOR_POST" != "No" ]]; then
 fi
 
 
-    if [[ "$GEANT" != "0" ]]; then
+if [[ "$GEANT" != "0" ]]; then
 	echo "RUNNING GEANT"$GEANTVER
 
 	if [[ `echo $eBEAM_ENERGY | grep -o "\." | wc -l` == 0 ]]; then
@@ -1492,7 +1494,8 @@ fi
 if [[ "$GENERATOR" == "geantBEAM" ]]; then
   	echo "SKIP RUNNING MCSMEAR AND RECONSTRUCTION"
 else
-	if [[ !("$GENR" == "0" && "$GEANT" == "0" && "$SMEAR" == "0") ]]; then
+	#check if config file ends in .evio to decide whether or not smear needs to be run for conversion of simulation for reconstruction
+	if [[ !("$GENR" == "0" && "$GEANT" == "0" && "$SMEAR" == "0" && "$CONFIG_FILE" != *.evio ) ]]; then
 	echo "RUNNING MCSMEAR"
 	if [[ "$GENR" == "0" && "$GEANT" == "0" ]]; then
 		echo $GENERATOR
@@ -1597,6 +1600,7 @@ else
 		fi
 
 	fi
+
 	    if [[ "$RECON" != "0" ]]; then
 		echo "RUNNING RECONSTRUCTION"
 		file_to_recon=$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm'
