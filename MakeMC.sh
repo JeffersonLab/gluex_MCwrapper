@@ -675,9 +675,9 @@ if [[ "$GENR" != "0" ]]; then
 
 	gen_pre=`echo $GENERATOR | cut -c1-4`
 
-    if [[ "$gen_pre" != "file" && "$GENERATOR" != "genr8" && "$GENERATOR" != "bggen" && "$GENERATOR" != "genEtaRegge" && "$GENERATOR" != "gen_2pi_amp" && "$GENERATOR" != "gen_pi0" && "$GENERATOR" != "gen_2pi_primakoff" && "$GENERATOR" != "gen_2pi0_primakoff" && "$GENERATOR" != "gen_omega_3pi" && "$GENERATOR" != "gen_omegapi" && "$GENERATOR" != "gen_2k" && "$GENERATOR" != "bggen_jpsi" && "$GENERATOR" != "gen_ee" && "$GENERATOR" != "gen_ee_hb" && "$GENERATOR" != "particle_gun" && "$GENERATOR" != "geantBEAM" && "$GENERATOR" != "bggen_phi_ee" && "$GENERATOR" != "genBH" && "$GENERATOR" != "gen_omega_radiative" && "$GENERATOR" != "gen_amp" && "$GENERATOR" != "genr8_new" && "$GENERATOR" != "gen_compton" && "$GENERATOR" != "gen_npi" && "$GENERATOR" != "gen_compton_simple" && "$GENERATOR" != "gen_primex_eta_he4" && "$GENERATOR" != "gen_whizard" && "$GENERATOR" != "mc_gen" && "$GENERATOR" != "gen_vec_ps" ]]; then
+    if [[ "$gen_pre" != "file" && "$GENERATOR" != "genr8" && "$GENERATOR" != "bggen" && "$GENERATOR" != "genEtaRegge" && "$GENERATOR" != "gen_2pi_amp" && "$GENERATOR" != "gen_pi0" && "$GENERATOR" != "gen_2pi_primakoff" && "$GENERATOR" != "gen_2pi0_primakoff" && "$GENERATOR" != "gen_omega_3pi" && "$GENERATOR" != "gen_omegapi" && "$GENERATOR" != "gen_2k" && "$GENERATOR" != "bggen_jpsi" && "$GENERATOR" != "gen_ee" && "$GENERATOR" != "gen_ee_hb" && "$GENERATOR" != "particle_gun" && "$GENERATOR" != "geantBEAM" && "$GENERATOR" != "bggen_phi_ee" && "$GENERATOR" != "genBH" && "$GENERATOR" != "gen_omega_radiative" && "$GENERATOR" != "gen_amp" && "$GENERATOR" != "genr8_new" && "$GENERATOR" != "gen_compton" && "$GENERATOR" != "gen_npi" && "$GENERATOR" != "gen_compton_simple" && "$GENERATOR" != "gen_primex_eta_he4" && "$GENERATOR" != "gen_whizard" && "$GENERATOR" != "mc_gen" && "$GENERATOR" != "gen_vec_ps"  && "$GENERATOR" != "gen_gcf" && "$GENERATOR" != "gen_ALP" ]]; then
 		echo "NO VALID GENERATOR GIVEN"
-		echo "only [genr8, bggen, genEtaRegge, gen_2pi_amp, gen_pi0, gen_omega_3pi, gen_2k, bggen_jpsi, gen_ee, gen_ee_hb,  bggen_phi_ee, particle_gun, geantBEAM, genBH, gen_omega_radiative, gen_amp, gen_compton, gen_npi, gen_compton_simple, gen_primex_eta_he4, gen_whizard, gen_omegapi, mc_gen, gen_vec_ps] are supported"
+		echo "only [genr8, bggen, genEtaRegge, gen_2pi_amp, gen_pi0, gen_omega_3pi, gen_2k, bggen_jpsi, gen_ee, gen_ee_hb,  bggen_phi_ee, particle_gun, geantBEAM, genBH, gen_omega_radiative, gen_amp, gen_compton, gen_npi, gen_compton_simple, gen_primex_eta_he4, gen_whizard, gen_omegapi, mc_gen, gen_vec_ps, gen_gcf, gen_ALP] are supported"
 		exit 1
     fi
 
@@ -919,7 +919,7 @@ if [[ "$GENR" != "0" ]]; then
 		echo "configuring the particle gun"
 		STANDARD_NAME="particle_gun_"$STANDARD_NAME
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
-  elif [[ "$GENERATOR" == "geantBEAM" ]]; then
+    elif [[ "$GENERATOR" == "geantBEAM" ]]; then
 		echo "configuring geantBEAM"
 		STANDARD_NAME="geantBeam"$STANDARD_NAME
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
@@ -929,6 +929,14 @@ if [[ "$GENR" != "0" ]]; then
 		echo "note: this generator is run completely from command line, thus no config file will be made and/or modified"
 
 		cp $CONFIG_FILE ./cobrems.root
+    elif [[ "$GENERATOR" == "gen_gcf" ]]; then
+                echo "configuring gen_gcf"
+                STANDARD_NAME="gen_gcf_"$STANDARD_NAME
+                cp $CONFIG_FILE ./$STANDARD_NAME.conf
+    else if ( "$GENERATOR" == "gen_ALP" ) then
+                echo "configuring gen_ALP"
+                set STANDARD_NAME="gen_ALP_"$STANDARD_NAME
+                cp $CONFIG_FILE ./$STANDARD_NAME.conf
 
     fi
 
@@ -1246,6 +1254,23 @@ if [[ "$GENR" != "0" ]]; then
 
 		sed -i 's/class="mc_s"/'class=\"s\"'/' $STANDARD_NAME.hddm
 		generator_return_code=$?
+        elif [[ "$GENERATOR" == "gen_gcf" ]]; then
+        echo "RUNNING GEN_GCF"
+        #optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
+        #echo $optionals_line
+        sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
+	echo gen_gcf -C $STANDARD_NAME.conf -B $STANDARD_NAME'_beam.conf' -H $STANDARD_NAME.hddm -n $EVT_TO_GEN -z $RUN_NUMBER -r $formatted_fileNumber #$optionals_line
+	gen_gcf -C $STANDARD_NAME.conf -B $STANDARD_NAME'_beam.conf' -H $STANDARD_NAME.hddm -n $EVT_TO_GEN -z $RUN_NUMBER -r $formatted_fileNumber #$optionals_line
+	generator_return_code=$?
+        elif [[ "$GENERATOR" == "gen_ALP" ]]; then
+        echo "RUNNING GEN_ALP"
+        #optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
+        #echo $optionals_line
+        sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
+	echo gen_ALP -C $STANDARD_NAME.conf -B $STANDARD_NAME'_beam.conf' -H $STANDARD_NAME.hddm -R $STANDARD_NAME.root -n $EVT_TO_GEN -z $RUN_NUMBER -r $formatted_fileNumber #$optionals_line
+        gen_ALP -C $STANDARD_NAME.conf -B $STANDARD_NAME'_beam.conf' -H $STANDARD_NAME.hddm -R $STANDARD_NAME.root -n $EVT_TO_GEN -z $RUN_NUMBER -r $formatted_fileNumber #$optionals_line
+        generator_return_code=$?
+
 	fi
 
 
@@ -1790,6 +1815,7 @@ fi
 
 cd ..
 rm -rf .hdds_tmp_*
+rm -rf *.astate
 if [[ `ls $RUNNING_DIR/${RUN_NUMBER}_${FILE_NUMBER} | wc -l` == 0 ]]; then
 	rm -rf $RUNNING_DIR/${RUN_NUMBER}_${FILE_NUMBER}
 else
