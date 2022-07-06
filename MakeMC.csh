@@ -665,9 +665,9 @@ if ( "$GENR" != "0" ) then
 
     set gen_pre=`echo $GENERATOR | cut -c1-4`
 
-    if ( "$gen_pre" != "file" && "$GENERATOR" != "genr8" && "$GENERATOR" != "bggen" && "$GENERATOR" != "genEtaRegge" && "$GENERATOR" != "gen_2pi_amp" && "$GENERATOR" != "gen_pi0" && "$GENERATOR" != "gen_2pi_primakoff" && "$GENERATOR" != "gen_2pi0_primakoff" && "$GENERATOR" != "gen_omega_3pi" && "$GENERATOR" != "gen_omegapi" && "$GENERATOR" != "gen_2k" && "$GENERATOR" != "bggen_jpsi" && "$GENERATOR" != "gen_ee" && "$GENERATOR" != "gen_ee_hb" && "$GENERATOR" != "particle_gun" && "$GENERATOR" != "geantBEAM" && "$GENERATOR" != "bggen_phi_ee" && "$GENERATOR" != "genBH" && "$GENERATOR" != "gen_omega_radiative" && "$GENERATOR" != "gen_amp" && "$GENERATOR" != "genr8_new" && "$GENERATOR" != "gen_compton" && "$GENERATOR" != "gen_npi" && "$GENERATOR" != "gen_compton_simple" && "$GENERATOR" != "gen_primex_eta_he4" && "$GENERATOR" != "gen_whizard" && "$GENERATOR" != "mc_gen" && "$GENERATOR" != "gen_vec_ps") then
+    if ( "$gen_pre" != "file" && "$GENERATOR" != "genr8" && "$GENERATOR" != "bggen" && "$GENERATOR" != "genEtaRegge" && "$GENERATOR" != "gen_2pi_amp" && "$GENERATOR" != "gen_pi0" && "$GENERATOR" != "gen_2pi_primakoff" && "$GENERATOR" != "gen_2pi0_primakoff" && "$GENERATOR" != "gen_omega_3pi" && "$GENERATOR" != "gen_omegapi" && "$GENERATOR" != "gen_2k" && "$GENERATOR" != "bggen_jpsi" && "$GENERATOR" != "gen_ee" && "$GENERATOR" != "gen_ee_hb" && "$GENERATOR" != "particle_gun" && "$GENERATOR" != "geantBEAM" && "$GENERATOR" != "bggen_phi_ee" && "$GENERATOR" != "genBH" && "$GENERATOR" != "gen_omega_radiative" && "$GENERATOR" != "gen_amp" && "$GENERATOR" != "genr8_new" && "$GENERATOR" != "gen_compton" && "$GENERATOR" != "gen_npi" && "$GENERATOR" != "gen_compton_simple" && "$GENERATOR" != "gen_primex_eta_he4" && "$GENERATOR" != "gen_whizard" && "$GENERATOR" != "mc_gen" && "$GENERATOR" != "gen_vec_ps"  && "$GENERATOR" != "bggen_upd" ) then
 		echo "NO VALID GENERATOR GIVEN"
-		echo "only [genr8, bggen, genEtaRegge, gen_2pi_amp, gen_pi0, gen_omega_3pi, gen_2k, bggen_jpsi, gen_ee , gen_ee_hb, bggen_phi_ee, particle_gun, geantBEAM, genBH, gen_omega_radiative, gen_amp, gen_compton, gen_npi, gen_compton_simple, gen_primex_eta_he4, gen_whizard, gen_omegapi, mc_gen, gen_vec_ps] are supported"
+		echo "only [genr8, bggen, genEtaRegge, gen_2pi_amp, gen_pi0, gen_omega_3pi, gen_2k, bggen_jpsi, gen_ee , gen_ee_hb, bggen_phi_ee, particle_gun, geantBEAM, genBH, gen_omega_radiative, gen_amp, gen_compton, gen_npi, gen_compton_simple, gen_primex_eta_he4, gen_whizard, gen_omegapi, mc_gen, gen_vec_ps, bggen_upd] are supported"
 		echo "something went wrong with initialization"
 		exit 1
     endif
@@ -887,6 +887,13 @@ if ( "$GENR" != "0" ) then
 		cp $MCWRAPPER_CENTRAL/Generators/bggen_jpsi/particle.dat ./
 		cp $MCWRAPPER_CENTRAL/Generators/bggen_jpsi/pythia.dat ./
 		cp $MCWRAPPER_CENTRAL/Generators/bggen_jpsi/pythia-geant.map ./
+		cp $CONFIG_FILE ./$STANDARD_NAME.conf
+	else if ( "$GENERATOR" == "bggen_upd" ) then
+		echo "configuring bggen_upd"
+		set STANDARD_NAME="bggen_upd_"$STANDARD_NAME
+		cp $MCWRAPPER_CENTRAL/Generators/bggen_upd/particles.ffr ./
+		cp $MCWRAPPER_CENTRAL/Generators/bggen_upd/pythia.dat ./
+		cp $MCWRAPPER_CENTRAL/Generators/bggen_upd/run_mcwrapper.ffr ./
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
 	else if ( "$GENERATOR" == "bggen_phi_ee" ) then
 		echo "configuring bggen_phi_ee"
@@ -1211,6 +1218,26 @@ if ( "$GENR" != "0" ) then
 
 		ln -s $STANDARD_NAME.conf fort.15
 		bggen_jpsi
+		set generator_return_code=$status
+		mv bggen.hddm $STANDARD_NAME.hddm
+	else if ( "$GENERATOR" == "bggen_upd" ) then
+		set RANDOMnum=`bash -c 'echo $RANDOM'`
+		echo Random Number used: $RANDOMnum
+		sed -i 's/TEMPTRIG/'$EVT_TO_GEN'/' run_mcwrapper.ffr
+		sed -i 's/TEMPRUNNO/'$RUN_NUMBER'/' run_mcwrapper.ffr
+		sed -i 's/TEMPCOLD/'0.00$colsize'/' run_mcwrapper.ffr
+		sed -i 's/TEMPRAND/'$RANDOMnum'/' run_mcwrapper.ffr
+		set Fortran_eBEAM_ENRGY=`echo $eBEAM_ENERGY | cut -c -7`
+		sed -i 's/TEMPELECE/'$Fortran_eBEAM_ENRGY'/' run_mcwrapper.ffr
+		set Fortran_COHERENT_PEAK=`echo $COHERENT_PEAK | cut -c -7`
+		sed -i 's/TEMPCOHERENT/'$Fortran_COHERENT_PEAK'/' 
+		sed -i 's/TEMPMINGENE/'$GEN_MIN_ENERGY'/' run_mcwrapper.ffr
+		sed -i 's/TEMPMAXGENE/'$GEN_MAX_ENERGY'/' run_mcwrapper.ffr
+
+		ln -s $STANDARD_NAME.conf fort.15
+        ln -s particles.ffr fort.16
+        ln -s run_mcwrapper.ffr fort.17
+		bggen_upd
 		set generator_return_code=$status
 		mv bggen.hddm $STANDARD_NAME.hddm
 	else if ( "$GENERATOR" == "bggen_phi_ee" ) then
