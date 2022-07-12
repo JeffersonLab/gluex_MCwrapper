@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 ##########################################################################################################################
 #
 # 2017/03 Thomas Britton
@@ -1782,7 +1782,8 @@ def GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,RUNNUM):
                 path_base=path_base+"run"+formattedRUNNUM+"_random.hddm"
                 #print(path_base)
 
-                if socket.gethostname() == "scosg16.jlab.org" or socket.gethostname() == "scosg20.jlab.org":
+                running_hostname=socket.gethostname()
+                if running_hostname == "scosg16.jlab.org" or running_hostname == "scosg20.jlab.org" or running_hostname == "scosg2201.jlab.org":
                         #os.system("scp sci-xrootd.jlab.org:/osgpool/halld/"+"/random_triggers/"+RANDBGTAG+"/run"+formattedRUNNUM+"_random.hddm /tmp/")
                         path_base="/tmp/"+RANDBGTAG+"/run"+formattedRUNNUM+"_random.hddm"
 
@@ -1798,7 +1799,8 @@ def GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,RUNNUM):
                 #print matches
                 if len(matches) == 0:
                         print("Attempting to scan and tag this random trigger file")
-                        if socket.gethostname() == "scosg16.jlab.org" or socket.gethostname() == "scosg20.jlab.org":
+                        running_hostname=socket.gethostname()
+                        if running_hostname == "scosg16.jlab.org" or running_hostname == "scosg20.jlab.org" or running_hostname == "scosg2201.jlab.org":
                                 os.system("mkdir -p /tmp/"+RANDBGTAG)
                                 os.system("scp sci-xrootd.jlab.org:/osgpool/halld/"+"/random_triggers/"+RANDBGTAG+"/run"+formattedRUNNUM+"_random.hddm /tmp/"+RANDBGTAG)
 

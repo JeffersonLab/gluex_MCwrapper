@@ -39,11 +39,19 @@ import json
 import time
 from datetime import timedelta
 from datetime import datetime
+import pwd
 
 dbhost = "hallddb.jlab.org"
 dbuser = 'mcuser'
 dbpass = ''
 dbname = 'gluex_mc'
+
+#get user name of current user
+runner_name=pwd.getpwuid( os.getuid() )[0]
+
+if( not (runner_name=="tbritton" or runner_name=="mcwrap")):
+    print("ERROR: You must be tbritton or mcwrap to run this script")
+    sys.exit(1)
 
 try:
         dbcnx=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
@@ -74,11 +82,11 @@ def main(argv):
         if(len(argv) !=0):
                 numOverRide=True
         
-        numprocesses_running=subprocess.check_output(["echo `ps all -u tbritton | grep MCDrone.py | grep -v grep | wc -l`"], shell=True).strip()
+        numprocesses_running=subprocess.check_output(["echo `ps all -u "+runner_name+" | grep MCDrone.py | grep -v grep | wc -l`"], shell=True).strip()
 
         print(int(numprocesses_running))
         ALLSTOP=False
-        if(os.path.isfile('/osgpool/halld/tbritton/.ALLSTOP')):
+        if(os.path.isfile('/osgpool/halld/'+runner_name+'/.ALLSTOP')):
             print("ALL STOP DETECTED")
             ALLSTOP=True
 

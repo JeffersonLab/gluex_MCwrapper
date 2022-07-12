@@ -636,7 +636,7 @@ if ( "$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" == "
 			endif
     else
 			set bkglocstring="/work/osgpool/halld/random_triggers/"$RANDBGTAG"/run"$formatted_runNumber"_random.hddm"
-			if ( `hostname` == 'scosg16.jlab.org' || `hostname` == 'scosg20.jlab.org' ) then
+			if ( `hostname` == 'scosg16.jlab.org' || `hostname` == 'scosg20.jlab.org' || `hostname` == 'scosg2201.jlab.org' ) then
 				set bkglocstring="/work/osgpool/halld/random_triggers/"$RANDBGTAG"/run"$formatted_runNumber"_random.hddm"
 			endif
 		endif

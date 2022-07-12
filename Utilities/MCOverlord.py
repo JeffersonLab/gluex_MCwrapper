@@ -28,6 +28,7 @@ import os.path
 #import mysql.connector
 import time
 import os
+import pwd
 import getpass
 import sys
 import re
@@ -60,6 +61,12 @@ except:
         print("WARNING: CANNOT CONNECT TO DATABASE.  JOBS WILL NOT BE CONTROLLED OR MONITORED")
         pass
 
+#get user name of current user
+runner_name=pwd.getpwuid( os.getuid() )[0]
+
+if( not (runner_name=="tbritton" or runner_name=="mcwrap")):
+    print("ERROR: You must be tbritton or mcwrap to run this script")
+    sys.exit(1)
 
 def exists_remote(host, path):
     """Test if a file exists at path on a host accessible with SSH."""
@@ -91,7 +98,7 @@ def CheckForFile(rootLoc,expFile):
     #tbritton@dtn1902-ib:
 
     #if(os.path.isfile('/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/'+rootLoc+"/"+subloc+"/"+expFile) or os.path.isfile('/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) or os.path.isfile('/mss/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) ):
-    if(os.path.isfile('/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote('tbritton@dtn1902-ib','/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote('tbritton@dtn1902-ib','/mss/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) ):
+    if(os.path.isfile('/osgpool/halld/'+runner_name+'/REQUESTEDMC_OUTPUT/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote(runner_name+'@dtn1902-ib','/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote(runner_name+'@dtn1902-ib','/mss/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) ):
         found=True
     else:
         print(rootLoc+"/"+subloc+"/"+expFile+"   NOT FOUND")
@@ -130,7 +137,7 @@ def checkProjectsForCompletion(comp_assignment):
     #OutstandingProjects=dbcursor.fetchall()
     dbcnx_comp=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
     dbcursor_comp=dbcnx_comp.cursor(MySQLdb.cursors.DictCursor)
-    outdir_root="/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/"
+    outdir_root="/osgpool/halld/"+runner_name+"/REQUESTEDMC_OUTPUT/"
 
     for proj in comp_assignment:#OutstandingProjects:
         
@@ -549,7 +556,7 @@ def UpdateOutputSize():
             location=Project[0]["FinalDestination"]
 
         try:
-            statuscommand="ssh tbritton@dtn1902 du -sh --exclude \".*\" --total "+location
+            statuscommand="ssh "+runner_name+"@dtn1902 du -sh --exclude \".*\" --total "+location
             print(statuscommand)
             totalSizeStr=subprocess.check_output([statuscommand], shell=True)
             #print "==============="
@@ -770,7 +777,7 @@ def checkOSG(Jobs_List):
                                 if len(attempt_BKG_parts) != 1:
                                     locally_found=False
                                     try:
-                                        check_out=subprocess.check_output('ssh tbritton@dtn1902 ls /osgpool/halld/random_triggers/'+str(attempt_BKG_parts[1])+"/run"+str(thisJOB_RunNumber).zfill(6)+'_random.hddm', shell=True)
+                                        check_out=subprocess.check_output('ssh '+runner_name+'@dtn1902 ls /osgpool/halld/random_triggers/'+str(attempt_BKG_parts[1])+"/run"+str(thisJOB_RunNumber).zfill(6)+'_random.hddm', shell=True)
                                         print("Found:",check_out)
                                         locally_found=True
                                     except Exception as e:
@@ -808,8 +815,8 @@ def checkOSG(Jobs_List):
                         std_out_loc=str(JSON_job["Out"])
                         print(std_out_loc)
                         if( not os.path.isfile(std_out_loc)):
-                            print("scp tbritton@dtn1902-ib:/cache/halld/gluex_simulations/REQUESTED_MC/"+std_out_loc.split("REQUESTEDMC_OUTPUT")[1]+" "+"/tmp/"+std_out_loc.split("/")[-1])
-                            subprocess.call("scp tbritton@dtn1902-ib:/cache/halld/gluex_simulations/REQUESTED_MC/"+std_out_loc.split("REQUESTEDMC_OUTPUT")[1]+" "+"/tmp/"+std_out_loc.split("/")[-1],shell=True)
+                            print("scp "+runner_name+"@dtn1902-ib:/cache/halld/gluex_simulations/REQUESTED_MC/"+std_out_loc.split("REQUESTEDMC_OUTPUT")[1]+" "+"/tmp/"+std_out_loc.split("/")[-1])
+                            subprocess.call("scp "+runner_name+"@dtn1902-ib:/cache/halld/gluex_simulations/REQUESTED_MC/"+std_out_loc.split("REQUESTEDMC_OUTPUT")[1]+" "+"/tmp/"+std_out_loc.split("/")[-1],shell=True)
                             std_out_loc="/tmp/"+std_out_loc.split("/")[-1]
                         #print(std_out_loc)
                         
@@ -892,7 +899,7 @@ def main(argv):
         if(len(argv) !=0):
             numOverRide=True
         
-        numprocesses_running=subprocess.check_output(["echo `ps all -u tbritton | grep MCOverlord.py | grep -v grep | wc -l`"], shell=True)
+        numprocesses_running=subprocess.check_output(["echo `ps all -u "+runner_name+" | grep MCOverlord.py | grep -v grep | wc -l`"], shell=True)
 
         print(int(numprocesses_running))
         if(int(numprocesses_running) <2 or numOverRide):
