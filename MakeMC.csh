@@ -1373,6 +1373,12 @@ endif
 		sed -i 's/TEMPOUT/'$STANDARD_NAME'_geant'$GEANTVER'.hddm/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 		sed -i 's/TEMPTRIG/'$EVT_TO_GEN'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 
+		if ( $RUN_NUMBER >= 70000 ) then
+			sed -i 's/TEMPCKOV/'1'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+		else
+			sed -i 's/TEMPCKOV/'0'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+		endif
+
 		sed -i 's/TEMPGEANTAREA/'$GEANT_VERTEXT_AREA'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 		sed -i 's/TEMPGEANTLENGTH/'$GEANT_VERTEXT_LENGTH'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 
