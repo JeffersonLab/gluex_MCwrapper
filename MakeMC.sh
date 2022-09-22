@@ -1834,6 +1834,11 @@ else
 	echo `ls $RUNNING_DIR/${RUN_NUMBER}_${FILE_NUMBER}`
 fi
 
+#copy the OUT_DIR back to location via xrdcp
+#export COPYBACK_DIR=xroots://dtn2002.jlab.org//gluex/mcwrap/REQUESTEDMC_OUTPUT/
+#echo "Copying back to $COPYBACK_DIR"
+#xrdcp -f -r -N $OUTDIR $COPYBACK_DIR
+
 #mv $PWD/*.root $OUTDIR/root/ #just in case
 echo `date`
 echo "Successfully completed"
