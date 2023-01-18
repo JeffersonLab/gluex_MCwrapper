@@ -98,7 +98,7 @@ def CheckForFile(rootLoc,expFile):
     #tbritton@dtn1902-ib:
 
     #if(os.path.isfile('/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/'+rootLoc+"/"+subloc+"/"+expFile) or os.path.isfile('/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) or os.path.isfile('/mss/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) ):
-    if(os.path.isfile('/osgpool/halld/'+runner_name+'/REQUESTEDMC_OUTPUT/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote(runner_name+'@dtn1902-ib','/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote(runner_name+'@dtn1902-ib','/mss/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) ):
+    if(os.path.isfile('/osgpool/halld/'+runner_name+'/REQUESTEDMC_OUTPUT/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote(runner_name+'@dtn1902','/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote(runner_name+'@dtn1902','/mss/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) ):
         found=True
     else:
         print(rootLoc+"/"+subloc+"/"+expFile+"   NOT FOUND")
@@ -815,8 +815,8 @@ def checkOSG(Jobs_List):
                         std_out_loc=str(JSON_job["Out"])
                         print(std_out_loc)
                         if( not os.path.isfile(std_out_loc)):
-                            print("scp "+runner_name+"@dtn1902-ib:/cache/halld/gluex_simulations/REQUESTED_MC/"+std_out_loc.split("REQUESTEDMC_OUTPUT")[1]+" "+"/tmp/"+std_out_loc.split("/")[-1])
-                            subprocess.call("scp "+runner_name+"@dtn1902-ib:/cache/halld/gluex_simulations/REQUESTED_MC/"+std_out_loc.split("REQUESTEDMC_OUTPUT")[1]+" "+"/tmp/"+std_out_loc.split("/")[-1],shell=True)
+                            print("scp "+runner_name+"@dtn1902:/cache/halld/gluex_simulations/REQUESTED_MC/"+std_out_loc.split("REQUESTEDMC_OUTPUT")[1]+" "+"/tmp/"+std_out_loc.split("/")[-1])
+                            subprocess.call("scp "+runner_name+"@dtn1902:/cache/halld/gluex_simulations/REQUESTED_MC/"+std_out_loc.split("REQUESTEDMC_OUTPUT")[1]+" "+"/tmp/"+std_out_loc.split("/")[-1],shell=True)
                             std_out_loc="/tmp/"+std_out_loc.split("/")[-1]
                         #print(std_out_loc)
                         
@@ -894,6 +894,7 @@ def main(argv):
         runnum=0
         runmax=-1
         spawnNum=10
+        comp_spawnnum=5
         numOverRide=False
 
         if(len(argv) !=0):
@@ -958,7 +959,7 @@ def main(argv):
                     print("CHECKING GLOBALS ON MAIN")
                     #UpdateOutputSize() broken without lustre mounted
                     #MULTI PROCESS THIS? MAYBE 5-10 processes
-                    comp_spawnnum=5
+                    
                     OutstandingProjectsQuery="SELECT * FROM Project WHERE (Is_Dispatched != '0' && Tested != '-1' && Tested != '2' ) && Notified is NULL"
                     dbcursor.execute(OutstandingProjectsQuery)
                     OutstandingProjects=dbcursor.fetchall()

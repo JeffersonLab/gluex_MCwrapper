@@ -12,8 +12,6 @@ import socket
 import pprint
 import pwd
 
-
-
 dbhost = "hallddb.jlab.org"
 dbuser = 'mcuser'
 dbpass = ''
@@ -34,9 +32,11 @@ class bcolors:
 
 runner_name=pwd.getpwuid( os.getuid() )[0]
 
+print("user check")
 if( not (runner_name=="tbritton" or runner_name=="mcwrap")):
     print("ERROR: You must be tbritton or mcwrap to run this script")
     sys.exit(1)
+
 
 def WritePayloadConfig(order,foundConfig,batch_system):
     
@@ -139,6 +139,7 @@ def SubmitList(SubList,job_IDs_submitted):
     list_to_Submit=list(SubList)
     #print("element 0 is "+str(list_to_Submit[0]))
     print("Submitting >= "+str(len(list_to_Submit))+" jobs")
+    print("submit list length:", len(list_to_Submit) )
     while row_index < len(list_to_Submit):
         print("on row "+str(row_index),"out of",str(len(list_to_Submit)))
     #for row in SubList:
@@ -149,6 +150,7 @@ def SubmitList(SubList,job_IDs_submitted):
             row_index+=1
             continue
 
+        print(" BUNDLE Q")
         bundled=False
         bundle_query="select ID,FileNumber from Jobs where Project_ID in (SELECT Project_ID from Jobs where ID="+str(row['ID'])+") and RunNumber in (SELECT RunNumber from Jobs where ID="+str(row['ID'])+") and NumEvts in (SELECT NumEvts from Jobs where ID="+str(row['ID'])+") and IsActive=1;"
         curs.execute(bundle_query)
@@ -188,6 +190,7 @@ def SubmitList(SubList,job_IDs_submitted):
         elif system_to_run_on == "SWIF":
             status = subprocess.call("cp "+MCWRAPPER_BOT_HOME+"examples/SWIFShell.config ./MCSubDispatched.config", shell=True)
 
+        print("WRITING PAYLOAD")
         WritePayloadConfig(proj[0],"True",system_to_run_on)
 
         per_file_num=20000
@@ -200,6 +203,7 @@ def SubmitList(SubList,job_IDs_submitted):
             print(e)
             pass
 
+        print("SUBMITTING JOB(S)")
         command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCSubDispatched.config "+str(RunNumber)+" "+str(row["NumEvts"])+" per_file="+str(per_file_num)+" base_file_number="+str(row["FileNumber"])+" generate="+str(proj[0]["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(proj[0]["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(proj[0]["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(proj[0]["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid=-"+str(row['ID'])+" logdir=/osgpool/halld/"+runner_name+"/REQUESTEDMC_LOGS/"+proj[0]["OutputLocation"].split("/")[7]+" batch=2 submitter=1 tobundle=1"
         print(command)
         #status = subprocess.call("printenv > /tmp/Submitter_env")
@@ -290,7 +294,7 @@ def decideSystem(row):
 
 
 def main(argv):
-    #print(argv)
+    print("beginning MCSub")
 
     Block_size=1000
     int_i=0
@@ -317,7 +321,7 @@ def main(argv):
         curs.execute(querysubmitters)
         lastid = curs.fetchall()
         try:    
-            while more_sub:# and int_i<1:
+            while more_sub:# and int_i<5:
                 #sleep 1 second
                 #time.sleep(1)
                 

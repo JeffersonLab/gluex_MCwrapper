@@ -82,25 +82,28 @@ def recursivermdir(rootloc):
         print(e)
         pass
 
-outdir_root="/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/"
 
-alldirs=os.listdir(outdir_root)
+locations=["REQUESTEDMC_OUTPUT","REQUESTEDMC_LOGS"]
+for location in locations:
+    outdir_root="/osgpool/halld/mcwrap/"+location+"/"
 
-for dirs in alldirs:
-    query='SELECT Completed_Time,Notified FROM Project where OutputLocation LIKE "%'+dirs+'%"'
-    #print(query)
-    dbcursor.execute(query)
-    Project = dbcursor.fetchall()
-    #print(Project)
-    if(len(Project)==0):
-        #print("no project")
-        recursivermdir(outdir_root+"/"+dirs)
-    elif(len(Project)==1):
-        #print("Project Found")
-        if(str(Project[0]["Notified"])=="1" and str(Project[0]["Notified"]) !="" ):
+    alldirs=os.listdir(outdir_root)
+
+    for dirs in alldirs:
+        query='SELECT Completed_Time,Notified FROM Project where OutputLocation LIKE "%'+dirs+'%"'
+        #print(query)
+        dbcursor.execute(query)
+        Project = dbcursor.fetchall()
+        #print(Project)
+        if(len(Project)==0):
+            #print("no project")
             recursivermdir(outdir_root+"/"+dirs)
-    else:
-        #print("HOW?!?!?!")
-        print(outdir_root+"/"+dirs)
-        if(dirs=="dalton" or dirs=="pippimeta_flat_NoDelta_2018-08_20191006081957pm" ):
-            recursivermdir(outdir_root+"/"+dirs)
+        elif(len(Project)==1):
+            #print("Project Found")
+            if(str(Project[0]["Notified"])=="1" and str(Project[0]["Notified"]) !="" ):
+                recursivermdir(outdir_root+"/"+dirs)
+        else:
+            #print("HOW?!?!?!")
+            print(outdir_root+"/"+dirs)
+            if(dirs=="dalton" or dirs=="pippimeta_flat_NoDelta_2018-08_20191006081957pm" ):
+                recursivermdir(outdir_root+"/"+dirs)

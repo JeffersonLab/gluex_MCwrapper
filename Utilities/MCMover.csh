@@ -22,13 +22,15 @@ if [[ `ps all -u $runner | grep MCMover.csh | grep -v grep | wc -l` == 2 ]]; the
     LOGtransfer_node=$runner@ifarm1901$ibapp
     CONFIGtransfer_node=$runner@ifarm1901$ibapp
 
+    list_tmp_loc="/w/halld-scshelf2101/halld3/home/mcwrap/"
+
     output_dir=/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/
     outputLOG_dir=/work/halld3/REQUESTED_MC/
     outputCONFIG_dir=/work/halld3/REQUESTED_MC/
 
-    outputLOG_file=outputLOG_files_list_$HOST
-    outputCONFIG_file=outputCONFIG_files_list_$HOST
-    output_file=outputLOG_files_list_$HOST
+    outputLOG_file=outputLOG_files_list_$host_name
+    outputCONFIG_file=outputCONFIG_files_list_$host_name
+    output_file=outputLOG_files_list_$host_name
     # move slag-like files in the input directory out of the way
     mkdir -pv $input_dir/slag
     echo "Finding in $input_dir to move to SLAG" >> /osgpool/halld/$runner/MCWrapper_Logs/MCWrapperMover.log
@@ -84,13 +86,13 @@ if [[ `ps all -u $runner | grep MCMover.csh | grep -v grep | wc -l` == 2 ]]; the
     done
 
     echo "============================================================================================"
-    echo "ssh" $LOGtransfer_node "cd $outputLOG_dir;rm /tmp/"$outputLOG_file".txt; find . -type f | sort > /tmp/"$outputLOG_file".txt;"
-    ssh $LOGtransfer_node "cd $outputLOG_dir;rm /tmp/"$outputLOG_file".txt; find . -type f | sort > /tmp/"$outputLOG_file".txt;"
+    echo "ssh" $LOGtransfer_node "cd $outputLOG_dir;rm $list_tmp_loc/"$outputLOG_file".txt; find . -type f | sort > $list_tmp_loc/"$outputLOG_file".txt;"
+    ssh $LOGtransfer_node "cd $outputLOG_dir;rm $list_tmp_loc/"$outputLOG_file".txt; find . -type f | sort > $list_tmp_loc/"$outputLOG_file".txt;"
 
     echo "OUTPUT FILE WRITTEN"
 
-    echo scp $LOGtransfer_node:/tmp/$outputLOG_file".txt" /tmp/outputLOG_files_list.txt
-    scp $LOGtransfer_node:/tmp/$outputLOG_file".txt" /tmp/outputLOG_files_list.txt
+    echo scp $LOGtransfer_node:$list_tmp_loc/$outputLOG_file".txt" /tmp/outputLOG_files_list.txt
+    scp $LOGtransfer_node:$list_tmp_loc/$outputLOG_file".txt" /tmp/outputLOG_files_list.txt
     #echo "pwd" $PWD >> /osgpool/halld/$runner/MCWrapper_Logs/MCWrapperMover.log
     #find . -type f | sort > /tmp/output_files_list.txt
     echo "cd $input_dir" >> /osgpool/halld/$runner/MCWrapper_Logs/MCWrapperMover.log
@@ -104,7 +106,7 @@ if [[ `ps all -u $runner | grep MCMover.csh | grep -v grep | wc -l` == 2 ]]; the
         exit 1
     fi
     # make list of files in the input directory
-    find . -type f -mmin +600 | sort > /tmp/inputLOG_files_list.txt
+    find . -type f -mmin +15 | sort > /tmp/inputLOG_files_list.txt
     echo "DELETING" >> /osgpool/halld/$runner/MCWrapper_Logs/MCWrapperMover.log
     echo `comm -12 /tmp/inputLOG_files_list.txt /tmp/outputLOG_files_list.txt` >> /osgpool/halld/$runner/MCWrapper_Logs/MCWrapperMover.log
     echo `comm -12 /tmp/inputLOG_files_list.txt /tmp/outputLOG_files_list.txt`
@@ -144,13 +146,13 @@ if [[ `ps all -u $runner | grep MCMover.csh | grep -v grep | wc -l` == 2 ]]; the
     done
 
     echo "============================================================================================"
-    echo "ssh" $CONFIGtransfer_node "cd $outputCONFIG_dir;rm /tmp/"$outputCONFIG_file".txt; find . -type f | sort > /tmp/"$outputCONFIG_file".txt;"
-    ssh $CONFIGtransfer_node "cd $outputCONFIG_dir;rm /tmp/"$outputCONFIG_file".txt; find . -type f | sort > /tmp/"$outputCONFIG_file".txt;"
+    echo "ssh" $CONFIGtransfer_node "cd $outputCONFIG_dir;rm $list_tmp_loc"$outputCONFIG_file".txt; find . -type f | sort > $list_tmp_loc"$outputCONFIG_file".txt;"
+    ssh $CONFIGtransfer_node "cd $outputCONFIG_dir;rm $list_tmp_loc"$outputCONFIG_file".txt; find . -type f | sort > $list_tmp_loc"$outputCONFIG_file".txt;"
 
     echo "OUTPUT FILE WRITTEN"
 
-    echo scp $CONFIGtransfer_node:/tmp/$outputCONFIG_file".txt" /tmp/outputCONFIG_files_list.txt
-    scp $CONFIGtransfer_node:/tmp/$outputCONFIG_file".txt" /tmp/outputCONFIG_files_list.txt
+    echo scp $CONFIGtransfer_node:$list_tmp_loc/$outputCONFIG_file".txt" /tmp/outputCONFIG_files_list.txt
+    scp $CONFIGtransfer_node:$list_tmp_loc/$outputCONFIG_file".txt" /tmp/outputCONFIG_files_list.txt
     #echo "pwd" $PWD >> /osgpool/halld/$runner/MCWrapper_Logs/MCWrapperMover.log
     #find . -type f | sort > /tmp/output_files_list.txt
     echo "cd $input_dir" >> /osgpool/halld/$runner/MCWrapper_Logs/MCWrapperMover.log
@@ -165,7 +167,7 @@ if [[ `ps all -u $runner | grep MCMover.csh | grep -v grep | wc -l` == 2 ]]; the
     fi
 
     # make list of files in the input directory
-    find . -type f -mmin +600 | sort > /tmp/inputCONFIG_files_list.txt
+    find . -type f -mmin +15 | sort > /tmp/inputCONFIG_files_list.txt
     echo "DELETING" >> /osgpool/halld/$runner/MCWrapper_Logs/MCWrapperMover.log
     echo `comm -12 /tmp/inputCONFIG_files_list.txt /tmp/outputCONFIG_files_list.txt` >> /osgpool/halld/$runner/MCWrapper_Logs/MCWrapperMover.log
     echo `comm -12 /tmp/inputCONFIG_files_list.txt /tmp/outputCONFIG_files_list.txt`
@@ -230,7 +232,7 @@ if [[ `ps all -u $runner | grep MCMover.csh | grep -v grep | wc -l` == 2 ]]; the
         exit 1
     fi
     # make list of files in the input directory
-    find . -type f -mmin +600 | sort > /tmp/input_files_list.txt
+    find . -type f -mmin +15 | sort > /tmp/input_files_list.txt
     echo "DELETING"
     echo "DELETING" >> /osgpool/halld/$runner/MCWrapper_Logs/MCWrapperMover.log
     echo `comm -12 /tmp/input_files_list.txt /tmp/output_files_list.txt` >> /osgpool/halld/$runner/MCWrapper_Logs/MCWrapperMover.log

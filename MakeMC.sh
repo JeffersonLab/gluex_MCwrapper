@@ -134,6 +134,8 @@ shift
 export GEANT_VERTEXT_LENGTH=$1
 shift
 export MCSMEAR_NOTAG=$1
+shift
+export PROJECT_DIR_NAME=$1
 
 export USER_BC=`which bc`
 export USER_PYTHON=`which python`
@@ -467,6 +469,7 @@ echo "Producing file number: "$FILE_NUMBER
 echo "Containing: " $EVT_TO_GEN"/""$PER_FILE"" events"
 echo "Running location:" $RUNNING_DIR
 echo "Output location: "$OUTDIR
+echo "Project directory name: "$PROJECT_DIR_NAME
 echo "Environment file: " $ENVIRONMENT
 echo "Analysis Environment file: " $ANAENVIRONMENT
 echo "Context: "$JANA_CALIB_CONTEXT
@@ -1375,8 +1378,10 @@ if [[ "$GEANT" != "0" ]]; then
 
 	if [[ $RUN_NUMBER -gt 70000 ]]; then
 		sed -i 's/TEMPCKOV/'1'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+		echo "USING CKOV 1"
 	else
 		sed -i 's/TEMPCKOV/'0'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+		echo "USING CKOV 0"
 	fi
 
 	sed -i 's/TEMPGEANTAREA/'$GEANT_VERTEXT_AREA'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
@@ -1825,19 +1830,40 @@ if [[ "$hddmfiles" != "" ]]; then
 	done
 fi
 
+
+echo `ls`
+
+if [[ "$BATCHSYS" == "OSG" ]]; then
+#copy the OUT_DIR back to location via xrdcp
+echo "xrd version:" 
+echo `xrdcp --version`
+export BEARER_TOKEN_FILE=${_CONDOR_CREDS}/jlab_gluex.use
+#get everything after the last / in PROJECT_DIR_NAME
+project_dir_name=`echo $PROJECT_DIR_NAME | sed -r 's/.*\///'`
+export COPYBACK_DIR=xroots://dtn-gluex.jlab.org//gluex/mcwrap/REQUESTEDMC_OUTPUT/$project_dir_name
+echo `ls -lbh $OUTDIR`
+echo "Copying back to $COPYBACK_DIR"
+echo "xrdcp -rfv $OUTDIR $COPYBACK_DIR"
+xrdcp -rfv $OUTDIR $COPYBACK_DIR
+#transfer_return_code=$?
+#if [[ $transfer_return_code != 0 ]]; then
+#	echo
+#	echo
+#	echo "Something went wrong with xrdcp"
+#	echo "status code: "$transfer_return_code
+#	exit $transfer_return_code
+#fi
+fi
 cd ..
+
 rm -rf .hdds_tmp_*
+
 if [[ `ls $RUNNING_DIR/${RUN_NUMBER}_${FILE_NUMBER} | wc -l` == 0 ]]; then
 	rm -rf $RUNNING_DIR/${RUN_NUMBER}_${FILE_NUMBER}
 else
 	echo "MOVING AND/OR CLEANUP FAILED"
 	echo `ls $RUNNING_DIR/${RUN_NUMBER}_${FILE_NUMBER}`
 fi
-
-#copy the OUT_DIR back to location via xrdcp
-#export COPYBACK_DIR=xroots://dtn2002.jlab.org//gluex/mcwrap/REQUESTEDMC_OUTPUT/
-#echo "Copying back to $COPYBACK_DIR"
-#xrdcp -f -r -N $OUTDIR $COPYBACK_DIR
 
 #mv $PWD/*.root $OUTDIR/root/ #just in case
 echo `date`

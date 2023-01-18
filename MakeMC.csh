@@ -134,6 +134,8 @@ shift
 setenv GEANT_VERTEXT_LENGTH $1
 shift
 setenv MCSMEAR_NOTAG $1
+shift
+setenv PROJECT_DIR_NAME $1
 
 setenv USER_BC `which bc`
 setenv USER_PYTHON `which python`
@@ -461,6 +463,7 @@ echo "Producing file number: "$FILE_NUMBER
 echo "Containing: " $EVT_TO_GEN"/""$PER_FILE"" events"
 echo "Running location:" $RUNNING_DIR
 echo "Output location: "$OUTDIR
+echo "Project directory name: "$PROJECT_DIR_NAME
 echo "Environment file: " $ENVIRONMENT
 echo "Analysis Environment file: " $ANAENVIRONMENT
 echo "Context: "$JANA_CALIB_CONTEXT

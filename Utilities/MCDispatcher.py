@@ -147,6 +147,19 @@ def AutoLaunch():
     CancelAll()
     print("DECLARING...")
     DeclareAllComplete()
+
+    #get the return from df -h | grep /osgpool/halld
+    #print("GETTING DF...")
+    #d_usage=str(subprocess.check_output("df -h | grep /osgpool/halld",shell=True),"utf-8").strip()
+    #print(d_usage)
+    #percent=int(d_usage.split(" ")[-2].split("%")[0])
+    #print("disk is",percent,"% full")
+    #if percent > 75:
+    #    print("disk is too full, not launching")
+    #    return
+    
+
+
     print("RETRYING...")
     RetryAllJobs()
     print("TESTING...")
@@ -333,8 +346,10 @@ def RetryJobsFromProject(ID, countLim):
         #TREAT LIKE NEW PROJECT WITH JUST THE JOB
 
 def RetryJob(ID,AllOSG=False):
-    #query = "SELECT * FROM Attempts WHERE Job_ID="+str(ID)
-    query= "SELECT Attempts.*,Max(Attempts.Creation_Time) FROM Attempts,Jobs WHERE Attempts.Job_ID = "+str(ID)
+    
+    #query= "SELECT Attempts.*,Max(Attempts.Creation_Time) FROM Attempts,Jobs WHERE Attempts.Job_ID = "+str(ID)
+    query= "SELECT Attempts.*,Max(Attempts.Creation_Time) FROM Attempts WHERE Attempts.Job_ID = "+str(ID)
+    #print(query)
     curs.execute(query) 
     rows=curs.fetchall()
 
