@@ -907,7 +907,7 @@ if [[ "$GENR" != "0" ]]; then
 		STANDARD_NAME="bggen_upd_"$STANDARD_NAME
 		cp $MCWRAPPER_CENTRAL/Generators/bggen_upd/particles.ffr ./
 		cp $MCWRAPPER_CENTRAL/Generators/bggen_upd/pythia.dat ./
-		cp $MCWRAPPER_CENTRAL/Generators/bggen_upd/run_mcwrapper_test.ffr ./
+		cp $MCWRAPPER_CENTRAL/Generators/bggen_upd/run_mcwrapper.ffr ./
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
 	elif [[ "$GENERATOR" == "bggen_phi_ee" ]]; then
 		echo "configuring bggen_phi_ee"

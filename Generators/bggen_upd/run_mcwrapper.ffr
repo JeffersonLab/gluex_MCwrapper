@@ -6,5 +6,6 @@ RNDMSEQ    TEMPRAND         # random number sequence     integer values
 EELEC      TEMPELECE        # electron beam energy
 EPEAK      TEMPCOHERENT     # coherent peak energy
 DCOLLIM    TEMPCOLD         # collimator diameter in m
+EPHLIM     TEMPMINGENE TEMPMAXGENE      # energy range in GeV
 C
 END
