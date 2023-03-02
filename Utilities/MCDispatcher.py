@@ -11,6 +11,7 @@ import datetime
 import os.path
 import pwd
 import time
+import shlex
 from optparse import OptionParser
 try:
     import subprocess
@@ -56,7 +57,9 @@ class bcolors:
 #DELETE FROM Attempts WHERE Job_ID IN (SELECT ID FROM Jobs WHERE Project_ID=65);
 
 def RecallAll():
-    query="SELECT BatchJobID, BatchSystem from Attempts where (Status=\"2\" || Status=\"1\" || Status=\"5\") && SubmitHost=\""+MCWRAPPER_BOT_HOST_NAME+"\" && Job_ID in (SELECT ID from Jobs where Project_ID in (SELECT ID FROM Project where Tested=2 || Tested=4 || Tested=3 ));"
+    #query="SELECT BatchJobID, BatchSystem from Attempts where (Status=\"2\" || Status=\"1\" || Status=\"5\") && SubmitHost=\""+MCWRAPPER_BOT_HOST_NAME+"\" && Job_ID in (SELECT ID from Jobs where Project_ID in (SELECT ID FROM Project where Tested=2 || Tested=4 || Tested=3 ));"
+    query="SELECT a.BatchJobID, a.BatchSystem FROM Attempts a JOIN Jobs j ON a.Job_ID = j.ID JOIN Project p ON j.Project_ID = p.ID WHERE a.SubmitHost = \""+MCWRAPPER_BOT_HOST_NAME+"\" AND a.Status IN (\"1\", \"2\", \"5\") AND p.Tested IN (2, 3, 4);"
+    print(query)
     curs.execute(query)
     rows=curs.fetchall()
     print("RECALLING "+str(len(rows)))
@@ -81,11 +84,54 @@ def RecallAll():
                 break
             #subprocess.call(command,shell=True)
 
+def BundleFiles(input,output):
+    MCWRAPPER_BOT_HOME="/scigroup/mcwrapper/gluex_MCwrapper/"
+    bundlecommand = "ssh ifarm1802 " + "echo hostname; source /group/halld/Software/build_scripts/gluex_env_jlab.csh; /usr/bin/python3.6 " + MCWRAPPER_BOT_HOME + "/Utilities/MCMerger.py -f " + input + "/ " + output + "/"
+    print(bundlecommand)
+    try:
+        out = subprocess.check_output(shlex.split(bundlecommand), stderr=subprocess.STDOUT)
+        return "SUCCESS"
+    except subprocess.CalledProcessError as e:
+        print(e.output)
+        return "ERROR"
+
 def DeclareAllComplete():
-    query="SELECT ID,OutputLocation,Email from Project where Tested=4 && Notified is NULL;"
+    conn=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
+    curs=conn.cursor(MySQLdb.cursors.DictCursor)
+
+    query="SELECT ID,OutputLocation,Email,Completed_Time from Project where Tested=4 && Notified is NULL;"
     curs.execute(query)
     rows=curs.fetchall()
+    print("DECLARING",rows,"COMPLETE")
+    
     for proj in rows:
+
+        inputdir= proj["OutputLocation"].replace("/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/","/work/halld/gluex_simulations/REQUESTED_MC/")
+        #outputlocation="/".join(proj["OutputLocation"].split("/")[:-1])
+        outputlocation="/work/halld/gluex_simulations/MERGED_MC/"
+
+        hours_to_wait=4
+
+        #check if now is at least 4 hours later than the completion time
+        if proj["Completed_Time"] is None:
+            continue
+        if datetime.datetime.now() < proj["Completed_Time"] + datetime.timedelta(hours=hours_to_wait):
+            continue
+        
+        print("BundleFiles("+inputdir+","+outputlocation+")")
+        mkdircommand="ssh ifarm1802 mkdir -p "+outputlocation
+        print(mkdircommand)
+        subprocess.call(mkdircommand.split(" "))
+        #close the connection to the database while we run the bundle files
+        conn.close()
+        out=BundleFiles(inputdir,outputlocation)
+        print("final output",out)
+
+        if out == "ERROR":
+            continue
+        
+        conn=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
+        curs=conn.cursor(MySQLdb.cursors.DictCursor)
         msg = EmailMessage()
         msg.set_content('Your Project ID '+str(proj['ID'])+' has been declared completed.  Outstanding jobs have been recalled. Output may be found here:\n'+proj['OutputLocation'])
 
@@ -149,14 +195,14 @@ def AutoLaunch():
     DeclareAllComplete()
 
     #get the return from df -h | grep /osgpool/halld
-    #print("GETTING DF...")
-    #d_usage=str(subprocess.check_output("df -h | grep /osgpool/halld",shell=True),"utf-8").strip()
-    #print(d_usage)
-    #percent=int(d_usage.split(" ")[-2].split("%")[0])
-    #print("disk is",percent,"% full")
-    #if percent > 75:
-    #    print("disk is too full, not launching")
-    #    return
+    print("GETTING DF...")
+    d_usage=str(subprocess.check_output("df -h | grep /osgpool/halld",shell=True),"utf-8").strip()
+    print(d_usage)
+    percent=int(d_usage.split(" ")[-2].split("%")[0])
+    print("disk is",percent,"% full")
+    if percent > 75:
+        print("disk is too full, not launching")
+        return
     
 
 
@@ -1490,7 +1536,7 @@ def main(argv):
         #print MODE
         #print SYSTEM
         #print ID
-
+        print("RUNNING",MODE)
         if MODE == "DISPATCH":
             if ID != "All":
                 DispatchProject(ID,SYSTEM,PERCENT)

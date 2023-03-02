@@ -18,13 +18,15 @@ if [[ `ps all -u $runner | grep MCMover.csh | grep -v grep | wc -l` == 2 ]]; the
     if [[ $host_name == "scosg20" ]]; then
         ibapp="-ib"
     fi
-    transfer_node=$runner@dtn1902$ibapp
+    #transfer_node=$runner@dtn1902$ibapp
+    transfer_node=$runner@ifarm1802$ibapp
     LOGtransfer_node=$runner@ifarm1901$ibapp
     CONFIGtransfer_node=$runner@ifarm1901$ibapp
 
     list_tmp_loc="/w/halld-scshelf2101/halld3/home/mcwrap/"
 
-    output_dir=/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/
+    #output_dir=/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/
+    output_dir=/work/halld/gluex_simulations/REQUESTED_MC/
     outputLOG_dir=/work/halld3/REQUESTED_MC/
     outputCONFIG_dir=/work/halld3/REQUESTED_MC/
 
@@ -67,8 +69,8 @@ if [[ `ps all -u $runner | grep MCMover.csh | grep -v grep | wc -l` == 2 ]]; the
         
 
         logdir2=${logdir}
-        echo chmod -R g+w $logdir2
-        ssh $LOGtransfer_node chmod -R g+w $outputLOG_dir/$projpath/
+        echo chmod -R g+wr $logdir2
+        ssh $LOGtransfer_node chmod -R g+wr $outputLOG_dir/$projpath/
         rsync_command="rsync --progress -pruvt $logdir/ $LOGtransfer_node:$outputLOG_dir/$projpath/" #--exclude $input_dir/slag"
         echo $rsync_command >> /osgpool/halld/$runner/MCWrapper_Logs/MCWrapperMover.log
         status="255"
@@ -127,8 +129,8 @@ if [[ `ps all -u $runner | grep MCMover.csh | grep -v grep | wc -l` == 2 ]]; the
         
 
         configdir2=${configdir}
-        echo chmod -R g+w $configdir2
-        ssh $CONFIGtransfer_node chmod -R g+w $outputCONFIG_dir/$projpath/
+        echo chmod -R g+wr $configdir2
+        ssh $CONFIGtransfer_node chmod -R g+wr $outputCONFIG_dir/$projpath/
         rsync_command="rsync --progress -pruvt $configdir/ $CONFIGtransfer_node:$outputCONFIG_dir/$projpath/" #--exclude $input_dir/slag"
         echo $rsync_command >> /osgpool/halld/$runner/MCWrapper_Logs/MCWrapperMover.log
         status="255"
@@ -187,8 +189,8 @@ if [[ `ps all -u $runner | grep MCMover.csh | grep -v grep | wc -l` == 2 ]]; the
         ssh $transfer_node mkdir -p $output_dir/$projpath/
 
         dir2=${dir}
-        echo chmod -R g+w $dir2
-        chmod -R g+w $dir2
+        echo chmod -R g+wr $dir2
+        chmod -R g+wr $dir2
         rsync_command="rsync --progress -pruvt $dir/ $transfer_node:$output_dir/$projpath/" #--exclude $input_dir/slag"
         echo $rsync_command >> /osgpool/halld/$runner/MCWrapper_Logs/MCWrapperMover.log
         status="255"

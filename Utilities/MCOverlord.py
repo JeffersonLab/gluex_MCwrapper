@@ -47,6 +47,7 @@ import random
 import pipes
 import random
 import shutil
+import shlex
 
 MCWRAPPER_BOT_HOST_NAME=socket.gethostname()
 dbhost = "hallddb.jlab.org"
@@ -98,7 +99,8 @@ def CheckForFile(rootLoc,expFile):
     #tbritton@dtn1902-ib:
 
     #if(os.path.isfile('/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/'+rootLoc+"/"+subloc+"/"+expFile) or os.path.isfile('/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) or os.path.isfile('/mss/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) ):
-    if(os.path.isfile('/osgpool/halld/'+runner_name+'/REQUESTEDMC_OUTPUT/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote(runner_name+'@dtn1902','/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote(runner_name+'@dtn1902','/mss/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) ):
+    #if(os.path.isfile('/osgpool/halld/'+runner_name+'/REQUESTEDMC_OUTPUT/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote(runner_name+'@dtn1902','/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote(runner_name+'@dtn1902','/mss/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) ):
+    if(exists_remote(runner_name+'@dtn1902','/work/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) ):
         found=True
     else:
         print(rootLoc+"/"+subloc+"/"+expFile+"   NOT FOUND")
@@ -126,6 +128,18 @@ def recursivermdir(rootloc):
     except Exception as e:
         print(e)
         pass
+
+def BundleFiles(input,output):
+    MCWRAPPER_BOT_HOME="/scigroup/mcwrapper/gluex_MCwrapper/"
+    bundlecommand = "ssh ifarm1802 " + "echo hostname; source /group/halld/Software/build_scripts/gluex_env_jlab.csh; /usr/bin/python3.6 " + MCWRAPPER_BOT_HOME + "/Utilities/MCMerger.py -f " + input + "/ " + output + "/"
+    print(bundlecommand)
+    try:
+        out = subprocess.check_output(shlex.split(bundlecommand), stderr=subprocess.STDOUT)
+        return "SUCCESS"
+    except subprocess.CalledProcessError as e:
+        print(e.output)
+        return "ERROR"
+    
 
 def checkProjectsForCompletion(comp_assignment):
     chck_Str=""
@@ -291,8 +305,26 @@ def checkProjectsForCompletion(comp_assignment):
         if((len(fulfilledJobs)-len(nullify_list))==len(AllActiveJobs) and len(AllActiveJobs) != 0 and filesToMove ==0 and submitted_evtNum[0]["SUM(NumEvts)"] >= proj["NumEvents"]-len(AllActiveJobs)):
             print(proj['ID'],"DONE")
 
+            inputdir= proj["OutputLocation"].replace("/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/","/work/halld/gluex_simulations/REQUESTED_MC/")
+            outputlocation="/".join(proj["OutputLocation"].split("/")[:-1])+"/"
+            #outputlocation="/lustre19/expphy/cache/halld/gluex_simulations/MERGED_MC/"+inputdir.replace("/work/halld/gluex_simulations/REQUESTED_MC/","")+"/"
+            print("BundleFiles("+inputdir+","+outputlocation+")")
+            mkdircommand="ssh ifarm1802 mkdir -p "+outputlocation
+            print(mkdircommand)
+            subprocess.call(mkdircommand.split(" "))
+            #close the connection to the database while we run the bundle files
+            dbcnx_comp.close()
+            out=BundleFiles(inputdir,outputlocation)
+            print("final output",out)
+            
+            if out == "ERROR":
+                continue
+
+            dbcnx_comp=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
+            dbcursor_comp=dbcnx_comp.cursor(MySQLdb.cursors.DictCursor)
             getFinalCompleteTime="SELECT MAX(Completed_Time) FROM Attempts WHERE Job_ID IN (SELECT ID FROM Jobs WHERE Project_ID="+str(proj['ID'])+");"
             print(getFinalCompleteTime)
+
             dbcursor_comp.execute(getFinalCompleteTime)
             finalTimeRes=dbcursor_comp.fetchall()
             #print "============"
@@ -894,7 +926,7 @@ def main(argv):
         runnum=0
         runmax=-1
         spawnNum=10
-        comp_spawnnum=5
+        comp_spawnnum=1
         numOverRide=False
 
         if(len(argv) !=0):
@@ -961,8 +993,13 @@ def main(argv):
                     #MULTI PROCESS THIS? MAYBE 5-10 processes
                     
                     OutstandingProjectsQuery="SELECT * FROM Project WHERE (Is_Dispatched != '0' && Tested != '-1' && Tested != '2' ) && Notified is NULL"
+                    print(OutstandingProjectsQuery)
                     dbcursor.execute(OutstandingProjectsQuery)
                     OutstandingProjects=dbcursor.fetchall()
+
+                    for proj in OutstandingProjects:
+                        print("to check",proj["ID"])
+                    
                     if(comp_spawnnum>0):
                         completion_assignments=array_split(OutstandingProjects,comp_spawnnum)
                     
