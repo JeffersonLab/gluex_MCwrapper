@@ -733,7 +733,7 @@ if ( "$GENR" != "0" ) then
 	else
 		if ( -f $CONFIG_FILE ) then
 		    echo "input file found"
-		else if( "$GENERATOR" == "gen_ee" || "$GENERATOR" == "gen_ee_hb" || "$GENERATOR" == "genBH" ) then
+		else if( "$GENERATOR" == "gen_ee_hb" || "$GENERATOR" == "genBH" ) then
 			echo "Config file not applicable"
 		else
 	    	echo $CONFIG_FILE" does not exist"
@@ -864,15 +864,15 @@ if ( "$GENR" != "0" ) then
 		echo "configuring gen_compton"
 		set STANDARD_NAME="gen_compton_"$STANDARD_NAME
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
-        else if ( "$GENERATOR" == "gen_compton_simple" ) then
+    else if ( "$GENERATOR" == "gen_compton_simple" ) then
 		echo "configuring gen_compton_simple"
 		STANDARD_NAME="gen_compton_simple_"$STANDARD_NAME
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
-        else if ( "$GENERATOR" == "gen_primex_eta_he4" ) then
+    else if ( "$GENERATOR" == "gen_primex_eta_he4" ) then
 		echo "configuring gen_primex_eta_he4"
 		STANDARD_NAME="gen_primex_eta_he4_"$STANDARD_NAME
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
-        else if ( "$GENERATOR" == "gen_whizard" ) then
+    else if ( "$GENERATOR" == "gen_whizard" ) then
 		echo "configuring gen_whizard"
 		STANDARD_NAME="gen_whizard_"$STANDARD_NAME
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
@@ -907,9 +907,8 @@ if ( "$GENR" != "0" ) then
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
 	else if ( "$GENERATOR" == "gen_ee" ) then
 		echo "configuring gen_ee"
-		set STANDARD_NAME="gen_ee_"$STANDARD_NAME
-		echo "note: this generator is run completely from command line, thus no config file will be made and/or modified"
-		cp $CONFIG_FILE ./cobrems.root
+		STANDARD_NAME="gen_ee_"$STANDARD_NAME
+		cp $CONFIG_FILE ./$STANDARD_NAME.conf
 	else if ( "$GENERATOR" == "gen_ee_hb" ) then
 		echo "configuring gen_ee_hb"
 		set STANDARD_NAME="gen_ee_hb_"$STANDARD_NAME
@@ -1161,7 +1160,7 @@ if ( "$GENR" != "0" ) then
 		gen_compton -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
 		set generator_return_code=$status
 
-        else if ( "$GENERATOR" == "gen_compton_simple" ) then
+    else if ( "$GENERATOR" == "gen_compton_simple" ) then
 		echo "RUNNING GEN_COMPTON_SIMPLE"
 		set optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
 		echo $optionals_line
@@ -1170,7 +1169,7 @@ if ( "$GENR" != "0" ) then
 
 		set generator_return_code=$status
 
-        else if ( "$GENERATOR" == "gen_primex_eta_he4" ) then
+    else if ( "$GENERATOR" == "gen_primex_eta_he4" ) then
 		echo "RUNNING GEN_PRIMEX_ETA_HE4"
 		set optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
 		echo $optionals_line
@@ -1179,7 +1178,7 @@ if ( "$GENR" != "0" ) then
 
 		set generator_return_code=$status
 
-        else if ( "$GENERATOR" == "gen_whizard" ) then
+    else if ( "$GENERATOR" == "gen_whizard" ) then
 		echo "RUNNING GEN_WHIZARD"
 		set optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
 		echo $optionals_line
@@ -1261,13 +1260,17 @@ if ( "$GENR" != "0" ) then
 		bggen_jpsi
 		set generator_return_code=$status
 		mv bggen.hddm $STANDARD_NAME.hddm
+
 	else if ( "$GENERATOR" == "gen_ee" ) then
+		echo "RUNNING GEN_EE"
 		set RANDOMnum=`bash -c 'echo $RANDOM'`
 		echo "Random number used: "$RANDOMnum
-		echo gen_ee -n$EVT_TO_GEN -R2 -b2 -l$GEN_MIN_ENERGY -u$GEN_MAX_ENERGY -t2 -r$RANDOMnum -omc_ee.hddm
-		gen_ee -n$EVT_TO_GEN -R2 -b2 -l$GEN_MIN_ENERGY -u$GEN_MAX_ENERGY -t2 -r$RANDOMnum -omc_ee.hddm
+		set optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
+		echo $optionals_line
+		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
+		gen_ee -d$STANDARD_NAME.conf -c$STANDARD_NAME'_beam.conf' -o$STANDARD_NAME.hddm -n$EVT_TO_GEN -z$RUN_NUMBER -l$GEN_MIN_ENERGY -u$GEN_MAX_ENERGY -r$RANDOMnum $optionals_line
+
 		set generator_return_code=$status
-		mv mc_ee.hddm $STANDARD_NAME.hddm
 	else if ( "$GENERATOR" == "gen_ee_hb" ) then
 		echo gen_ee_hb -N$RUN_NUMBER -n$EVT_TO_GEN
 		gen_ee_hb -N$RUN_NUMBER -n$EVT_TO_GEN
@@ -1818,7 +1821,7 @@ rm -rf .hdds_tmp_*
 rm -rf ccdb.sqlite
 rm -rf rcdb.sqlite
 
-if ( "$gen_pre" != "file" && "$GENERATOR" != "gen_ee_hb" && "$GENERATOR" != "gen_ee" && "$GENR" == "1" ) then
+if ( "$gen_pre" != "file" && "$GENERATOR" != "gen_ee_hb" && "$GENR" == "1" ) then
     mv $PWD/*.conf $OUTDIR/configurations/generation/
 endif
 
