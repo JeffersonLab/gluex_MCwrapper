@@ -81,6 +81,8 @@ export TAGSTR=$1
 shift
 export CUSTOM_PLUGINS=$1
 shift
+export CUSTOM_ANA_PLUGINS=$1
+shift
 export PER_FILE=$1
 shift
 export RUNNING_DIR=$1
@@ -500,6 +502,7 @@ echo "Run mcsmear? "$SMEAR"  Will be cleaned?" $CLEANSMEAR
 echo "----------------------------------------------"
 echo "Run reconstruction? "$RECON"  Will be cleaned?" $CLEANRECON
 echo "With additional plugins: "$CUSTOM_PLUGINS
+echo "With additional analysis launch plugins: "$CUSTOM_ANA_PLUGINS
 echo "=============================================="
 echo ""
 echo ""
@@ -674,6 +677,18 @@ if [[ $recon_pre == "file" ]]; then
 	fi
 fi
 gen_pre=""
+
+if [[ "$CUSTOM_ANA_PLUGINS" != "None" ]]; then
+	ana_pre=`echo $CUSTOM_ANA_PLUGINS | cut -c1-4`
+	jana_ana_config_file=`echo $CUSTOM_ANA_PLUGINS | sed -r 's/^.{5}//'`
+	echo "ANA PREFIX:  " $ana_pre
+	if [[ $ana_pre == "file" ]]; then
+		if [[ -f $jana_ana_config_file ]]; then
+		echo "gathering jana config file"
+		cp $jana_ana_config_file ./ana_jana.cfg
+		fi
+	fi
+fi
 
 
 if [[ "$GENR" != "0" ]]; then
@@ -1734,12 +1749,38 @@ fi
 
 			echo "EMULATING ANALYSIS LAUNCH"
 			echo "changed software to:  "`which hd_root`
-			echo "PLUGINS ReactionFilter" > ana_jana.cfg
-			tail jana_config.cfg -n+2 >> ana_jana.cfg
+
+			if [[ "$CUSTOM_ANA_PLUGINS" != "None" ]]; then
+				if [[ $ana_pre == "file" ]]; then
+					echo "Use $jana_ana_config_file"
+				else #use list of plugins
+					declare -a anapluginlist=( "monitoring_hists" )
+					anapluginlist=( "${anapluginlist[@]}" "$CUSTOM_ANA_PLUGINS" )
+					anaPluginStr=""
+					for plugin in "${anapluginlist[@]}"; do
+						anaPluginStr="$anaPluginStr""$plugin"","
+					done
+					anaPluginStr=`echo $anaPluginStr | sed -r 's/.{1}$//'` #remove last ","
+					echo "PLUGINS ""$anaPluginStr" > ana_jana.cfg
+				fi
+			else
+				echo "PLUGINS ReactionFilter" > ana_jana.cfg
+				sed '/PLUGINS/d' jana_config.cfg >> ana_jana.cfg
+			fi
+
+			thrown_tree_check=`grep mcthrown_tree ana_jana.cfg`
+			if [[ $thrown_tree_check != "" ]]; then
+				echo
+				echo
+				echo "WARNING: You have the mcthrown_tree plugin in your jana config file for the analysis launch (see below)!"
+				echo "         This will overwrite the previous thrown_tree and the file will not contain ALL thrown information."
+				echo
+				echo
+			fi
 
 			cat ana_jana.cfg
 
-			hd_root dana_rest_$STANDARD_NAME.hddm --config=ana_jana.cfg -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 -o hd_root_ana_$STANDARD_NAME.root
+			hd_root dana_rest_$STANDARD_NAME.hddm --config=ana_jana.cfg -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 -o hd_root_ana.root
 			anahd_root_return_code=$?
 
 			if [[ $anahd_root_return_code != 0 ]]; then
@@ -1751,6 +1792,10 @@ fi
 			fi
 			rm jana_config.cfg
 			rm ana_jana.cfg
+
+			if [[ -f dana_rest.hddm ]]; then
+            	mv dana_rest.hddm dana_rest_ana_$STANDARD_NAME.hddm
+			fi
 		fi
 fi
 		if [[ "$CLEANGEANT" == "1" && "$GEANT" == "1" ]]; then
