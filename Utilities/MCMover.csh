@@ -20,8 +20,8 @@ if [[ `ps all -u $runner | grep MCMover.csh | grep -v grep | wc -l` == 2 ]]; the
     fi
     #transfer_node=$runner@dtn1902$ibapp
     transfer_node=$runner@ifarm1802$ibapp
-    LOGtransfer_node=$runner@ifarm1901$ibapp
-    CONFIGtransfer_node=$runner@ifarm1901$ibapp
+    LOGtransfer_node=$runner@ifarm1802$ibapp
+    CONFIGtransfer_node=$runner@ifarm1802$ibapp
 
     list_tmp_loc="/w/halld-scshelf2101/halld3/home/mcwrap/"
 

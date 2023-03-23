@@ -318,6 +318,8 @@ def checkProjectsForCompletion(comp_assignment):
             print("final output",out)
             
             if out == "ERROR":
+                dbcnx_comp=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
+                dbcursor_comp=dbcnx_comp.cursor(MySQLdb.cursors.DictCursor)
                 continue
 
             dbcnx_comp=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
@@ -362,10 +364,12 @@ def checkProjectsForCompletion(comp_assignment):
         else:
             #print("ELSE")
             #print(proj['ID'])
-            updateProjectstatus="UPDATE Project SET Completed_Time=NULL WHERE ID="+str(proj['ID'])+";"
+            print("NOT DONE")
+
+            #updateProjectstatus="UPDATE Project SET Completed_Time=NULL WHERE ID="+str(proj['ID'])+";"
             #print(updateProjectstatus)
-            dbcursor_comp.execute(updateProjectstatus)
-            dbcnx_comp.commit()
+            #dbcursor_comp.execute(updateProjectstatus)
+            #dbcnx_comp.commit()
 
 
 def checkSWIF2():

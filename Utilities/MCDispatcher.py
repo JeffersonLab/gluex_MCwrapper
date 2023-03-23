@@ -107,8 +107,8 @@ def DeclareAllComplete():
     for proj in rows:
 
         inputdir= proj["OutputLocation"].replace("/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/","/work/halld/gluex_simulations/REQUESTED_MC/")
-        #outputlocation="/".join(proj["OutputLocation"].split("/")[:-1])
-        outputlocation="/work/halld/gluex_simulations/MERGED_MC/"
+        outputlocation="/".join(proj["OutputLocation"].split("/")[:-1])+"/"
+        # outputlocation="/work/halld/gluex_simulations/MERGED_MC/"
 
         hours_to_wait=4
 
@@ -147,7 +147,7 @@ def DeclareAllComplete():
         s.quit()
 
         #subprocess.call("echo 'Your Project ID "+str(proj['ID'])+" has been declared completed.  Outstanding jobs have been recalled. Output may be found here:\n"+proj['OutputLocation']+"' | mail -s 'GlueX MC Request #"+str(proj['ID'])+" Completed' "+str(proj['Email']),shell=True)
-        updatequery="UPDATE Project SET Completed_Time=NOW(),Notified=1 where ID="+str(proj["ID"])
+        updatequery="UPDATE Project SET Notified=1 where ID="+str(proj["ID"]) #Completed_Time=NOW(),
         curs.execute(updatequery)
         conn.commit()
 
@@ -356,7 +356,9 @@ def RetryJobsFromProject(ID, countLim):
                     if row["Status"] == "-1":
                         response=os.system("ping -c 1 nod25.phys.uconn.edu")
                         if response != 0:
-                            continue #waiting for node to come back
+                            statusUpdate="Update Attempts Set Status=\"4\" WHERE ID ="+str(row["ID"])
+                            curs.execute(statusUpdate)
+                            conn.commit()
                         else:
                             #update Status and retry
                             statusUpdate="Update Attempts Set Status=\"4\" WHERE ID ="+str(row["ID"])

@@ -86,7 +86,7 @@ def CheckForFile(rootLoc,expFile):
 
 
     #if(os.path.isfile('/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/'+rootLoc+"/"+subloc+"/"+expFile) or os.path.isfile('/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) or os.path.isfile('/mss/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) ):
-    if(os.path.isfile('/osgpool/halld/'+runner_name+'/REQUESTEDMC_OUTPUT/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote(runner_name+'@dtn1902-ib','/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote(runner_name+'@dtn1902-ib','/mss/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote(runner_name+'@dtn1902','/work/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) ):
+    if(os.path.isfile('/osgpool/halld/'+runner_name+'/REQUESTEDMC_OUTPUT/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote(runner_name+'@dtn1902','/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote(runner_name+'@dtn1902','/mss/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote(runner_name+'@dtn1902','/work/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) ):
         found=True
     else:
         print(rootLoc+"/"+subloc+"/"+expFile+"   NOT FOUND")
