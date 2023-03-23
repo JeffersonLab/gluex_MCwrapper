@@ -1812,47 +1812,48 @@ endif #close geantBEAM if
 					set filecheck=`echo $current_files | grep -c $filetomv`
 
 					if ( "$filecheck" == "0" ) then
-						mv $filetomv $filename_root\_$STANDARD_NAME.root
-						echo $filename_root\_$STANDARD_NAME.root
-						set hdroot_test=`echo $filename_root\_$STANDARD_NAME.root | grep hd_root_`
-						set thrown_test=`echo $filename_root\_$STANDARD_NAME.root | grep tree_thrown`
-						set gen_test=`echo $filename_root\_$STANDARD_NAME.root | grep gen_`
-						set reaction_test=`echo $filename_root\_$STANDARD_NAME.root | grep tree_`
+						echo $filetomv
+						set hdroot_test=`echo $filetomv | grep 'hd_root_\|hd_root.root'`
+						set thrown_test=`echo $filetomv | grep tree_thrown`
+						set gen_test=`echo $filetomv | grep gen_`
+						set reaction_test=`echo $filetomv | grep tree_`
+						set std_name_test=`echo $filetomv | grep $STANDARD_NAME`
 						#echo hdroot_test = $hdroot_test
 						if ($hdroot_test !~ "") then
-							echo "hdroot"
 							if ( ! -d "$OUTDIR/root/monitoring_hists/" ) then
 								#echo "DNE"
 								#echo "$OUTDIR/root/monitoring_hists/"
     						mkdir $OUTDIR/root/monitoring_hists/
 							endif
-							mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/monitoring_hists
+							mv $PWD/$filetomv $OUTDIR/root/monitoring_hists/$filename_root\_$STANDARD_NAME.root
 						else if ($thrown_test !~ "") then
-							echo "thrown"
 							if ( ! -d "$OUTDIR/root/thrown/" ) then
 								#echo "DNE"
 								#echo "$OUTDIR/root/monitoring_hists/"
     						mkdir $OUTDIR/root/thrown/
 							endif
-							mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/thrown
+							mv $PWD/$filetomv $OUTDIR/root/thrown/$filename_root\_$STANDARD_NAME.root
 						else if ($reaction_test !~ "") then
-							echo "reaction"
 							if ( ! -d "$OUTDIR/root/trees/" ) then
 								#echo "DNE"
 								#echo "$OUTDIR/root/monitoring_hists/"
     						mkdir $OUTDIR/root/trees/
 							endif
-							mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/trees
+							mv $PWD/$filetomv $OUTDIR/root/trees/$filename_root\_$STANDARD_NAME.root
 						else if ($gen_test !~ "") then
-							echo "gen"
 							if ( ! -d "$OUTDIR/root/generator/" ) then
 								#echo "DNE"
 								#echo "$OUTDIR/root/monitoring_hists/"
     						mkdir $OUTDIR/root/generator/
 							endif
-							mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/generator
+							if ($std_name_test !~ "") then
+								# echo "generator output root file $filetomv already contains $STANDARD_NAME"
+								mv $PWD/$filetomv $OUTDIR/root/generator/$filename_root.root
+							else
+								mv $PWD/$filetomv $OUTDIR/root/generator/$filename_root\_$STANDARD_NAME.root
+							endif
 						else
-							mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/
+							mv $PWD/$filetomv $OUTDIR/root/$filename_root\_$STANDARD_NAME.root
 						endif
 
 					endif
