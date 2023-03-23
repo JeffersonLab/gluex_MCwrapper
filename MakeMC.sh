@@ -1826,34 +1826,40 @@ fi
 			filecheck=`echo $current_files | grep -c $filetomv`
 
 			if [[ "$filecheck" == "0" ]]; then
-			    mv $filetomv $filename_root\_$STANDARD_NAME.root
-			    hdroot_test=`echo $filename_root\_$STANDARD_NAME.root | grep hd_root_`
-				thrown_test=`echo $filename_root\_$STANDARD_NAME.root | grep tree_thrown`
-				gen_test=`echo $filename_root\_$STANDARD_NAME.root | grep gen_`
-				reaction_test=`echo $filename_root\_$STANDARD_NAME.root | grep tree_`
+				echo $filetomv
+			    hdroot_test=`echo $filetomv | grep 'hd_root_\|hd_root.root'`
+				thrown_test=`echo $filetomv | grep tree_thrown`
+				gen_test=`echo $filetomv | grep gen_`
+				reaction_test=`echo $filetomv | grep tree_`
+				std_name_test=`echo $filetomv | grep $STANDARD_NAME`
 				#echo hdroot_test = $hdroot_test
 				if [[ $hdroot_test != "" ]]; then
 					if [[ ! -d "$OUTDIR/root/monitoring_hists/" ]]; then
     					mkdir $OUTDIR/root/monitoring_hists/
 					fi
-					mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/monitoring_hists
+					mv $PWD/$filetomv $OUTDIR/root/monitoring_hists/$filename_root\_$STANDARD_NAME.root
 				elif [[ $thrown_test != "" ]]; then
 					if [[ ! -d "$OUTDIR/root/thrown/" ]]; then
 						mkdir $OUTDIR/root/thrown/
 					fi
-					mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/thrown
+					mv $PWD/$filetomv $OUTDIR/root/thrown/$filename_root\_$STANDARD_NAME.root
 				elif [[ $reaction_test != "" ]]; then
 					if [[ ! -d "$OUTDIR/root/trees/" ]]; then
 						mkdir $OUTDIR/root/trees/
 					fi
-					mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/trees
+					mv $PWD/$filetomv $OUTDIR/root/trees/$filename_root\_$STANDARD_NAME.root
 				elif [[ $gen_test != "" ]]; then
 					if [[ ! -d "$OUTDIR/root/generator/" ]]; then
 						mkdir $OUTDIR/root/generator/
 					fi
-					mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/generator
+					if [[ $std_name_test != "" ]]; then
+						# echo "generator output root file $filename_root.root already contains $STANDARD_NAME"
+						mv $PWD/$filetomv $OUTDIR/root/generator/$filename_root.root
+					else
+						mv $PWD/$filetomv $OUTDIR/root/generator/$filename_root\_$STANDARD_NAME.root
+					fi
 				else
-					mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/
+					mv $PWD/$filetomv $OUTDIR/root/$filename_root\_$STANDARD_NAME.root
 				fi
 			fi
 		done
