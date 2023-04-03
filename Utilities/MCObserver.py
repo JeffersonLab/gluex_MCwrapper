@@ -45,6 +45,7 @@ from multiprocessing import Process
 import random
 import pipes
 import random
+import pwd
 
 MCWRAPPER_BOT_HOST_NAME=str(socket.gethostname())
 dbhost = "hallddb.jlab.org"
@@ -59,6 +60,11 @@ except:
         print("WARNING: CANNOT CONNECT TO DATABASE.  JOBS WILL NOT BE CONTROLLED OR MONITORED")
         pass
 
+runner_name=pwd.getpwuid( os.getuid() )[0]
+
+if( not (runner_name=="tbritton" or runner_name=="mcwrap")):
+    print("ERROR: You must be tbritton or mcwrap to run this script")
+    sys.exit(1)
 
 def exists_remote(host, path):
     """Test if a file exists at path on a host accessible with SSH."""
@@ -80,7 +86,7 @@ def CheckForFile(rootLoc,expFile):
 
 
     #if(os.path.isfile('/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/'+rootLoc+"/"+subloc+"/"+expFile) or os.path.isfile('/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) or os.path.isfile('/mss/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) ):
-    if(os.path.isfile('/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote('tbritton@dtn1902-ib','/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote('tbritton@dtn1902-ib','/mss/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) ):
+    if(os.path.isfile('/osgpool/halld/'+runner_name+'/REQUESTEDMC_OUTPUT/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote(runner_name+'@dtn1902','/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote(runner_name+'@dtn1902','/mss/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote(runner_name+'@dtn1902','/work/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) ):
         found=True
     else:
         print(rootLoc+"/"+subloc+"/"+expFile+"   NOT FOUND")
@@ -93,7 +99,7 @@ def checkJobFilesForCompletion(comp_assignment):
     #OutstandingProjects=dbcursor.fetchall()
     dbcnx_comp=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
     dbcursor_comp=dbcnx_comp.cursor(MySQLdb.cursors.DictCursor)
-    outdir_root="/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/"
+    outdir_root="/osgpool/halld/"+runner_name+"/REQUESTEDMC_OUTPUT/"
     print("checking "+str(len(comp_assignment)))
     for attempt in comp_assignment:#OutstandingProjects:
         
@@ -214,7 +220,7 @@ def main(argv):
         if(len(argv) !=0):
             numOverRide=True
         
-        numprocesses_running=subprocess.check_output(["echo `ps all -u tbritton | grep MCObserver.py | grep -v grep | wc -l`"], shell=True)
+        numprocesses_running=subprocess.check_output(["echo `ps all -u "+runner_name+" | grep MCObserver.py | grep -v grep | wc -l`"], shell=True)
 
         print(int(numprocesses_running))
         if(int(numprocesses_running) <2 or numOverRide):

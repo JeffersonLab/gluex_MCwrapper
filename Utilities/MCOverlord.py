@@ -28,6 +28,7 @@ import os.path
 #import mysql.connector
 import time
 import os
+import pwd
 import getpass
 import sys
 import re
@@ -46,6 +47,7 @@ import random
 import pipes
 import random
 import shutil
+import shlex
 
 MCWRAPPER_BOT_HOST_NAME=socket.gethostname()
 dbhost = "hallddb.jlab.org"
@@ -60,6 +62,12 @@ except:
         print("WARNING: CANNOT CONNECT TO DATABASE.  JOBS WILL NOT BE CONTROLLED OR MONITORED")
         pass
 
+#get user name of current user
+runner_name=pwd.getpwuid( os.getuid() )[0]
+
+if( not (runner_name=="tbritton" or runner_name=="mcwrap")):
+    print("ERROR: You must be tbritton or mcwrap to run this script")
+    sys.exit(1)
 
 def exists_remote(host, path):
     """Test if a file exists at path on a host accessible with SSH."""
@@ -91,7 +99,8 @@ def CheckForFile(rootLoc,expFile):
     #tbritton@dtn1902-ib:
 
     #if(os.path.isfile('/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/'+rootLoc+"/"+subloc+"/"+expFile) or os.path.isfile('/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) or os.path.isfile('/mss/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) ):
-    if(os.path.isfile('/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote('tbritton@dtn1902-ib','/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote('tbritton@dtn1902-ib','/mss/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) ):
+    #if(os.path.isfile('/osgpool/halld/'+runner_name+'/REQUESTEDMC_OUTPUT/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote(runner_name+'@dtn1902','/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote(runner_name+'@dtn1902','/mss/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) ):
+    if(os.path.isfile('/osgpool/halld/'+runner_name+'/REQUESTEDMC_OUTPUT/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote(runner_name+'@dtn1902','/work/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) ):
         found=True
     else:
         print(rootLoc+"/"+subloc+"/"+expFile+"   NOT FOUND")
@@ -120,6 +129,18 @@ def recursivermdir(rootloc):
         print(e)
         pass
 
+def BundleFiles(input,output):
+    MCWRAPPER_BOT_HOME="/scigroup/mcwrapper/gluex_MCwrapper/"
+    bundlecommand = "ssh ifarm1802 " + "echo hostname; source /group/halld/Software/build_scripts/gluex_env_jlab.csh; /usr/bin/python3.6 " + MCWRAPPER_BOT_HOME + "/Utilities/MCMerger.py -f " + input + "/ " + output + "/"
+    print(bundlecommand)
+    try:
+        out = subprocess.check_output(shlex.split(bundlecommand), stderr=subprocess.STDOUT)
+        return "SUCCESS"
+    except subprocess.CalledProcessError as e:
+        print(e.output)
+        return "ERROR"
+    
+
 def checkProjectsForCompletion(comp_assignment):
     chck_Str=""
     for comp in comp_assignment:
@@ -130,7 +151,7 @@ def checkProjectsForCompletion(comp_assignment):
     #OutstandingProjects=dbcursor.fetchall()
     dbcnx_comp=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
     dbcursor_comp=dbcnx_comp.cursor(MySQLdb.cursors.DictCursor)
-    outdir_root="/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/"
+    outdir_root="/osgpool/halld/"+runner_name+"/REQUESTEDMC_OUTPUT/"
 
     for proj in comp_assignment:#OutstandingProjects:
         
@@ -284,8 +305,28 @@ def checkProjectsForCompletion(comp_assignment):
         if((len(fulfilledJobs)-len(nullify_list))==len(AllActiveJobs) and len(AllActiveJobs) != 0 and filesToMove ==0 and submitted_evtNum[0]["SUM(NumEvts)"] >= proj["NumEvents"]-len(AllActiveJobs)):
             print(proj['ID'],"DONE")
 
+            inputdir= proj["OutputLocation"].replace("/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/","/work/halld/gluex_simulations/REQUESTED_MC/")
+            outputlocation="/".join(proj["OutputLocation"].split("/")[:-1])+"/"
+            #outputlocation="/lustre19/expphy/cache/halld/gluex_simulations/MERGED_MC/"+inputdir.replace("/work/halld/gluex_simulations/REQUESTED_MC/","")+"/"
+            print("BundleFiles("+inputdir+","+outputlocation+")")
+            mkdircommand="ssh ifarm1802 mkdir -p "+outputlocation
+            print(mkdircommand)
+            subprocess.call(mkdircommand.split(" "))
+            #close the connection to the database while we run the bundle files
+            dbcnx_comp.close()
+            out=BundleFiles(inputdir,outputlocation)
+            print("final output",out)
+            
+            if out == "ERROR":
+                dbcnx_comp=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
+                dbcursor_comp=dbcnx_comp.cursor(MySQLdb.cursors.DictCursor)
+                continue
+
+            dbcnx_comp=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
+            dbcursor_comp=dbcnx_comp.cursor(MySQLdb.cursors.DictCursor)
             getFinalCompleteTime="SELECT MAX(Completed_Time) FROM Attempts WHERE Job_ID IN (SELECT ID FROM Jobs WHERE Project_ID="+str(proj['ID'])+");"
             print(getFinalCompleteTime)
+
             dbcursor_comp.execute(getFinalCompleteTime)
             finalTimeRes=dbcursor_comp.fetchall()
             #print "============"
@@ -323,10 +364,12 @@ def checkProjectsForCompletion(comp_assignment):
         else:
             #print("ELSE")
             #print(proj['ID'])
-            updateProjectstatus="UPDATE Project SET Completed_Time=NULL WHERE ID="+str(proj['ID'])+";"
+            print("NOT DONE")
+
+            #updateProjectstatus="UPDATE Project SET Completed_Time=NULL WHERE ID="+str(proj['ID'])+";"
             #print(updateProjectstatus)
-            dbcursor_comp.execute(updateProjectstatus)
-            dbcnx_comp.commit()
+            #dbcursor_comp.execute(updateProjectstatus)
+            #dbcnx_comp.commit()
 
 
 def checkSWIF2():
@@ -549,7 +592,7 @@ def UpdateOutputSize():
             location=Project[0]["FinalDestination"]
 
         try:
-            statuscommand="ssh tbritton@dtn1902 du -sh --exclude \".*\" --total "+location
+            statuscommand="ssh "+runner_name+"@dtn1902 du -sh --exclude \".*\" --total "+location
             print(statuscommand)
             totalSizeStr=subprocess.check_output([statuscommand], shell=True)
             #print "==============="
@@ -770,7 +813,7 @@ def checkOSG(Jobs_List):
                                 if len(attempt_BKG_parts) != 1:
                                     locally_found=False
                                     try:
-                                        check_out=subprocess.check_output('ssh tbritton@dtn1902 ls /osgpool/halld/random_triggers/'+str(attempt_BKG_parts[1])+"/run"+str(thisJOB_RunNumber).zfill(6)+'_random.hddm', shell=True)
+                                        check_out=subprocess.check_output('ssh '+runner_name+'@dtn1902 ls /osgpool/halld/random_triggers/'+str(attempt_BKG_parts[1])+"/run"+str(thisJOB_RunNumber).zfill(6)+'_random.hddm', shell=True)
                                         print("Found:",check_out)
                                         locally_found=True
                                     except Exception as e:
@@ -780,18 +823,12 @@ def checkOSG(Jobs_List):
                                     print("is found:",locally_found)
                                     if locally_found:
                                         print("found file locally: "+str("/work/osgpool/halld/random_triggers/"+str(attempt_BKG_parts[1])+"/run"+str(thisJOB_RunNumber).zfill(6)+"_random.hddm"))
-                                        response=os.system("ping -c 1 nod25.phys.uconn.edu")
-                                        print("PING RESPONSE:"+str(response))
-                                        if response != 0:
-                                            print("-1 job stat")
-                                            JOB_STATUS=-1 #hold until host comes back
-                                        else:
-                                            print("7 job stat")
-                                            JOB_STATUS=7 #globus needs doing?
-                                            
-                                            if(locally_found):
-                                                JOB_STATUS=4
-                                                ExitCode=-232
+                                        print("7 job stat")
+                                        JOB_STATUS=7 #globus needs doing?
+                                        
+                                        if(locally_found):
+                                            JOB_STATUS=4
+                                            ExitCode=-232
 
                                     else:
                                         print("6 job stat")
@@ -808,8 +845,8 @@ def checkOSG(Jobs_List):
                         std_out_loc=str(JSON_job["Out"])
                         print(std_out_loc)
                         if( not os.path.isfile(std_out_loc)):
-                            print("scp tbritton@dtn1902-ib:/cache/halld/gluex_simulations/REQUESTED_MC/"+std_out_loc.split("REQUESTEDMC_OUTPUT")[1]+" "+"/tmp/"+std_out_loc.split("/")[-1])
-                            subprocess.call("scp tbritton@dtn1902-ib:/cache/halld/gluex_simulations/REQUESTED_MC/"+std_out_loc.split("REQUESTEDMC_OUTPUT")[1]+" "+"/tmp/"+std_out_loc.split("/")[-1],shell=True)
+                            print("scp "+runner_name+"@dtn1902:/cache/halld/gluex_simulations/REQUESTED_MC/"+std_out_loc.split("REQUESTEDMC_OUTPUT")[1]+" "+"/tmp/"+std_out_loc.split("/")[-1])
+                            subprocess.call("scp "+runner_name+"@dtn1902:/cache/halld/gluex_simulations/REQUESTED_MC/"+std_out_loc.split("REQUESTEDMC_OUTPUT")[1]+" "+"/tmp/"+std_out_loc.split("/")[-1],shell=True)
                             std_out_loc="/tmp/"+std_out_loc.split("/")[-1]
                         #print(std_out_loc)
                         
@@ -887,12 +924,13 @@ def main(argv):
         runnum=0
         runmax=-1
         spawnNum=10
+        comp_spawnnum=1
         numOverRide=False
 
         if(len(argv) !=0):
             numOverRide=True
         
-        numprocesses_running=subprocess.check_output(["echo `ps all -u tbritton | grep MCOverlord.py | grep -v grep | wc -l`"], shell=True)
+        numprocesses_running=subprocess.check_output(["echo `ps all -u "+runner_name+" | grep MCOverlord.py | grep -v grep | wc -l`"], shell=True)
 
         print(int(numprocesses_running))
         if(int(numprocesses_running) <2 or numOverRide):
@@ -951,10 +989,15 @@ def main(argv):
                     print("CHECKING GLOBALS ON MAIN")
                     #UpdateOutputSize() broken without lustre mounted
                     #MULTI PROCESS THIS? MAYBE 5-10 processes
-                    comp_spawnnum=5
+                    
                     OutstandingProjectsQuery="SELECT * FROM Project WHERE (Is_Dispatched != '0' && Tested != '-1' && Tested != '2' ) && Notified is NULL"
+                    print(OutstandingProjectsQuery)
                     dbcursor.execute(OutstandingProjectsQuery)
                     OutstandingProjects=dbcursor.fetchall()
+
+                    for proj in OutstandingProjects:
+                        print("to check",proj["ID"])
+                    
                     if(comp_spawnnum>0):
                         completion_assignments=array_split(OutstandingProjects,comp_spawnnum)
                     

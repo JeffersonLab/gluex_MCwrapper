@@ -81,6 +81,8 @@ setenv TAGSTR $1
 shift
 setenv CUSTOM_PLUGINS $1
 shift
+setenv CUSTOM_ANA_PLUGINS $1
+shift
 setenv PER_FILE $1
 shift
 setenv RUNNING_DIR $1
@@ -134,6 +136,8 @@ shift
 setenv GEANT_VERTEXT_LENGTH $1
 shift
 setenv MCSMEAR_NOTAG $1
+shift
+setenv PROJECT_DIR_NAME $1
 
 setenv USER_BC `which bc`
 setenv USER_PYTHON `which python`
@@ -461,6 +465,7 @@ echo "Producing file number: "$FILE_NUMBER
 echo "Containing: " $EVT_TO_GEN"/""$PER_FILE"" events"
 echo "Running location:" $RUNNING_DIR
 echo "Output location: "$OUTDIR
+echo "Project directory name: "$PROJECT_DIR_NAME
 echo "Environment file: " $ENVIRONMENT
 echo "Analysis Environment file: " $ANAENVIRONMENT
 echo "Context: "$JANA_CALIB_CONTEXT
@@ -491,6 +496,7 @@ echo "Run mcsmear? "$SMEAR"  Will be cleaned?" $CLEANSMEAR
 echo "----------------------------------------------"
 echo "Run reconstruction? "$RECON"  Will be cleaned?" $CLEANRECON
 echo "With additional plugins: "$CUSTOM_PLUGINS
+echo "With additional analysis launch plugins: "$CUSTOM_ANA_PLUGINS
 echo "=============================================="
 echo ""
 echo ""
@@ -636,7 +642,7 @@ if ( "$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" == "
 			endif
     else
 			set bkglocstring="/work/osgpool/halld/random_triggers/"$RANDBGTAG"/run"$formatted_runNumber"_random.hddm"
-			if ( `hostname` == 'scosg16.jlab.org' || `hostname` == 'scosg20.jlab.org' ) then
+			if ( `hostname` == 'scosg16.jlab.org' || `hostname` == 'scosg20.jlab.org' || `hostname` == 'scosg2201.jlab.org' ) then
 				set bkglocstring="/work/osgpool/halld/random_triggers/"$RANDBGTAG"/run"$formatted_runNumber"_random.hddm"
 			endif
 		endif
@@ -661,13 +667,24 @@ endif
 
 set gen_pre=""
 
+if ( "$CUSTOM_ANA_PLUGINS" != "None" ) then
+	set ana_pre=`echo $CUSTOM_ANA_PLUGINS | cut -c1-4`
+	set jana_ana_config_file=`echo $CUSTOM_ANA_PLUGINS | sed -r 's/^.{5}//'`
+	echo "ANA PREFIX:  " $ana_pre
+	if ( $ana_pre == "file" ) then
+		if ( -f $jana_ana_config_file ) then
+			cp $jana_ana_config_file ./ana_jana.cfg
+		endif
+	endif
+endif
+
 if ( "$GENR" != "0" ) then
 
     set gen_pre=`echo $GENERATOR | cut -c1-4`
 
-    if ( "$gen_pre" != "file" && "$GENERATOR" != "genr8" && "$GENERATOR" != "bggen" && "$GENERATOR" != "genEtaRegge" && "$GENERATOR" != "gen_2pi_amp" && "$GENERATOR" != "gen_pi0" && "$GENERATOR" != "gen_2pi_primakoff" && "$GENERATOR" != "gen_2pi0_primakoff" && "$GENERATOR" != "gen_omega_3pi" && "$GENERATOR" != "gen_omegapi" && "$GENERATOR" != "gen_2k" && "$GENERATOR" != "bggen_jpsi" && "$GENERATOR" != "gen_ee" && "$GENERATOR" != "gen_ee_hb" && "$GENERATOR" != "particle_gun" && "$GENERATOR" != "geantBEAM" && "$GENERATOR" != "bggen_phi_ee" && "$GENERATOR" != "genBH" && "$GENERATOR" != "gen_omega_radiative" && "$GENERATOR" != "gen_amp" && "$GENERATOR" != "genr8_new" && "$GENERATOR" != "gen_compton" && "$GENERATOR" != "gen_npi" && "$GENERATOR" != "gen_compton_simple" && "$GENERATOR" != "gen_primex_eta_he4" && "$GENERATOR" != "gen_whizard" && "$GENERATOR" != "mc_gen" && "$GENERATOR" != "gen_vec_ps") then
+    if ( "$gen_pre" != "file" && "$GENERATOR" != "genr8" && "$GENERATOR" != "bggen" && "$GENERATOR" != "genEtaRegge" && "$GENERATOR" != "gen_2pi_amp" && "$GENERATOR" != "gen_pi0" && "$GENERATOR" != "gen_2pi_primakoff" && "$GENERATOR" != "gen_2pi0_primakoff" && "$GENERATOR" != "gen_omega_3pi" && "$GENERATOR" != "gen_omegapi" && "$GENERATOR" != "gen_2k" && "$GENERATOR" != "bggen_jpsi" && "$GENERATOR" != "gen_ee" && "$GENERATOR" != "gen_ee_hb" && "$GENERATOR" != "particle_gun" && "$GENERATOR" != "geantBEAM" && "$GENERATOR" != "bggen_phi_ee" && "$GENERATOR" != "genBH" && "$GENERATOR" != "gen_omega_radiative" && "$GENERATOR" != "gen_amp" && "$GENERATOR" != "genr8_new" && "$GENERATOR" != "gen_compton" && "$GENERATOR" != "gen_npi" && "$GENERATOR" != "gen_compton_simple" && "$GENERATOR" != "gen_primex_eta_he4" && "$GENERATOR" != "gen_whizard" && "$GENERATOR" != "mc_gen" && "$GENERATOR" != "gen_vec_ps"  && "$GENERATOR" != "bggen_upd" ) then
 		echo "NO VALID GENERATOR GIVEN"
-		echo "only [genr8, bggen, genEtaRegge, gen_2pi_amp, gen_pi0, gen_omega_3pi, gen_2k, bggen_jpsi, gen_ee , gen_ee_hb, bggen_phi_ee, particle_gun, geantBEAM, genBH, gen_omega_radiative, gen_amp, gen_compton, gen_npi, gen_compton_simple, gen_primex_eta_he4, gen_whizard, gen_omegapi, mc_gen, gen_vec_ps] are supported"
+		echo "only [genr8, bggen, genEtaRegge, gen_2pi_amp, gen_pi0, gen_omega_3pi, gen_2k, bggen_jpsi, gen_ee , gen_ee_hb, bggen_phi_ee, particle_gun, geantBEAM, genBH, gen_omega_radiative, gen_amp, gen_compton, gen_npi, gen_compton_simple, gen_primex_eta_he4, gen_whizard, gen_omegapi, mc_gen, gen_vec_ps, bggen_upd] are supported"
 		echo "something went wrong with initialization"
 		exit 1
     endif
@@ -730,7 +747,7 @@ if ( "$GENR" != "0" ) then
 	else
 		if ( -f $CONFIG_FILE ) then
 		    echo "input file found"
-		else if( "$GENERATOR" == "gen_ee" || "$GENERATOR" == "gen_ee_hb" || "$GENERATOR" == "genBH" ) then
+		else if( "$GENERATOR" == "gen_ee_hb" || "$GENERATOR" == "genBH" ) then
 			echo "Config file not applicable"
 		else
 	    	echo $CONFIG_FILE" does not exist"
@@ -861,15 +878,15 @@ if ( "$GENR" != "0" ) then
 		echo "configuring gen_compton"
 		set STANDARD_NAME="gen_compton_"$STANDARD_NAME
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
-        else if ( "$GENERATOR" == "gen_compton_simple" ) then
+    else if ( "$GENERATOR" == "gen_compton_simple" ) then
 		echo "configuring gen_compton_simple"
 		STANDARD_NAME="gen_compton_simple_"$STANDARD_NAME
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
-        else if ( "$GENERATOR" == "gen_primex_eta_he4" ) then
+    else if ( "$GENERATOR" == "gen_primex_eta_he4" ) then
 		echo "configuring gen_primex_eta_he4"
 		STANDARD_NAME="gen_primex_eta_he4_"$STANDARD_NAME
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
-        else if ( "$GENERATOR" == "gen_whizard" ) then
+    else if ( "$GENERATOR" == "gen_whizard" ) then
 		echo "configuring gen_whizard"
 		STANDARD_NAME="gen_whizard_"$STANDARD_NAME
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
@@ -888,6 +905,13 @@ if ( "$GENR" != "0" ) then
 		cp $MCWRAPPER_CENTRAL/Generators/bggen_jpsi/pythia.dat ./
 		cp $MCWRAPPER_CENTRAL/Generators/bggen_jpsi/pythia-geant.map ./
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
+	else if ( "$GENERATOR" == "bggen_upd" ) then
+		echo "configuring bggen_upd"
+		set STANDARD_NAME="bggen_upd_"$STANDARD_NAME
+		cp $MCWRAPPER_CENTRAL/Generators/bggen_upd/particles.ffr ./
+		cp $MCWRAPPER_CENTRAL/Generators/bggen_upd/pythia.dat ./
+		cp $MCWRAPPER_CENTRAL/Generators/bggen_upd/run_mcwrapper.ffr ./
+		cp $CONFIG_FILE ./$STANDARD_NAME.conf
 	else if ( "$GENERATOR" == "bggen_phi_ee" ) then
 		echo "configuring bggen_phi_ee"
 		set STANDARD_NAME="bggen_phi_ee_"$STANDARD_NAME
@@ -897,9 +921,8 @@ if ( "$GENR" != "0" ) then
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
 	else if ( "$GENERATOR" == "gen_ee" ) then
 		echo "configuring gen_ee"
-		set STANDARD_NAME="gen_ee_"$STANDARD_NAME
-		echo "note: this generator is run completely from command line, thus no config file will be made and/or modified"
-		cp $CONFIG_FILE ./cobrems.root
+		STANDARD_NAME="gen_ee_"$STANDARD_NAME
+		cp $CONFIG_FILE ./$STANDARD_NAME.conf
 	else if ( "$GENERATOR" == "gen_ee_hb" ) then
 		echo "configuring gen_ee_hb"
 		set STANDARD_NAME="gen_ee_hb_"$STANDARD_NAME
@@ -1151,7 +1174,7 @@ if ( "$GENR" != "0" ) then
 		gen_compton -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
 		set generator_return_code=$status
 
-        else if ( "$GENERATOR" == "gen_compton_simple" ) then
+    else if ( "$GENERATOR" == "gen_compton_simple" ) then
 		echo "RUNNING GEN_COMPTON_SIMPLE"
 		set optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
 		echo $optionals_line
@@ -1160,7 +1183,7 @@ if ( "$GENR" != "0" ) then
 
 		set generator_return_code=$status
 
-        else if ( "$GENERATOR" == "gen_primex_eta_he4" ) then
+    else if ( "$GENERATOR" == "gen_primex_eta_he4" ) then
 		echo "RUNNING GEN_PRIMEX_ETA_HE4"
 		set optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
 		echo $optionals_line
@@ -1169,7 +1192,7 @@ if ( "$GENR" != "0" ) then
 
 		set generator_return_code=$status
 
-        else if ( "$GENERATOR" == "gen_whizard" ) then
+    else if ( "$GENERATOR" == "gen_whizard" ) then
 		echo "RUNNING GEN_WHIZARD"
 		set optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
 		echo $optionals_line
@@ -1213,6 +1236,26 @@ if ( "$GENR" != "0" ) then
 		bggen_jpsi
 		set generator_return_code=$status
 		mv bggen.hddm $STANDARD_NAME.hddm
+	else if ( "$GENERATOR" == "bggen_upd" ) then
+		set RANDOMnum=`bash -c 'echo $RANDOM'`
+		echo Random Number used: $RANDOMnum
+		sed -i 's/TEMPTRIG/'$EVT_TO_GEN'/' run_mcwrapper.ffr
+		sed -i 's/TEMPRUNNO/'$RUN_NUMBER'/' run_mcwrapper.ffr
+		sed -i 's/TEMPCOLD/'0.00$colsize'/' run_mcwrapper.ffr
+		sed -i 's/TEMPRAND/'$RANDOMnum'/' run_mcwrapper.ffr
+		set Fortran_eBEAM_ENRGY=`echo $eBEAM_ENERGY | cut -c -7`
+		sed -i 's/TEMPELECE/'$Fortran_eBEAM_ENRGY'/' run_mcwrapper.ffr
+		set Fortran_COHERENT_PEAK=`echo $COHERENT_PEAK | cut -c -7`
+		sed -i 's/TEMPCOHERENT/'$Fortran_COHERENT_PEAK'/' 
+		sed -i 's/TEMPMINGENE/'$GEN_MIN_ENERGY'/' run_mcwrapper.ffr
+		sed -i 's/TEMPMAXGENE/'$GEN_MAX_ENERGY'/' run_mcwrapper.ffr
+
+		ln -s $STANDARD_NAME.conf fort.15
+        ln -s particles.ffr fort.16
+        ln -s run_mcwrapper.ffr fort.17
+		bggen_upd
+		set generator_return_code=$status
+		mv bggen.hddm $STANDARD_NAME.hddm
 	else if ( "$GENERATOR" == "bggen_phi_ee" ) then
 		set RANDOMnum=`bash -c 'echo $RANDOM'`
 		echo Random Number used: $RANDOMnum
@@ -1231,13 +1274,17 @@ if ( "$GENR" != "0" ) then
 		bggen_jpsi
 		set generator_return_code=$status
 		mv bggen.hddm $STANDARD_NAME.hddm
+
 	else if ( "$GENERATOR" == "gen_ee" ) then
+		echo "RUNNING GEN_EE"
 		set RANDOMnum=`bash -c 'echo $RANDOM'`
 		echo "Random number used: "$RANDOMnum
-		echo gen_ee -n$EVT_TO_GEN -R2 -b2 -l$GEN_MIN_ENERGY -u$GEN_MAX_ENERGY -t2 -r$RANDOMnum -omc_ee.hddm
-		gen_ee -n$EVT_TO_GEN -R2 -b2 -l$GEN_MIN_ENERGY -u$GEN_MAX_ENERGY -t2 -r$RANDOMnum -omc_ee.hddm
+		set optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
+		echo $optionals_line
+		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
+		gen_ee -d$STANDARD_NAME.conf -c$STANDARD_NAME'_beam.conf' -o$STANDARD_NAME.hddm -n$EVT_TO_GEN -z$RUN_NUMBER -l$GEN_MIN_ENERGY -u$GEN_MAX_ENERGY -r$RANDOMnum $optionals_line
+
 		set generator_return_code=$status
-		mv mc_ee.hddm $STANDARD_NAME.hddm
 	else if ( "$GENERATOR" == "gen_ee_hb" ) then
 		echo gen_ee_hb -N$RUN_NUMBER -n$EVT_TO_GEN
 		gen_ee_hb -N$RUN_NUMBER -n$EVT_TO_GEN
@@ -1345,6 +1392,12 @@ endif
 		sed -i 's/TEMPRUNG/'$RUN_NUMBER'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 		sed -i 's/TEMPOUT/'$STANDARD_NAME'_geant'$GEANTVER'.hddm/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 		sed -i 's/TEMPTRIG/'$EVT_TO_GEN'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+
+		if ( $RUN_NUMBER >= 70000 ) then
+			sed -i 's/TEMPCKOV/'1'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+		else
+			sed -i 's/TEMPCKOV/'0'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+		endif
 
 		sed -i 's/TEMPGEANTAREA/'$GEANT_VERTEXT_AREA'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 		sed -i 's/TEMPGEANTLENGTH/'$GEANT_VERTEXT_LENGTH'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
@@ -1681,12 +1734,37 @@ endif
 
 					echo "EMULATING ANALYSIS LAUNCH"
 					echo "changed software to:  "`which hd_root`
-					echo "PLUGINS ReactionFilter" > ana_jana.cfg
-					tail jana_config.cfg -n+2 >> ana_jana.cfg
+
+					if ( "$CUSTOM_ANA_PLUGINS" != "None" ) then
+						if ( $ana_pre == "file" ) then
+							echo "Use $jana_ana_config_file"
+						else #use list of plugins
+							set anapluginlist=( "monitoring_hists" "$CUSTOM_ANA_PLUGINS" )
+							set anaPluginStr=""
+							foreach plugin ($anapluginlist)
+									set anaPluginStr="$anaPluginStr""$plugin"","
+							end
+							set anaPluginStr=`echo $anaPluginStr | sed -r 's/.{1}$//'` #remove last ","
+							echo "PLUGINS ""$anaPluginStr" > ana_jana.cfg
+						endif
+					else
+						echo "PLUGINS ReactionFilter" > ana_jana.cfg
+						sed '/PLUGINS/d' jana_config.cfg >> ana_jana.cfg
+					endif
+
+					set thrown_tree_check=`grep mcthrown_tree ana_jana.cfg`
+					if ( "$thrown_tree_check" != "" ) then
+						echo
+						echo
+						echo "WARNING: You have the mcthrown_tree plugin in your jana config file for the analysis launch (see below)!"
+						echo "         This will overwrite the previous thrown_tree and the file will not contain ALL thrown information."
+						echo
+						echo
+					endif
 
 					cat ana_jana.cfg
 
-					hd_root dana_rest_$STANDARD_NAME.hddm --config=ana_jana.cfg -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 -o hd_root_ana_$STANDARD_NAME.root
+					hd_root dana_rest_$STANDARD_NAME.hddm --config=ana_jana.cfg -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 -o hd_root_ana.root
 					set anahd_root_return_code=$status
 
 					if ( $anahd_root_return_code != 0 ) then
@@ -1699,6 +1777,10 @@ endif
 
 					rm jana_config.cfg
 					rm ana_jana.cfg
+
+					if ( -f dana_rest.hddm ) then
+						mv dana_rest.hddm dana_rest_ana_$STANDARD_NAME.hddm
+					endif
 
 				endif
 endif #close geantBEAM if
@@ -1730,47 +1812,48 @@ endif #close geantBEAM if
 					set filecheck=`echo $current_files | grep -c $filetomv`
 
 					if ( "$filecheck" == "0" ) then
-						mv $filetomv $filename_root\_$STANDARD_NAME.root
-						echo $filename_root\_$STANDARD_NAME.root
-						set hdroot_test=`echo $filename_root\_$STANDARD_NAME.root | grep hd_root_`
-						set thrown_test=`echo $filename_root\_$STANDARD_NAME.root | grep tree_thrown`
-						set gen_test=`echo $filename_root\_$STANDARD_NAME.root | grep gen_`
-						set reaction_test=`echo $filename_root\_$STANDARD_NAME.root | grep tree_`
+						echo $filetomv
+						set hdroot_test=`echo $filetomv | grep 'hd_root_\|hd_root.root'`
+						set thrown_test=`echo $filetomv | grep tree_thrown`
+						set gen_test=`echo $filetomv | grep gen_`
+						set reaction_test=`echo $filetomv | grep tree_`
+						set std_name_test=`echo $filetomv | grep $STANDARD_NAME`
 						#echo hdroot_test = $hdroot_test
 						if ($hdroot_test !~ "") then
-							echo "hdroot"
 							if ( ! -d "$OUTDIR/root/monitoring_hists/" ) then
 								#echo "DNE"
 								#echo "$OUTDIR/root/monitoring_hists/"
     						mkdir $OUTDIR/root/monitoring_hists/
 							endif
-							mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/monitoring_hists
+							mv $PWD/$filetomv $OUTDIR/root/monitoring_hists/$filename_root\_$STANDARD_NAME.root
 						else if ($thrown_test !~ "") then
-							echo "thrown"
 							if ( ! -d "$OUTDIR/root/thrown/" ) then
 								#echo "DNE"
 								#echo "$OUTDIR/root/monitoring_hists/"
     						mkdir $OUTDIR/root/thrown/
 							endif
-							mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/thrown
+							mv $PWD/$filetomv $OUTDIR/root/thrown/$filename_root\_$STANDARD_NAME.root
 						else if ($reaction_test !~ "") then
-							echo "reaction"
 							if ( ! -d "$OUTDIR/root/trees/" ) then
 								#echo "DNE"
 								#echo "$OUTDIR/root/monitoring_hists/"
     						mkdir $OUTDIR/root/trees/
 							endif
-							mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/trees
+							mv $PWD/$filetomv $OUTDIR/root/trees/$filename_root\_$STANDARD_NAME.root
 						else if ($gen_test !~ "") then
-							echo "gen"
 							if ( ! -d "$OUTDIR/root/generator/" ) then
 								#echo "DNE"
 								#echo "$OUTDIR/root/monitoring_hists/"
     						mkdir $OUTDIR/root/generator/
 							endif
-							mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/generator
+							if ($std_name_test !~ "") then
+								# echo "generator output root file $filetomv already contains $STANDARD_NAME"
+								mv $PWD/$filetomv $OUTDIR/root/generator/$filename_root.root
+							else
+								mv $PWD/$filetomv $OUTDIR/root/generator/$filename_root\_$STANDARD_NAME.root
+							endif
 						else
-							mv $PWD/$filename_root\_$STANDARD_NAME.root $OUTDIR/root/
+							mv $PWD/$filetomv $OUTDIR/root/$filename_root\_$STANDARD_NAME.root
 						endif
 
 					endif
@@ -1782,7 +1865,7 @@ rm -rf .hdds_tmp_*
 rm -rf ccdb.sqlite
 rm -rf rcdb.sqlite
 
-if ( "$gen_pre" != "file" && "$GENERATOR" != "gen_ee_hb" && "$GENERATOR" != "gen_ee" && "$GENR" == "1" ) then
+if ( "$gen_pre" != "file" && "$GENERATOR" != "gen_ee_hb" && "$GENR" == "1" ) then
     mv $PWD/*.conf $OUTDIR/configurations/generation/
 endif
 

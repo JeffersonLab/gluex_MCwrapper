@@ -9,7 +9,9 @@ import MySQLdb
 import sys
 import datetime
 import os.path
+import pwd
 import time
+import shlex
 from optparse import OptionParser
 try:
     import subprocess
@@ -32,6 +34,13 @@ dbuser = 'mcuser'
 dbpass = ''
 dbname = 'gluex_mc'
 
+#get user name of current user
+runner_name=pwd.getpwuid( os.getuid() )[0]
+
+if( not (runner_name=="tbritton" or runner_name=="mcwrap")):
+    print("ERROR: You must be tbritton or mcwrap to run this script")
+    sys.exit(1)
+
 conn=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
 curs=conn.cursor(MySQLdb.cursors.DictCursor)
 
@@ -48,7 +57,9 @@ class bcolors:
 #DELETE FROM Attempts WHERE Job_ID IN (SELECT ID FROM Jobs WHERE Project_ID=65);
 
 def RecallAll():
-    query="SELECT BatchJobID, BatchSystem from Attempts where (Status=\"2\" || Status=\"1\" || Status=\"5\") && SubmitHost=\""+MCWRAPPER_BOT_HOST_NAME+"\" && Job_ID in (SELECT ID from Jobs where Project_ID in (SELECT ID FROM Project where Tested=2 || Tested=4 || Tested=3 ));"
+    #query="SELECT BatchJobID, BatchSystem from Attempts where (Status=\"2\" || Status=\"1\" || Status=\"5\") && SubmitHost=\""+MCWRAPPER_BOT_HOST_NAME+"\" && Job_ID in (SELECT ID from Jobs where Project_ID in (SELECT ID FROM Project where Tested=2 || Tested=4 || Tested=3 ));"
+    query="SELECT a.BatchJobID, a.BatchSystem FROM Attempts a JOIN Jobs j ON a.Job_ID = j.ID JOIN Project p ON j.Project_ID = p.ID WHERE a.SubmitHost = \""+MCWRAPPER_BOT_HOST_NAME+"\" AND a.Status IN (\"1\", \"2\", \"5\") AND p.Tested IN (2, 3, 4);"
+    print(query)
     curs.execute(query)
     rows=curs.fetchall()
     print("RECALLING "+str(len(rows)))
@@ -73,11 +84,54 @@ def RecallAll():
                 break
             #subprocess.call(command,shell=True)
 
+def BundleFiles(input,output):
+    MCWRAPPER_BOT_HOME="/scigroup/mcwrapper/gluex_MCwrapper/"
+    bundlecommand = "ssh ifarm1802 " + "echo hostname; source /group/halld/Software/build_scripts/gluex_env_jlab.csh; /usr/bin/python3.6 " + MCWRAPPER_BOT_HOME + "/Utilities/MCMerger.py -f " + input + "/ " + output + "/"
+    print(bundlecommand)
+    try:
+        out = subprocess.check_output(shlex.split(bundlecommand), stderr=subprocess.STDOUT)
+        return "SUCCESS"
+    except subprocess.CalledProcessError as e:
+        print(e.output)
+        return "ERROR"
+
 def DeclareAllComplete():
-    query="SELECT ID,OutputLocation,Email from Project where Tested=4 && Notified is NULL;"
+    conn=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
+    curs=conn.cursor(MySQLdb.cursors.DictCursor)
+
+    query="SELECT ID,OutputLocation,Email,Completed_Time from Project where Tested=4 && Notified is NULL;"
     curs.execute(query)
     rows=curs.fetchall()
+    print("DECLARING",rows,"COMPLETE")
+    
     for proj in rows:
+
+        inputdir= proj["OutputLocation"].replace("/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/","/work/halld/gluex_simulations/REQUESTED_MC/")
+        outputlocation="/".join(proj["OutputLocation"].split("/")[:-1])+"/"
+        # outputlocation="/work/halld/gluex_simulations/MERGED_MC/"
+
+        hours_to_wait=4
+
+        #check if now is at least 4 hours later than the completion time
+        if proj["Completed_Time"] is None:
+            continue
+        if datetime.datetime.now() < proj["Completed_Time"] + datetime.timedelta(hours=hours_to_wait):
+            continue
+        
+        print("BundleFiles("+inputdir+","+outputlocation+")")
+        mkdircommand="ssh ifarm1802 mkdir -p "+outputlocation
+        print(mkdircommand)
+        subprocess.call(mkdircommand.split(" "))
+        #close the connection to the database while we run the bundle files
+        conn.close()
+        out=BundleFiles(inputdir,outputlocation)
+        print("final output",out)
+
+        if out == "ERROR":
+            continue
+        
+        conn=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
+        curs=conn.cursor(MySQLdb.cursors.DictCursor)
         msg = EmailMessage()
         msg.set_content('Your Project ID '+str(proj['ID'])+' has been declared completed.  Outstanding jobs have been recalled. Output may be found here:\n'+proj['OutputLocation'])
 
@@ -93,7 +147,7 @@ def DeclareAllComplete():
         s.quit()
 
         #subprocess.call("echo 'Your Project ID "+str(proj['ID'])+" has been declared completed.  Outstanding jobs have been recalled. Output may be found here:\n"+proj['OutputLocation']+"' | mail -s 'GlueX MC Request #"+str(proj['ID'])+" Completed' "+str(proj['Email']),shell=True)
-        updatequery="UPDATE Project SET Completed_Time=NOW(),Notified=1 where ID="+str(proj["ID"])
+        updatequery="UPDATE Project SET Notified=1 where ID="+str(proj["ID"]) #Completed_Time=NOW(),
         curs.execute(updatequery)
         conn.commit()
 
@@ -139,11 +193,24 @@ def AutoLaunch():
     CancelAll()
     print("DECLARING...")
     DeclareAllComplete()
+
+    #get the return from df -h | grep /osgpool/halld
+    print("GETTING DF...")
+    d_usage=str(subprocess.check_output("df -h | grep /osgpool/halld",shell=True),"utf-8").strip()
+    print(d_usage)
+    percent=int(d_usage.split(" ")[-2].split("%")[0])
+    print("disk is",percent,"% full")
+    if percent > 75:
+        print("disk is too full, not launching")
+        return
+    
+
+
     print("RETRYING...")
     RetryAllJobs()
     print("TESTING...")
     query = "SELECT ID,Email,VersionSet,Tested,UName FROM Project WHERE (Tested = 0) && Dispatched_Time is NULL ORDER BY (SELECT Priority from Users where name=UName) DESC LIMIT 10;"
-    #print query
+    print(query)
     curs.execute(query) 
     rows=curs.fetchall()
     #print rows
@@ -287,14 +354,10 @@ def RetryJobsFromProject(ID, countLim):
                         continue
                     
                     if row["Status"] == "-1":
-                        response=os.system("ping -c 1 nod25.phys.uconn.edu")
-                        if response != 0:
-                            continue #waiting for node to come back
-                        else:
-                            #update Status and retry
-                            statusUpdate="Update Attempts Set Status=\"4\" WHERE ID ="+str(row["ID"])
-                            curs.execute(statusUpdate)
-                            conn.commit()
+                        #update Status and retry
+                        statusUpdate="Update Attempts Set Status=\"4\" WHERE ID ="+str(row["ID"])
+                        curs.execute(statusUpdate)
+                        conn.commit()
                             
                 RetryJob(row["Job_ID"],AllOSG)
                 i=i+1
@@ -325,8 +388,10 @@ def RetryJobsFromProject(ID, countLim):
         #TREAT LIKE NEW PROJECT WITH JUST THE JOB
 
 def RetryJob(ID,AllOSG=False):
-    #query = "SELECT * FROM Attempts WHERE Job_ID="+str(ID)
-    query= "SELECT Attempts.*,Max(Attempts.Creation_Time) FROM Attempts,Jobs WHERE Attempts.Job_ID = "+str(ID)
+    
+    #query= "SELECT Attempts.*,Max(Attempts.Creation_Time) FROM Attempts,Jobs WHERE Attempts.Job_ID = "+str(ID)
+    query= "SELECT Attempts.*,Max(Attempts.Creation_Time) FROM Attempts WHERE Attempts.Job_ID = "+str(ID)
+    #print(query)
     curs.execute(query) 
     rows=curs.fetchall()
 
@@ -424,18 +489,22 @@ def CheckGenConfig(order):
     #print("looking for generator config:",fileSTR)
     #print("os.path.isfile("+fileSTR+")")
     #print("is file:",os.path.isfile(fileSTR))
-    copyTo="/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"
-    if(os.path.isfile(fileSTR)==False and (socket.gethostname() == "scosg16.jlab.org" or socket.gethostname() == "scosg20.jlab.org") ):
+    copyTo="/osgpool/halld/"+runner_name+"/REQUESTEDMC_CONFIGS/"
+    running_hostname=socket.gethostname()
+    if(os.path.isfile(fileSTR)==False and (running_hostname == "scosg16.jlab.org" or running_hostname == "scosg20.jlab.org" or running_hostname=="scosg2201.jlab.org") ):
         print("File not found and on submit node, attempting to copy to "+copyTo)
         #copyTo="/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"
-        print("scp tbritton@ifarm1801-ib:"+fileSTR.lstrip()+" "+copyTo+str(ID)+"_"+name)
-        subprocess.call("scp tbritton@ifarm1801-ib:"+fileSTR+" "+copyTo+str(ID)+"_"+name,shell=True)
+        copy_loc="ifarm1801-ib"
+        if(running_hostname=="scosg2201.jlab.org"):
+            copy_loc="ifarm1801"
+        print("scp "+runner_name+"@"+copy_loc+":"+fileSTR.lstrip()+" "+copyTo+str(ID)+"_"+name)
+        subprocess.call("scp "+runner_name+"@"+copy_loc+":"+fileSTR.lstrip()+" "+copyTo+str(ID)+"_"+name,shell=True)
         #subprocess.call("rsync -ruvt ifarm1402:"+fileSTR+" "+copyTo,shell=True)
         print("Updating order gen config:",fileSTR,"------>",copyTo+str(ID)+"_"+name)
         order["Generator_Config"]=copyTo+str(ID)+"_"+name
         print("returning",copyTo+str(ID)+"_"+name)
         return copyTo+str(ID)+"_"+name
-    elif(os.path.isfile(fileSTR)==True and (socket.gethostname() == "scosg16.jlab.org" or  socket.gethostname() == "scosg20.jlab.org") ):
+    elif(os.path.isfile(fileSTR)==True and (running_hostname == "scosg16.jlab.org" or running_hostname == "scosg20.jlab.org" or running_hostname=="scosg2201.jlab.org") ):
         print("File found and on submit node")
         #copyTo="/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"
         #print("scp tbritton@ifarm1801-ib:"+fileSTR+" "+copyTo+str(ID)+"_"+name)
@@ -445,7 +514,7 @@ def CheckGenConfig(order):
         
         order["Generator_Config"]=copyTo+str(ID)+"_"+name #copyTo+name
         return copyTo+str(ID)+"_"+name
-    elif os.path.isfile(fileSTR)==False and (socket.gethostname() != "scosg16.jlab.org" or socket.gethostname() != "scosg20.jlab.org"):
+    elif os.path.isfile(fileSTR)==False and (running_hostname != "scosg16.jlab.org" or running_hostname != "scosg20.jlab.org" or running_hostname!="scosg2201.jlab.org"):
         print("File not found and not on submit node ")
         return copyTo+str(ID)+"_"+name
 
@@ -482,6 +551,13 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
     curs.execute(query) 
     rows=curs.fetchall()
     order=rows[0]
+
+    origOutLoc=order["OutputLocation"]
+    orig_dirname=origOutLoc.split("/")[-2]
+    new_dirname="_".join(orig_dirname.split("_")[:-1])+"_"+str(ID)
+    new_full_dirname=origOutLoc.replace(orig_dirname,new_dirname)
+
+
     print("order", order)
     print("========================")
     print(order["Generator_Config"])
@@ -499,7 +575,7 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
     already_passed=curs.fetchall()
 
     if(already_passed[0]["COUNT(*)"]>0):
-        updatequery="UPDATE Project SET Tested=1"+" WHERE ID="+str(ID)+";"
+        updatequery="UPDATE Project SET Tested=1, OutputLocation=\""+new_full_dirname+"\" WHERE ID="+str(ID)+";"
         curs.execute(updatequery)
         conn.commit()
         STATUS="Success"
@@ -626,9 +702,9 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
         output="Error in rcdb query"
         errors="Error in rcdb query:"+str(query_to_do)
         sing_img="/cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_prod:v1"
-        print("singularity exec --cleanenv --bind "+pwd+":"+pwd+" --bind /osgpool/halld/tbritton:/osgpool/halld/tbritton --bind /group/halld/:/group/halld/ --bind /scigroup/mcwrapper/gluex_MCwrapper:/scigroup/mcwrapper/gluex_MCwrapper "+sing_img+" /bin/sh "+pwd+"/TestProject_runscript_"+str(ID)+".sh")
+        print("singularity exec --cleanenv --bind "+pwd+":"+pwd+" --bind /osgpool/halld/"+runner_name+":/osgpool/halld/"+runner_name+" --bind /group/halld/:/group/halld/ --bind /scigroup/mcwrapper/gluex_MCwrapper:/scigroup/mcwrapper/gluex_MCwrapper "+sing_img+" /bin/sh "+pwd+"/TestProject_runscript_"+str(ID)+".sh")
         if RunNumber != -1:
-            p = Popen("singularity exec --cleanenv --bind "+pwd+":"+pwd+" --bind /osgpool/halld/tbritton:/osgpool/halld/tbritton --bind /group/halld/:/group/halld/ --bind /scigroup/mcwrapper/gluex_MCwrapper:/scigroup/mcwrapper/gluex_MCwrapper "+ sing_img +" /bin/sh "+pwd+"/TestProject_runscript_"+str(ID)+".sh", env=my_env ,stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True)
+            p = Popen("singularity exec --cleanenv --bind "+pwd+":"+pwd+" --bind /osgpool/halld/"+runner_name+":/osgpool/halld/"+runner_name+" --bind /group/halld/:/group/halld/ --bind /scigroup/mcwrapper/gluex_MCwrapper:/scigroup/mcwrapper/gluex_MCwrapper "+ sing_img +" /bin/sh "+pwd+"/TestProject_runscript_"+str(ID)+".sh", env=my_env ,stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True)
             output, errors = p.communicate()
     
 
@@ -641,7 +717,7 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
 
     if(STATUS!=-1):
         try:
-            updatequery="UPDATE Project SET Tested=1"+" WHERE ID="+str(ID)+";"
+            updatequery="UPDATE Project SET Tested=1, OutputLocation=\""+new_full_dirname+"\" WHERE ID="+str(ID)+";"
             curs.execute(updatequery)
             conn.commit()
             if(newLoc != "True"):
@@ -713,7 +789,7 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
             print("SENT")
             s.quit() 
             try:    
-                copy=open("/osgpool/halld/tbritton/REQUESTED_FAIL_MAILS/email_"+str(row['ID'])+".log", "w+")
+                copy=open("/osgpool/halld/"+runner_name+"/REQUESTED_FAIL_MAILS/email_"+str(row['ID'])+".log", "w+")
                 copy.write('The log information is reproduced below:\n\n\n'+str(status[0])+'\n\n\nErrors:\n\n\n'+str(status[2]))
                 copy.close()
             except Exception as e:
@@ -722,7 +798,7 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
             #subprocess.call("echo 'Your Project ID "+str(row['ID'])+" failed the test.  Please correct this issue by following the link: "+"https://halldweb.jlab.org/gluex_sim/SubmitSim.html?prefill="+str(row['ID'])+"&mod=1" +" .  Do NOT resubmit this request.  Write tbritton@jlab.org for additional assistance\n\n The log information is reproduced below:\n\n\n"+status[0]+"\n\n\n"+status[2]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+str(row['Email']),shell=True)
         except:
             print("UH OH MAILING")
-            log = open("/osgpool/halld/tbritton/"+str(row['ID'])+".err", "w+")
+            log = open("/osgpool/halld/"+runner_name+"/"+str(row['ID'])+".err", "w+")
             log.write("this was broke: \n" + str(status[2]))
             log.write("this was broke: \n" + str(status[0]))
             log.close()
@@ -740,6 +816,12 @@ def TestProject(ID,versionSet,commands_to_call=""):
     curs.execute(query) 
     rows=curs.fetchall()
     order=rows[0]
+
+    origOutLoc=order["OutputLocation"]
+    orig_dirname=origOutLoc.split("/")[-2]
+    new_dirname="_".join(orig_dirname.split("_")[:-1])+"_"+str(ID)
+    new_full_dirname=origOutLoc.replace(orig_dirname,new_dirname)
+    
     print("========================")
     print(order["Generator_Config"])
     newLoc=CheckGenConfig(order)
@@ -818,7 +900,7 @@ def TestProject(ID,versionSet,commands_to_call=""):
                 print("SENDING")
                 #s.send_message(msg)
                 s.quit()     
-                copy=open("/osgpool/halld/tbritton/REQUESTED_FAIL_MAILS/email_"+str(order['ID'])+".log", "w+")
+                copy=open("/osgpool/halld/"+runner_name+"/REQUESTED_FAIL_MAILS/email_"+str(order['ID'])+".log", "w+")
                 copy.write('The log information is reproduced below:\n\n\n'+str("There was a problem with the RCDB query provided")+'\n\n\nErrors:\n\n\n'+str(e))
                 copy.close()
             except Exception as me:
@@ -890,9 +972,9 @@ def TestProject(ID,versionSet,commands_to_call=""):
     f.close()
 
    
-    print("singularity exec --cleanenv --bind "+pwd+":"+pwd+" --bind /osgpool/halld/tbritton:/osgpool/halld/tbritton --bind /group/halld/:/group/halld/ --bind /scigroup/mcwrapper/gluex_MCwrapper:/scigroup/mcwrapper/gluex_MCwrapper /cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest /bin/sh "+pwd+"/TestProject_runscript_"+str(ID)+".sh")
+    print("singularity exec --cleanenv --bind "+pwd+":"+pwd+" --bind /osgpool/halld/"+runner_name+":/osgpool/halld/"+runner_name+" --bind /group/halld/:/group/halld/ --bind /scigroup/mcwrapper/gluex_MCwrapper:/scigroup/mcwrapper/gluex_MCwrapper /cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest /bin/sh "+pwd+"/TestProject_runscript_"+str(ID)+".sh")
     if RunNumber != -1:
-        p = Popen("singularity exec --cleanenv --bind "+pwd+":"+pwd+" --bind /osgpool/halld/tbritton:/osgpool/halld/tbritton --bind /group/halld/:/group/halld/ --bind /scigroup/mcwrapper/gluex_MCwrapper:/scigroup/mcwrapper/gluex_MCwrapper /cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest /bin/sh "+pwd+"/TestProject_runscript_"+str(ID)+".sh", env=my_env ,stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True)
+        p = Popen("singularity exec --cleanenv --bind "+pwd+":"+pwd+" --bind /osgpool/halld/"+runner_name+":/osgpool/halld/"+runner_name+" --bind /group/halld/:/group/halld/ --bind /scigroup/mcwrapper/gluex_MCwrapper:/scigroup/mcwrapper/gluex_MCwrapper /cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest /bin/sh "+pwd+"/TestProject_runscript_"+str(ID)+".sh", env=my_env ,stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True)
     
     #print p
     #print "p defined"
@@ -905,9 +987,10 @@ def TestProject(ID,versionSet,commands_to_call=""):
     
 
     if(STATUS!=-1):
-        updatequery="UPDATE Project SET Tested=1"+" WHERE ID="+str(ID)+";"
+        updatequery="UPDATE Project SET Tested=1, OutputLocation=\""+new_full_dirname+"\" WHERE ID="+str(ID)+";"
         curs.execute(updatequery)
         conn.commit()
+
         if(newLoc != "True"):
             updateOrderquery="UPDATE Project SET Generator_Config=\""+newLoc+"\" WHERE ID="+str(ID)+";"
             print(updateOrderquery)
@@ -1128,16 +1211,20 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
         for i in range(1,len(parseGenPostProcessing)):
             print("parseGenPostProcessing[i]",parseGenPostProcessing[i])
             if parseGenPostProcessing[i].strip() != "Default":
-                print("scp "+"tbritton@ifarm1801-ib:"+parseGenPostProcessing[i]+" "+"/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_genpost_"+str(i)+".config")
+
+                copy_loc="ifarm1801-ib"
+                if(socket.gethostname()=="scosg2201.jlab.org"):
+                    copy_loc="ifarm1801"
+                print("scp "+runner_name+"@"+copy_loc+":"+parseGenPostProcessing[i]+" "+"/osgpool/halld/"+runner_name+"/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_genpost_"+str(i)+".config")
                 try:
-                    subprocess.call("scp "+"tbritton@ifarm1801-ib:"+parseGenPostProcessing[i]+" "+"/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_genpost_"+str(i)+".config", shell=True)
+                    subprocess.call("scp "+runner_name+"@"+copy_loc+":"+parseGenPostProcessing[i]+" "+"/osgpool/halld/"+runner_name+"/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_genpost_"+str(i)+".config", shell=True)
                 except Exception as e:
                     print("Error in copying gen post processing file:",e)
                     pass
 
-                print("checking for config file:","/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_genpost_"+str(i)+".config")
-                if( os.path.exists("/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_genpost_"+str(i)+".config")):
-                    newGenPost_str+=":/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_genpost_"+str(i)+".config"
+                print("checking for config file:","/osgpool/halld/"+runner_name+"/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_genpost_"+str(i)+".config")
+                if( os.path.exists("/osgpool/halld/"+runner_name+"/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_genpost_"+str(i)+".config")):
+                    newGenPost_str+=":/osgpool/halld/"+runner_name+"/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_genpost_"+str(i)+".config"
                     
                     #fileError=False
                 else:
@@ -1157,7 +1244,7 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
         else:
             print("Could not find one or more generator post processing files!")
             msg = EmailMessage()
-            msg.set_content("Could not test the project because MCwrapper-bot could not copy the following file: "+parseGenPostProcessing[i]+"\n This may be do to a lack of permissions for tbritton to read from the containing directory or the file itself may not exist.\n Shortly you will receive a second email that the actual test has failed, please use the link contained in the second email to correct this problem.")
+            msg.set_content("Could not test the project because MCwrapper-bot could not copy the following file: "+parseGenPostProcessing[i]+"\n This may be due to a lack of permissions for "+runner_name+" to read from the containing directory or the file itself may not exist.\n Shortly you will receive a second email that the actual test has failed, please use the link contained in the second email to correct this problem.")
 
             # me == the sender's email address                                                                                                                                                                                 
             # you == the recipient's email address                                                                                                                                                                             
@@ -1185,7 +1272,7 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
     print(splitLoc)
     outputstring="/".join(splitLoc[7:-1])
     #order["OutputLocation"]).split("/")[7]
-    MCconfig_file.write("DATA_OUTPUT_BASE_DIR=/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/"+str(outputstring)+"\n")
+    MCconfig_file.write("DATA_OUTPUT_BASE_DIR=/osgpool/halld/"+runner_name+"/REQUESTEDMC_OUTPUT/"+str(outputstring)+"\n")
     #print "FOUND CONFIG="+foundConfig
 
 
@@ -1209,13 +1296,16 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
     if(order["ReactionLines"] != ""):
         if(order["ReactionLines"][0:5] == "file:"):
             jana_config_file=order["ReactionLines"][5:]
+            copy_loc="ifarm1801-ib"
+            if(socket.gethostname()=="scosg2201.jlab.org"):
+                copy_loc="ifarm1801"
 
-            print("scp "+"tbritton@ifarm1801-ib:"+jana_config_file+" "+"/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config")
-            subprocess.call("scp "+"tbritton@ifarm1801-ib:"+jana_config_file+" "+"/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config",shell=True)
+            print("scp "+runner_name+"@"+copy_loc+":"+jana_config_file+" "+"/osgpool/halld/"+runner_name+"/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config")
+            subprocess.call("scp "+runner_name+"@"+copy_loc+":"+jana_config_file+" "+"/osgpool/halld/"+runner_name+"/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config",shell=True)
             
 
-            if(os.path.exists("/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config")):
-                update_str="Update Project Set ReactionLines='file:/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config' where ID="+str(order["ID"])
+            if(os.path.exists("/osgpool/halld/"+runner_name+"/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config")):
+                update_str="Update Project Set ReactionLines='file:/osgpool/halld/"+runner_name+"/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config' where ID="+str(order["ID"])
                 print(update_str)
                 curs.execute(update_str)
                 conn.commit()
@@ -1223,7 +1313,7 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
                 print("could not copy file",jana_config_file)
                 
                 msg = EmailMessage()
-                msg.set_content("Could not test the project because MCwrapper-bot could not copy the following file: "+jana_config_file+"\n This may be do to a lack of permissions for tbritton to read from the containing directory or the file itself may not exist.\n Shortly you will receive a second email that the actual test has failed, please use the link contained in the second email to correct this problem.")
+                msg.set_content("Could not test the project because MCwrapper-bot could not copy the following file: "+jana_config_file+"\n This may be due to a lack of permissions for "+runner_name+" to read from the containing directory or the file itself may not exist.\n Shortly you will receive a second email that the actual test has failed, please use the link contained in the second email to correct this problem.")
 
                 # me == the sender's email address                                                                                                                                                                                 
                 # you == the recipient's email address                                                                                                                                                                             
@@ -1238,7 +1328,7 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
                 pass
 
         else:
-            jana_config_file=open("/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config","w")
+            jana_config_file=open("/osgpool/halld/"+runner_name+"/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config","w")
             janaplugins="PLUGINS danarest,monitoring_hists,mcthrown_tree"
             if(order["ReactionLines"]):
                 janaplugins+=",ReactionFilter\n"+order["ReactionLines"]
@@ -1248,7 +1338,7 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
             jana_config_file.close()
 
 
-        MCconfig_file.write("CUSTOM_PLUGINS=file:/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config\n")
+        MCconfig_file.write("CUSTOM_PLUGINS=file:/osgpool/halld/"+runner_name+"/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config\n")
 
     
     MCconfig_file.write("ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"+str(order["VersionSet"])+"\n")
@@ -1298,7 +1388,7 @@ def DispatchToOSG(ID,order,PERCENT):
     except Exception as e:
         print(e)
         pass
-    command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched_"+str(ID)+".config "+str(RunNumber)+" "+str(order["NumEvents"])+" per_file="+str(per_file_num)+" base_file_number="+str(0)+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" logdir=/osgpool/halld/tbritton/REQUESTEDMC_LOGS/"+order["OutputLocation"].split("/")[7]+" batch=1 tobundle=0"
+    command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched_"+str(ID)+".config "+str(RunNumber)+" "+str(order["NumEvents"])+" per_file="+str(per_file_num)+" base_file_number="+str(0)+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" logdir=/osgpool/halld/"+runner_name+"/REQUESTEDMC_LOGS/"+order["OutputLocation"].split("/")[7]+" batch=1 tobundle=0"
     print(command)
     status = subprocess.call(command, shell=True)
     
@@ -1369,7 +1459,7 @@ def WritePayloadConfigString(order,foundConfig):
     #print(splitLoc)
     outputstring="/".join(splitLoc[7:-1])
     #order["OutputLocation"]).split("/")[7]
-    config_str+="DATA_OUTPUT_BASE_DIR=/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/"+str(outputstring)+"\n"
+    config_str+="DATA_OUTPUT_BASE_DIR=/osgpool/halld/"+runner_name+"/REQUESTEDMC_OUTPUT/"+str(outputstring)+"\n"
     #print "FOUND CONFIG="+foundConfig
 
     if(order["RunNumLow"] != order["RunNumHigh"]):
@@ -1397,7 +1487,7 @@ def WritePayloadConfigString(order,foundConfig):
                 janaplugins+="\n"
             #jana_config_file.write(janaplugins)
             #jana_config_file.close()
-        config_str+="CUSTOM_PLUGINS=file:/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config\n"
+        config_str+="CUSTOM_PLUGINS=file:/osgpool/halld/"+runner_name+"/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config\n"
 
     
     config_str+="ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"+str(order["VersionSet"])+"\n"
@@ -1413,11 +1503,11 @@ def WritePayloadConfigString(order,foundConfig):
 def main(argv):
     #print(argv)
 
-    if(os.path.isfile("/osgpool/halld/tbritton/.ALLSTOP")==True):
+    if(os.path.isfile("/osgpool/halld/"+runner_name+"/.ALLSTOP")==True):
         print("ALL STOP DETECTED")
         exit(1)
 
-    numprocesses_running=subprocess.check_output(["echo `ps all -u tbritton | grep MCDispatcher.py | grep -v grep | wc -l`"], shell=True)
+    numprocesses_running=subprocess.check_output(["echo `ps all -u "+runner_name+" | grep MCDispatcher.py | grep -v grep | wc -l`"], shell=True)
     #print(args)
 
     ID=-1
@@ -1456,7 +1546,7 @@ def main(argv):
         #print MODE
         #print SYSTEM
         #print ID
-
+        print("RUNNING",MODE)
         if MODE == "DISPATCH":
             if ID != "All":
                 DispatchProject(ID,SYSTEM,PERCENT)
@@ -1494,7 +1584,7 @@ def main(argv):
         elif MODE == "CANCELJOB":
             CancelJob(ID)
         elif MODE == "AUTOLAUNCH":
-            #print "AUTOLAUNCHING NOW"
+            print("AUTOLAUNCHING NOW")
             AutoLaunch()
         elif MODE == "REMOVEJOBS":
             RemoveAllJobs()
