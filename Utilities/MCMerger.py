@@ -39,6 +39,9 @@ def bash_root(name_map, path, mc_dir):
     """Merge root files in mc_dir."""
     return_code = 0
     for dir_type in name_map.keys():
+        print(f"Path: {path}    dir_type: {dir_type}")
+        if not isinstance(dir_type,str):
+            continue
         subprocess.run([f"mkdir -p {path + dir_type}"], shell=True)
         if dir_type == "trees":
             for tup in name_map["trees"].keys():

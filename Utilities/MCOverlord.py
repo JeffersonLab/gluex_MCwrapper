@@ -100,7 +100,7 @@ def CheckForFile(rootLoc,expFile):
 
     #if(os.path.isfile('/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/'+rootLoc+"/"+subloc+"/"+expFile) or os.path.isfile('/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) or os.path.isfile('/mss/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) ):
     #if(os.path.isfile('/osgpool/halld/'+runner_name+'/REQUESTEDMC_OUTPUT/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote(runner_name+'@dtn1902','/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote(runner_name+'@dtn1902','/mss/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) ):
-    if(exists_remote(runner_name+'@dtn1902','/work/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) ):
+    if(os.path.isfile('/osgpool/halld/'+runner_name+'/REQUESTEDMC_OUTPUT/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote(runner_name+'@dtn1902','/work/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) ):
         found=True
     else:
         print(rootLoc+"/"+subloc+"/"+expFile+"   NOT FOUND")
@@ -823,18 +823,12 @@ def checkOSG(Jobs_List):
                                     print("is found:",locally_found)
                                     if locally_found:
                                         print("found file locally: "+str("/work/osgpool/halld/random_triggers/"+str(attempt_BKG_parts[1])+"/run"+str(thisJOB_RunNumber).zfill(6)+"_random.hddm"))
-                                        response=os.system("ping -c 1 nod25.phys.uconn.edu")
-                                        print("PING RESPONSE:"+str(response))
-                                        if response != 0:
-                                            print("-1 job stat")
-                                            JOB_STATUS=-1 #hold until host comes back
-                                        else:
-                                            print("7 job stat")
-                                            JOB_STATUS=7 #globus needs doing?
-                                            
-                                            if(locally_found):
-                                                JOB_STATUS=4
-                                                ExitCode=-232
+                                        print("7 job stat")
+                                        JOB_STATUS=7 #globus needs doing?
+                                        
+                                        if(locally_found):
+                                            JOB_STATUS=4
+                                            ExitCode=-232
 
                                     else:
                                         print("6 job stat")

@@ -354,16 +354,10 @@ def RetryJobsFromProject(ID, countLim):
                         continue
                     
                     if row["Status"] == "-1":
-                        response=os.system("ping -c 1 nod25.phys.uconn.edu")
-                        if response != 0:
-                            statusUpdate="Update Attempts Set Status=\"4\" WHERE ID ="+str(row["ID"])
-                            curs.execute(statusUpdate)
-                            conn.commit()
-                        else:
-                            #update Status and retry
-                            statusUpdate="Update Attempts Set Status=\"4\" WHERE ID ="+str(row["ID"])
-                            curs.execute(statusUpdate)
-                            conn.commit()
+                        #update Status and retry
+                        statusUpdate="Update Attempts Set Status=\"4\" WHERE ID ="+str(row["ID"])
+                        curs.execute(statusUpdate)
+                        conn.commit()
                             
                 RetryJob(row["Job_ID"],AllOSG)
                 i=i+1
@@ -557,6 +551,13 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
     curs.execute(query) 
     rows=curs.fetchall()
     order=rows[0]
+
+    origOutLoc=order["OutputLocation"]
+    orig_dirname=origOutLoc.split("/")[-2]
+    new_dirname="_".join(orig_dirname.split("_")[:-1])+"_"+str(ID)
+    new_full_dirname=origOutLoc.replace(orig_dirname,new_dirname)
+
+
     print("order", order)
     print("========================")
     print(order["Generator_Config"])
@@ -574,7 +575,7 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
     already_passed=curs.fetchall()
 
     if(already_passed[0]["COUNT(*)"]>0):
-        updatequery="UPDATE Project SET Tested=1"+" WHERE ID="+str(ID)+";"
+        updatequery="UPDATE Project SET Tested=1, OutputLocation=\""+new_full_dirname+"\" WHERE ID="+str(ID)+";"
         curs.execute(updatequery)
         conn.commit()
         STATUS="Success"
@@ -716,7 +717,7 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
 
     if(STATUS!=-1):
         try:
-            updatequery="UPDATE Project SET Tested=1"+" WHERE ID="+str(ID)+";"
+            updatequery="UPDATE Project SET Tested=1, OutputLocation=\""+new_full_dirname+"\" WHERE ID="+str(ID)+";"
             curs.execute(updatequery)
             conn.commit()
             if(newLoc != "True"):
@@ -815,6 +816,12 @@ def TestProject(ID,versionSet,commands_to_call=""):
     curs.execute(query) 
     rows=curs.fetchall()
     order=rows[0]
+
+    origOutLoc=order["OutputLocation"]
+    orig_dirname=origOutLoc.split("/")[-2]
+    new_dirname="_".join(orig_dirname.split("_")[:-1])+"_"+str(ID)
+    new_full_dirname=origOutLoc.replace(orig_dirname,new_dirname)
+    
     print("========================")
     print(order["Generator_Config"])
     newLoc=CheckGenConfig(order)
@@ -980,9 +987,10 @@ def TestProject(ID,versionSet,commands_to_call=""):
     
 
     if(STATUS!=-1):
-        updatequery="UPDATE Project SET Tested=1"+" WHERE ID="+str(ID)+";"
+        updatequery="UPDATE Project SET Tested=1, OutputLocation=\""+new_full_dirname+"\" WHERE ID="+str(ID)+";"
         curs.execute(updatequery)
         conn.commit()
+
         if(newLoc != "True"):
             updateOrderquery="UPDATE Project SET Generator_Config=\""+newLoc+"\" WHERE ID="+str(ID)+";"
             print(updateOrderquery)
