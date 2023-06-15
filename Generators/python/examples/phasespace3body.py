@@ -211,9 +211,6 @@ gRandom.SetSeed(seed)
 # get run-specific flux from CCDB
 hflux = GetFluxCCDB(run, Emin, Emax)
 
-cflux = TCanvas( "cflux", "cflux", 800, 600 )
-hflux.Draw()
-
 # proton target
 target = TLorentzVector(0.0, 0.0, 0.0, 0.93827)
 
