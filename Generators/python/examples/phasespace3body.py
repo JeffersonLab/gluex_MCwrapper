@@ -1,4 +1,4 @@
-# -t 5
+# 
 import os,sys
 from ROOT import TFile,TH1F,TH1D,TH2D,TF1,TLorentzVector,TGenPhaseSpace,TCanvas,gRandom
 from array import array
@@ -141,7 +141,7 @@ Emin = 8.2
 Emax = 8.8
 tmin = 0.0
 tmax = 1.5
-tslope = 1.099
+tslope = 0.0
 Mmin = 0.0
 Mmax = 1.7
 
