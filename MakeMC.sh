@@ -695,9 +695,9 @@ if [[ "$GENR" != "0" ]]; then
 
 	gen_pre=`echo $GENERATOR | cut -c1-4`
 
-    if [[ "$gen_pre" != "file" && "$GENERATOR" != "genr8" && "$GENERATOR" != "bggen" && "$GENERATOR" != "genEtaRegge" && "$GENERATOR" != "gen_2pi_amp" && "$GENERATOR" != "gen_pi0" && "$GENERATOR" != "gen_2pi_primakoff" && "$GENERATOR" != "gen_2pi0_primakoff" && "$GENERATOR" != "gen_omega_3pi" && "$GENERATOR" != "gen_omegapi" && "$GENERATOR" != "gen_2k" && "$GENERATOR" != "bggen_jpsi" && "$GENERATOR" != "gen_ee" && "$GENERATOR" != "gen_ee_hb" && "$GENERATOR" != "particle_gun" && "$GENERATOR" != "geantBEAM" && "$GENERATOR" != "bggen_phi_ee" && "$GENERATOR" != "genBH" && "$GENERATOR" != "gen_omega_radiative" && "$GENERATOR" != "gen_amp" && "$GENERATOR" != "genr8_new" && "$GENERATOR" != "gen_compton" && "$GENERATOR" != "gen_npi" && "$GENERATOR" != "gen_compton_simple" && "$GENERATOR" != "gen_primex_eta_he4" && "$GENERATOR" != "gen_whizard" && "$GENERATOR" != "mc_gen" && "$GENERATOR" != "gen_vec_ps" && "$GENERATOR" != "bggen_upd"  ]]; then
+    if [[ "$gen_pre" != "file" && "$GENERATOR" != "genr8" && "$GENERATOR" != "bggen" && "$GENERATOR" != "genEtaRegge" && "$GENERATOR" != "gen_2pi_amp" && "$GENERATOR" != "gen_pi0" && "$GENERATOR" != "gen_2pi_primakoff" && "$GENERATOR" != "gen_2pi0_primakoff" && "$GENERATOR" != "gen_omega_3pi" && "$GENERATOR" != "gen_omegapi" && "$GENERATOR" != "gen_2k" && "$GENERATOR" != "bggen_jpsi" && "$GENERATOR" != "gen_ee" && "$GENERATOR" != "gen_ee_hb" && "$GENERATOR" != "particle_gun" && "$GENERATOR" != "geantBEAM" && "$GENERATOR" != "bggen_phi_ee" && "$GENERATOR" != "genBH" && "$GENERATOR" != "gen_omega_radiative" && "$GENERATOR" != "gen_amp" && "$GENERATOR" != "genr8_new" && "$GENERATOR" != "gen_compton" && "$GENERATOR" != "gen_npi" && "$GENERATOR" != "gen_compton_simple" && "$GENERATOR" != "gen_primex_eta_he4" && "$GENERATOR" != "gen_whizard" && "$GENERATOR" != "mc_gen" && "$GENERATOR" != "gen_vec_ps" && "$GENERATOR" != "bggen_upd"  && "$GENERATOR" != "python" ]]; then
 		echo "NO VALID GENERATOR GIVEN"
-		echo "only [genr8, bggen, genEtaRegge, gen_2pi_amp, gen_pi0, gen_omega_3pi, gen_2k, bggen_jpsi, gen_ee, gen_ee_hb,  bggen_phi_ee, particle_gun, geantBEAM, genBH, gen_omega_radiative, gen_amp, gen_compton, gen_npi, gen_compton_simple, gen_primex_eta_he4, gen_whizard, gen_omegapi, mc_gen, gen_vec_ps, bggen_upd] are supported"
+		echo "only [genr8, bggen, genEtaRegge, gen_2pi_amp, gen_pi0, gen_omega_3pi, gen_2k, bggen_jpsi, gen_ee, gen_ee_hb,  bggen_phi_ee, particle_gun, geantBEAM, genBH, gen_omega_radiative, gen_amp, gen_compton, gen_npi, gen_compton_simple, gen_primex_eta_he4, gen_whizard, gen_omegapi, mc_gen, gen_vec_ps, bggen_upd, python] are supported"
 		exit 1
     fi
 
@@ -955,7 +955,10 @@ if [[ "$GENR" != "0" ]]; then
 		echo "note: this generator is run completely from command line, thus no config file will be made and/or modified"
 
 		cp $CONFIG_FILE ./cobrems.root
-
+	elif [[ "$GENERATOR" == "python" ]]; then
+	        echo "configuring python script"
+		STANDARD_NAME="python_"$STANDARD_NAME
+		cp $CONFIG_FILE ./$STANDARD_NAME.py
     fi
 
 	if [[ "$gen_pre" != "file" ]]; then
@@ -1294,6 +1297,12 @@ if [[ "$GENR" != "0" ]]; then
 		genBH -n$EVT_TO_GEN -t$NUMTHREADS -m0.5 -e$GEN_MAX_ENERGY -r$RANDOMnum $STANDARD_NAME.hddm
 
 		sed -i 's/class="mc_s"/'class=\"s\"'/' $STANDARD_NAME.hddm
+		generator_return_code=$?
+	elif [[ "$GENERATOR" == "python" ]]; then
+	        optionals_line=`head -n 1 $STANDARD_NAME.py | sed -r 's/.//'`
+		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.py
+		echo $GENERATOR $STANDARD_NAME.py --run $formatted_runNumber --nevents $EVT_TO_GEN --out $STANDARD_NAME.hddm --seed $formatted_fileNumber $optionals_line
+		$GENERATOR $STANDARD_NAME.py --run $formatted_runNumber --nevents $EVT_TO_GEN --out $STANDARD_NAME.hddm --seed $formatted_fileNumber $optionals_line
 		generator_return_code=$?
 	fi
 
@@ -1871,6 +1880,9 @@ rm -rf rcdb.sqlite
 
 if [[ "$gen_pre" != "file" && "$GENERATOR" != "gen_ee_hb" && "$GENR" == "1" ]]; then
 	mv $PWD/*.conf $OUTDIR/configurations/generation/
+fi
+if [[ "$GENERATOR" == "python" ]]; then
+        mv $PWD/*.py $OUTDIR/configurations/generation/
 fi
 hddmfiles=$(ls | grep .hddm)
 if [[ "$hddmfiles" != "" ]]; then
