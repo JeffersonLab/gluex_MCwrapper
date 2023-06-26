@@ -914,19 +914,12 @@ def calcFluxCCDB(ccdb_conn, run, emin, emax):
         scale = livetime_ratio * 1./((7/9.) * radiationLength)
 
         photon_endpoint = array('d')
-        tagm_untagged_flux = array('d')
-        tagm_scaled_energy = array('d')
         tagh_untagged_flux = array('d')
         tagh_scaled_energy = array('d')
 
         try:
                 photon_endpoint_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/endpoint_energy", run[0], VARIATION, CALIBTIME_ENERGY)
                 photon_endpoint = photon_endpoint_assignment.constant_set.data_table
-
-                tagm_untagged_flux_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/pair_spectrometer/lumi/tagm/untagged", run[0], VARIATION, CALIBTIME)
-                tagm_untagged_flux = tagm_untagged_flux_assignment.constant_set.data_table
-                tagm_scaled_energy_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/microscope/scaled_energy_range", run[0], VARIATION, CALIBTIME_ENERGY)
-                tagm_scaled_energy_table = tagm_scaled_energy_assignment.constant_set.data_table
 
                 tagh_untagged_flux_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/pair_spectrometer/lumi/tagh/untagged", run[0], VARIATION, CALIBTIME)
                 tagh_untagged_flux = tagh_untagged_flux_assignment.constant_set.data_table
@@ -938,21 +931,7 @@ def calcFluxCCDB(ccdb_conn, run, emin, emax):
                 print("Missing flux for run number = %d, skipping generation" % run[0])
                 return -1.0
 
-
-        # sum TAGM flux
-        for tagm_flux, tagm_scaled_energy in zip(tagm_untagged_flux, tagm_scaled_energy_table):
-                tagm_energy = float(photon_endpoint[0][0])*(float(tagm_scaled_energy[1])+float(tagm_scaled_energy[2]))/2.
-
-                if tagm_energy < emin or tagm_energy > emax:
-                        continue
-
-                psAccept = PSAcceptance(tagm_energy, float(PS_accept[0][0]), float(PS_accept[0][1]), float(PS_accept[0][2]))
-                if psAccept <= 0.0:
-                        continue
-
-                flux = flux + float(tagm_flux[1]) * scale / psAccept
-
-	# sum TAGH flux
+	# sum untagged flux
         for tagh_flux, tagh_scaled_energy in zip(tagh_untagged_flux, tagh_scaled_energy_table):
                 tagh_energy = float(photon_endpoint[0][0])*(float(tagh_scaled_energy[1])+float(tagh_scaled_energy[2]))/2.
 
