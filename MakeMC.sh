@@ -1299,10 +1299,11 @@ if [[ "$GENR" != "0" ]]; then
 		sed -i 's/class="mc_s"/'class=\"s\"'/' $STANDARD_NAME.hddm
 		generator_return_code=$?
 	elif [[ "$GENERATOR" == "python" ]]; then
+		RANDOMnum=`bash -c 'echo $RANDOM'`
 	        optionals_line=`head -n 1 $STANDARD_NAME.py | sed -r 's/.//'`
 		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.py
-		echo $GENERATOR $STANDARD_NAME.py --run $formatted_runNumber --nevents $EVT_TO_GEN --out $STANDARD_NAME.hddm --seed $formatted_fileNumber $optionals_line
-		$GENERATOR $STANDARD_NAME.py --run $formatted_runNumber --nevents $EVT_TO_GEN --out $STANDARD_NAME.hddm --seed $formatted_fileNumber $optionals_line
+		echo $GENERATOR $STANDARD_NAME.py --run $formatted_runNumber --nevents $EVT_TO_GEN --out $STANDARD_NAME.hddm --seed $RANDOMnum $optionals_line
+		$GENERATOR $STANDARD_NAME.py --run $formatted_runNumber --nevents $EVT_TO_GEN --out $STANDARD_NAME.hddm --seed $RANDOMnum $optionals_line
 		generator_return_code=$?
 	fi
 
