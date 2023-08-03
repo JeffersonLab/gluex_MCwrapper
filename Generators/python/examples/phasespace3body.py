@@ -16,11 +16,14 @@ def WriteHDDM(hddm_output, particlesP4, particlesGeantID, particlesPDGID):
     rea = pev[0].addReactions(1)
     bea = rea[0].addBeams(1)
     bea[0].type = 1
+    prop = bea[0].addPropertiesList()
+    prop[0].charge = 0
+    prop[0].mass = 0.0
     mom = bea[0].addMomenta(1)
     mom[0].E = E
     mom[0].px = 0
     mom[0].py = 0
-    mom[0].pz = 0
+    mom[0].pz = E
 
     tar = rea[0].addTargets(1)
     tar[0].type = 14
