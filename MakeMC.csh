@@ -1020,7 +1020,7 @@ if ( "$GENR" != "0" ) then
 		set generator_return_code=$status
 	else if ( "$GENERATOR" == "mc_gen" ) then
 		echo "RUNNING MC_GEN"
-		python $HD_UTILITIES_HOME/psflux/plot_flux_ccdb.py -b $RUN_NUMBER -e $RUN_NUMBER
+		python3.6 $HD_UTILITIES_HOME/psflux/plot_flux_ccdb.py -b $RUN_NUMBER -e $RUN_NUMBER
 		set MCGEN_FLUX_DIR=`printf './flux_%d_%d.ascii' "$RUN_NUMBER" "$RUN_NUMBER"`
 		set ROOTSCRIPT=`printf '$MCWRAPPER_CENTRAL/Generators/mc_gen/Flux_to_Ascii.C("flux_%s_%s.root")' "$RUN_NUMBER" "$RUN_NUMBER" `
 		root -l -b -q $ROOTSCRIPT
