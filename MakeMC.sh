@@ -1703,7 +1703,7 @@ else
 		if [[ -f dana_rest.hddm ]]; then
                     mv dana_rest.hddm dana_rest_$STANDARD_NAME.hddm
         fi
-		if [[ "$ANAENVIRONMENT" != "no_Analysis_env" && "$reaction_filter" != "" ]]; then
+		if [[ "$ANAENVIRONMENT" != "no_Analysis_env" && "$reaction_filter" != "" || "$ANAENVIRONMENT" != "no_Analysis_env" && $ana_pre == "file" ]]; then
 			echo "new env setup"
 			source /group/halld/Software/build_scripts/gluex_env_clean.sh
 			xmltest2=`echo $ANAENVIRONMENT | rev | cut -c -4 | rev`
