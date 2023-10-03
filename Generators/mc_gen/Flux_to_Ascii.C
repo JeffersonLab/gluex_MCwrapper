@@ -4,7 +4,7 @@ void Flux_to_Ascii(TString flux_path)// = "flux_SP17_30274_31057.root")
 {
 	TString flux_name = "tagged_flux";
 	TFile* f = new TFile(flux_path);
-	histo_flux = (TH1F*) f->Get(flux_name);
+	TH1D* histo_flux = (TH1D*) f->Get(flux_name);
 
 	TString outName = flux_path;
 	outName.Replace(outName.Length()-5, outName.Length()-1, ".ascii");
