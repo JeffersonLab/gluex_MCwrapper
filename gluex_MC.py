@@ -143,7 +143,7 @@ def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,N
         elif int(PROJECT_ID) < 0:
                 recordAttempt(abs(int(PROJECT_ID)),RUNNO,FILENO,"SWIF",SWIF_ID_NUM,COMMAND['num_events'],NCORES,RAM)
 
-def swif2_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,ACCOUNT,PARTITION,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID):
+def swif2_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,ACCOUNT,PARTITION,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR,LOG_DIR, PROJECT_ID):
         STUBNAME=""
         if(COMMAND['custom_tag_string'] != "I_dont_have_one"):
                 STUBNAME=COMMAND['custom_tag_string']+"_"
@@ -156,7 +156,7 @@ def swif2_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,ACCOUNT,PARTIT
         # job
         #try removing the name specification
 
-        mkdircom="mkdir -p "+DATA_OUTPUT_BASE_DIR+"/log/"
+        mkdircom="mkdir -p "+LOG_DIR+"/log/"
         status = subprocess.call(mkdircom, shell=True)
 
 
@@ -166,9 +166,9 @@ def swif2_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,ACCOUNT,PARTIT
         # resources
         add_command += " -create -cores " + NCORES + " -disk " + DISK + " -ram " + RAM + " -time " + TIMELIMIT + " -os " + OS
         # stdout
-        add_command += " -stdout " + DATA_OUTPUT_BASE_DIR + "/log/" + str(RUNNO) + "_stdout." + STUBNAME + ".out"
+        add_command += " -stdout " + LOG_DIR + "/log/" + str(RUNNO) + "_stdout." + STUBNAME + ".out"
         # stderr
-        add_command += " -stderr " + DATA_OUTPUT_BASE_DIR + "/log/" + str(RUNNO) + "_stderr." + STUBNAME + ".err"
+        add_command += " -stderr " + LOG_DIR + "/log/" + str(RUNNO) + "_stderr." + STUBNAME + ".err"
         # tags
         add_command += " -tag run_number " + str(RUNNO)
         # tags
@@ -1554,7 +1554,7 @@ def main(argv):
                                         subprocess.call(swifrun.split(" "))
                                 elif BATCHSYS.upper()=="SWIF2":
                                         #status = subprocess.call("swif2 create "+WORKFLOW,shell=True)
-                                        swif2_add_job(WORKFLOW, RUNNUM, BASEFILENUM,str(SCRIPT_TO_RUN),COMMAND_dict,VERBOSE,ACCOUNT,PARTITION,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID)
+                                        swif2_add_job(WORKFLOW, RUNNUM, BASEFILENUM,str(SCRIPT_TO_RUN),COMMAND_dict,VERBOSE,ACCOUNT,PARTITION,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR,LOG_DIR, PROJECT_ID)
                                         swifrun = "swif2 run "+WORKFLOW
                                         subprocess.call(swifrun.split(" "))
                                 elif BATCHSYS.upper()=="QSUB":
@@ -1689,7 +1689,7 @@ def main(argv):
                                                                 swif_add_job(WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1,str(SCRIPT_TO_RUN),COMMAND_dict,VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID)
                                                         elif BATCHSYS.upper()=="SWIF2":
                                                                 #status = subprocess.call("swif2 create "+WORKFLOW,shell=True)
-                                                                swif2_add_job(WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1,str(SCRIPT_TO_RUN),COMMAND_dict,VERBOSE,ACCOUNT,PARTITION,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID)
+                                                                swif2_add_job(WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1,str(SCRIPT_TO_RUN),COMMAND_dict,VERBOSE,ACCOUNT,PARTITION,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR,LOG_DIR, PROJECT_ID)
                                                         elif BATCHSYS.upper()=="QSUB":
                                                                 qsub_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, RAM, QUEUENAME, LOG_DIR, PROJECT_ID )
                                                         elif BATCHSYS.upper()=="CONDOR":
@@ -1741,7 +1741,7 @@ def main(argv):
                                                         swif_add_job(WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1,str(SCRIPT_TO_RUN),COMMAND_dict,VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID)
                                                 elif BATCHSYS.upper()=="SWIF2":
                                                         #status = subprocess.call("swif2 create "+WORKFLOW,shell=True)
-                                                        swif2_add_job(WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1,str(SCRIPT_TO_RUN),COMMAND_dict,VERBOSE,ACCOUNT,PARTITION,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID)
+                                                        swif2_add_job(WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1,str(SCRIPT_TO_RUN),COMMAND_dict,VERBOSE,ACCOUNT,PARTITION,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR,LOG_DIR, PROJECT_ID)
                                                 elif BATCHSYS.upper()=="QSUB":
                                                         qsub_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, RAM, QUEUENAME, LOG_DIR, PROJECT_ID )
                                                 elif BATCHSYS.upper()=="CONDOR":
