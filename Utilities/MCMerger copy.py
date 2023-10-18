@@ -18,20 +18,8 @@ import sys
 import subprocess
 import argparse
 from collections import defaultdict
-import MySQLdb
 
-dbhost = "hallddb.jlab.org"
-dbuser = 'mcuser'
-dbpass = ''
-dbname = 'gluex_mc'
 
-try:
-    conn=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
-    curs=conn.cursor(MySQLdb.cursors.DictCursor)
-except:
-    print("Could not connect to database")
-    sys.exit(1)
-    
 bash = {}
 
 def dir_path(path):
@@ -227,45 +215,32 @@ def check_success(name_map, output_path):
     return mc_file_no == merged_file_no
 
 def main(args):
+        print(f"Moving from: {args.input_path} to {args.output_path}")
+        if args.f==False:
+            for path, dirs, files in os.walk(args.input_path):
+                if "output" in dirs:
+                    print("The directory in the input path might already be in the process of bundling. Use the -f flag to overwrite.")
+                    return -1
+                    for path, dirs, files in os.walk(args.output_path):
+                        for existing_dir in ["configurations", "root", "hddm"]:
+                            if existing_dir in dirs:
+                                print("Output path might already contain bundled files. Use the -f flag to overwrite.")
+                                return -1
+        name_map = get_directory_structure(args.input_path)
+        dir_type = re.split("/", args.input_path.rstrip(os.sep))[-1]
+        bundle_success = bundle(name_map[dir_type], args.input_path.rstrip(os.sep), args.hddm)
+        move_success = move(args.input_path, args.output_path)
+        final_success = bundle_success + move_success
+        success_check = check_success(name_map, args.output_path)
+        if final_success == 0 and success_check:
+            print("Bundling and moving completed succesfully")
+            if args.noclean==False:
+                print(f"Removing {args.input_path}.")
+                subprocess.run([f"rm -r {args.input_path}"], shell=True)
+        else:
+            print(f"Bundling and moving failed with error code {final_success}.")
 
-    print("args: ", args)
-
-    input_path = args.input_path
-    output_path = args.output_path
-
-    if args.P:
-        curs.execute("SELECT * FROM Project WHERE ID=%s",args.P)
-        proj=curs.fetchone()
-        input_path= proj["OutputLocation"].replace("/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/","/work/halld/gluex_simulations/REQUESTED_MC/")
-        output_path="/".join(proj["OutputLocation"].split("/")[:-1])+"/"
-
-
-    print(f"Moving from: {args.input_path} to {args.output_path}")
-    if args.f==False:
-        for path, dirs, files in os.walk(args.input_path):
-            if "output" in dirs:
-                print("The directory in the input path might already be in the process of bundling. Use the -f flag to overwrite.")
-                return -1
-                for path, dirs, files in os.walk(args.output_path):
-                    for existing_dir in ["configurations", "root", "hddm"]:
-                        if existing_dir in dirs:
-                            print("Output path might already contain bundled files. Use the -f flag to overwrite.")
-                            return -1
-    name_map = get_directory_structure(args.input_path)
-    dir_type = re.split("/", args.input_path.rstrip(os.sep))[-1]
-    bundle_success = bundle(name_map[dir_type], args.input_path.rstrip(os.sep), args.hddm)
-    move_success = move(args.input_path, args.output_path)
-    final_success = bundle_success + move_success
-    success_check = check_success(name_map, args.output_path)
-    if final_success == 0 and success_check:
-        print("Bundling and moving completed succesfully")
-        if args.noclean==False:
-            print(f"Removing {args.input_path}.")
-            subprocess.run([f"rm -r {args.input_path}"], shell=True)
-    else:
-        print(f"Bundling and moving failed with error code {final_success}.")
-
-    return final_success
+        return final_success
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Bundle and move MCwrapper outputs to another directory.")
@@ -274,6 +249,5 @@ if __name__ == "__main__":
     parser.add_argument("output_path", type=dir_path, help="The output path for the merged directory.")
     parser.add_argument("-hddm", action="store_true", help="Use the Python hddm interfaces to merge hddm files instead of bundling with tar. Warning: may be very slow.")
     parser.add_argument("-noclean", action="store_true", help="Do not remove the input directory after a succesful merge.")
-    parser.add_argument("-P",help="ID number of the project to bundle.")
     args = parser.parse_args()
     sys.exit(main(args))

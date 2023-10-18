@@ -86,7 +86,7 @@ def RecallAll():
 
 def BundleFiles(input,output):
     MCWRAPPER_BOT_HOME="/scigroup/mcwrapper/gluex_MCwrapper/"
-    bundlecommand = "ssh ifarm1802 " + "echo hostname; source /group/halld/Software/build_scripts/gluex_env_jlab.csh; /usr/bin/python3.6 " + MCWRAPPER_BOT_HOME + "/Utilities/MCMerger.py -f " + input + "/ " + output + "/"
+    bundlecommand = "ssh dtn1902 ;" + "echo hostname; source /group/halld/Software/build_scripts/gluex_env_jlab.csh; /usr/bin/python3.6 " + MCWRAPPER_BOT_HOME + "/Utilities/MCMerger.py -f " + input + "/ " + output + "/"
     print(bundlecommand)
     try:
         out = subprocess.check_output(shlex.split(bundlecommand), stderr=subprocess.STDOUT)
@@ -119,7 +119,7 @@ def DeclareAllComplete():
             continue
         
         print("BundleFiles("+inputdir+","+outputlocation+")")
-        mkdircommand="ssh ifarm1802 mkdir -p "+outputlocation
+        mkdircommand="ssh dtn1902 mkdir -p "+outputlocation
         print(mkdircommand)
         subprocess.call(mkdircommand.split(" "))
         #close the connection to the database while we run the bundle files
@@ -192,7 +192,7 @@ def AutoLaunch():
     print("CANCELING...")
     CancelAll()
     print("DECLARING...")
-    DeclareAllComplete()
+    #DeclareAllComplete()
 
     #get the return from df -h | grep /osgpool/halld
     print("GETTING DF...")
@@ -441,7 +441,19 @@ def RetryJob(ID,AllOSG=False):
             pass
         command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched_"+str(ID)+".config "+str(job[0]["RunNumber"])+" "+str(job[0]["NumEvts"])+" per_file="+str(per_file_num)+"  base_file_number="+str(job[0]["FileNumber"])+" generate="+str(proj[0]["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(proj[0]["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(proj[0]["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(proj[0]["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid=-"+str(ID)+" batch=1 tobundle=0"
         print(command)
-        status = subprocess.call(command, shell=True)
+        #command="printenv"
+        #run the command in the environment of the user who submitted the job
+        #print "running command"
+        #print "=========================="
+        #print command
+        #add bearer token to env
+        os.environ["BEARER_TOKEN_FILE"]="/var/run/user/10967/bt_u10967"
+        os.environ["XDG_RUNTIME_DIR"]="/run/user/10967"
+        status_out, status_err = subprocess.Popen(command,shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,env=os.environ,executable='/bin/bash').communicate()
+        print(command,"STATUS:")
+        print(str(status_out,"utf-8"))
+        
+        #status = subprocess.call(command, shell=True)
 
 def CancelJob(ID):
     #deactivate
@@ -496,7 +508,7 @@ def CheckGenConfig(order):
         #copyTo="/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"
         copy_loc="ifarm1801-ib"
         if(running_hostname=="scosg2201.jlab.org"):
-            copy_loc="ifarm1801"
+            copy_loc="ifarm1901"
         print("scp "+runner_name+"@"+copy_loc+":"+fileSTR.lstrip()+" "+copyTo+str(ID)+"_"+name)
         subprocess.call("scp "+runner_name+"@"+copy_loc+":"+fileSTR.lstrip()+" "+copyTo+str(ID)+"_"+name,shell=True)
         #subprocess.call("rsync -ruvt ifarm1402:"+fileSTR+" "+copyTo,shell=True)
@@ -556,6 +568,12 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
     orig_dirname=origOutLoc.split("/")[-2]
     new_dirname="_".join(orig_dirname.split("_")[:-1])+"_"+str(ID)
     new_full_dirname=origOutLoc.replace(orig_dirname,new_dirname)
+
+
+    if new_full_dirname[-1]=="/":
+        xrd_stub_name=new_full_dirname[:-1].split("/")[-1]
+    else:
+        xrd_stub_name=new_full_dirname.split("/")[-1]
 
 
     print("order", order)
@@ -733,6 +751,33 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
         
         print(bcolors.OKGREEN+"TEST SUCCEEDED"+bcolors.ENDC)
         print("rm -rf "+order["OutputLocation"])
+
+        #mkdir for xrootd out
+        
+        try:
+            XROOTD_OUTPUT_ROOT="/gluex/mcwrap/REQUESTEDMC_OUTPUT/"
+            XROOTD_SERVER="dtn-gluex.jlab.org"
+            mkdir_xrd_cmd="/usr/bin/xrdfs "+XROOTD_SERVER+" mkdir -mrwxr-xr-x"+XROOTD_OUTPUT_ROOT+xrd_stub_name   #+"; chmod g+w "+XROOTD_OUTPUT_ROOT+xrd_stub_name
+            #subprocess.call(mkdir_xrd_cmd)
+            
+            print("Creating folder:",mkdir_xrd_cmd)
+            #use POPEN to run this mkdir_xrd_cmd importing the environment which this python script was called in
+            #set my_env to the envronment this python script was called in
+            my_env=os.environ.copy()
+
+            p = Popen(mkdir_xrd_cmd, env=my_env ,stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True)
+            output, errors = p.communicate()
+
+            if str(errors,'utf-8') != "":
+                print("ERROR IN MAKING XROOTD DIR")
+                print(errors)
+                print("============================")
+                print(output)
+            
+        except Exception as e:
+            print(e)
+            pass
+        
         #status = subprocess.call("rm -rf "+order["OutputLocation"],shell=True)
     else:
         try:
@@ -1390,7 +1435,8 @@ def DispatchToOSG(ID,order,PERCENT):
         pass
     command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched_"+str(ID)+".config "+str(RunNumber)+" "+str(order["NumEvents"])+" per_file="+str(per_file_num)+" base_file_number="+str(0)+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" logdir=/osgpool/halld/"+runner_name+"/REQUESTEDMC_LOGS/"+order["OutputLocation"].split("/")[7]+" batch=1 tobundle=0"
     print(command)
-    status = subprocess.call(command, shell=True)
+    status_out,status_error= subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=os.environ).communicate()
+    #status = subprocess.call(command, shell=True)
     
 def WritePayloadConfigString(order,foundConfig):
     config_str=""

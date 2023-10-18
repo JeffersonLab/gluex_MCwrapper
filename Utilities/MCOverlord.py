@@ -131,7 +131,7 @@ def recursivermdir(rootloc):
 
 def BundleFiles(input,output):
     MCWRAPPER_BOT_HOME="/scigroup/mcwrapper/gluex_MCwrapper/"
-    bundlecommand = "ssh ifarm1802 " + "echo hostname; source /group/halld/Software/build_scripts/gluex_env_jlab.csh; /usr/bin/python3.6 " + MCWRAPPER_BOT_HOME + "/Utilities/MCMerger.py -f " + input + "/ " + output + "/"
+    bundlecommand = "ssh dtn1902 " + "source /group/halld/Software/build_scripts/gluex_env_jlab.sh; /usr/bin/python3.6 " + MCWRAPPER_BOT_HOME + "/Utilities/MCMerger.py -f " + input + "/ " + output + "/"
     print(bundlecommand)
     try:
         out = subprocess.check_output(shlex.split(bundlecommand), stderr=subprocess.STDOUT)
@@ -161,19 +161,24 @@ def checkProjectsForCompletion(comp_assignment):
         #print("ProjID:",proj['ID'])
         files=[]
         dirs=[]
-        #print locparts[len(locparts)-2]
+        print("WALKING:",locparts[len(locparts)-2])
         for r, dirs, files in os.walk(outdir_root+locparts[len(locparts)-2]) : 
             files = [f for f in files if not f[0] == '.']
             dirs[:] = [d for d in dirs if not d[0] == '.']
 
         #print("NumFiles:",len(files))
         #print(dirs)
+        filtered_files=[]
+        for f in files:
+            if(".log" not in f):
+                filtered_files=filtered_files.append(f)
 
+        files=filtered_files
         filesToMove = len(files) #sum([len(files) for r, d, files in os.walk(outdir_root+locparts[len(locparts)-2])])
         #print cpt
         #print(proj)
         
-        #print("Files to move:",files)
+        print("Files to move:",files)
         #DISTINCT ID ------in query below
         TOTCompletedQuery ="SELECT * From Jobs inner join Attempts on Attempts.job_id = Jobs.id WHERE Project_ID="+str(proj['ID'])+" && IsActive=1 and Attempts.ExitCode = 0 && (Attempts.Status ='4' || Attempts.Status='succeeded') && Attempts.ExitCode IS NOT NULL and Attempts.id = (select max(id) from Attempts Attempts2 where Attempts2.job_id = Jobs.id);"
         #"SELECT * From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1 && ID in (SELECT DISTINCT Job_ID FROM Attempts WHERE ExitCode = 0 && (Status ='4' || Status='succeeded')  && ExitCode rIS NOT NULL ORDER BY ID DESC LIMIT 1);" 
@@ -309,7 +314,7 @@ def checkProjectsForCompletion(comp_assignment):
             outputlocation="/".join(proj["OutputLocation"].split("/")[:-1])+"/"
             #outputlocation="/lustre19/expphy/cache/halld/gluex_simulations/MERGED_MC/"+inputdir.replace("/work/halld/gluex_simulations/REQUESTED_MC/","")+"/"
             print("BundleFiles("+inputdir+","+outputlocation+")")
-            mkdircommand="ssh ifarm1802 mkdir -p "+outputlocation
+            mkdircommand="ssh dtn1902 mkdir -p "+outputlocation
             print(mkdircommand)
             subprocess.call(mkdircommand.split(" "))
             #close the connection to the database while we run the bundle files
@@ -920,6 +925,12 @@ def array_split(lst,n):
     return to_return
 
 def main(argv):
+        try:
+            dbcnx=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
+            dbcursor=dbcnx.cursor(MySQLdb.cursors.DictCursor)
+        except:
+            print("WARNING: CANNOT CONNECT TO DATABASE.  JOBS WILL NOT BE CONTROLLED OR MONITORED")
+            pass
 
         runnum=0
         runmax=-1
@@ -992,8 +1003,19 @@ def main(argv):
                     
                     OutstandingProjectsQuery="SELECT * FROM Project WHERE (Is_Dispatched != '0' && Tested != '-1' && Tested != '2' ) && Notified is NULL"
                     print(OutstandingProjectsQuery)
-                    dbcursor.execute(OutstandingProjectsQuery)
-                    OutstandingProjects=dbcursor.fetchall()
+                    try:
+                        dbcursor.execute(OutstandingProjectsQuery)
+                        OutstandingProjects=dbcursor.fetchall()
+                    except:
+                        print("DB connection died. Re-establish and try again.")
+                        try:
+                            dbcnx=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
+                            dbcursor=dbcnx.cursor(MySQLdb.cursors.DictCursor)
+                            dbcursor.execute(OutstandingProjectsQuery)
+                            OutstandingProjects=dbcursor.fetchall()
+                        except:
+                            print("WARNING: CANNOT CONNECT TO DATABASE.  JOBS WILL NOT BE CONTROLLED OR MONITORED")
+                            pass
 
                     for proj in OutstandingProjects:
                         print("to check",proj["ID"])
