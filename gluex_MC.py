@@ -502,7 +502,8 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
                 f.write('+SingularityImage = "/cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_devel:latest"'+"\n")
                 f.write("use_oauth_services = jlab_gluex"+"\n")
         else:
-                f.write('+SingularityImage = "/cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_prod:v1"'+"\n")
+                f.write('+SingularityImage = "/cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_devel:latest"'+"\n")
+                #f.write('+SingularityImage = "/cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_prod:v1"'+"\n")
                 #f.write("use_oauth_services = jlab_gluex"+"\n")
 
         f.write('+SingularityBindCVMFS = True'+"\n")
@@ -561,11 +562,20 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
         status = subprocess.call(mkdircom, shell=True)
         SWIF_ID_NUM="-1"
         if( int(PROJECT_ID) <=0 ):
+                
+                #do in Popen with the environment
+                #print(add_command)
+                #add bearer token to env
+                os.environ["BEARER_TOKEN_FILE"]="/var/run/user/10967/bt_u10967"
+                os.environ["XDG_RUNTIME_DIR"]="/run/user/10967"
                 print("Submitting: ",add_command)
-                jobSubout=subprocess.check_output(add_command.split(" "))
-                print(jobSubout)
+                jobSubout,jobSuberr=subprocess.Popen(add_command,shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,env=os.environ,executable='/bin/bash').communicate()
+                #jobSubout=subprocess.check_output(add_command.split(" "))
+                print("JOBSUB OUTPUT",jobSubout)
+                print("JOBSUB ERROR",jobSuberr)
+                
                 idnumline=jobSubout.split("\n")[1].split(".")[0].split(" ")
-
+                
 
                 #1 job(s) submitted to cluster 425013.
 

@@ -1906,8 +1906,22 @@ echo `xrdcp --version`
 export BEARER_TOKEN_FILE=${_CONDOR_CREDS}/jlab_gluex.use
 #get everything after the last / in PROJECT_DIR_NAME
 project_dir_name=`echo $PROJECT_DIR_NAME | sed -r 's/.*\///'`
-export COPYBACK_DIR=xroots://dtn-gluex.jlab.org//gluex/mcwrap/REQUESTEDMC_OUTPUT/$project_dir_name
+export COPYBACK_DIR=xroots://dtn-gluex.jlab.org//gluex/mcwrap/REQUESTEDMC_OUTPUT/$project_dir_name/
 echo `ls -lbh $OUTDIR`
+
+
+#echo "Testing a single file"
+#echo "TEST DATA" >> ./test.txt
+#ls
+#echo "xrdcp -f ./test.txt $COPYBACK_DIR"
+#xrdcp -f ./test.txt $COPYBACK_DIR
+
+#echo "ping server"
+#xrdfs dtn-gluex.jlab.org query stats l
+#echo "check token"
+#httokendecode -H
+#echo "ls check"
+#xrdfs dtn-gluex.jlab.org ls /gluex/mcwrap/REQUESTEDMC_OUTPUT/
 echo "Copying back to $COPYBACK_DIR"
 echo "xrdcp -rfv $OUTDIR $COPYBACK_DIR"
 xrdcp -rfv $OUTDIR $COPYBACK_DIR
