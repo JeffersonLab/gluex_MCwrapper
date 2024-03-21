@@ -47,8 +47,8 @@ try:
 except:
         pass
 
-MCWRAPPER_VERSION="2.7.0"
-MCWRAPPER_DATE="01/18/23"
+MCWRAPPER_VERSION="2.8.0"
+MCWRAPPER_DATE="03/21/24"
 
 #group sync test
 #====================================================
@@ -143,7 +143,7 @@ def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,N
         elif int(PROJECT_ID) < 0:
                 recordAttempt(abs(int(PROJECT_ID)),RUNNO,FILENO,"SWIF",SWIF_ID_NUM,COMMAND['num_events'],NCORES,RAM)
 
-def swif2_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,ACCOUNT,PARTITION,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID):
+def swif2_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,ACCOUNT,PARTITION,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR,LOG_DIR, PROJECT_ID):
         STUBNAME=""
         if(COMMAND['custom_tag_string'] != "I_dont_have_one"):
                 STUBNAME=COMMAND['custom_tag_string']+"_"
@@ -156,7 +156,7 @@ def swif2_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,ACCOUNT,PARTIT
         # job
         #try removing the name specification
 
-        mkdircom="mkdir -p "+DATA_OUTPUT_BASE_DIR+"/log/"
+        mkdircom="mkdir -p "+LOG_DIR+"/log/"
         status = subprocess.call(mkdircom, shell=True)
 
 
@@ -166,9 +166,9 @@ def swif2_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,ACCOUNT,PARTIT
         # resources
         add_command += " -create -cores " + NCORES + " -disk " + DISK + " -ram " + RAM + " -time " + TIMELIMIT + " -os " + OS
         # stdout
-        add_command += " -stdout " + DATA_OUTPUT_BASE_DIR + "/log/" + str(RUNNO) + "_stdout." + STUBNAME + ".out"
+        add_command += " -stdout " + LOG_DIR + "/log/" + str(RUNNO) + "_stdout." + STUBNAME + ".out"
         # stderr
-        add_command += " -stderr " + DATA_OUTPUT_BASE_DIR + "/log/" + str(RUNNO) + "_stderr." + STUBNAME + ".err"
+        add_command += " -stderr " + LOG_DIR + "/log/" + str(RUNNO) + "_stderr." + STUBNAME + ".err"
         # tags
         add_command += " -tag run_number " + str(RUNNO)
         # tags
@@ -502,8 +502,9 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
                 f.write('+SingularityImage = "/cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_devel:latest"'+"\n")
                 f.write("use_oauth_services = jlab_gluex"+"\n")
         else:
-                f.write('+SingularityImage = "/cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_prod:v1"'+"\n")
-                #f.write("use_oauth_services = jlab_gluex"+"\n")
+                f.write('+SingularityImage = "/cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_devel:latest"'+"\n")
+                #f.write('+SingularityImage = "/cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_prod:v1"'+"\n")
+                f.write("use_oauth_services = jlab_gluex"+"\n")
 
         f.write('+SingularityBindCVMFS = True'+"\n")
         #f.write('+UNDESIRED_Sites = "OSG_US_ODU-Ubuntu"'+"\n")
@@ -511,8 +512,13 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
         
 #        f.write('+CVMFSReposList = "oasis.opensciencegrid.org"'+"\n")
         #f.write('+DesiredSites="JLab-FARM-CE"'+"\n")
+        
         f.write('should_transfer_files = YES'+"\n")
-        f.write('when_to_transfer_output = ON_EXIT'+"\n")
+        #f.write('should_transfer_files = NO'+"\n")
+        #f.write('when_to_transfer_output = ON_EXIT'+"\n")
+
+        #f.write('should_transfer_files = NO'+"\n")
+
         f.write('concurrency_limits = GluexProduction'+"\n")
         f.write('on_exit_remove = true'+"\n")
         f.write('on_exit_hold = false'+"\n")
@@ -527,21 +533,19 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
 
         
         f.write("request_cpus = "+str(NCORES)+"\n")
-        if DATA_OUTPUT_BASE_DIR == "/lustre/expphy/cache/halld/halld-scratch/REQUESTED_MC/wmcginle_phi_eta_gamma_more2_20190806093041am/":
-                f.write("request_memory = 5.0GB"+"\n")
-        else:
-                f.write("request_memory = "+str(RAM)+"\n")
+        
+        f.write("request_memory = "+str(RAM)+"\n")
 
         f.write("request_disk = 5.0GB"+"\n")
         #f.write("transfer_input_files = "+ENVFILE+"\n")
         f.write("transfer_input_files = "+SCRIPT_TO_RUN+", "+ENVFILE+additional_passins+"\n")
 
-        if(numJobsInBundle==1):
-                f.write("transfer_output_files = "+str(RUNNUM)+"_"+str(FILENUM)+"\n")
-                f.write("transfer_output_remaps = "+"\""+str(RUNNUM)+"_"+str(FILENUM)+"="+DATA_OUTPUT_BASE_DIR+"\""+"\n")
-        else:
-                f.write("transfer_output_files = "+str(RUNNUM)+"_$(Process)"+"\n")
-                f.write("transfer_output_remaps = "+"\""+str(RUNNUM)+"_$(Process)"+"="+DATA_OUTPUT_BASE_DIR+"\""+"\n")
+        #if(numJobsInBundle==1):
+        #        f.write("transfer_output_files = "+str(RUNNUM)+"_"+str(FILENUM)+"\n")
+        #        f.write("transfer_output_remaps = "+"\""+str(RUNNUM)+"_"+str(FILENUM)+"="+DATA_OUTPUT_BASE_DIR+"\""+"\n")
+        #else:
+        #        f.write("transfer_output_files = "+str(RUNNUM)+"_$(Process)"+"\n")
+        #        f.write("transfer_output_remaps = "+"\""+str(RUNNUM)+"_$(Process)"+"="+DATA_OUTPUT_BASE_DIR+"\""+"\n")
 
         f.write("queue "+str(numJobsInBundle)+"\n")
         f.close()
@@ -561,11 +565,26 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
         status = subprocess.call(mkdircom, shell=True)
         SWIF_ID_NUM="-1"
         if( int(PROJECT_ID) <=0 ):
-                print("Submitting: ",add_command)
-                jobSubout=subprocess.check_output(add_command.split(" "))
-                print(jobSubout)
-                idnumline=jobSubout.split("\n")[1].split(".")[0].split(" ")
+                
+                #do in Popen with the environment
+                #print(add_command)
+                #add bearer token to env
+                os.environ["BEARER_TOKEN_FILE"]="/var/run/user/10967/bt_u10967"
+                os.environ["XDG_RUNTIME_DIR"]="/run/user/10967"
+                
+                token_str='eval `ssh-agent`; /usr/bin/ssh-add;'
+                agent_kill_str="; ssh-agent -k"
+                print("Submitting: ",token_str+add_command+agent_kill_str)
 
+                
+
+                jobSubout,jobSuberr=subprocess.Popen(token_str+add_command+agent_kill_str,shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,env=os.environ,executable='/bin/bash',close_fds=True).communicate()
+                #jobSubout=subprocess.check_output(add_command.split(" "))
+                print("JOBSUB OUTPUT",jobSubout)
+                print("JOBSUB ERROR",jobSuberr)
+                #'Agent pid 2322136\nSubmitting job(s).\n1 job(s) submitted to cluster 925999.\n'
+                idnumline=jobSubout.split("\n")[2].split(".")[0].split(" ")
+                
 
                 #1 job(s) submitted to cluster 425013.
 
@@ -914,19 +933,12 @@ def calcFluxCCDB(ccdb_conn, run, emin, emax):
         scale = livetime_ratio * 1./((7/9.) * radiationLength)
 
         photon_endpoint = array('d')
-        tagm_untagged_flux = array('d')
-        tagm_scaled_energy = array('d')
         tagh_untagged_flux = array('d')
         tagh_scaled_energy = array('d')
 
         try:
                 photon_endpoint_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/endpoint_energy", run[0], VARIATION, CALIBTIME_ENERGY)
                 photon_endpoint = photon_endpoint_assignment.constant_set.data_table
-
-                tagm_untagged_flux_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/pair_spectrometer/lumi/tagm/untagged", run[0], VARIATION, CALIBTIME)
-                tagm_untagged_flux = tagm_untagged_flux_assignment.constant_set.data_table
-                tagm_scaled_energy_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/microscope/scaled_energy_range", run[0], VARIATION, CALIBTIME_ENERGY)
-                tagm_scaled_energy_table = tagm_scaled_energy_assignment.constant_set.data_table
 
                 tagh_untagged_flux_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/pair_spectrometer/lumi/tagh/untagged", run[0], VARIATION, CALIBTIME)
                 tagh_untagged_flux = tagh_untagged_flux_assignment.constant_set.data_table
@@ -938,21 +950,7 @@ def calcFluxCCDB(ccdb_conn, run, emin, emax):
                 print("Missing flux for run number = %d, skipping generation" % run[0])
                 return -1.0
 
-
-        # sum TAGM flux
-        for tagm_flux, tagm_scaled_energy in zip(tagm_untagged_flux, tagm_scaled_energy_table):
-                tagm_energy = float(photon_endpoint[0][0])*(float(tagm_scaled_energy[1])+float(tagm_scaled_energy[2]))/2.
-
-                if tagm_energy < emin or tagm_energy > emax:
-                        continue
-
-                psAccept = PSAcceptance(tagm_energy, float(PS_accept[0][0]), float(PS_accept[0][1]), float(PS_accept[0][2]))
-                if psAccept <= 0.0:
-                        continue
-
-                flux = flux + float(tagm_flux[1]) * scale / psAccept
-
-	# sum TAGH flux
+	# sum untagged flux
         for tagh_flux, tagh_scaled_energy in zip(tagh_untagged_flux, tagh_scaled_energy_table):
                 tagh_energy = float(photon_endpoint[0][0])*(float(tagh_scaled_energy[1])+float(tagh_scaled_energy[2]))/2.
 
@@ -1575,7 +1573,7 @@ def main(argv):
                                         subprocess.call(swifrun.split(" "))
                                 elif BATCHSYS.upper()=="SWIF2":
                                         #status = subprocess.call("swif2 create "+WORKFLOW,shell=True)
-                                        swif2_add_job(WORKFLOW, RUNNUM, BASEFILENUM,str(SCRIPT_TO_RUN),COMMAND_dict,VERBOSE,ACCOUNT,PARTITION,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID)
+                                        swif2_add_job(WORKFLOW, RUNNUM, BASEFILENUM,str(SCRIPT_TO_RUN),COMMAND_dict,VERBOSE,ACCOUNT,PARTITION,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR,LOG_DIR, PROJECT_ID)
                                         swifrun = "swif2 run "+WORKFLOW
                                         subprocess.call(swifrun.split(" "))
                                 elif BATCHSYS.upper()=="QSUB":
@@ -1710,7 +1708,7 @@ def main(argv):
                                                                 swif_add_job(WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1,str(SCRIPT_TO_RUN),COMMAND_dict,VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID)
                                                         elif BATCHSYS.upper()=="SWIF2":
                                                                 #status = subprocess.call("swif2 create "+WORKFLOW,shell=True)
-                                                                swif2_add_job(WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1,str(SCRIPT_TO_RUN),COMMAND_dict,VERBOSE,ACCOUNT,PARTITION,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID)
+                                                                swif2_add_job(WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1,str(SCRIPT_TO_RUN),COMMAND_dict,VERBOSE,ACCOUNT,PARTITION,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR,LOG_DIR, PROJECT_ID)
                                                         elif BATCHSYS.upper()=="QSUB":
                                                                 qsub_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, RAM, QUEUENAME, LOG_DIR, PROJECT_ID )
                                                         elif BATCHSYS.upper()=="CONDOR":
@@ -1762,7 +1760,7 @@ def main(argv):
                                                         swif_add_job(WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1,str(SCRIPT_TO_RUN),COMMAND_dict,VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID)
                                                 elif BATCHSYS.upper()=="SWIF2":
                                                         #status = subprocess.call("swif2 create "+WORKFLOW,shell=True)
-                                                        swif2_add_job(WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1,str(SCRIPT_TO_RUN),COMMAND_dict,VERBOSE,ACCOUNT,PARTITION,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID)
+                                                        swif2_add_job(WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1,str(SCRIPT_TO_RUN),COMMAND_dict,VERBOSE,ACCOUNT,PARTITION,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR,LOG_DIR, PROJECT_ID)
                                                 elif BATCHSYS.upper()=="QSUB":
                                                         qsub_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, RAM, QUEUENAME, LOG_DIR, PROJECT_ID )
                                                 elif BATCHSYS.upper()=="CONDOR":

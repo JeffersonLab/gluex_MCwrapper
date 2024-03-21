@@ -65,7 +65,9 @@ def DroneDo(id):
         try:
                 drone_directive=os.environ["MCWRAPPER_CENTRAL"]+"/Utilities/MCDispatcher.py autolaunch"
                 print(drone_directive)
-                retcode=subprocess.call(drone_directive.split(" "))
+                return_out, return_err=subprocess.Popen(drone_directive.split(" "), stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=os.environ).communicate()
+                print(return_out)
+                #retcode=subprocess.call(drone_directive.split(" "))
         except subprocess.CalledProcessError as exc:
                 dbcursor.execute("UPDATE MCDrone SET Status='Fail' where ID="+str(id))
                 dbcnx.commit()
