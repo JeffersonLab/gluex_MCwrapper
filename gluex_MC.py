@@ -47,8 +47,8 @@ try:
 except:
         pass
 
-MCWRAPPER_VERSION="2.7.0"
-MCWRAPPER_DATE="01/18/23"
+MCWRAPPER_VERSION="2.8.0"
+MCWRAPPER_DATE="03/21/24"
 
 #group sync test
 #====================================================
@@ -504,7 +504,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
         else:
                 f.write('+SingularityImage = "/cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_devel:latest"'+"\n")
                 #f.write('+SingularityImage = "/cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_prod:v1"'+"\n")
-                #f.write("use_oauth_services = jlab_gluex"+"\n")
+                f.write("use_oauth_services = jlab_gluex"+"\n")
 
         f.write('+SingularityBindCVMFS = True'+"\n")
         #f.write('+UNDESIRED_Sites = "OSG_US_ODU-Ubuntu"'+"\n")
@@ -512,8 +512,13 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
         
 #        f.write('+CVMFSReposList = "oasis.opensciencegrid.org"'+"\n")
         #f.write('+DesiredSites="JLab-FARM-CE"'+"\n")
+        
         f.write('should_transfer_files = YES'+"\n")
-        f.write('when_to_transfer_output = ON_EXIT'+"\n")
+        #f.write('should_transfer_files = NO'+"\n")
+        #f.write('when_to_transfer_output = ON_EXIT'+"\n")
+
+        #f.write('should_transfer_files = NO'+"\n")
+
         f.write('concurrency_limits = GluexProduction'+"\n")
         f.write('on_exit_remove = true'+"\n")
         f.write('on_exit_hold = false'+"\n")
@@ -528,21 +533,19 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
 
         
         f.write("request_cpus = "+str(NCORES)+"\n")
-        if DATA_OUTPUT_BASE_DIR == "/lustre/expphy/cache/halld/halld-scratch/REQUESTED_MC/wmcginle_phi_eta_gamma_more2_20190806093041am/":
-                f.write("request_memory = 5.0GB"+"\n")
-        else:
-                f.write("request_memory = "+str(RAM)+"\n")
+        
+        f.write("request_memory = "+str(RAM)+"\n")
 
         f.write("request_disk = 5.0GB"+"\n")
         #f.write("transfer_input_files = "+ENVFILE+"\n")
         f.write("transfer_input_files = "+SCRIPT_TO_RUN+", "+ENVFILE+additional_passins+"\n")
 
-        if(numJobsInBundle==1):
-                f.write("transfer_output_files = "+str(RUNNUM)+"_"+str(FILENUM)+"\n")
-                f.write("transfer_output_remaps = "+"\""+str(RUNNUM)+"_"+str(FILENUM)+"="+DATA_OUTPUT_BASE_DIR+"\""+"\n")
-        else:
-                f.write("transfer_output_files = "+str(RUNNUM)+"_$(Process)"+"\n")
-                f.write("transfer_output_remaps = "+"\""+str(RUNNUM)+"_$(Process)"+"="+DATA_OUTPUT_BASE_DIR+"\""+"\n")
+        #if(numJobsInBundle==1):
+        #        f.write("transfer_output_files = "+str(RUNNUM)+"_"+str(FILENUM)+"\n")
+        #        f.write("transfer_output_remaps = "+"\""+str(RUNNUM)+"_"+str(FILENUM)+"="+DATA_OUTPUT_BASE_DIR+"\""+"\n")
+        #else:
+        #        f.write("transfer_output_files = "+str(RUNNUM)+"_$(Process)"+"\n")
+        #        f.write("transfer_output_remaps = "+"\""+str(RUNNUM)+"_$(Process)"+"="+DATA_OUTPUT_BASE_DIR+"\""+"\n")
 
         f.write("queue "+str(numJobsInBundle)+"\n")
         f.close()
@@ -568,13 +571,19 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
                 #add bearer token to env
                 os.environ["BEARER_TOKEN_FILE"]="/var/run/user/10967/bt_u10967"
                 os.environ["XDG_RUNTIME_DIR"]="/run/user/10967"
-                print("Submitting: ",add_command)
-                jobSubout,jobSuberr=subprocess.Popen(add_command,shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,env=os.environ,executable='/bin/bash').communicate()
+                
+                token_str='eval `ssh-agent`; /usr/bin/ssh-add;'
+                agent_kill_str="; ssh-agent -k"
+                print("Submitting: ",token_str+add_command+agent_kill_str)
+
+                
+
+                jobSubout,jobSuberr=subprocess.Popen(token_str+add_command+agent_kill_str,shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,env=os.environ,executable='/bin/bash',close_fds=True).communicate()
                 #jobSubout=subprocess.check_output(add_command.split(" "))
                 print("JOBSUB OUTPUT",jobSubout)
                 print("JOBSUB ERROR",jobSuberr)
-                
-                idnumline=jobSubout.split("\n")[1].split(".")[0].split(" ")
+                #'Agent pid 2322136\nSubmitting job(s).\n1 job(s) submitted to cluster 925999.\n'
+                idnumline=jobSubout.split("\n")[2].split(".")[0].split(" ")
                 
 
                 #1 job(s) submitted to cluster 425013.

@@ -908,9 +908,11 @@ if ( "$GENR" != "0" ) then
 	else if ( "$GENERATOR" == "bggen_upd" ) then
 		echo "configuring bggen_upd"
 		set STANDARD_NAME="bggen_upd_"$STANDARD_NAME
-		cp $MCWRAPPER_CENTRAL/Generators/bggen_upd/particles.ffr ./
-		cp $MCWRAPPER_CENTRAL/Generators/bggen_upd/pythia.dat ./
-		cp $MCWRAPPER_CENTRAL/Generators/bggen_upd/run_mcwrapper.ffr ./
+		cp $HALLD_SIM_HOME/src/programs/Simulation/bggen_upd/run/particles.ffr ./
+		cp $HALLD_SIM_HOME/src/programs/Simulation/bggen_upd/run/pythia.dat ./
+		mkdir ./spec_fun
+		cp $HALLD_SIM_HOME/src/programs/Simulation/bggen_upd/run/spec_fun/* ./spec_fun/
+		cp $HALLD_SIM_HOME/src/programs/Simulation/bggen_upd/run/run_mcwrapper.ffr ./
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
 	else if ( "$GENERATOR" == "bggen_phi_ee" ) then
 		echo "configuring bggen_phi_ee"
@@ -1252,6 +1254,18 @@ if ( "$GENR" != "0" ) then
 		sed -i 's/TEMPCOHERENT/'$Fortran_COHERENT_PEAK'/' 
 		sed -i 's/TEMPMINGENE/'$GEN_MIN_ENERGY'/' run_mcwrapper.ffr
 		sed -i 's/TEMPMAXGENE/'$GEN_MAX_ENERGY'/' run_mcwrapper.ffr
+
+		if ( grep -q "C EELEC" $STANDARD_NAME.conf ) then
+    		sed -i 's/EELEC/C EELEC/g' run_mcwrapper.ffr
+		fi
+
+		if ( grep -q "C EPEAK" $STANDARD_NAME.conf ) then
+    		sed -i 's/EPEAK/C EPEAK/g' run_mcwrapper.ffr
+		fi
+
+		if ( grep -q "C DCOLLIM" $STANDARD_NAME.conf ) then
+    		sed -i 's/DCOLLIM/C DCOLLIM/g' run_mcwrapper.ffr
+		fi
 
 		ln -s $STANDARD_NAME.conf fort.15
         ln -s particles.ffr fort.16
