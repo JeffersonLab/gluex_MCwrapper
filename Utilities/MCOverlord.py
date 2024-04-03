@@ -33,7 +33,7 @@ import getpass
 import sys
 import re
 import subprocess
-from subprocess import call
+from subprocess import call, Popen, PIPE
 import socket
 import glob
 import json
@@ -81,12 +81,42 @@ def exists_remote(host, path):
 
 def CheckForFile(rootLoc,expFile):
     found=False
+    rootlocparse=rootLoc.split("/")
+    #print("ROOTLOC:",rootlocparse)
+    #drop all empty strings from rootlocparse
+    rootlocparse = list(filter(None, rootlocparse))
+    rootLoc=rootlocparse[-1]
+    #print(rootLoc)
     subloc="hddm"
     parse_expFile=expFile.split(".")
     #print(parse_expFile[len(parse_expFile)-1])
     if(parse_expFile[len(parse_expFile)-1]=="root"):
         subloc="root/monitoring_hists"
 
+    os.environ["BEARER_TOKEN_FILE"]="/var/run/user/10967/bt_u10967"
+    os.environ["XDG_RUNTIME_DIR"]="/run/user/10967"
+                
+    token_str='eval `ssh-agent`; /usr/bin/ssh-add;'
+    agent_kill_str="; ssh-agent -k"
+
+    XROOTD_OUTPUT_ROOT="/gluex/mcwrap/REQUESTEDMC_OUTPUT/"
+    XROOTD_SERVER="dtn-gluex.jlab.org"
+    xrd_file_check="/usr/bin/xrdfs "+XROOTD_SERVER+" ls "+XROOTD_OUTPUT_ROOT+rootLoc+"/"+subloc+"/"+expFile
+    print(token_str+xrd_file_check+agent_kill_str)
+    my_env=os.environ.copy()
+
+    p = Popen(token_str+xrd_file_check+agent_kill_str, env=my_env ,stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True,close_fds=True)
+    output, errors = p.communicate()
+
+    print("check for file:",xrd_file_check)
+    #print("output:",output)
+    #print("errors:",errors)
+
+    xrd_found=False
+
+    if "Unable to locate" not in str(errors, 'utf-8') and XROOTD_OUTPUT_ROOT+rootLoc+"/"+subloc+"/"+expFile in str(output, 'utf-8'):
+        print("FILE FOUND VIA XROOTD")
+        xrd_found=True
     #if( os.path.isfile('/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/'+rootLoc+"/"+subloc+"/"+expFile) ):
     #    print(rootLoc+"/"+subloc+"/"+expFile+"   found on OSG pool")
 
@@ -100,10 +130,12 @@ def CheckForFile(rootLoc,expFile):
 
     #if(os.path.isfile('/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/'+rootLoc+"/"+subloc+"/"+expFile) or os.path.isfile('/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) or os.path.isfile('/mss/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) ):
     #if(os.path.isfile('/osgpool/halld/'+runner_name+'/REQUESTEDMC_OUTPUT/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote(runner_name+'@dtn1902','/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote(runner_name+'@dtn1902','/mss/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) ):
-    if(os.path.isfile('/osgpool/halld/'+runner_name+'/REQUESTEDMC_OUTPUT/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote(runner_name+'@dtn1902','/work/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) ):
+    if(os.path.isfile('/osgpool/halld/'+runner_name+'/REQUESTEDMC_OUTPUT/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote(runner_name+'@dtn1902','/work/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) or xrd_found ):
         found=True
     else:
         print(rootLoc+"/"+subloc+"/"+expFile+"   NOT FOUND")
+
+    print("FILE FOUND?",found)
     return found
 
 def recursivermdir(rootloc):
@@ -131,7 +163,11 @@ def recursivermdir(rootloc):
 
 def BundleFiles(input,output):
     MCWRAPPER_BOT_HOME="/scigroup/mcwrapper/gluex_MCwrapper/"
-    bundlecommand = "ssh ifarm1802 " + "echo hostname; source /group/halld/Software/build_scripts/gluex_env_jlab.csh; /usr/bin/python3.6 " + MCWRAPPER_BOT_HOME + "/Utilities/MCMerger.py -f " + input + "/ " + output + "/"
+    projectName = input.split("/")[-2] if input[-1]=="/" else input.split("/")[-1]
+    mkdircommand="ssh dtn1902 mkdir -p /osgpool/halld/mcwrap/mergetemp/" + projectName
+    print(mkdircommand)
+    subprocess.call(mkdircommand.split(" "))
+    bundlecommand = "ssh dtn1902 \'" + "echo hostname; source /group/halld/Software/build_scripts/gluex_env_jlab.sh; /usr/bin/python3.6 " + MCWRAPPER_BOT_HOME + "/Utilities/MCMerger.py -f -tempdir /osgpool/halld/mcwrap/mergetemp/" + projectName + "/ " + input + " " + output + "\'"
     print(bundlecommand)
     try:
         out = subprocess.check_output(shlex.split(bundlecommand), stderr=subprocess.STDOUT)
@@ -161,19 +197,24 @@ def checkProjectsForCompletion(comp_assignment):
         #print("ProjID:",proj['ID'])
         files=[]
         dirs=[]
-        #print locparts[len(locparts)-2]
+        print("WALKING:",locparts[len(locparts)-2])
         for r, dirs, files in os.walk(outdir_root+locparts[len(locparts)-2]) : 
             files = [f for f in files if not f[0] == '.']
             dirs[:] = [d for d in dirs if not d[0] == '.']
 
         #print("NumFiles:",len(files))
         #print(dirs)
+        filtered_files=[]
+        for f in files:
+            if(".log" not in f):
+                filtered_files.append(f)
 
+        files=filtered_files
         filesToMove = len(files) #sum([len(files) for r, d, files in os.walk(outdir_root+locparts[len(locparts)-2])])
         #print cpt
         #print(proj)
         
-        #print("Files to move:",files)
+        print("Files to move:",files)
         #DISTINCT ID ------in query below
         TOTCompletedQuery ="SELECT * From Jobs inner join Attempts on Attempts.job_id = Jobs.id WHERE Project_ID="+str(proj['ID'])+" && IsActive=1 and Attempts.ExitCode = 0 && (Attempts.Status ='4' || Attempts.Status='succeeded') && Attempts.ExitCode IS NOT NULL and Attempts.id = (select max(id) from Attempts Attempts2 where Attempts2.job_id = Jobs.id);"
         #"SELECT * From Jobs WHERE Project_ID="+str(proj['ID'])+" && IsActive=1 && ID in (SELECT DISTINCT Job_ID FROM Attempts WHERE ExitCode = 0 && (Status ='4' || Status='succeeded')  && ExitCode rIS NOT NULL ORDER BY ID DESC LIMIT 1);" 
@@ -225,7 +266,7 @@ def checkProjectsForCompletion(comp_assignment):
             files_not_found=[]
             for expFile in Expected_returned_files:
                 #print(expFile)
-                #print("checking for",expFile,"@",rootLoc)
+                print("checking for",expFile,"@",rootLoc)
                 found=CheckForFile(rootLoc,expFile)
                 if not found:
                     print(expFile+"   NOT FOUND!!!!")
@@ -304,63 +345,77 @@ def checkProjectsForCompletion(comp_assignment):
         #need -len(AllActiveJobs for when Run number need 0 events and it round to nearest NOT up in num events
         if((len(fulfilledJobs)-len(nullify_list))==len(AllActiveJobs) and len(AllActiveJobs) != 0 and filesToMove ==0 and submitted_evtNum[0]["SUM(NumEvts)"] >= proj["NumEvents"]-len(AllActiveJobs)):
             print(proj['ID'],"DONE")
-
-            inputdir= proj["OutputLocation"].replace("/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/","/work/halld/gluex_simulations/REQUESTED_MC/")
-            outputlocation="/".join(proj["OutputLocation"].split("/")[:-1])+"/"
-            #outputlocation="/lustre19/expphy/cache/halld/gluex_simulations/MERGED_MC/"+inputdir.replace("/work/halld/gluex_simulations/REQUESTED_MC/","")+"/"
-            print("BundleFiles("+inputdir+","+outputlocation+")")
-            mkdircommand="ssh ifarm1802 mkdir -p "+outputlocation
-            print(mkdircommand)
-            subprocess.call(mkdircommand.split(" "))
-            #close the connection to the database while we run the bundle files
-            dbcnx_comp.close()
-            out=BundleFiles(inputdir,outputlocation)
-            print("final output",out)
-            
-            if out == "ERROR":
-                dbcnx_comp=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
-                dbcursor_comp=dbcnx_comp.cursor(MySQLdb.cursors.DictCursor)
-                continue
-
             dbcnx_comp=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
             dbcursor_comp=dbcnx_comp.cursor(MySQLdb.cursors.DictCursor)
-            getFinalCompleteTime="SELECT MAX(Completed_Time) FROM Attempts WHERE Job_ID IN (SELECT ID FROM Jobs WHERE Project_ID="+str(proj['ID'])+");"
-            print(getFinalCompleteTime)
 
-            dbcursor_comp.execute(getFinalCompleteTime)
-            finalTimeRes=dbcursor_comp.fetchall()
-            #print "============"
-            print("Final Time", finalTimeRes[0]["MAX(Completed_Time)"])
-            updateProjectstatus="UPDATE Project SET Completed_Time="+"'"+str(finalTimeRes[0]["MAX(Completed_Time)"])+"'"+ " WHERE ID="+str(proj['ID'])+";"
-            print(updateProjectstatus)
-            #print "============"
-            dbcursor_comp.execute(updateProjectstatus)
-            dbcnx_comp.commit()
+            if (proj["Tested"]!=100 and proj["Tested"]!=21 and proj["Tested"]!=41 and proj["Tested"]!=40 and proj["Tested"]!=400 and proj["Tested"]!=20):
+                updateProjectStatus_tobundle_q="Update Project Set Tested=20 where ID="+str(proj['ID'])+";"
+                dbcursor_comp.execute(updateProjectStatus_tobundle_q)
+                dbcnx_comp.commit()
+            ##inputdir= proj["OutputLocation"].replace("/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/","/work/halld/gluex_simulations/REQUESTED_MC/")
+            #inputdir= proj["OutputLocation"].replace("/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/","/work/test-xrootd/gluex/mcwrap/REQUESTEDMC_OUTPUT/")
+            #outputlocation="/".join(proj["OutputLocation"].split("/")[:-1])+"/"
+            ##outputlocation="/lustre19/expphy/cache/halld/gluex_simulations/MERGED_MC/"+inputdir.replace("/work/halld/gluex_simulations/REQUESTED_MC/","")+"/"
+            #print("BundleFiles("+inputdir+","+outputlocation+")")
+            #mkdircommand="ssh dtn1902 mkdir -p "+outputlocation
+            #print(mkdircommand)
+            #subprocess.call(mkdircommand.split(" "))
+            ##close the connection to the database while we run the bundle files
+            #dbcnx_comp.close()
+            #out=BundleFiles(inputdir,outputlocation)
+            #print("final output",out)
+            
+            #if out == "ERROR":
+            #    dbcnx_comp=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
+            #    dbcursor_comp=dbcnx_comp.cursor(MySQLdb.cursors.DictCursor)
+            #    continue
+            if proj["Tested"]==100:
+                del_comm="touch "+str(proj['ID'])+"; xrdcp "+str(proj['ID'])+" xroots://dtn-gluex.jlab.org//gluex/mcwrap/to_be_scrubbed/; rm "+str(proj['ID'])
+                print(del_comm)
+                try:
+                    subprocess.call(del_comm,shell=True)
+                except Exception as e:
+                    print(e)
+                    pass
+                dbcnx_comp=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
+                dbcursor_comp=dbcnx_comp.cursor(MySQLdb.cursors.DictCursor)
+                getFinalCompleteTime="SELECT MAX(Completed_Time) FROM Attempts WHERE Job_ID IN (SELECT ID FROM Jobs WHERE Project_ID="+str(proj['ID'])+");"
+                print(getFinalCompleteTime)
 
-            #print "echo 'Your Project ID "+str(proj['ID'])+" has been completed.  Output may be found:\n"+proj['OutputLocation']+"' | mail -s 'GlueX MC Request #"+str(proj['ID'])+" Completed' "+str(proj['Email'])
-            msg = EmailMessage()
-            msg.set_content('Your Project ID '+str(proj['ID'])+' has been completed.  Output may be found here:\n'+str(proj['OutputLocation']))
+                dbcursor_comp.execute(getFinalCompleteTime)
+                finalTimeRes=dbcursor_comp.fetchall()
+                #print "============"
+                print("Final Time", finalTimeRes[0]["MAX(Completed_Time)"])
+                updateProjectstatus="UPDATE Project SET Completed_Time="+"'"+str(finalTimeRes[0]["MAX(Completed_Time)"])+"',Tested=1"+ " WHERE ID="+str(proj['ID'])+";"
+                print(updateProjectstatus)
+                #print "============"
+                dbcursor_comp.execute(updateProjectstatus)
+                dbcnx_comp.commit()
 
-            # me == the sender's email address                                                                                                                                                                                 
-            # you == the recipient's email address                                                                                                                                                                             
-            msg['Subject'] = 'GlueX MC Request #'+str(proj['ID'])+' Completed'
-            msg['From'] = 'MCwrapper-bot'
-            msg['To'] = str(proj['Email'])
+                #print "echo 'Your Project ID "+str(proj['ID'])+" has been completed.  Output may be found:\n"+proj['OutputLocation']+"' | mail -s 'GlueX MC Request #"+str(proj['ID'])+" Completed' "+str(proj['Email'])
+                msg = EmailMessage()
+                msg.set_content('Your Project ID '+str(proj['ID'])+' has been completed.  Output may be found here:\n'+str(proj['OutputLocation']))
 
-            # Send the message via our own SMTP server.                                                                                                                                                                        
-            s = smtplib.SMTP('localhost')
-            s.send_message(msg)
-            s.quit()
-            #subprocess.call("echo 'Your Project ID "+str(proj['ID'])+" has been completed.  Output may be found here:\n"+proj['OutputLocation']+"' | mail -s 'GlueX MC Request #"+str(proj['ID'], "utf-8")+" Completed' "+str(proj['Email'], "utf-8"),shell=True)
-            sql_notified = "UPDATE Project Set Notified=1 WHERE ID="+str(proj['ID'])
-            dbcursor_comp.execute(sql_notified)
-            dbcnx_comp.commit()
+                # me == the sender's email address                                                                                                                                                                                 
+                # you == the recipient's email address                                                                                                                                                                             
+                msg['Subject'] = 'GlueX MC Request #'+str(proj['ID'])+' Completed'
+                msg['From'] = 'MCwrapper-bot'
+                msg['To'] = str(proj['Email'])
 
-            #clean up empty directories
-            data_location=outdir_root+rootLoc
-            print("Data Location:",data_location)
-            print("Cleaning up empty folders")
-            recursivermdir(data_location)
+                # Send the message via our own SMTP server.                                                                                                                                                                        
+                s = smtplib.SMTP('localhost')
+                s.send_message(msg)
+                s.quit()
+                #subprocess.call("echo 'Your Project ID "+str(proj['ID'])+" has been completed.  Output may be found here:\n"+proj['OutputLocation']+"' | mail -s 'GlueX MC Request #"+str(proj['ID'], "utf-8")+" Completed' "+str(proj['Email'], "utf-8"),shell=True)
+                sql_notified = "UPDATE Project Set Notified=1 WHERE ID="+str(proj['ID'])
+                dbcursor_comp.execute(sql_notified)
+                dbcnx_comp.commit()
+
+                #clean up empty directories
+                data_location=outdir_root+rootLoc
+                print("Data Location:",data_location)
+                print("Cleaning up empty folders")
+                recursivermdir(data_location)
         else:
             #print("ELSE")
             #print(proj['ID'])
@@ -920,11 +975,17 @@ def array_split(lst,n):
     return to_return
 
 def main(argv):
+        try:
+            dbcnx=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
+            dbcursor=dbcnx.cursor(MySQLdb.cursors.DictCursor)
+        except:
+            print("WARNING: CANNOT CONNECT TO DATABASE.  JOBS WILL NOT BE CONTROLLED OR MONITORED")
+            pass
 
         runnum=0
         runmax=-1
-        spawnNum=10
-        comp_spawnnum=1
+        maxspawnNum=20
+        comp_spawnnum=4
         numOverRide=False
 
         if(len(argv) !=0):
@@ -947,10 +1008,22 @@ def main(argv):
                     print(queryosgjobs)
                     dbcursor.execute(queryosgjobs)
                     Alljobs = list(dbcursor.fetchall())
+                    #Alljobs=Alljobs[:spawnNum]
                     #print(Alljobs[:5])
                     random.shuffle(Alljobs)
                     #print(Alljobs[:5])
+                    length_limit=50000
+                    if(len(Alljobs)>length_limit):
+                        Alljobs=Alljobs[:length_limit]
+
                     if(len(Alljobs) !=0 ):
+                        target_amount=250
+                        #take the floor of len(Alljobs)/target_amount
+                        print(len(Alljobs),target_amount,maxspawnNum)
+                        if(len(Alljobs)<target_amount):
+                            target_amount=int(len(Alljobs)/5)
+                        spawnNum=min(int(len(Alljobs)/target_amount),maxspawnNum)
+                        #find the min between spawnNum and reduced
 
                         Monitoring_assignments=array_split(Alljobs,spawnNum)
                         spawns=[]
@@ -968,7 +1041,7 @@ def main(argv):
 
                         for i in range(0,len(spawns)):
                             #print("join "+str(i))
-                            time.sleep(random.randint(1,spawnNum))
+                            time.sleep(random.randint(1,spawnNum)/1000.0)
                             spawns[i].start()
 
                         #time.sleep(2)
@@ -992,8 +1065,19 @@ def main(argv):
                     
                     OutstandingProjectsQuery="SELECT * FROM Project WHERE (Is_Dispatched != '0' && Tested != '-1' && Tested != '2' ) && Notified is NULL"
                     print(OutstandingProjectsQuery)
-                    dbcursor.execute(OutstandingProjectsQuery)
-                    OutstandingProjects=dbcursor.fetchall()
+                    try:
+                        dbcursor.execute(OutstandingProjectsQuery)
+                        OutstandingProjects=dbcursor.fetchall()
+                    except:
+                        print("DB connection died. Re-establish and try again.")
+                        try:
+                            dbcnx=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
+                            dbcursor=dbcnx.cursor(MySQLdb.cursors.DictCursor)
+                            dbcursor.execute(OutstandingProjectsQuery)
+                            OutstandingProjects=dbcursor.fetchall()
+                        except:
+                            print("WARNING: CANNOT CONNECT TO DATABASE.  JOBS WILL NOT BE CONTROLLED OR MONITORED")
+                            pass
 
                     for proj in OutstandingProjects:
                         print("to check",proj["ID"])

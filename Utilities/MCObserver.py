@@ -33,6 +33,7 @@ import sys
 import re
 import subprocess
 from subprocess import call
+from subprocess import Popen, PIPE
 import socket
 import glob
 import json
@@ -84,12 +85,38 @@ def CheckForFile(rootLoc,expFile):
     if(parse_expFile[len(parse_expFile)-1]=="root"):
         subloc="root/monitoring_hists"
 
+    os.environ["BEARER_TOKEN_FILE"]="/var/run/user/10967/bt_u10967"
+    os.environ["XDG_RUNTIME_DIR"]="/run/user/10967"
+                
+    token_str='eval `ssh-agent`; /usr/bin/ssh-add;'
+    agent_kill_str="; ssh-agent -k"
+    XROOTD_OUTPUT_ROOT="/gluex/mcwrap/REQUESTEDMC_OUTPUT/"
+    XROOTD_SERVER="dtn-gluex.jlab.org"
+    xrd_file_check="/usr/bin/xrdfs "+XROOTD_SERVER+" ls "+XROOTD_OUTPUT_ROOT+rootLoc+"/"+subloc+"/"+expFile
+
+    print(token_str+xrd_file_check+agent_kill_str)
+    my_env=os.environ.copy()
+
+    p = Popen(token_str+xrd_file_check+agent_kill_str, env=my_env ,stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True,close_fds=True)
+    output, errors = p.communicate()
+
+    print("check for file:",xrd_file_check)
+    #print("output:",output)
+    #print("errors:",errors)
+
+    xrd_found=False
+
+    if "Unable to locate" not in str(errors, 'utf-8') and XROOTD_OUTPUT_ROOT+rootLoc+"/"+subloc+"/"+expFile in str(output, 'utf-8'):
+        print("FILE FOUND VIA XROOTD")
+        xrd_found=True
 
     #if(os.path.isfile('/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/'+rootLoc+"/"+subloc+"/"+expFile) or os.path.isfile('/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) or os.path.isfile('/mss/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) ):
-    if(os.path.isfile('/osgpool/halld/'+runner_name+'/REQUESTEDMC_OUTPUT/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote(runner_name+'@dtn1902','/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote(runner_name+'@dtn1902','/mss/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote(runner_name+'@dtn1902','/work/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) ):
+    if(os.path.isfile('/osgpool/halld/'+runner_name+'/REQUESTEDMC_OUTPUT/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote(runner_name+'@dtn1902','/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote(runner_name+'@dtn1902','/mss/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote(runner_name+'@dtn1902','/work/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) or xrd_found):
         found=True
     else:
         print(rootLoc+"/"+subloc+"/"+expFile+"   NOT FOUND")
+
+    print("File found?",found)
     return found
 
 
