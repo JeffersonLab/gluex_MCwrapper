@@ -77,6 +77,10 @@ setenv GEN_MIN_ENERGY $1
 shift
 setenv GEN_MAX_ENERGY $1
 shift
+setenv UPPER_VERTEX_INDICES $1
+shift
+setenv LOWER_VERTEX_INDICES $1
+shift
 setenv TAGSTR $1
 shift
 setenv CUSTOM_PLUGINS $1
@@ -477,6 +481,7 @@ echo "Electron beam energy to use: "$eBEAM_ENERGY" GeV"
 echo "Radiator Thickness to use: "$radthick" m"
 echo "Collimator Diameter: 0.00"$colsize" m"
 echo "Photon Energy between "$GEN_MIN_ENERGY" and "$GEN_MAX_ENERGY" GeV"
+echo "Upper / Lower vertex indices are "$UPPER_VERTEX_INDICES" and "$LOWER_VERTEX_INDICES
 echo "Polarization Angle: "$polarization_angle "degrees"
 echo "Coherent Peak position: "$COHERENT_PEAK
 echo "----------------------------------------------"
@@ -682,9 +687,9 @@ if ( "$GENR" != "0" ) then
 
     set gen_pre=`echo $GENERATOR | cut -c1-4`
 
-    if ( "$gen_pre" != "file" && "$GENERATOR" != "genr8" && "$GENERATOR" != "bggen" && "$GENERATOR" != "genEtaRegge" && "$GENERATOR" != "gen_2pi_amp" && "$GENERATOR" != "gen_pi0" && "$GENERATOR" != "gen_2pi_primakoff" && "$GENERATOR" != "gen_2pi0_primakoff" && "$GENERATOR" != "gen_omega_3pi" && "$GENERATOR" != "gen_omegapi" && "$GENERATOR" != "gen_2k" && "$GENERATOR" != "bggen_jpsi" && "$GENERATOR" != "gen_ee" && "$GENERATOR" != "gen_ee_hb" && "$GENERATOR" != "particle_gun" && "$GENERATOR" != "geantBEAM" && "$GENERATOR" != "bggen_phi_ee" && "$GENERATOR" != "genBH" && "$GENERATOR" != "gen_omega_radiative" && "$GENERATOR" != "gen_amp" && "$GENERATOR" != "genr8_new" && "$GENERATOR" != "gen_compton" && "$GENERATOR" != "gen_npi" && "$GENERATOR" != "gen_compton_simple" && "$GENERATOR" != "gen_primex_eta_he4" && "$GENERATOR" != "gen_whizard" && "$GENERATOR" != "mc_gen" && "$GENERATOR" != "gen_vec_ps"  && "$GENERATOR" != "bggen_upd" && "$GENERATOR" != "python" ) then
+    if ( "$gen_pre" != "file" && "$GENERATOR" != "genr8" && "$GENERATOR" != "bggen" && "$GENERATOR" != "genEtaRegge" && "$GENERATOR" != "gen_2pi_amp" && "$GENERATOR" != "gen_pi0" && "$GENERATOR" != "gen_2pi_primakoff" && "$GENERATOR" != "gen_2pi0_primakoff" && "$GENERATOR" != "gen_omega_3pi" && "$GENERATOR" != "gen_omegapi" && "$GENERATOR" != "gen_2k" && "$GENERATOR" != "bggen_jpsi" && "$GENERATOR" != "gen_ee" && "$GENERATOR" != "gen_ee_hb" && "$GENERATOR" != "particle_gun" && "$GENERATOR" != "geantBEAM" && "$GENERATOR" != "bggen_phi_ee" && "$GENERATOR" != "genBH" && "$GENERATOR" != "gen_omega_radiative" && "$GENERATOR" != "gen_amp" && "$GENERATOR" != "gen_amp_V2" && "$GENERATOR" != "genr8_new" && "$GENERATOR" != "gen_compton" && "$GENERATOR" != "gen_npi" && "$GENERATOR" != "gen_compton_simple" && "$GENERATOR" != "gen_primex_eta_he4" && "$GENERATOR" != "gen_whizard" && "$GENERATOR" != "mc_gen" && "$GENERATOR" != "gen_vec_ps"  && "$GENERATOR" != "bggen_upd"  && "$GENERATOR" != "python") then
 		echo "NO VALID GENERATOR GIVEN"
-		echo "only [genr8, bggen, genEtaRegge, gen_2pi_amp, gen_pi0, gen_omega_3pi, gen_2k, bggen_jpsi, gen_ee , gen_ee_hb, bggen_phi_ee, particle_gun, geantBEAM, genBH, gen_omega_radiative, gen_amp, gen_compton, gen_npi, gen_compton_simple, gen_primex_eta_he4, gen_whizard, gen_omegapi, mc_gen, gen_vec_ps, bggen_upd, python] are supported"
+		echo "only [genr8, bggen, genEtaRegge, gen_2pi_amp, gen_pi0, gen_omega_3pi, gen_2k, bggen_jpsi, gen_ee , gen_ee_hb, bggen_phi_ee, particle_gun, geantBEAM, genBH, gen_omega_radiative, gen_amp, gen_amp_V2, gen_compton, gen_npi, gen_compton_simple, gen_primex_eta_he4, gen_whizard, gen_omegapi, mc_gen, gen_vec_ps, bggen_upd, python] are supported"
 		echo "something went wrong with initialization"
 		exit 1
     endif
@@ -838,6 +843,10 @@ if ( "$GENR" != "0" ) then
 		echo "configuring gen_amp"
 		set STANDARD_NAME="gen_amp_"$STANDARD_NAME
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
+    else if ( "$GENERATOR" == "gen_amp_V2") then
+		echo "configuring gen_amp_V2"
+		set STANDARD_NAME="gen_amp_V2_"$STANDARD_NAME
+		cp $CONFIG_FILE ./$STANDARD_NAME.conf      
     else if ( "$GENERATOR" == "gen_2pi_amp" ) then
 		echo "configuring gen_2pi_amp"
 		set STANDARD_NAME="gen_2pi_amp_"$STANDARD_NAME
@@ -1022,6 +1031,23 @@ if ( "$GENR" != "0" ) then
 		echo $optionals_line
 		echo gen_amp -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY  $optionals_line
 		gen_amp -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
+		set generator_return_code=$status
+	else if ( "$GENERATOR" == "gen_amp_V2" ) then
+		echo "RUNNING GEN_AMP_V2"
+		set optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
+
+                sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
+                if ( "$polarization_angle" == "-1.0" ) then
+                        sed -i 's/TEMPPOLFRAC/'0'/' $STANDARD_NAME.conf
+                        sed -i 's/TEMPPOLANGLE/'0'/' $STANDARD_NAME.conf
+                else
+                        sed -i 's/TEMPPOLFRAC/'.4'/' $STANDARD_NAME.conf
+                        sed -i 's/TEMPPOLANGLE/'$polarization_angle'/' $STANDARD_NAME.conf
+                endif
+
+		echo $optionals_line
+		echo gen_amp_V2 -ac $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -uv $UPPER_VERTEX_INDICES -lv $LOWER_VERTEX_INDICES -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
+		gen_amp_V2 -ac $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -uv $UPPER_VERTEX_INDICES -lv $LOWER_VERTEX_INDICES -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
 		set generator_return_code=$status
 	else if ( "$GENERATOR" == "mc_gen" ) then
 		echo "RUNNING MC_GEN"
