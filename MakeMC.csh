@@ -1257,15 +1257,15 @@ if ( "$GENR" != "0" ) then
 
 		if ( grep -q "C EELEC" $STANDARD_NAME.conf ) then
     		sed -i 's/EELEC/C EELEC/g' run_mcwrapper.ffr
-		fi
+		endif
 
 		if ( grep -q "C EPEAK" $STANDARD_NAME.conf ) then
     		sed -i 's/EPEAK/C EPEAK/g' run_mcwrapper.ffr
-		fi
+		endif
 
 		if ( grep -q "C DCOLLIM" $STANDARD_NAME.conf ) then
     		sed -i 's/DCOLLIM/C DCOLLIM/g' run_mcwrapper.ffr
-		fi
+		endif
 
 		ln -s $STANDARD_NAME.conf fort.15
         ln -s particles.ffr fort.16
