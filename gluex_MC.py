@@ -1040,6 +1040,9 @@ def main(argv):
         POL_HIST="unset"
         MIN_GEN_ENERGY="3"
         MAX_GEN_ENERGY="12"
+	UPPER_VERTEX_INDICES="unset"
+	LOWER_VERTEX_INDICES="unset"
+
         RADIATOR_THICKNESS="rcdb"
         BGRATE="rcdb" #GHz
         BGTAGONLY="0"
