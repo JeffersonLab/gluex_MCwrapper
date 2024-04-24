@@ -950,7 +950,7 @@ def calcFluxCCDB(ccdb_conn, run, emin, emax):
                 print("Missing flux for run number = %d, skipping generation" % run[0])
                 return -1.0
 
-	# sum untagged flux
+        # sum untagged flux
         for tagh_flux, tagh_scaled_energy in zip(tagh_untagged_flux, tagh_scaled_energy_table):
                 tagh_energy = float(photon_endpoint[0][0])*(float(tagh_scaled_energy[1])+float(tagh_scaled_energy[2]))/2.
 
@@ -1040,8 +1040,8 @@ def main(argv):
         POL_HIST="unset"
         MIN_GEN_ENERGY="3"
         MAX_GEN_ENERGY="12"
-	UPPER_VERTEX_INDICES="unset"
-	LOWER_VERTEX_INDICES="unset"
+        UPPER_VERTEX_INDICES="unset"
+        LOWER_VERTEX_INDICES="unset"
 
         RADIATOR_THICKNESS="rcdb"
         BGRATE="rcdb" #GHz
@@ -1257,9 +1257,9 @@ def main(argv):
                         MIN_GEN_ENERGY=rm_comments[0].strip()
                 elif str(parts[0]).upper()=="GEN_MAX_ENERGY" :
                         MAX_GEN_ENERGY=rm_comments[0].strip()
-		elif str(parts[0]).upper()=="UPPER_VERTEX_INDICES" :
-			UPPER_VERTEX_INDICES=rm_comments[0].strip()
-		elif str(parts[0]).upper()=="LOWER_VERTEX_INDICES" :
+                elif str(parts[0]).upper()=="UPPER_VERTEX_INDICES" :
+                        UPPER_VERTEX_INDICES=rm_comments[0].strip()
+                elif str(parts[0]).upper()=="LOWER_VERTEX_INDICES" :
                         LOWER_VERTEX_INDICES=rm_comments[0].strip()
                 elif str(parts[0]).upper()=="TAG" :
                         TAGSTR=rm_comments[0].strip()
@@ -1517,8 +1517,8 @@ def main(argv):
         COMMAND_dict['coherent_peak']=str(COHERENT_PEAK)
         COMMAND_dict['min_generator_energy']=str(MIN_GEN_ENERGY)
         COMMAND_dict['max_generator_energy']=str(MAX_GEN_ENERGY)
-	COMMAND_dict['upper_vertex_indices']=str(UPPER_VERTEX_INDICES)
-	COMMAND_dict['lower_vertex_indices']=str(LOWER_VERTEX_INDICES)
+        COMMAND_dict['upper_vertex_indices']=str(UPPER_VERTEX_INDICES)
+        COMMAND_dict['lower_vertex_indices']=str(LOWER_VERTEX_INDICES)
         COMMAND_dict['custom_tag_string']=str(TAGSTR)
         COMMAND_dict['custom_plugins']=str(CUSTOM_PLUGINS)
         COMMAND_dict['custom_ana_plugins']=str(CUSTOM_ANA_PLUGINS)
