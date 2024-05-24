@@ -877,9 +877,9 @@ def recordAttempt(JOB_ID,RUNNO,FILENO,BatchSYS,BatchJobID, NUMEVTS,NCORES, RAM):
 #====================================================
 def getCommandString(COMMAND,USER,numbundled=1):
         if(USER=="OSG" and numbundled!=1):
-                return COMMAND['batchrun']+" "+COMMAND['environment_file']+" "+COMMAND['ana_environment_file']+" "+COMMAND['generator_config']+" "+COMMAND['output_directory']+" "+COMMAND['run_number']+" "+"$(Process)"+" "+COMMAND['num_events']+" "+COMMAND['jana_calib_context']+" "+COMMAND['jana_calibtime']+" "+COMMAND['do_gen']+" "+COMMAND['do_geant']+" "+COMMAND['do_mcsmear']+" "+COMMAND['do_recon']+" "+COMMAND['clean_gen']+" "+COMMAND['clean_geant']+" "+COMMAND['clean_mcsmear']+" "+COMMAND['clean_recon']+" "+COMMAND['batch_system']+" "+COMMAND['num_cores']+" "+COMMAND['generator']+" "+COMMAND['geant_version']+" "+COMMAND['background_to_include']+" "+COMMAND['custom_Gcontrol']+" "+COMMAND['eBeam_energy']+" "+COMMAND['coherent_peak']+" "+COMMAND['min_generator_energy']+" "+COMMAND['max_generator_energy']+" "+COMMAND['custom_tag_string']+" "+COMMAND['custom_plugins']+" "+COMMAND['custom_ana_plugins']+" "+COMMAND['events_per_file']+" "+COMMAND['running_directory']+" "+COMMAND['ccdb_sqlite_path']+" "+COMMAND['rcdb_sqlite_path']+" "+COMMAND['background_tagger_only']+" "+COMMAND['radiator_thickness']+" "+COMMAND['background_rate']+" "+COMMAND['random_background_tag']+" "+COMMAND['recon_calibtime']+" "+COMMAND['no_geant_secondaries']+" "+COMMAND['mcwrapper_version']+" "+COMMAND['no_bcal_sipm_saturation']+" "+COMMAND['flux_to_generate']+" "+COMMAND['flux_histogram']+" "+COMMAND['polarization_to_generate']+" "+COMMAND['polarization_histogram']+" "+COMMAND['eBeam_current']+" "+COMMAND['experiment']+" "+COMMAND['num_rand_trigs']+" "+COMMAND['location']+" "+COMMAND['generator_post']+" "+COMMAND['generator_post_config']+" "+COMMAND['generator_post_configevt']+" "+COMMAND['generator_post_configdec']+" "+COMMAND['geant_vertex_area']+" "+COMMAND['geant_vertex_length']+" "+COMMAND['mcsmear_notag']+" "+COMMAND['project_directory_name']
+                return COMMAND['batchrun']+" "+COMMAND['environment_file']+" "+COMMAND['ana_environment_file']+" "+COMMAND['generator_config']+" "+COMMAND['output_directory']+" "+COMMAND['run_number']+" "+"$(Process)"+" "+COMMAND['num_events']+" "+COMMAND['jana_calib_context']+" "+COMMAND['jana_calibtime']+" "+COMMAND['do_gen']+" "+COMMAND['do_geant']+" "+COMMAND['do_mcsmear']+" "+COMMAND['do_recon']+" "+COMMAND['clean_gen']+" "+COMMAND['clean_geant']+" "+COMMAND['clean_mcsmear']+" "+COMMAND['clean_recon']+" "+COMMAND['batch_system']+" "+COMMAND['num_cores']+" "+COMMAND['generator']+" "+COMMAND['geant_version']+" "+COMMAND['background_to_include']+" "+COMMAND['custom_Gcontrol']+" "+COMMAND['eBeam_energy']+" "+COMMAND['coherent_peak']+" "+COMMAND['min_generator_energy']+" "+COMMAND['max_generator_energy']+" "+COMMAND['upper_vertex_indices']+" "+COMMAND['lower_vertex_indices']+" "+COMMAND['custom_tag_string']+" "+COMMAND['custom_plugins']+" "+COMMAND['custom_ana_plugins']+" "+COMMAND['events_per_file']+" "+COMMAND['running_directory']+" "+COMMAND['ccdb_sqlite_path']+" "+COMMAND['rcdb_sqlite_path']+" "+COMMAND['background_tagger_only']+" "+COMMAND['radiator_thickness']+" "+COMMAND['background_rate']+" "+COMMAND['random_background_tag']+" "+COMMAND['recon_calibtime']+" "+COMMAND['no_geant_secondaries']+" "+COMMAND['mcwrapper_version']+" "+COMMAND['no_bcal_sipm_saturation']+" "+COMMAND['flux_to_generate']+" "+COMMAND['flux_histogram']+" "+COMMAND['polarization_to_generate']+" "+COMMAND['polarization_histogram']+" "+COMMAND['eBeam_current']+" "+COMMAND['experiment']+" "+COMMAND['num_rand_trigs']+" "+COMMAND['location']+" "+COMMAND['generator_post']+" "+COMMAND['generator_post_config']+" "+COMMAND['generator_post_configevt']+" "+COMMAND['generator_post_configdec']+" "+COMMAND['geant_vertex_area']+" "+COMMAND['geant_vertex_length']+" "+COMMAND['mcsmear_notag']+" "+COMMAND['project_directory_name']
         else:
-                return COMMAND['batchrun']+" "+COMMAND['environment_file']+" "+COMMAND['ana_environment_file']+" "+COMMAND['generator_config']+" "+COMMAND['output_directory']+" "+COMMAND['run_number']+" "+COMMAND['file_number']+" "+COMMAND['num_events']+" "+COMMAND['jana_calib_context']+" "+COMMAND['jana_calibtime']+" "+COMMAND['do_gen']+" "+COMMAND['do_geant']+" "+COMMAND['do_mcsmear']+" "+COMMAND['do_recon']+" "+COMMAND['clean_gen']+" "+COMMAND['clean_geant']+" "+COMMAND['clean_mcsmear']+" "+COMMAND['clean_recon']+" "+COMMAND['batch_system']+" "+COMMAND['num_cores']+" "+COMMAND['generator']+" "+COMMAND['geant_version']+" "+COMMAND['background_to_include']+" "+COMMAND['custom_Gcontrol']+" "+COMMAND['eBeam_energy']+" "+COMMAND['coherent_peak']+" "+COMMAND['min_generator_energy']+" "+COMMAND['max_generator_energy']+" "+COMMAND['custom_tag_string']+" "+COMMAND['custom_plugins']+" "+COMMAND['custom_ana_plugins']+" "+COMMAND['events_per_file']+" "+COMMAND['running_directory']+" "+COMMAND['ccdb_sqlite_path']+" "+COMMAND['rcdb_sqlite_path']+" "+COMMAND['background_tagger_only']+" "+COMMAND['radiator_thickness']+" "+COMMAND['background_rate']+" "+COMMAND['random_background_tag']+" "+COMMAND['recon_calibtime']+" "+COMMAND['no_geant_secondaries']+" "+COMMAND['mcwrapper_version']+" "+COMMAND['no_bcal_sipm_saturation']+" "+COMMAND['flux_to_generate']+" "+COMMAND['flux_histogram']+" "+COMMAND['polarization_to_generate']+" "+COMMAND['polarization_histogram']+" "+COMMAND['eBeam_current']+" "+COMMAND['experiment']+" "+COMMAND['num_rand_trigs']+" "+COMMAND['location']+" "+COMMAND['generator_post']+" "+COMMAND['generator_post_config']+" "+COMMAND['generator_post_configevt']+" "+COMMAND['generator_post_configdec']+" "+COMMAND['geant_vertex_area']+" "+COMMAND['geant_vertex_length']+" "+COMMAND['mcsmear_notag']+" "+COMMAND['project_directory_name']
+                return COMMAND['batchrun']+" "+COMMAND['environment_file']+" "+COMMAND['ana_environment_file']+" "+COMMAND['generator_config']+" "+COMMAND['output_directory']+" "+COMMAND['run_number']+" "+COMMAND['file_number']+" "+COMMAND['num_events']+" "+COMMAND['jana_calib_context']+" "+COMMAND['jana_calibtime']+" "+COMMAND['do_gen']+" "+COMMAND['do_geant']+" "+COMMAND['do_mcsmear']+" "+COMMAND['do_recon']+" "+COMMAND['clean_gen']+" "+COMMAND['clean_geant']+" "+COMMAND['clean_mcsmear']+" "+COMMAND['clean_recon']+" "+COMMAND['batch_system']+" "+COMMAND['num_cores']+" "+COMMAND['generator']+" "+COMMAND['geant_version']+" "+COMMAND['background_to_include']+" "+COMMAND['custom_Gcontrol']+" "+COMMAND['eBeam_energy']+" "+COMMAND['coherent_peak']+" "+COMMAND['min_generator_energy']+" "+COMMAND['max_generator_energy']+" "+COMMAND['upper_vertex_indices']+" "+COMMAND['lower_vertex_indices']+" "+COMMAND['custom_tag_string']+" "+COMMAND['custom_plugins']+" "+COMMAND['custom_ana_plugins']+" "+COMMAND['events_per_file']+" "+COMMAND['running_directory']+" "+COMMAND['ccdb_sqlite_path']+" "+COMMAND['rcdb_sqlite_path']+" "+COMMAND['background_tagger_only']+" "+COMMAND['radiator_thickness']+" "+COMMAND['background_rate']+" "+COMMAND['random_background_tag']+" "+COMMAND['recon_calibtime']+" "+COMMAND['no_geant_secondaries']+" "+COMMAND['mcwrapper_version']+" "+COMMAND['no_bcal_sipm_saturation']+" "+COMMAND['flux_to_generate']+" "+COMMAND['flux_histogram']+" "+COMMAND['polarization_to_generate']+" "+COMMAND['polarization_histogram']+" "+COMMAND['eBeam_current']+" "+COMMAND['experiment']+" "+COMMAND['num_rand_trigs']+" "+COMMAND['location']+" "+COMMAND['generator_post']+" "+COMMAND['generator_post_config']+" "+COMMAND['generator_post_configevt']+" "+COMMAND['generator_post_configdec']+" "+COMMAND['geant_vertex_area']+" "+COMMAND['geant_vertex_length']+" "+COMMAND['mcsmear_notag']+" "+COMMAND['project_directory_name']
 def LoadCCDB():
         sqlite_connect_str = "mysql://ccdb_user@hallddb.jlab.org/ccdb"
         provider = ccdb.AlchemyProvider()                           # this class has all CCDB manipulation functions
@@ -950,7 +950,7 @@ def calcFluxCCDB(ccdb_conn, run, emin, emax):
                 print("Missing flux for run number = %d, skipping generation" % run[0])
                 return -1.0
 
-	# sum untagged flux
+        # sum untagged flux
         for tagh_flux, tagh_scaled_energy in zip(tagh_untagged_flux, tagh_scaled_energy_table):
                 tagh_energy = float(photon_endpoint[0][0])*(float(tagh_scaled_energy[1])+float(tagh_scaled_energy[2]))/2.
 
@@ -1040,6 +1040,9 @@ def main(argv):
         POL_HIST="unset"
         MIN_GEN_ENERGY="3"
         MAX_GEN_ENERGY="12"
+        UPPER_VERTEX_INDICES="unset"
+        LOWER_VERTEX_INDICES="unset"
+
         RADIATOR_THICKNESS="rcdb"
         BGRATE="rcdb" #GHz
         BGTAGONLY="0"
@@ -1254,6 +1257,10 @@ def main(argv):
                         MIN_GEN_ENERGY=rm_comments[0].strip()
                 elif str(parts[0]).upper()=="GEN_MAX_ENERGY" :
                         MAX_GEN_ENERGY=rm_comments[0].strip()
+                elif str(parts[0]).upper()=="UPPER_VERTEX_INDICES" :
+                        UPPER_VERTEX_INDICES=rm_comments[0].strip()
+                elif str(parts[0]).upper()=="LOWER_VERTEX_INDICES" :
+                        LOWER_VERTEX_INDICES=rm_comments[0].strip()
                 elif str(parts[0]).upper()=="TAG" :
                         TAGSTR=rm_comments[0].strip()
                 elif str(parts[0]).upper()=="CUSTOM_PLUGINS" :
@@ -1510,6 +1517,8 @@ def main(argv):
         COMMAND_dict['coherent_peak']=str(COHERENT_PEAK)
         COMMAND_dict['min_generator_energy']=str(MIN_GEN_ENERGY)
         COMMAND_dict['max_generator_energy']=str(MAX_GEN_ENERGY)
+        COMMAND_dict['upper_vertex_indices']=str(UPPER_VERTEX_INDICES)
+        COMMAND_dict['lower_vertex_indices']=str(LOWER_VERTEX_INDICES)
         COMMAND_dict['custom_tag_string']=str(TAGSTR)
         COMMAND_dict['custom_plugins']=str(CUSTOM_PLUGINS)
         COMMAND_dict['custom_ana_plugins']=str(CUSTOM_ANA_PLUGINS)
