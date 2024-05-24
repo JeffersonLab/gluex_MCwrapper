@@ -548,6 +548,7 @@ def CheckGenConfig(order):
         #subprocess.call("rsync -ruvt ifarm1402:"+fileSTR+" "+copyTo,shell=True)
         print("Updating order gen config:",fileSTR,"------>",copyTo+str(ID)+"_"+name)
         order["Generator_Config"]=copyTo+str(ID)+"_"+name
+        print("new order config:",order["Generator_Config"])
         print("returning",copyTo+str(ID)+"_"+name)
         return copyTo+str(ID)+"_"+name
     elif(os.path.isfile(fileSTR)==True and (running_hostname == "scosg16.jlab.org" or running_hostname == "scosg20.jlab.org" or running_hostname=="scosg2201.jlab.org") ):
@@ -617,10 +618,15 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
     print(order["Generator_Config"])
     print("========================")
     print(newLoc)
+    update_q="Update Project Set Generator_Config=\""+newLoc+"\" where ID="+str(ID)+";"
+    print(update_q)
+    curs.execute(update_q)
+    conn.commit()
     if(newLoc!="True"):
         curs.execute(query) 
         rows=curs.fetchall()
         order=rows[0]
+        order["Generator_Config"]=newLoc
 
     already_passed_q="SELECT COUNT(*) from Jobs where Project_ID="+str(ID)
     curs.execute(already_passed_q)
@@ -843,12 +849,21 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
     #if output=="Dispatch_Failure" and errors=="Dispatch_Failure":
     #    status=[output,STATUS,errors]
     print("status:",status)
-    if(status[1]!=-1):
+    #read the Tested value from the DB
+    ProjTest_q="SELECT Tested from Project where ID="+str(row['ID'])
+    curs.execute(ProjTest_q) 
+    ProjTest_r=curs.fetchall()
+    Status_Check=ProjTest_r[0]['Tested']
+    if(Status_Check==1):
         #print "TEST success"
         #EMAIL SUCCESS AND DISPATCH
         print("YAY TESTED")
         print(MCWRAPPER_BOT_HOME+"/Utilities/MCDispatcher.py dispatch -rlim -sys OSG "+str(row['ID']))
         subprocess.call(MCWRAPPER_BOT_HOME+"/Utilities/MCDispatcher.py dispatch -rlim -sys OSG "+str(row['ID']),shell=True)
+    elif (Status_Check==0):
+        print("DB FAILED TO UPDATE WITH Status")
+        print("DB",Status_Check)
+        print("Test Status",status[1])
     else:
         #print("BOO TESTED")
         #EMAIL FAIL AND LOG
