@@ -163,6 +163,7 @@ endif
 
 
 setenv XRD_RANDOMS_URL root://sci-xrootd.jlab.org//osgpool/halld/
+#setenv XRD_RANDOMS_URL xroots://dtn-gluex.jlab.org//gluex/mcwrap/
 
 if ( "$MCWRAPPER_RUN_LOCATION" == "JLAB" || `hostname` =~ '*.jlab.org' ) then
 #	setenv XRD_RANDOMS_URL root://sci-xrootd-ib.qcd.jlab.org//osgpool/halld/
@@ -174,10 +175,12 @@ if ( -f /usr/lib64/libXrdPosixPreload.so && "$BKGFOLDSTR" != "None" ) then
 	setenv MAKE_MC_USING_XROOTD 1
 	setenv LD_PRELOAD /usr/lib64/libXrdPosixPreload.so
 	echo "XROOTD is available for use if needed..."
-	#set con_test=`ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm`
-	#echo `ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1`
+
 	if ( "$BKGFOLDSTR" == "Random" ) then
-		if ( `ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1` != "r" ) then
+		
+		set con_test=`ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1`
+
+		if ( $con_test != "r" ) then
 			echo "JLAB Connection test failed.  Falling back to UConn ...."
 			#echo "attempting to copy the needed file from an alternate source..."
 			setenv XRD_RANDOMS_URL root://nod25.phys.uconn.edu/Gluex/rawdata/
@@ -185,6 +188,9 @@ if ( -f /usr/lib64/libXrdPosixPreload.so && "$BKGFOLDSTR" != "None" ) then
 				echo "Cannot connect to the file.  Disabling xrootd...."
 				setenv MAKE_MC_USING_XROOTD 0
 			endif
+		#else
+		#	setenv XRD_RANDOMS_URL $XRD_RANDOMS_URL/gluex/mcwrap/
+
 		endif
 	endif
 
@@ -1846,8 +1852,8 @@ endif #close geantBEAM if
 
 				if ( "$CLEANSMEAR" == "1" && "$SMEAR" == "1" ) then
 		   		rm $STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm'
-		   		rm -rf smear.root
 				endif
+		   		rm -rf smear.root
 
 				if ( "$CLEANRECON" == "1" ) then
 		   		rm dana_rest*

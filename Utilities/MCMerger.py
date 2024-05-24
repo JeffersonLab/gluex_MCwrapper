@@ -57,28 +57,53 @@ def bash_root(name_map, path, mc_dir):
     if os.path.isfile(path.split("//")[0]+"/.bash_root"):
         print("Skipping bash_root step")
         return return_code
+    
+    checkpointpath = root_path + "/.checkpoints/root/"
 
     for dir_type in name_map.keys():
         print(f"Path: {path}    dir_type: {dir_type}")
         if not isinstance(dir_type,str):
             continue
         subprocess.run([f"mkdir -p {path + dir_type}"], shell=True)
+        subprocess.run([f"mkdir -p {checkpointpath + dir_type}"], shell=True)
         if dir_type == "trees":
             for tup in name_map["trees"].keys():
                 fold_name, suffix = tup[0], tup[1]
                 fold_name = fold_name.rstrip("_")
                 return_code += subprocess.run([f"mkdir {path + '/' + dir_type + '/' +  fold_name}"], shell=True).returncode
+                return_code += subprocess.run([f"mkdir {checkpointpath + '/' + dir_type + '/' +  fold_name}"], shell=True).returncode
                 for run in name_map["trees"][tup]["run_nums"]:
+                    if os.path.isfile(checkpointpath + '/' + dir_type + '/' +  fold_name + '/' + tup[0] + run + tup[1] + '.done'):
+                        continue
                     success = subprocess.run([f"/home/mcwrap/tools/hadd -v 1 -f {path + '/' + dir_type + '/' +  fold_name + '/' + tup[0] + run + tup[1]} {mc_dir + '/' + 'root' + '/' +  dir_type + '/' + tup[0]+run}*{tup[1]}"], shell=True)
+                    # success = subprocess.run([f"hadd -v 1 -f {path + '/' + dir_type + '/' +  fold_name + '/' + tup[0] + run + tup[1]} {mc_dir + '/' + 'root' + '/' +  dir_type + '/' + tup[0]+run}*{tup[1]}"], shell=True)
                     return_code += success.returncode
-                    #if success.returncode == 0:
+                    if success.returncode == 0:
+                        open(checkpointpath + '/' + dir_type + '/' +  fold_name + '/' + tup[0] + run + tup[1] + '.done', 'a').close()
                      #   good_runs.append(run)
-        else:
+        elif dir_type == "monitoring_hists":
             subprocess.run([f"mkdir -p {path + dir_type}"] , shell=True)
+            subprocess.run([f"mkdir -p {checkpointpath + dir_type}"] , shell=True)
             for tup in name_map[dir_type].keys():
                 for run in name_map[dir_type][tup]["run_nums"]:
-                    success = subprocess.run([f"/home/mcwrap/tools/hadd -v 1 -f {path + '/' + dir_type + '/' +  tup[0] + run + tup[1]} {mc_dir + '/' + 'root' + '/' +  dir_type + '/' + tup[0]+run}*{tup[1]}"], shell=True)
+                    if os.path.isfile(checkpointpath + '/' + dir_type + '/' +  tup[0] + run + tup[1] + '.tar.done'):
+                        continue
+                    success = subprocess.run([f"tar cvf {path + '/' + dir_type + '/' +  tup[0] + run + tup[1]}.tar {mc_dir + '/' + 'root' + '/' +  dir_type + '/' + tup[0]+run}*{tup[1]}"], shell=True)
                     return_code += success.returncode
+                    if success.returncode == 0:
+                        open(checkpointpath + '/' + dir_type + '/' +  tup[0] + run + tup[1] + '.tar.done', 'a').close()
+        else:
+            subprocess.run([f"mkdir -p {path + dir_type}"] , shell=True)
+            subprocess.run([f"mkdir -p {checkpointpath + dir_type}"] , shell=True)
+            for tup in name_map[dir_type].keys():
+                for run in name_map[dir_type][tup]["run_nums"]:
+                    if os.path.isfile(checkpointpath + '/' + dir_type + '/' +  tup[0] + run + tup[1] + '.done'):
+                        continue
+                    success = subprocess.run([f"/home/mcwrap/tools/hadd -v 1 -f {path + '/' + dir_type + '/' +  tup[0] + run + tup[1]} {mc_dir + '/' + 'root' + '/' +  dir_type + '/' + tup[0]+run}*{tup[1]}"], shell=True)
+                    # success = subprocess.run([f"hadd -v 1 -f {path + '/' + dir_type + '/' +  tup[0] + run + tup[1]} {mc_dir + '/' + 'root' + '/' +  dir_type + '/' + tup[0]+run}*{tup[1]}"], shell=True)
+                    return_code += success.returncode
+                    if success.returncode == 0:
+                        open(checkpointpath + '/' + dir_type + '/' +  tup[0] + run + tup[1] + '.done', 'a').close()
 
     #if return_code=0 create empty file .bash_root in cwd directory
     if return_code==0:
@@ -95,14 +120,20 @@ def bash_hddm_merge(name_map, path, mc_dir):
     if os.path.isfile(path + dir_type+"/.bash_hddm_merge"):
         print("Skipping bash_hddm_merge step")
         return return_code
+    checkpointpath = path.split("//")[0] + "/.checkpoints/hddm/"
 
     MCWRAPPER_BOT_HOME="/scigroup/mcwrapper/gluex_MCwrapper/"
     subprocess.run([f"mkdir -p {path}"] , shell=True)
+    subprocess.run([f"mkdir -p {checkpointpath}"] , shell=True)
     for tup in name_map.keys():
         for run in name_map[tup]["run_nums"]:
             print(f"hddm add {run}",flush=True)
+            if os.path.isfile(checkpointpath + tup[0] + run + tup[1] + '.done'):
+                continue
             success =  subprocess.run([f"python2 "+MCWRAPPER_BOT_HOME+f"/Utilities/merge_hddm.py {path + tup[0] + run + tup[1]} {mc_dir + '/hddm/' + tup[0] + run}*{tup[1]}"], shell=True)
             return_code += success.returncode
+            if success.returncode == 0:
+                open(checkpointpath + tup[0] + run + tup[1] + '.done', 'a').close()
 
     if return_code==0:
         print("Creating .bash_hddm_merge file in "+path)
@@ -118,11 +149,19 @@ def bash_hddm(name_map, path, mc_dir):
         print("Skipping bash_hddm step")
         return return_code
 
+    checkpointpath = path.split("//")[0] + "/.checkpoints/hddm/"
+    print("Checkpoint path: ", checkpointpath)
+
     subprocess.run([f"mkdir -p {path}"] , shell=True)
+    subprocess.run([f"mkdir -p {checkpointpath}"] , shell=True)
     for tup in name_map.keys():
         for run in name_map[tup]["run_nums"]:
-            success = subprocess.run([f"tar cvf {path  + tup[0] + run + tup[1]}.tar {mc_dir + '/'  +  'hddm' + '/' +   tup[0] + run}_*{tup[1]}"], shell=True)
+            if os.path.isfile(checkpointpath + tup[0] + run + tup[1] + '.tar.done'):
+                continue
+            success = subprocess.run([f"tar cvf {path + tup[0] + run + tup[1]}.tar {mc_dir + '/'  +  'hddm' + '/' +   tup[0] + run}_*{tup[1]}"], shell=True)
             return_code += success.returncode
+            if success.returncode == 0:
+                open(checkpointpath + tup[0] + run + tup[1] + '.tar.done', 'a').close()
     
     if return_code==0:
         print("Creating .bash_hddm file in "+path)
@@ -140,12 +179,20 @@ def bash_configurations(name_map, path, mc_dir):
         print("Skipping bash_configurations step")
         return return_code
 
+    checkpointpath = path.split("//")[0] + "/.checkpoints/configurations/"
+    print("Checkpoint path: ", checkpointpath)
+
     for dir_type in name_map.keys():
         subprocess.run([f"mkdir -p {path + dir_type}"] , shell=True)
+        subprocess.run([f"mkdir -p {checkpointpath + dir_type}"] , shell=True)
         for tup in name_map[dir_type].keys():
             for run in name_map[dir_type][tup]["run_nums"]:
-                success = subprocess.run([f"tar cvf {path + '/' +  dir_type + '/' + tup[0] + run + tup[1]}.tar {mc_dir + '/' + 'configurations' + '/' +  dir_type + '/' +   tup[0] + run}_*{tup[1]}"], shell=True)
+                if os.path.isfile(checkpointpath + '/' + dir_type + '/' + tup[0] + run + tup[1] + '.tar.done'):
+                    continue
+                success = subprocess.run([f"tar cvf {path + '/' + dir_type + '/' + tup[0] + run + tup[1]}.tar {mc_dir + '/' + 'configurations' + '/' +  dir_type + '/' +   tup[0] + run}_*{tup[1]}"], shell=True)
                 return_code += success.returncode
+                if success.returncode == 0:
+                    open(checkpointpath + '/' + dir_type + '/' + tup[0] + run + tup[1] + '.tar.done', 'a').close()
     
     if return_code==0:
         print("Creating .bash_configurations file in "+path)
@@ -217,10 +264,12 @@ def bundle(name_map, mc_dir, temp_dir, hddm=False):
     return_code = 0
     if temp_dir is None:
         print("MC",mc_dir)
-        return_code += subprocess.run([f"cd {mc_dir}; rm -rf output; mkdir -p output"], shell=True).returncode
+        return_code += subprocess.run([f"cd {mc_dir}; mkdir -p output"], shell=True).returncode
+        return_code += subprocess.run([f"cd {mc_dir}; mkdir -p .checkpoints"], shell=True).returncode
     else:
         print("TEMP",temp_dir)
-        return_code += subprocess.run([f"cd {temp_dir}; rm -rf output; mkdir -p output"], shell=True).returncode
+        return_code += subprocess.run([f"cd {temp_dir}; mkdir -p output"], shell=True).returncode
+        return_code += subprocess.run([f"cd {temp_dir}; mkdir -p .checkpoints"], shell=True).returncode
     #else:
       #  return_code += subprocess.run([f"
 
