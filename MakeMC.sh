@@ -935,19 +935,19 @@ if [[ "$GENR" != "0" ]]; then
                 echo "configuring gen_gcf"
                 STANDARD_NAME="gen_gcf_"$STANDARD_NAME
                 cp $CONFIG_FILE ./$STANDARD_NAME.conf
-    else if ( "$GENERATOR" == "gen_ALP" ) then
+    elif [[ "$GENERATOR" == "gen_ALP" ]]; then
                 echo "configuring gen_ALP"
                 set STANDARD_NAME="gen_ALP_"$STANDARD_NAME
                 cp $CONFIG_FILE ./$STANDARD_NAME.conf
-    else if ( "$GENERATOR" == "gen_MF" ) then
+    elif [[ "$GENERATOR" == "gen_MF" ]]; then
                 echo "configuring gen_MF"
                 set STANDARD_NAME="gen_MF_"$STANDARD_NAME
                 cp $CONFIG_FILE ./$STANDARD_NAME.conf
-    else if ( "$GENERATOR" == "gen_jpsi_hc" ) then
+    elif [[ "$GENERATOR" == "gen_jpsi_hc" ]]; then
                 echo "configuring gen_jpsi_hc"
                 set STANDARD_NAME="gen_jpsi_hc_"$STANDARD_NAME
                 cp $CONFIG_FILE ./$STANDARD_NAME.conf
-    else if ( "$GENERATOR" == "genA" ) then
+    elif [[ "$GENERATOR" == "genA" ]]; then
                 echo "configuring genA"
                 set STANDARD_NAME="genA_"$STANDARD_NAME
                 cp $CONFIG_FILE ./$STANDARD_NAME.conf
