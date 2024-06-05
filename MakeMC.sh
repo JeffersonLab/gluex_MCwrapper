@@ -1,5 +1,9 @@
 #!/bin/bash
 
+if [[ $SINGULARITY_NAME != "" ]]; then
+	echo "RUNNING IN A SINGULARITY CONTAINER: "$SINGULARITY_NAME
+fi
+
 # SET INPUTS
 export BATCHRUN=$1
 shift
