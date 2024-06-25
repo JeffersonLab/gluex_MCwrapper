@@ -1,5 +1,9 @@
 #!/bin/bash
 
+if [[ $SINGULARITY_NAME != "" ]]; then
+	echo "RUNNING IN A SINGULARITY CONTAINER: "$SINGULARITY_NAME
+fi
+
 # SET INPUTS
 export BATCHRUN=$1
 shift
@@ -163,11 +167,13 @@ export XRD_RANDOMS_URL=root://sci-xrootd.jlab.org//osgpool/halld/
 export RANDOMS_PREPEND=""
 if [[ "$BATCHSYS" == "OSG" && "$BATCHRUN"=="1" ]]; then
 	export XRD_RANDOMS_URL=xroots://dtn-gluex.jlab.org/
-	export RANDOMS_PREPEND="gluex/mcwrap/"
+	export RANDOMS_PREPEND="/gluex/mcwrap/"
 fi
 
-if [[ "$MCWRAPPER_RUN_LOCATION" == "JLAB" || `hostname` == *'.jlab.org'* ]]; then
+if [[ ("$MCWRAPPER_RUN_LOCATION" == "JLAB" || `hostname` == *'.jlab.org'*) && "$BATCHSYS" != "slurmcont" ]]; then
 	#export XRD_RANDOMS_URL=root://sci-xrootd-ib.qcd.jlab.org//osgpool/halld/
+	echo "JLAB DETECTED RESETTING RUNNING DIR"
+	echo "changing "$RUNNING_DIR" to ./"
 	export RUNNING_DIR="./"
 fi
 
@@ -188,11 +194,13 @@ if [[ -f /usr/lib64/libXrdPosixPreload.so && "$BKGFOLDSTR" != "None" ]]; then
 		echo `ls $XRD_RANDOMS_URL/$RANDOMS_PREPEND/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm`
 		export con_test=`ls $XRD_RANDOMS_URL/$RANDOMS_PREPEND/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1`
 
-		export contest=`xrdfs $XRD_RANDOMS_URL ls $RANDOMS_PREPEND/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random2.hddm | wc -l`
+		export contest=`xrdfs $XRD_RANDOMS_URL ls $RANDOMS_PREPEND/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | wc -l`
 		#echo "Executing command: xrdfs $XRD_RANDOMS_URL ls /gluex/mcwrap/random_triggers/$RANDBGTAG/run${formatted_runNumber}_random.hddm | wc -l"
 		#xrdfs $XRD_RANDOMS_URL ls /gluex/mcwrap/random_triggers/$RANDBGTAG/run${formatted_runNumber}_random.hddm | wc -l
 		#export con_test=$(xrdfs $XRD_RANDOMS_URL ls /gluex/mcwrap/random_triggers/$RANDBGTAG/run${formatted_runNumber}_random.hddm)
 		echo "random trigger connection test: $con_test"
+		echo xrdfs $XRD_RANDOMS_URL ls $RANDOMS_PREPEND/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm
+		echo "random trigger connection test2: $contest"
 		if [[ $con_test != "r" && $contest == 0 ]]; then
 			echo "JLab Connection test failed. Falling back to UConn...."
 			#echo "attempting to copy the needed file from an alternate source..."
@@ -237,9 +245,10 @@ fi
 
 
 if [[ ! -d $RUNNING_DIR/${RUN_NUMBER}_${FILE_NUMBER} ]]; then
-mkdir $RUNNING_DIR/${RUN_NUMBER}_${FILE_NUMBER}
+echo "making work directory "$RUNNING_DIR/${RUN_NUMBER}_${FILE_NUMBER}
+mkdir -p $RUNNING_DIR/${RUN_NUMBER}_${FILE_NUMBER}
 fi
-
+echo "cd $RUNNING_DIR/${RUN_NUMBER}_${FILE_NUMBER}"
 cd $RUNNING_DIR/${RUN_NUMBER}_${FILE_NUMBER}
 
 if [[ "$ccdbSQLITEPATH" != "no_sqlite" && "$ccdbSQLITEPATH" != "batch_default" && "$ccdbSQLITEPATH" != "jlab_batch_default" ]]; then
@@ -487,6 +496,7 @@ export GEN_MAX_ENERGY=$eBEAM_ENERGY
 fi
 
 # PRINT INPUTS
+echo "Using : " $BATCHSYS
 echo "This job has been configured to run at: " $MCWRAPPER_RUN_LOCATION" : "`hostname`
 echo "Job started: " `date`
 echo "Simulating the Experiment: " $EXPERIMENT
@@ -495,6 +505,7 @@ echo "rcdbsqlite path: " $rcdbSQLITEPATH $RCDB_CONNECTION
 echo "Producing file number: "$FILE_NUMBER
 echo "Containing: " $EVT_TO_GEN"/""$PER_FILE"" events"
 echo "Running location:" $RUNNING_DIR
+echo "Current Working Directory:" $PWD
 echo "Output location: "$OUTDIR
 echo "Project directory name: "$PROJECT_DIR_NAME
 echo "Environment file: " $ENVIRONMENT
@@ -1690,7 +1701,7 @@ else
 			mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
 			mcsmear_return_code=$?
 		else
-			xrdcopy $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm ./run$formatted_runNumber\_random.hddm
+			xrdcopy $XRD_RANDOMS_URL/$RANDOMS_PREPEND/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm ./run$formatted_runNumber\_random.hddm
 			echo "mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm ./run$formatted_runNumber\_random.hddm:1+$fold_skip_num"
             mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm ./run$formatted_runNumber\_random.hddm\:1\+$fold_skip_num
 			mcsmear_return_code=$?

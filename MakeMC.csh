@@ -1,6 +1,12 @@
 #!/bin/csh -f
 #set echo
 echo `date`
+
+if ($?SINGULARITY_NAME) then
+  echo "RUNNING IN A SINGULARITY CONTAINER: "$SINGULARITY_NAME
+endif
+
+
 # SET INPUTS
 setenv BATCHRUN $1
 shift
