@@ -540,9 +540,9 @@ def CheckGenConfig(order):
     if(os.path.isfile(fileSTR)==False and (running_hostname == "scosg16.jlab.org" or running_hostname == "scosg20.jlab.org" or running_hostname=="scosg2201.jlab.org") ):
         print("File not found and on submit node, attempting to copy to "+copyTo)
         #copyTo="/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"
-        copy_loc="ifarm1801-ib"
+        copy_loc="ifarm2401-ib"
         if(running_hostname=="scosg2201.jlab.org"):
-            copy_loc="ifarm1901"
+            copy_loc="ifarm2401"
         print("scp "+runner_name+"@"+copy_loc+":"+fileSTR.lstrip()+" "+copyTo+str(ID)+"_"+name)
         subprocess.call("scp "+runner_name+"@"+copy_loc+":"+fileSTR.lstrip()+" "+copyTo+str(ID)+"_"+name,shell=True)
         #subprocess.call("rsync -ruvt ifarm1402:"+fileSTR+" "+copyTo,shell=True)
@@ -1313,9 +1313,9 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
             print("parseGenPostProcessing[i]",parseGenPostProcessing[i])
             if parseGenPostProcessing[i].strip() != "Default":
 
-                copy_loc="ifarm1801-ib"
+                copy_loc="ifarm2401-ib"
                 if(socket.gethostname()=="scosg2201.jlab.org"):
-                    copy_loc="ifarm1801"
+                    copy_loc="ifarm2401"
                 print("scp "+runner_name+"@"+copy_loc+":"+parseGenPostProcessing[i]+" "+"/osgpool/halld/"+runner_name+"/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_genpost_"+str(i)+".config")
                 try:
                     subprocess.call("scp "+runner_name+"@"+copy_loc+":"+parseGenPostProcessing[i]+" "+"/osgpool/halld/"+runner_name+"/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_genpost_"+str(i)+".config", shell=True)
@@ -1397,9 +1397,9 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
     if(order["ReactionLines"] != ""):
         if(order["ReactionLines"][0:5] == "file:"):
             jana_config_file=order["ReactionLines"][5:]
-            copy_loc="ifarm1801-ib"
+            copy_loc="ifarm2401-ib"
             if(socket.gethostname()=="scosg2201.jlab.org"):
-                copy_loc="ifarm1801"
+                copy_loc="ifarm2401"
 
             print("scp "+runner_name+"@"+copy_loc+":"+jana_config_file+" "+"/osgpool/halld/"+runner_name+"/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config")
             subprocess.call("scp "+runner_name+"@"+copy_loc+":"+jana_config_file+" "+"/osgpool/halld/"+runner_name+"/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config",shell=True)
