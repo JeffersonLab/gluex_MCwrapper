@@ -1016,7 +1016,8 @@ def calcFluxCCDB(ccdb_conn, run, emin, emax):
                 tagh_scaled_energy_table = tagh_scaled_energy_assignment.constant_set.data_table
                 PS_accept_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/pair_spectrometer/lumi/PS_accept", run[0], VARIATION, CALIBTIME)
                 PS_accept = PS_accept_assignment.constant_set.data_table
-        except:
+        except Exception as e:
+                print(e)
                 print("Missing flux for run number = %d, skipping generation" % run[0])
                 return -1.0
 
