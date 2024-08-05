@@ -83,10 +83,6 @@ setenv GEN_MIN_ENERGY $1
 shift
 setenv GEN_MAX_ENERGY $1
 shift
-setenv UPPER_VERTEX_INDICES $1
-shift
-setenv LOWER_VERTEX_INDICES $1
-shift
 setenv TAGSTR $1
 shift
 setenv CUSTOM_PLUGINS $1
@@ -493,7 +489,6 @@ echo "Electron beam energy to use: "$eBEAM_ENERGY" GeV"
 echo "Radiator Thickness to use: "$radthick" m"
 echo "Collimator Diameter: 0.00"$colsize" m"
 echo "Photon Energy between "$GEN_MIN_ENERGY" and "$GEN_MAX_ENERGY" GeV"
-echo "Upper / Lower vertex indices are "$UPPER_VERTEX_INDICES" and "$LOWER_VERTEX_INDICES
 echo "Polarization Angle: "$polarization_angle "degrees"
 echo "Coherent Peak position: "$COHERENT_PEAK
 echo "----------------------------------------------"
@@ -1058,8 +1053,8 @@ if ( "$GENR" != "0" ) then
                 endif
 
 		echo $optionals_line
-		echo gen_amp_V2 -ac $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -uv $UPPER_VERTEX_INDICES -lv $LOWER_VERTEX_INDICES -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
-		gen_amp_V2 -ac $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -uv $UPPER_VERTEX_INDICES -lv $LOWER_VERTEX_INDICES -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
+		echo gen_amp_V2 -ac $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
+		gen_amp_V2 -ac $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
 		set generator_return_code=$status
 	else if ( "$GENERATOR" == "mc_gen" ) then
 		echo "RUNNING MC_GEN"
