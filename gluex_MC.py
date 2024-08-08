@@ -242,7 +242,7 @@ def swif2cont_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,ACCOUNT,PA
         # script with options command
         # add_command += " -fail-save-dir "+DATA_OUTPUT_BASE_DIR
 
-        add_command += " singularity exec --bind /scigroup/mcwrapper/ --bind /u --bind /group/halld/ --bind /scratch/slurm/ --bind /lustre/enp/swif2 --bind /cvmfs --bind /work/osgpool/ --bind /work/halld --bind /cache/halld --bind /volatile/halld --bind /work/halld2 /cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_prod:v1 "+os.environ.get('MCWRAPPER_CENTRAL')+"/MakeMC.sh "+getCommandString(COMMAND,"SWIF")
+        add_command += " singularity exec --bind /scigroup/mcwrapper/ --bind /u --bind /group/halld/ --bind /scratch/slurm/ --bind /lustre/enp/swif2 --bind /cvmfs --bind /work/osgpool/ --bind /work/halld --bind /cache/halld --bind /volatile/halld --bind /work/halld2 /cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_prod:v1 "+SCRIPT  +" "+getCommandString(COMMAND,"SWIF")
         # print(getCommandString(COMMAND,"SBATCH_SLURM"))
         # add_command += " "+SCRIPT  +" "+ getCommandString(COMMAND,"SWIF")
 
