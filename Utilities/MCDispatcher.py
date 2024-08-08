@@ -659,8 +659,14 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
 
 
     if(not skip_Test):
-        WritePayloadConfig(order,newLoc)
+        writeout=WritePayloadConfig(order,newLoc)
         RunNumber=str(order["RunNumLow"])
+
+        if writeout == -3:
+            print("Error in writing payload")
+            print("could not find postprocessing file(s)")
+            status=["oh no!!!",-3,"could not find postprocessing file(s)"]
+            return status
 
         print(str(index)+":  "+"Wrote Payload")
         print("original RCDB QUERY:", order["RCDBQuery"])
@@ -1358,10 +1364,19 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
             s.send_message(msg)
             s.quit()
 
+            #write message to email_[ProjectID].log file in copy=open("/osgpool/halld/"+runner_name+"/REQUESTED_FAIL_MAILS/email_"+str(row['ID'])+".log", "w+")
+            try:    
+                copy=open("/osgpool/halld/"+runner_name+"/REQUESTED_FAIL_MAILS/email_"+str(row['ID'])+".log", "w+")
+                copy.write("Could not test the project because MCwrapper-bot could not copy the following file: "+parseGenPostProcessing[i]+"\n This may be due to a lack of permissions for "+runner_name+" to read from the containing directory or the file itself may not exist.\n Shortly you will receive a second email that the actual test has failed, please use the link contained in the second email to correct this problem.")
+                copy.close()
+            except Exception as e:
+                print(e)
+                pass
+
             update_status_query="UPDATE Project SET Tested=-1 WHERE ID="+str(order["ID"])
             curs.execute(update_status_query)
             conn.commit()
-            return
+            return -3
         MCconfig_file.write("GENERATOR_POSTPROCESS="+str(newGenPost_str)+"\n")
 
 

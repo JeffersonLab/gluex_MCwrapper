@@ -1207,7 +1207,8 @@ def main(argv):
                         j=j+1
                         i=i.strip()
                         parts[j]=i
-
+                print(parts[0],"found")
+                print("will set to",rm_comments[0].strip())
                 if str(parts[0]).upper()=="VERBOSE" :
                         if rm_comments[0].strip().upper()=="TRUE" or rm_comments[0].strip() == "1":
                                 VERBOSE=True
@@ -1475,7 +1476,7 @@ def main(argv):
                                 print( "WARNING OPTION: "+argu+" NOT FOUND!")
 
         if DATA_OUTPUT_BASE_DIR == "UNKNOWN_LOCATION":
-                print( "I doubt that the system will find the output directory: "+DATA_OUTPUT_BASE_DIR+" so I am saving you the embarassment of trying and stopping this now")
+                print( "I doubt that the system will find the output directory: "+DATA_OUTPUT_BASE_DIR+" so I am saving you the embarrassment of trying and stopping this now")
                 return
 
         print("WILL BE BUNDLED",TO_BUNDLE)
