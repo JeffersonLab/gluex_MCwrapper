@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/python
 ##########################################################################################################################
 #
 # 2017/03 Thomas Britton
@@ -25,7 +25,7 @@ from optparse import OptionParser
 import os.path
 import rcdb
 import ccdb
-from ccdb.cmd.console_context import ConsoleContext
+from ccdb.cmd.cli_manager import CliManager
 import ccdb.path_utils
 from ccdb import Directory, TypeTable, Assignment, ConstantSet
 from array import array
@@ -131,8 +131,8 @@ def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,N
         if( int(PROJECT_ID) <=0 ):
                 print(add_command)
                 jobSubout=subprocess.check_output(add_command.split(" "))
-                print(jobSubout)
-                idnumline=jobSubout.split("\n")[0].strip().split("=")
+                print(jobSubout.decode())
+                idnumline=jobSubout.decode().split("\n")[0].strip().split("=")
 
                 if(len(idnumline) == 2 ):
                         SWIF_ID_NUM=str(idnumline[1])
@@ -196,8 +196,8 @@ def swif2_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,ACCOUNT,PARTIT
         if( int(PROJECT_ID) <=0 ):
                 print(add_command)
                 jobSubout=subprocess.check_output(add_command.split(" "))
-                print(jobSubout)
-                idnumline=jobSubout.split("\n")[0].strip().split("=")
+                print(jobSubout.decode())
+                idnumline=jobSubout.decode().split("\n")[0].strip().split("=")
 
                 if(len(idnumline) == 2 ):
                         SWIF_ID_NUM=str(idnumline[1])
@@ -1670,7 +1670,7 @@ def main(argv):
                 if len(RunType) != 1 : #RUN RANGE GIVEN
                         event_sum=0.
                         #Make python rcdb calls to form the vector
-                        db = rcdb.RCDBProvider("mysql://rcdb@hallddb.jlab.org/rcdb")
+                        db = rcdb.RCDBProvider(os.environ.get('RCDB_CONNECTION'))
                         ccdb_conn = LoadCCDB()
 
                         runlow=0
@@ -1752,7 +1752,7 @@ def main(argv):
                                 FILES_TO_GEN_this_run=num_events_this_run/PERFILE
                                 REMAINING_GEN_this_run=num_events_this_run%PERFILE
 
-                                for FILENUM_this_run in range(1, FILES_TO_GEN_this_run + 2):
+                                for FILENUM_this_run in range(1, int(FILES_TO_GEN_this_run) + 2):
                                         num_this_file=PERFILE
 
                                         if FILENUM_this_run == FILES_TO_GEN_this_run +1:
@@ -1806,7 +1806,7 @@ def main(argv):
                         #        print( "This job has >500 subjobs and risks ddosing the servers.  Please use sqlite or request again with a larger per file. ")
                         #        return
 
-                        for FILENUM in range(1, FILES_TO_GEN + 2):
+                        for FILENUM in range(1, int(FILES_TO_GEN) + 2):
                                 num=PERFILE
                                 #last file gets the remainder
                                 if FILENUM == FILES_TO_GEN +1:
