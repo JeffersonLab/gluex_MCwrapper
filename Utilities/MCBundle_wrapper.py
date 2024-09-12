@@ -135,7 +135,7 @@ def main(argv):
         print(f"{int(numprocesses_running)} process(es) of MCBundle_wrapper.py running.  Continuing.")
         #get projects with Tested>=20
         # tobundle_q="SELECT * FROM Project WHERE Tested=20 OR Tested=40 LIMIT 1"
-        tobundle_q="SELECT * FROM Project WHERE (Tested=20 OR Tested=40) AND Notified is NULL AND ID != 3700 order by ID asc LIMIT 1"
+        tobundle_q="SELECT * FROM Project WHERE (Tested=20 OR Tested=40) AND Notified is NULL AND ID != 3700 and ID != 3923 and ID != 3924 and ID != 3954 and ID != 3956 order by ID asc LIMIT 1"
         # tobundle_q="SELECT * FROM Project WHERE (Tested=20 OR Tested=40) AND Notified is NULL AND ID != 3476 AND ID != 3700 order by NumEvents asc LIMIT 1"
         print(tobundle_q)
         dbcnx=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
@@ -153,7 +153,7 @@ def main(argv):
             inputdir = inputdir.replace("ppauli/","") if "ppauli/" in inputdir else inputdir
 
             outputlocation="/".join(proj["OutputLocation"].split("/")[:-1])+"/"
-            
+            outputlocation=outputlocation.replace("/lustre19/","/lustre24/")
             #update project status
             print(proj["ID"])
 

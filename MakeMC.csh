@@ -678,7 +678,7 @@ if ( $recon_pre == "file" ) then
 endif
 
 set gen_pre=""
-
+set ana_pre="None"
 if ( "$CUSTOM_ANA_PLUGINS" != "None" ) then
 	set ana_pre=`echo $CUSTOM_ANA_PLUGINS | cut -c1-4`
 	set jana_ana_config_file=`echo $CUSTOM_ANA_PLUGINS | sed -r 's/^.{5}//'`
