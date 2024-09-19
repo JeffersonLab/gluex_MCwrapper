@@ -264,8 +264,8 @@ def swif2cont_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,ACCOUNT,PA
         if( int(PROJECT_ID) <=0 ):
                 print(add_command)
                 jobSubout=subprocess.check_output(add_command.split(" "))
-                print(jobSubout)
-                idnumline=jobSubout.split("\n")[0].strip().split("=")
+                print(jobSubout.decode())
+                idnumline=jobSubout.decode().split("\n")[0].strip().split("=")
 
                 if(len(idnumline) == 2 ):
                         SWIF_ID_NUM=str(idnumline[1])
