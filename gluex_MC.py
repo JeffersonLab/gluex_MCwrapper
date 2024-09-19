@@ -1496,7 +1496,7 @@ def main(argv):
         #exit
 
         #calculate files needed to gen
-        FILES_TO_GEN=EVTS/PERFILE
+        FILES_TO_GEN=int(EVTS/PERFILE)
         REMAINING_GEN=EVTS%PERFILE
 
         #DETECT LOGIN SHELL AND PICK THE RIGHT SCRIPT TO RUN
@@ -1749,7 +1749,7 @@ def main(argv):
                                         continue
 
                                #do for each file needed
-                                FILES_TO_GEN_this_run=num_events_this_run/PERFILE
+                                FILES_TO_GEN_this_run=int(num_events_this_run/PERFILE)
                                 REMAINING_GEN_this_run=num_events_this_run%PERFILE
 
                                 for FILENUM_this_run in range(1, int(FILES_TO_GEN_this_run) + 2):
