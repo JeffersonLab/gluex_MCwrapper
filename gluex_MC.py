@@ -25,7 +25,6 @@ from optparse import OptionParser
 import os.path
 import rcdb
 import ccdb
-from ccdb.cmd.cli_manager import CliManager
 import ccdb.path_utils
 from ccdb import Directory, TypeTable, Assignment, ConstantSet
 from array import array
