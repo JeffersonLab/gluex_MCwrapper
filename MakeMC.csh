@@ -14,14 +14,12 @@ setenv ENVIRONMENT $1
 shift
 
 if ( "$BATCHRUN" != "0" ) then
-
 	set xmltest=`echo $ENVIRONMENT | rev | cut -c -4 | rev`
 	if ( "$xmltest" == ".xml" ) then
 		source /group/halld/Software/build_scripts/gluex_env_jlab.csh $ENVIRONMENT
 	else
 		source $ENVIRONMENT
 	endif
-
 endif
 
 setenv ANAENVIRONMENT $1
@@ -200,7 +198,7 @@ endif
 
 #necessary to run swif, uses local directory if swif=0 is used
 if ( "$BATCHRUN" != "0" ) then
-# ENVIRONMENT
+	# ENVIRONMENT
 	echo $ENVIRONMENT
 	echo pwd=$PWD
 	mkdir -p $OUTDIR
@@ -296,7 +294,6 @@ if ( $gen_pre_rcdb != "file" || ( "$BGTAGONLY_OPTION" == "1" || "$BKGFOLDSTR" ==
 	if ( "$RADIATOR_THICKNESS" != "rcdb" || ( "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" ) ) then
 		set radthick=$RADIATOR_THICKNESS
 	else
-		
 		set words = `rcnd $RUN_NUMBER radiator_type | sed 's/ / /g' `
 		echo $words
 		set radlen = `echo $words | wc -c`
@@ -304,17 +301,13 @@ if ( $gen_pre_rcdb != "file" || ( "$BGTAGONLY_OPTION" == "1" || "$BKGFOLDSTR" ==
 		if ( $radlen == 1 ) then 
 			echo "radiator_type not in rcdb for run "$RUN_NUMBER". Using default value..."
 		else
-			
 			foreach word ($words:q)
-
 				if ( $word != "number" ) then
-
 					if ( "$word" == "3x10-4" ) then
 						set radthick="30e-6"
 						end
 					else
 						set removedum = `echo $word:q | sed 's/um/ /g'`
-
 						if ( $removedum != $word:q ) then
 							set radthick = `echo $removedum e-6 | tr -d '[:space:]'`
 						endif
@@ -372,7 +365,6 @@ if ( $gen_pre_rcdb != "file" || ( "$BGTAGONLY_OPTION" == "1" || "$BKGFOLDSTR" ==
 	if ( "$COHERENT_PEAK" != "rcdb" && "$polarization_angle" == "-1.0" ) then
 		set copeak=$COHERENT_PEAK
 	else
-
 		if ( "$COHERENT_PEAK" != "rcdb" || ( "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" ) ) then
 			set copeak=$COHERENT_PEAK
 		else if ( $copeak_text == "Run" ) then
@@ -414,59 +406,61 @@ if ( $gen_pre_rcdb != "file" || ( "$BGTAGONLY_OPTION" == "1" || "$BKGFOLDSTR" ==
 	echo "Colimator size set..."
 
 	if ( "$eBEAM_CURRENT" == "rcdb" ) then
-	set beam_on_current=`rcnd $RUN_NUMBER beam_on_current | awk '{print $1}'`
+		set beam_on_current=`rcnd $RUN_NUMBER beam_on_current | awk '{print $1}'`
 
-	if ( $beam_on_current == "" || $beam_on_current == "Run" ) then
-		echo "Run $RUN_NUMBER does not have a beam_on_current. Defaulting to beam_current."
-		set beam_on_current=`rcnd $RUN_NUMBER beam_current | awk '{print $1}'`
+		if ( $beam_on_current == "" || $beam_on_current == "Run" ) then
+			echo "Run $RUN_NUMBER does not have a beam_on_current. Defaulting to beam_current."
+			set beam_on_current=`rcnd $RUN_NUMBER beam_current | awk '{print $1}'`
+		endif
+
+		if ( $beam_on_current == "Run" ) then
+			echo "The beam current could not be found for Run "$RUN_NUMBER". This is most like due to the run number provided not existing in the rcdb"
+			echo "Please set eBEAM_CURRENT explicitly in MC.config..."
+			echo "something went wrong with initialization"
+			exit 1
+		endif
+		
+		set beam_on_current=`echo "$beam_on_current / 1000." | $USER_BC -l`
+	else
+		set beam_on_current=$eBEAM_CURRENT
 	endif
 
-	if ( $beam_on_current == "Run" ) then
-		echo "The beam current could not be found for Run "$RUN_NUMBER". This is most like due to the run number provided not existing in the rcdb"
-		echo "Please set eBEAM_CURRENT explicitly in MC.config..."
-		echo "something went wrong with initialization"
-		exit 1
-	endif
-	set beam_on_current=`echo "$beam_on_current / 1000." | $USER_BC -l`
-else
-set beam_on_current=$eBEAM_CURRENT
-endif
+	echo "beam (on) current set..."
 
-echo "beam (on) current set..."
-
-set BGRATE_toUse=$BGRATE
-
-if ( "$BGRATE" != "rcdb" || ( "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" ) ) then
 	set BGRATE_toUse=$BGRATE
-else
-	if ( $BGTAGONLY_OPTION == "1" || $BKGFOLDSTR == "BeamPhotons" ) then
-		echo "Calculating BGRate. This process takes a minute..."
-		set BGRATE_toUse=`BGRate_calc --runNo $RUN_NUMBER --coherent_peak $COHERENT_PEAK --beam_on_current $beam_on_current --beam_energy $eBEAM_ENERGY --collimator_diameter 0.00$colsize --radiator_thickness $radthick --endpoint_energy_low $GEN_MIN_ENERGY --endpoint_energy_high $GEN_MAX_ENERGY`
 
-		if ( "$BGRATE_toUse" == "" ) then
-			echo "BGrate_calc is not built or inaccessible. Please check your build and/or specify a BGRate to be used."
-			exit 12
-		else
-			set BGRATE_list=($BGRATE_toUse:as/ / /)
-			set BGRATE_toUse=$BGRATE_list[$#BGRATE_list]
+	if ( "$BGRATE" != "rcdb" || ( "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" ) ) then
+		set BGRATE_toUse=$BGRATE
+	else
+		if ( $BGTAGONLY_OPTION == "1" || $BKGFOLDSTR == "BeamPhotons" ) then
+			echo "Calculating BGRate. This process takes a minute..."
+			set BGRATE_toUse=`BGRate_calc --runNo $RUN_NUMBER --coherent_peak $COHERENT_PEAK --beam_on_current $beam_on_current --beam_energy $eBEAM_ENERGY --collimator_diameter 0.00$colsize --radiator_thickness $radthick --endpoint_energy_low $GEN_MIN_ENERGY --endpoint_energy_high $GEN_MAX_ENERGY`
+
+			if ( "$BGRATE_toUse" == "" ) then
+				echo "BGrate_calc is not built or inaccessible. Please check your build and/or specify a BGRate to be used."
+				exit 12
+			else
+				set BGRATE_list=($BGRATE_toUse:as/ / /)
+				set BGRATE_toUse=$BGRATE_list[$#BGRATE_list]
+			endif
 		endif
 	endif
-endif
 
-echo "BGrate set..."
+	echo "BGrate set..."
 
-if ( "$polarization_angle" == "-1.0" ) then
-		set POL_TO_GEN=0
-endif
+	if ( "$polarization_angle" == "-1.0" ) then
+			set POL_TO_GEN=0
+	endif
 endif
 
 set isGreater=1
 set isGreater=`echo $GEN_MAX_ENERGY'>'$eBEAM_ENERGY | $USER_BC -l`
 
 if ( "$isGreater" == "1" && "$eBEAM_ENERGY" != "rcdb" ) then
-echo "WARNING: User requested GEN_MAX_ENERGY > eBEAM_ENERGY. This is not possible. Setting GEN_MAX_ENERGY to eBEAM_ENERGY..."
-set GEN_MAX_ENERGY=$eBEAM_ENERGY
+	echo "WARNING: User requested GEN_MAX_ENERGY > eBEAM_ENERGY. This is not possible. Setting GEN_MAX_ENERGY to eBEAM_ENERGY..."
+	set GEN_MAX_ENERGY=$eBEAM_ENERGY
 endif
+
 # PRINT INPUTS
 echo "This job has been configured to run at: " $MCWRAPPER_RUN_LOCATION" : "`hostname`
 echo "Job started: " `date`
@@ -520,7 +514,7 @@ echo "BC "$USER_BC
 echo "python "$USER_PYTHON
 echo `which $GENERATOR`
 if ( "$GENERATOR_POST" != "No" ) then
-echo `which $GENERATOR_POST`
+	echo `which $GENERATOR_POST`
 endif
 if ( "$GEANTVER" == "3" ) then
 	echo `which hdgeant`
@@ -635,15 +629,15 @@ if ( "$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" == "
 
 	if ( "$bkgloc_pre" == "loc:" ) then
 		set rand_bkg_loc=`echo $BKGFOLDSTR | cut -c 5-`
-		 if ( "$BATCHSYS" == "OSG" && $BATCHRUN != 0 ) then
-		if ( "$MAKE_MC_USING_XROOTD" == "0" ) then
-					set	bkglocstring="/srv""/run$formatted_runNumber""_random.hddm"
-				else
-					set	bkglocstring="$XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm"
-				endif
-		 else
+		if ( "$BATCHSYS" == "OSG" && $BATCHRUN != 0 ) then
+			if ( "$MAKE_MC_USING_XROOTD" == "0" ) then
+				set	bkglocstring="/srv""/run$formatted_runNumber""_random.hddm"
+			else
+				set	bkglocstring="$XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm"
+			endif
+		else
 			set bkglocstring=$rand_bkg_loc"/run$formatted_runNumber""_random.hddm"
-		 endif
+		endif
 	else
 		#set bkglocstring="/cache/halld/""$runperiod""/sim/random_triggers/""run$formatted_runNumber""_random.hddm"
 		if ( "$BATCHSYS" == "OSG" && $BATCHRUN != 0 ) then
@@ -652,7 +646,7 @@ if ( "$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" == "
 			else
 				set	bkglocstring="$XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm"
 			endif
-	else
+		else
 			set bkglocstring="/work/osgpool/halld/random_triggers/"$RANDBGTAG"/run"$formatted_runNumber"_random.hddm"
 			if ( `hostname` == 'scosg16.jlab.org' || `hostname` == 'scosg20.jlab.org' || `hostname` == 'scosg2201.jlab.org' ) then
 				set bkglocstring="/work/osgpool/halld/random_triggers/"$RANDBGTAG"/run"$formatted_runNumber"_random.hddm"
@@ -723,7 +717,6 @@ if ( "$GENR" != "0" ) then
 				echo "something went wrong with initialization"
 				exit 1
 			else
-
 				echo "particle_gun error checking"
 				echo "particle gun firing particle: "`grep KINE $CONFIG_FILE | awk '{print $2}' `
 
@@ -831,10 +824,8 @@ if ( "$GENR" != "0" ) then
 		#endif
 	else if ( "$GENERATOR" == "genr8_new" ) then
 		echo "configuring new genr8"
-
 		set STANDARD_NAME="genr8_new_"$STANDARD_NAME
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
-
 	else if ( "$GENERATOR" == "bggen" ) then
 		echo "configuring bggen"
 		set STANDARD_NAME="bggen_"$STANDARD_NAME
@@ -1059,14 +1050,14 @@ if ( "$GENR" != "0" ) then
 		echo "RUNNING GEN_AMP_V2"
 		set optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
 
-				sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
-				if ( "$polarization_angle" == "-1.0" ) then
-						sed -i 's/TEMPPOLFRAC/'0'/' $STANDARD_NAME.conf
-						sed -i 's/TEMPPOLANGLE/'0'/' $STANDARD_NAME.conf
-				else
-						sed -i 's/TEMPPOLFRAC/'.4'/' $STANDARD_NAME.conf
-						sed -i 's/TEMPPOLANGLE/'$polarization_angle'/' $STANDARD_NAME.conf
-				endif
+		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
+		if ( "$polarization_angle" == "-1.0" ) then
+			sed -i 's/TEMPPOLFRAC/'0'/' $STANDARD_NAME.conf
+			sed -i 's/TEMPPOLANGLE/'0'/' $STANDARD_NAME.conf
+		else
+			sed -i 's/TEMPPOLFRAC/'.4'/' $STANDARD_NAME.conf
+			sed -i 's/TEMPPOLANGLE/'$polarization_angle'/' $STANDARD_NAME.conf
+		endif
 
 		echo $optionals_line
 		echo gen_amp_V2 -ac $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
@@ -1227,34 +1218,27 @@ if ( "$GENR" != "0" ) then
 		echo gen_compton -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
 		gen_compton -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
 		set generator_return_code=$status
-
 	else if ( "$GENERATOR" == "gen_compton_simple" ) then
 		echo "RUNNING GEN_COMPTON_SIMPLE"
 		set optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
 		echo $optionals_line
 		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
 		gen_compton_simple -c $STANDARD_NAME'_beam.conf' -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -s $formatted_fileNumber -m $eBEAM_ENERGY $optionals_line
-
 		set generator_return_code=$status
-
 	else if ( "$GENERATOR" == "gen_primex_eta_he4" ) then
 		echo "RUNNING GEN_PRIMEX_ETA_HE4"
 		set optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
 		echo $optionals_line
 		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
 		gen_primex_eta_he4 -e $STANDARD_NAME.conf -c $STANDARD_NAME'_beam.conf' -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.txt -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -s $formatted_fileNumber -m $eBEAM_ENERGY $optionals_line
-
 		set generator_return_code=$status
-
 	else if ( "$GENERATOR" == "gen_whizard" ) then
 		echo "RUNNING GEN_WHIZARD"
 		set optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
 		echo $optionals_line
 		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
 		gen_whizard -e $STANDARD_NAME.conf -c $STANDARD_NAME'_beam.conf' -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.txt -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -s $formatted_fileNumber -m $eBEAM_ENERGY $optionals_line
-
 		set generator_return_code=$status
-
 	else if ( "$GENERATOR" == "gen_npi" ) then
 		echo "RUNNING GEN_NPI"
 		set optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
@@ -1340,7 +1324,6 @@ if ( "$GENR" != "0" ) then
 		bggen_jpsi
 		set generator_return_code=$status
 		mv bggen.hddm $STANDARD_NAME.hddm
-
 	else if ( "$GENERATOR" == "gen_ee" ) then
 		echo "RUNNING GEN_EE"
 		set RANDOMnum=`bash -c 'echo $RANDOM'`
@@ -1349,7 +1332,6 @@ if ( "$GENR" != "0" ) then
 		echo $optionals_line
 		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
 		gen_ee -d$STANDARD_NAME.conf -c$STANDARD_NAME'_beam.conf' -o$STANDARD_NAME.hddm -n$EVT_TO_GEN -z$RUN_NUMBER -l$GEN_MIN_ENERGY -u$GEN_MAX_ENERGY -r$RANDOMnum $optionals_line
-
 		set generator_return_code=$status
 	else if ( "$GENERATOR" == "gen_ee_hb" ) then
 		echo gen_ee_hb -N$RUN_NUMBER -n$EVT_TO_GEN
@@ -1374,11 +1356,11 @@ if ( "$GENR" != "0" ) then
 
 
 	if ( $generator_return_code != 0 ) then
-				echo
-				echo
-				echo "Something went wrong with " "$GENERATOR"
-				echo "status code: "$generator_return_code
-				exit $generator_return_code
+		echo
+		echo
+		echo "Something went wrong with " "$GENERATOR"
+		echo "status code: "$generator_return_code
+		exit $generator_return_code
 	endif
 
 	if ( ! -f ./$STANDARD_NAME.hddm && "$GENERATOR" != "particle_gun" && "$GENERATOR" != "geantBEAM" && "$gen_pre" != "file" ) then
@@ -1386,12 +1368,11 @@ if ( "$GENR" != "0" ) then
 		echo "An hddm file was not found after generation step. Terminating MC production. Please consult logs to diagnose"
 		exit 11
 	endif
-#GEANT/smearing
 endif
 
 if ( "$GENERATOR_POST" != "No" ) then
 	echo "RUNNING POSTPROCESSING "
-#copy config locally
+	#copy config locally
 	set post_return_code=-1
 	echo $GENERATOR_POST_CONFIG
 	echo $GENERATOR_POST_CONFIGEVT
@@ -1409,7 +1390,7 @@ if ( "$GENERATOR_POST" != "No" ) then
 			cp $GENERATOR_POST_CONFIGEVT ./postevt'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf
 			if ( ! -f ./postevt'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf ) then
 				echo "Couldn't copy $GENERATOR_POST_CONFIGEVT. Exit."
-			exit 1
+				exit 1
 			endif
 			setenv EVTGEN_PARTICLE_DEFINITIONS $PWD/postevt'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf
 		endif
@@ -1417,7 +1398,7 @@ if ( "$GENERATOR_POST" != "No" ) then
 			cp $GENERATOR_POST_CONFIGDEC ./postdec'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf
 			if ( ! -f ./postdec'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf ) then
 				echo "Couldn't copy $GENERATOR_POST_CONFIGDEC. Exit."
-			exit 1
+				exit 1
 			endif
 			setenv EVTGEN_DECAY_FILE $PWD/postdec'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf
 		endif
@@ -1428,174 +1409,170 @@ if ( "$GENERATOR_POST" != "No" ) then
 	endif
 	#do if/elses for running
 	if ( $post_return_code != 0 ) then
-				echo
-				echo
-				echo "Something went wrong with " "$GENERATOR_POST"
-				echo "status code: "$post_return_code
-				exit $post_return_code
+		echo
+		echo
+		echo "Something went wrong with " "$GENERATOR_POST"
+		echo "status code: "$post_return_code
+		exit $post_return_code
 	endif
 endif
 
-	if ( "$GEANT" != "0" ) then
-		echo "RUNNING GEANT"$GEANTVER
+if ( "$GEANT" != "0" ) then
+	echo "RUNNING GEANT"$GEANTVER
 
-		if ( `echo $eBEAM_ENERGY | grep -o "\." | wc -l` == 0 ) then
-			set eBEAM_ENERGY=$eBEAM_ENERGY\.
-		endif
-
-		if ( `echo $COHERENT_PEAK | grep -o "\." | wc -l` == 0 ) then
-			set COHERENT_PEAK=$COHERENT_PEAK\.
-		endif
-
-		cp temp_Gcontrol.in $PWD/control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-		chmod 777 $PWD/control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-		#a 4byte int: od -vAn -N4 -tu4 < /dev/urandom
-		set RANDOMnumGeant=`shuf -i1-215 -n1`
-		sed -i 's/TEMPRANDOM/'$RANDOMnumGeant'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-		sed -i 's/TEMPELECE/'$eBEAM_ENERGY'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-
-		if ( "$polarization_angle" == "-1" ) then
-			sed -i 's/TEMPCOHERENT/'0'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-		else
-			set Fortran_COHERENT_PEAK=`echo $COHERENT_PEAK | cut -c -7`
-			sed -i 's/TEMPCOHERENT/'$Fortran_COHERENT_PEAK'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-		endif
-
-		sed -i 's/TEMPIN/'$STANDARD_NAME.hddm'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-		sed -i 's/TEMPRUNG/'$RUN_NUMBER'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-		sed -i 's/TEMPOUT/'$STANDARD_NAME'_geant'$GEANTVER'.hddm/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-		sed -i 's/TEMPTRIG/'$EVT_TO_GEN'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-
-		if ( $RUN_NUMBER >= 70000 ) then
-			sed -i 's/TEMPCKOV/'1'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-		else
-			sed -i 's/TEMPCKOV/'0'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-		endif
-
-		sed -i 's/TEMPGEANTAREA/'$GEANT_VERTEXT_AREA'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-		sed -i 's/TEMPGEANTLENGTH/'$GEANT_VERTEXT_LENGTH'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-
-		if ( "$colsize" != "Not Needed" ) then
-			sed -i 's/TEMPCOLD/'0.00$colsize'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-		endif
-
-		sed -i 's/TEMPRADTHICK/'"$radthick"'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-
-		sed -i 's/TEMPBGTAGONLY/'$BGTAGONLY_OPTION'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-
-		if ( "$BGRATE_toUse" != "Not Needed" ) then
-			sed -i 's/TEMPBGRATE/'$BGRATE_toUse'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-		endif
-
-		sed -i 's/TEMPNOSECONDARIES/'$GEANT_NOSECONDARIES'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-
-		if ( "$gen_pre" == "file" ) then
-			@ skip_num = $FILE_NUMBER * $PER_FILE
-			sed -i 's/TEMPSKIP/'$skip_num'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-
-		else if ( $GENERATOR == "particle_gun" ) then
-			echo "doing seds"
-			sed -i 's/INFILE/cINFILE/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-			sed -i 's/BEAM/cBEAM/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-			sed -i 's/TEMPSKIP/'0'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-			grep -v "/particle/" $STANDARD_NAME.conf >> control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-		else if ( $GENERATOR == "geantBEAM" ) then
-			sed -i 's/INFILE/cINFILE/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-			sed -i 's/TEMPSKIP/'0'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-			grep -v "/GENBEAM/" $STANDARD_NAME.conf >> control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-		else
-		sed -i 's/TEMPSKIP/'0'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-		endif
-
-		if ( "$BKGFOLDSTR" == "None" ) then
-			echo "removing Beam Photon background from geant simulation"
-			sed -i 's/BGRATE/cBGRATE/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-			sed -i 's/BGGATE/cBGGATE/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-			sed -i 's/TEMPMINE/'$GEN_MIN_ENERGY'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-		else if ( "$BKGFOLDSTR" == "BeamPhotons" ) then
-			sed -i 's/cBEAM/BEAM/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-			sed -i 's/TEMPMINE/0.0012/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-		else if ( ("$BKGFOLDSTR" == "DEFAULT" || "$BKGFOLDSTR" == "Random" || "$bkgloc_pre" == "loc:") && "$BGTAGONLY_OPTION" == "0") then
-			sed -i 's/BGRATE/cBGRATE/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-			sed -i 's/BGGATE/cBGGATE/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-			sed -i 's/TEMPMINE/'$GEN_MIN_ENERGY'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-		else
-			sed -i 's/TEMPMINE/'$GEN_MIN_ENERGY'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-		endif
-
-		echo "" >> control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-		echo END >> control'_'$formatted_runNumber'_'$formatted_fileNumber.in
-		cp $PWD/control'_'$formatted_runNumber'_'$formatted_fileNumber.in $OUTDIR/configurations/geant/
-
-		mv $PWD/control'_'$formatted_runNumber'_'$formatted_fileNumber.in $PWD/control.in
-
-		if ( "$GEANTVER" == "3" ) then
-
-			hdgeant -xml=ccdb://GEOMETRY/main_HDDS.xml,run=$RUN_NUMBER
-			set geant_return_code=$status
-
-		else if ( "$GEANTVER" == "4" ) then
-			#make run.mac then call it below
-			rm -f run.mac
-
-			if ( $gen_pre != "file" ) then
-				if ( "$GENERATOR_POST" != "No" ) then
-					#STANDARD_NAME changed, remove '_decay_evtgen' for the search
-					grep "/particle/" `echo $STANDARD_NAME.conf | sed 's/_decay_evtgen//g'` >>! run.mac
-				else
-					grep "/particle/" $STANDARD_NAME.conf >>! run.mac
-				endif
-			endif
-			echo "/run/beamOn $EVT_TO_GEN" >>! run.mac
-			echo "exit" >>! run.mac
-
-			hdgeant4 -t$NUMTHREADS run.mac
-			set geant_return_code=$status
-			rm run.mac
-		else
-			echo "INVALID GEANT VERSION"
-			exit 1
-		endif
-
-		if ( $geant_return_code != 0 ) then
-				echo
-				echo
-				echo "Something went wrong with hdgeant(4)"
-				echo "status code: "$geant_return_code
-				exit $geant_return_code
-		endif
-
-		if ( ! -f ./$STANDARD_NAME'_geant'$GEANTVER'.hddm' ) then
-			echo "An hddm file was not created by Geant. Terminating MC production. Please consult logs to diagnose"
-			exit 12
-		endif
+	if ( `echo $eBEAM_ENERGY | grep -o "\." | wc -l` == 0 ) then
+		set eBEAM_ENERGY=$eBEAM_ENERGY\.
 	endif
 
-		set MCSMEAR_Flags=""
-		if ( "$SMEAR" == "0" ) then
-			set MCSMEAR_Flags="$MCSMEAR_Flags"" -s"
+	if ( `echo $COHERENT_PEAK | grep -o "\." | wc -l` == 0 ) then
+		set COHERENT_PEAK=$COHERENT_PEAK\.
+	endif
+
+	cp temp_Gcontrol.in $PWD/control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+	chmod 777 $PWD/control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+	#a 4byte int: od -vAn -N4 -tu4 < /dev/urandom
+	set RANDOMnumGeant=`shuf -i1-215 -n1`
+	sed -i 's/TEMPRANDOM/'$RANDOMnumGeant'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+	sed -i 's/TEMPELECE/'$eBEAM_ENERGY'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+
+	if ( "$polarization_angle" == "-1" ) then
+		sed -i 's/TEMPCOHERENT/'0'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+	else
+		set Fortran_COHERENT_PEAK=`echo $COHERENT_PEAK | cut -c -7`
+		sed -i 's/TEMPCOHERENT/'$Fortran_COHERENT_PEAK'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+	endif
+
+	sed -i 's/TEMPIN/'$STANDARD_NAME.hddm'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+	sed -i 's/TEMPRUNG/'$RUN_NUMBER'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+	sed -i 's/TEMPOUT/'$STANDARD_NAME'_geant'$GEANTVER'.hddm/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+	sed -i 's/TEMPTRIG/'$EVT_TO_GEN'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+
+	if ( $RUN_NUMBER >= 70000 ) then
+		sed -i 's/TEMPCKOV/'1'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+	else
+		sed -i 's/TEMPCKOV/'0'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+	endif
+
+	sed -i 's/TEMPGEANTAREA/'$GEANT_VERTEXT_AREA'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+	sed -i 's/TEMPGEANTLENGTH/'$GEANT_VERTEXT_LENGTH'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+
+	if ( "$colsize" != "Not Needed" ) then
+		sed -i 's/TEMPCOLD/'0.00$colsize'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+	endif
+
+	sed -i 's/TEMPRADTHICK/'"$radthick"'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+
+	sed -i 's/TEMPBGTAGONLY/'$BGTAGONLY_OPTION'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+
+	if ( "$BGRATE_toUse" != "Not Needed" ) then
+		sed -i 's/TEMPBGRATE/'$BGRATE_toUse'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+	endif
+
+	sed -i 's/TEMPNOSECONDARIES/'$GEANT_NOSECONDARIES'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+
+	if ( "$gen_pre" == "file" ) then
+		@ skip_num = $FILE_NUMBER * $PER_FILE
+		sed -i 's/TEMPSKIP/'$skip_num'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+
+	else if ( $GENERATOR == "particle_gun" ) then
+		echo "doing seds"
+		sed -i 's/INFILE/cINFILE/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+		sed -i 's/BEAM/cBEAM/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+		sed -i 's/TEMPSKIP/'0'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+		grep -v "/particle/" $STANDARD_NAME.conf >> control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+	else if ( $GENERATOR == "geantBEAM" ) then
+		sed -i 's/INFILE/cINFILE/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+		sed -i 's/TEMPSKIP/'0'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+		grep -v "/GENBEAM/" $STANDARD_NAME.conf >> control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+	else
+	sed -i 's/TEMPSKIP/'0'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+	endif
+
+	if ( "$BKGFOLDSTR" == "None" ) then
+		echo "removing Beam Photon background from geant simulation"
+		sed -i 's/BGRATE/cBGRATE/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+		sed -i 's/BGGATE/cBGGATE/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+		sed -i 's/TEMPMINE/'$GEN_MIN_ENERGY'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+	else if ( "$BKGFOLDSTR" == "BeamPhotons" ) then
+		sed -i 's/cBEAM/BEAM/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+		sed -i 's/TEMPMINE/0.0012/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+	else if ( ("$BKGFOLDSTR" == "DEFAULT" || "$BKGFOLDSTR" == "Random" || "$bkgloc_pre" == "loc:") && "$BGTAGONLY_OPTION" == "0") then
+		sed -i 's/BGRATE/cBGRATE/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+		sed -i 's/BGGATE/cBGGATE/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+		sed -i 's/TEMPMINE/'$GEN_MIN_ENERGY'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+	else
+		sed -i 's/TEMPMINE/'$GEN_MIN_ENERGY'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+	endif
+
+	echo "" >> control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+	echo END >> control'_'$formatted_runNumber'_'$formatted_fileNumber.in
+	cp $PWD/control'_'$formatted_runNumber'_'$formatted_fileNumber.in $OUTDIR/configurations/geant/
+
+	mv $PWD/control'_'$formatted_runNumber'_'$formatted_fileNumber.in $PWD/control.in
+
+	if ( "$GEANTVER" == "3" ) then
+		hdgeant -xml=ccdb://GEOMETRY/main_HDDS.xml,run=$RUN_NUMBER
+		set geant_return_code=$status
+	else if ( "$GEANTVER" == "4" ) then
+		#make run.mac then call it below
+		rm -f run.mac
+		if ( $gen_pre != "file" ) then
+			if ( "$GENERATOR_POST" != "No" ) then
+				#STANDARD_NAME changed, remove '_decay_evtgen' for the search
+				grep "/particle/" `echo $STANDARD_NAME.conf | sed 's/_decay_evtgen//g'` >>! run.mac
+			else
+				grep "/particle/" $STANDARD_NAME.conf >>! run.mac
+			endif
 		endif
+		echo "/run/beamOn $EVT_TO_GEN" >>! run.mac
+		echo "exit" >>! run.mac
 
-		if ( "$NOSIPMSATURATION" == "1" ) then
-			set MCSMEAR_Flags="$MCSMEAR_Flags"" -T"
-		endif
+		hdgeant4 -t$NUMTHREADS run.mac
+		set geant_return_code=$status
+		rm run.mac
+	else
+		echo "INVALID GEANT VERSION"
+		exit 1
+	endif
 
-		if ( "$MCSMEAR_NOTAG" == "1" ) then
-			set MCSMEAR_Flags="$MCSMEAR_Flags"" -t"
-		endif
+	if ( $geant_return_code != 0 ) then
+		echo
+		echo
+		echo "Something went wrong with hdgeant(4)"
+		echo "status code: "$geant_return_code
+		exit $geant_return_code
+	endif
 
-		if ( "$GENERATOR" == "geantBEAM" ) then
-			echo "SKIP RUNNING MCSMEAR AND RECONSTRUCTION"
-		else
+	if ( ! -f ./$STANDARD_NAME'_geant'$GEANTVER'.hddm' ) then
+		echo "An hddm file was not created by Geant. Terminating MC production. Please consult logs to diagnose"
+		exit 12
+	endif
+endif
 
-		#check if CONFIG_FILE ends with ".evio"
-		if ( !("$GENR" == "0" && "$GEANT" == "0" && "$SMEAR" == "0" && "$CONFIG_FILE" !~ ".evio" ) ) then
+set MCSMEAR_Flags=""
+if ( "$SMEAR" == "0" ) then
+	set MCSMEAR_Flags="$MCSMEAR_Flags"" -s"
+endif
+
+if ( "$NOSIPMSATURATION" == "1" ) then
+	set MCSMEAR_Flags="$MCSMEAR_Flags"" -T"
+endif
+
+if ( "$MCSMEAR_NOTAG" == "1" ) then
+	set MCSMEAR_Flags="$MCSMEAR_Flags"" -t"
+endif
+
+if ( "$GENERATOR" == "geantBEAM" ) then
+	echo "SKIP RUNNING MCSMEAR AND RECONSTRUCTION"
+else
+	#check if CONFIG_FILE ends with ".evio"
+	if ( !("$GENR" == "0" && "$GEANT" == "0" && "$SMEAR" == "0" && "$CONFIG_FILE" !~ ".evio" ) ) then
 		echo "RUNNING MCSMEAR"
 		if ( "$GENR" == "0" && "$GEANT" == "0" ) then
-		echo $GENERATOR
-		set geant_file=`echo $GENERATOR | cut -c 6-`
-		echo $geant_file
-		cp $geant_file ./$STANDARD_NAME'_geant'$GEANTVER'.hddm'
+			echo $GENERATOR
+			set geant_file=`echo $GENERATOR | cut -c 6-`
+			echo $geant_file
+			cp $geant_file ./$STANDARD_NAME'_geant'$GEANTVER'.hddm'
 		endif
 		if ( "$BKGFOLDSTR" == "BeamPhotons" || "$BKGFOLDSTR" == "None" || "$BKGFOLDSTR" == "TagOnly" ) then
 			echo "running MCsmear without folding in random background"
@@ -1605,10 +1582,10 @@ endif
 		else if ( "$BKGFOLDSTR" == "DEFAULT" || "$BKGFOLDSTR" == "Random" ) then
 			rm -f count.py
 			if ( $RANDOM_TRIG_NUM_EVT == -1 ) then
-			echo "import hddm_s" > count.py
-			echo "print(sum(1 for r in hddm_s.istream('$bkglocstring')))" >>! count.py
-			set totalnum=`$USER_PYTHON count.py`
-			rm count.py
+				echo "import hddm_s" > count.py
+				echo "print(sum(1 for r in hddm_s.istream('$bkglocstring')))" >>! count.py
+				set totalnum=`$USER_PYTHON count.py`
+				rm count.py
 			else
 				set totalnum=$RANDOM_TRIG_NUM_EVT
 			endif
@@ -1634,10 +1611,10 @@ endif
 		else if ( "$bkgloc_pre" == "loc:" ) then
 			rm -f count.py
 			if ( $RANDOM_TRIG_NUM_EVT == -1 ) then
-			echo "import hddm_s" > count.py
-			echo "print(sum(1 for r in hddm_s.istream('$bkglocstring')))" >>! count.py
-			set totalnum=`$USER_PYTHON count.py`
-			rm count.py
+				echo "import hddm_s" > count.py
+				echo "print(sum(1 for r in hddm_s.istream('$bkglocstring')))" >>! count.py
+				set totalnum=`$USER_PYTHON count.py`
+				rm count.py
 			else
 				set totalnum=$RANDOM_TRIG_NUM_EVT
 			endif
@@ -1647,13 +1624,13 @@ endif
 			mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
 			set mcsmear_return_code=$status
 
-			else
+		else
 			#trust the user and use their string
 			echo 'mcsmear '$MCSMEAR_Flags' -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o'$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm'' '$STANDARD_NAME'_geant'$GEANTVER'.hddm'' '$BKGFOLDSTR
 			mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' $STANDARD_NAME'_geant'$GEANTVER'.hddm' $BKGFOLDSTR
 			set mcsmear_return_code=$status
+		endif
 
-			endif
 		if ( $mcsmear_return_code != 0 ) then
 			echo
 			echo
@@ -1661,277 +1638,275 @@ endif
 			echo "status code: "$mcsmear_return_code
 			exit $mcsmear_return_code
 		endif
+	endif
+
+	#run reconstruction
+	if ( "$CLEANGENR" == "1" ) then
+		rm beam.config
+		rm $STANDARD_NAME'_beam.conf'
+		if ( "$GENERATOR" == "genr8" ) then
+			rm *.ascii
+		else if ( "$GENERATOR" == "bggen" || "$GENERATOR" == "bggen_jpsi" || "$GENERATOR" == "bggen_phi_ee" ) then
+			rm particle.dat
+			rm pythia.dat
+			rm pythia-geant.map
+			rm bggen.his
+			rm -f bggen.nt
+			unlink fort.15
+		else if ( "$GENERATOR" == "gen_ee_hb" ) then
+			rm CFFs_DD_Feb2012.dat
+			rm ee.ascii
+			rm cobrems.root
+			rm tcs_gen.root
+		endif
+		if ( "$GENERATOR" != "particle_gun" && "$GENERATOR" != "geantBEAM" && "$gen_pre" != "file" ) then
+			rm $STANDARD_NAME.hddm
+		endif
+		if ( "$gen_pre" == "file" ) then
+			rm $STANDARD_NAME.hddm
+		endif
+	endif
+
+
+	if ( ! -f ./$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' ) then
+		echo "An hddm file was not created by mcsmear. Terminating MC production. Please consult logs to diagnose"
+		exit 13
+	endif
+
+	if ( "$RECON" != "0" ) then
+		echo "RUNNING RECONSTRUCTION"
+		set file_to_recon=$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm'
+
+		if ("$GENR" == "0" && "$GEANT" == "0" && "$SMEAR" == "0" ) then
+			set file_to_recon="$CONFIG_FILE"
 		endif
 
-		#run reconstruction
-		if ( "$CLEANGENR" == "1" ) then
-				rm beam.config
-				rm $STANDARD_NAME'_beam.conf'
-				if ( "$GENERATOR" == "genr8" ) then
-				rm *.ascii
-				else if ( "$GENERATOR" == "bggen" || "$GENERATOR" == "bggen_jpsi" || "$GENERATOR" == "bggen_phi_ee" ) then
-				rm particle.dat
-				rm pythia.dat
-				rm pythia-geant.map
-					rm bggen.his
-					rm -f bggen.nt
-				unlink fort.15
-				else if ( "$GENERATOR" == "gen_ee_hb" ) then
-					rm CFFs_DD_Feb2012.dat
-					rm ee.ascii
-					rm cobrems.root
-					rm tcs_gen.root
-				endif
-				if ( "$GENERATOR" != "particle_gun" && "$GENERATOR" != "geantBEAM" && "$gen_pre" != "file" ) then
-					rm $STANDARD_NAME.hddm
-				endif
-				if ( "$gen_pre" == "file" ) then
-					rm $STANDARD_NAME.hddm
-				endif
+		set additional_hdroot=""
+		if ( "$EXPERIMENT" == "CPP" ) then
+			set additional_hdroot="-PKALMAN:ADD_VERTEX_POINT=1"
 		endif
 
+		if ( "$RECON_CALIBTIME" != "notime" ) then
+			set reconwholecontext = "variation=$VERSION calibtime=$RECON_CALIBTIME"
+			setenv JANA_CALIB_CONTEXT "$reconwholecontext"
+		endif
+		set reaction_filter=""
+		#set file_options=""
+		if ( "$recon_pre" == "file" ) then
+			echo "using config file: "$jana_config_file
 
-		if ( ! -f ./$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' ) then
-			echo "An hddm file was not created by mcsmear. Terminating MC production. Please consult logs to diagnose"
-			exit 13
+			echo hd_root $file_to_recon --config=jana_config.cfg -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 $additional_hdroot
+			hd_root $file_to_recon --config=jana_config.cfg -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 $additional_hdroot
+			set hd_root_return_code=$status
+
+			set reaction_filter = `grep ReactionFilter jana_config.cfg`
+			#set file_options = `tail jana_config.cfg -n+2` # get everything from line 2 on. Lines counting starts with 1
+			echo "Reaction Filter: "$reaction_filter
+			#echo "STATUS: " $hd_root_return_code
+			if ( "$reaction_filter" == "" || "$ANAENVIRONMENT" == "no_Analysis_env" ) then
+				rm jana_config.cfg
+			endif
+		else
+			set pluginlist=("danarest" "monitoring_hists" "mcthrown_tree" )
+			if ( "$CUSTOM_PLUGINS" != "None" ) then
+				set pluginlist=( "$pluginlist" "$CUSTOM_PLUGINS" )
+			endif
+			set PluginStr=""
+
+			foreach plugin ($pluginlist)
+				set PluginStr="$PluginStr""$plugin"","
+			end
+
+			set PluginStr=`echo $PluginStr | sed -r 's/.{1}$//'`
+			echo "Running hd_root with:""$PluginStr"
+			echo "hd_root ""$STANDARD_NAME"'_geant'"$GEANTVER"'_smeared.hddm'" -PPLUGINS=""$PluginStr ""-PNTHREADS=""$NUMTHREADS"
+			hd_root $file_to_recon -PPLUGINS=$PluginStr -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 $additional_hdroot
+			set hd_root_return_code=$status
+
 		endif
 
-		if ( "$RECON" != "0" ) then
-				echo "RUNNING RECONSTRUCTION"
-				set file_to_recon=$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm'
+		if ( $hd_root_return_code != 0 ) then
+			echo
+			echo
+			echo "Something went wrong with hd_root"
+			echo "Status code: "$hd_root_return_code
+			exit $hd_root_return_code
+		endif
 
-				if ("$GENR" == "0" && "$GEANT" == "0" && "$SMEAR" == "0" ) then
-					set file_to_recon="$CONFIG_FILE"
+		if ( -f dana_rest.hddm ) then
+			mv dana_rest.hddm dana_rest_$STANDARD_NAME.hddm
+		endif
+
+		if ( "$ANAENVIRONMENT" != "no_Analysis_env" && "$reaction_filter" != "" || "$ANAENVIRONMENT" != "no_Analysis_env" && $ana_pre == "file" ) then
+			echo "new env setup"
+			source /group/halld/Software/build_scripts/gluex_env_clean.csh
+			set xmltest2=`echo $ANAENVIRONMENT | rev | cut -c -4 | rev`
+			if ( "$xmltest2" == ".xml" ) then
+				source /group/halld/Software/build_scripts/gluex_env_jlab.csh $ANAENVIRONMENT
+			else
+				source $ANAENVIRONMENT
+			endif
+			if ( "$ccdbSQLITEPATH" != "no_sqlite" && "$ccdbSQLITEPATH" != "batch_default" && "$ccdbSQLITEPATH" != "jlab_batch_default" ) then
+				if (`$USER_STAT --file-system --format=%T $PWD` == "lustre" ) then
+					echo "Attempting to use sqlite on a lustre file system. This does not work. Try running on a different file system!"
+					exit 1
 				endif
+				cp $ccdbSQLITEPATH ./ccdb.sqlite
+				setenv CCDB_CONNECTION sqlite:///$PWD/ccdb.sqlite
+				setenv JANA_CALIB_URL ${CCDB_CONNECTION}
+			else if ( "$ccdbSQLITEPATH" == "batch_default" ) then
+				setenv CCDB_CONNECTION sqlite:////group/halld/www/halldweb/html/dist/ccdb.sqlite
+				setenv JANA_CALIB_URL ${CCDB_CONNECTION}
+			else if ( "$ccdbSQLITEPATH" == "jlab_batch_default" ) then
+				#	set ccdb_jlab_sqlite_path=`bash -c 'echo $((1 + RANDOM % 100))'`
+				#	if ( -f /work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite ) then
+				#		setenv CCDB_CONNECTION sqlite:////work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite
+				#	else
+				#		setenv CCDB_CONNECTION mysql://ccdb_user@hallddb.jlab.org/ccdb
+				#	endif
+				setenv CCDB_CONNECTION mysql://ccdb_user@hallddb-farm.jlab.org/ccdb
+				setenv JANA_CALIB_URL ${CCDB_CONNECTION}
+			endif
 
-				set additional_hdroot=""
-				if ( "$EXPERIMENT" == "CPP" ) then
-					set additional_hdroot="-PKALMAN:ADD_VERTEX_POINT=1"
+			if ( "$rcdbSQLITEPATH" != "no_sqlite" && "$rcdbSQLITEPATH" != "batch_default" ) then
+				if (`$USER_STAT --file-system --format=%T $PWD` == "lustre" ) then
+					echo "Attempting to use sqlite on a lustre file system. This does not work. Try running on a different file system!"
+					exit 1
 				endif
+				cp $rcdbSQLITEPATH ./rcdb.sqlite
+				setenv RCDB_CONNECTION sqlite:///$PWD/rcdb.sqlite
+			else if ( "$rcdbSQLITEPATH" == "batch_default" ) then
+				#echo "keeping the RCDB on mysql now"
+				setenv RCDB_CONNECTION sqlite:////group/halld/www/halldweb/html/dist/rcdb.sqlite
+			endif
 
-				if ( "$RECON_CALIBTIME" != "notime" ) then
-					set reconwholecontext = "variation=$VERSION calibtime=$RECON_CALIBTIME"
-					setenv JANA_CALIB_CONTEXT "$reconwholecontext"
+			echo "EMULATING ANALYSIS LAUNCH"
+			echo "changed software to: "`which hd_root`
+
+			if ( "$CUSTOM_ANA_PLUGINS" != "None" ) then
+				if ( $ana_pre == "file" ) then
+					echo "Use $jana_ana_config_file"
+				else #use list of plugins
+					set anapluginlist=( "monitoring_hists" "$CUSTOM_ANA_PLUGINS" )
+					set anaPluginStr=""
+					foreach plugin ($anapluginlist)
+						set anaPluginStr="$anaPluginStr""$plugin"","
+					end
+					set anaPluginStr=`echo $anaPluginStr | sed -r 's/.{1}$//'` #remove last ","
+					echo "PLUGINS ""$anaPluginStr" > ana_jana.cfg
 				endif
-				set reaction_filter=""
-				#set file_options=""
-				if ( "$recon_pre" == "file" ) then
-				echo "using config file: "$jana_config_file
+			else
+				echo "PLUGINS ReactionFilter" > ana_jana.cfg
+				sed '/PLUGINS/d' jana_config.cfg >> ana_jana.cfg
+			endif
 
-				echo hd_root $file_to_recon --config=jana_config.cfg -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 $additional_hdroot
-				hd_root $file_to_recon --config=jana_config.cfg -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 $additional_hdroot
-					set hd_root_return_code=$status
+			set thrown_tree_check=`grep mcthrown_tree ana_jana.cfg`
+			if ( "$thrown_tree_check" != "" ) then
+				echo
+				echo
+				echo "WARNING: You have the mcthrown_tree plugin in your jana config file for the analysis launch (see below)!"
+				echo "		This will overwrite the previous thrown_tree and the file will not contain ALL thrown information."
+				echo
+				echo
+			endif
 
-					set reaction_filter = `grep ReactionFilter jana_config.cfg`
-					#set file_options = `tail jana_config.cfg -n+2` # get everything from line 2 on. Lines counting starts with 1
-					echo "Reaction Filter: "$reaction_filter
-					#echo "STATUS: " $hd_root_return_code
-					if ( "$reaction_filter" == "" || "$ANAENVIRONMENT" == "no_Analysis_env" ) then
-						rm jana_config.cfg
-					endif
+			cat ana_jana.cfg
+
+			hd_root dana_rest_$STANDARD_NAME.hddm --config=ana_jana.cfg -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 -o hd_root_ana.root
+			set anahd_root_return_code=$status
+
+			if ( $anahd_root_return_code != 0 ) then
+				echo
+				echo
+				echo "Something went wrong with ana_hd_root"
+				echo "Status code: "$anahd_root_return_code
+				exit $anahd_root_return_code
+			endif
+
+			rm jana_config.cfg
+			rm ana_jana.cfg
+
+			if ( -f dana_rest.hddm ) then
+				mv dana_rest.hddm dana_rest_ana_$STANDARD_NAME.hddm
+			endif
+
+		endif
+	endif #end of reconstruction
+
+	if ( "$CLEANGEANT" == "1" && "$GEANT" == "1" ) then
+		rm $STANDARD_NAME'_geant'$GEANTVER'.hddm'
+		rm control.in
+		rm -f geant.hbook
+		rm -f hdgeant.rz
+		if ( "$PWD" != "$MCWRAPPER_CENTRAL" ) then
+			rm temp_Gcontrol.in
+		endif
+	endif
+
+	if ( "$CLEANSMEAR" == "1" && "$SMEAR" == "1" ) then
+		rm $STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm'
+	endif
+	rm -rf smear.root
+
+	if ( "$CLEANRECON" == "1" ) then
+		rm dana_rest*
+	endif
+
+	set rootfiles=`ls *.root`
+	set filename_root=""
+
+	foreach rootfile ($rootfiles)
+		set filename_root=`echo $rootfile | sed -r 's/.{5}$//'`
+		set filetomv="$rootfile"
+		set filecheck=`echo $current_files | grep -c $filetomv`
+
+		if ( "$filecheck" == "0" ) then
+			echo $filetomv
+			set hdroot_test=`echo $filetomv | grep 'hd_root_\|hd_root.root'`
+			set thrown_test=`echo $filetomv | grep tree_thrown`
+			set gen_test=`echo $filetomv | grep gen_`
+			set reaction_test=`echo $filetomv | grep tree_`
+			set std_name_test=`echo $filetomv | grep $STANDARD_NAME`
+			#echo hdroot_test = $hdroot_test
+			if ($hdroot_test !~ "") then
+				if ( ! -d "$OUTDIR/root/monitoring_hists/" ) then
+					#echo "DNE"
+					#echo "$OUTDIR/root/monitoring_hists/"
+					mkdir $OUTDIR/root/monitoring_hists/
+				endif
+				mv $PWD/$filetomv $OUTDIR/root/monitoring_hists/$filename_root\_$STANDARD_NAME.root
+			else if ($thrown_test !~ "") then
+				if ( ! -d "$OUTDIR/root/thrown/" ) then
+					#echo "DNE"
+					#echo "$OUTDIR/root/monitoring_hists/"
+					mkdir $OUTDIR/root/thrown/
+				endif
+				mv $PWD/$filetomv $OUTDIR/root/thrown/$filename_root\_$STANDARD_NAME.root
+			else if ($reaction_test !~ "") then
+				if ( ! -d "$OUTDIR/root/trees/" ) then
+					#echo "DNE"
+					#echo "$OUTDIR/root/monitoring_hists/"
+					mkdir $OUTDIR/root/trees/
+				endif
+				mv $PWD/$filetomv $OUTDIR/root/trees/$filename_root\_$STANDARD_NAME.root
+			else if ($gen_test !~ "") then
+				if ( ! -d "$OUTDIR/root/generator/" ) then
+					#echo "DNE"
+					#echo "$OUTDIR/root/monitoring_hists/"
+					mkdir $OUTDIR/root/generator/
+				endif
+				if ($std_name_test !~ "") then
+					# echo "generator output root file $filetomv already contains $STANDARD_NAME"
+					mv $PWD/$filetomv $OUTDIR/root/generator/$filename_root.root
 				else
-
-				set pluginlist=("danarest" "monitoring_hists" "mcthrown_tree" )
-
-				if ( "$CUSTOM_PLUGINS" != "None" ) then
-						set pluginlist=( "$pluginlist" "$CUSTOM_PLUGINS" )
+					mv $PWD/$filetomv $OUTDIR/root/generator/$filename_root\_$STANDARD_NAME.root
 				endif
-				set PluginStr=""
-
-				foreach plugin ($pluginlist)
-						set PluginStr="$PluginStr""$plugin"","
-				end
-
-				set PluginStr=`echo $PluginStr | sed -r 's/.{1}$//'`
-				echo "Running hd_root with:""$PluginStr"
-		 		echo "hd_root ""$STANDARD_NAME"'_geant'"$GEANTVER"'_smeared.hddm'" -PPLUGINS=""$PluginStr ""-PNTHREADS=""$NUMTHREADS"
-				hd_root $file_to_recon -PPLUGINS=$PluginStr -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 $additional_hdroot
-				set hd_root_return_code=$status
-
-				endif
-
-				if ( $hd_root_return_code != 0 ) then
-					echo
-					echo
-					echo "Something went wrong with hd_root"
-					echo "Status code: "$hd_root_return_code
-					exit $hd_root_return_code
-				endif
-
-				if ( -f dana_rest.hddm ) then
-					mv dana_rest.hddm dana_rest_$STANDARD_NAME.hddm
-				endif
-
-				if ( "$ANAENVIRONMENT" != "no_Analysis_env" && "$reaction_filter" != "" || "$ANAENVIRONMENT" != "no_Analysis_env" && $ana_pre == "file" ) then
-					echo "new env setup"
-					source /group/halld/Software/build_scripts/gluex_env_clean.csh
-					set xmltest2=`echo $ANAENVIRONMENT | rev | cut -c -4 | rev`
-					if ( "$xmltest2" == ".xml" ) then
-						source /group/halld/Software/build_scripts/gluex_env_jlab.csh $ANAENVIRONMENT
-					else
-						source $ANAENVIRONMENT
-					endif
-					if ( "$ccdbSQLITEPATH" != "no_sqlite" && "$ccdbSQLITEPATH" != "batch_default" && "$ccdbSQLITEPATH" != "jlab_batch_default" ) then
-	if (`$USER_STAT --file-system --format=%T $PWD` == "lustre" ) then
-		echo "Attempting to use sqlite on a lustre file system. This does not work. Try running on a different file system!"
-		exit 1
-	endif
-	cp $ccdbSQLITEPATH ./ccdb.sqlite
-	setenv CCDB_CONNECTION sqlite:///$PWD/ccdb.sqlite
-	setenv JANA_CALIB_URL ${CCDB_CONNECTION}
-else if ( "$ccdbSQLITEPATH" == "batch_default" ) then
-	setenv CCDB_CONNECTION sqlite:////group/halld/www/halldweb/html/dist/ccdb.sqlite
-	setenv JANA_CALIB_URL ${CCDB_CONNECTION}
-else if ( "$ccdbSQLITEPATH" == "jlab_batch_default" ) then
-	#	set ccdb_jlab_sqlite_path=`bash -c 'echo $((1 + RANDOM % 100))'`
-	#	if ( -f /work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite ) then
-	#		setenv CCDB_CONNECTION sqlite:////work/halld/ccdb_sqlite/$ccdb_jlab_sqlite_path/ccdb.sqlite
-	#	else
-	#		setenv CCDB_CONNECTION mysql://ccdb_user@hallddb.jlab.org/ccdb
-	#	endif
-	setenv CCDB_CONNECTION mysql://ccdb_user@hallddb-farm.jlab.org/ccdb
-	setenv JANA_CALIB_URL ${CCDB_CONNECTION}
-endif
-
-if ( "$rcdbSQLITEPATH" != "no_sqlite" && "$rcdbSQLITEPATH" != "batch_default" ) then
-	if (`$USER_STAT --file-system --format=%T $PWD` == "lustre" ) then
-		echo "Attempting to use sqlite on a lustre file system. This does not work. Try running on a different file system!"
-		exit 1
-	endif
-	cp $rcdbSQLITEPATH ./rcdb.sqlite
-	setenv RCDB_CONNECTION sqlite:///$PWD/rcdb.sqlite
-else if ( "$rcdbSQLITEPATH" == "batch_default" ) then
-	#echo "keeping the RCDB on mysql now"
-	setenv RCDB_CONNECTION sqlite:////group/halld/www/halldweb/html/dist/rcdb.sqlite
-endif
-
-					echo "EMULATING ANALYSIS LAUNCH"
-					echo "changed software to: "`which hd_root`
-
-					if ( "$CUSTOM_ANA_PLUGINS" != "None" ) then
-						if ( $ana_pre == "file" ) then
-							echo "Use $jana_ana_config_file"
-						else #use list of plugins
-							set anapluginlist=( "monitoring_hists" "$CUSTOM_ANA_PLUGINS" )
-							set anaPluginStr=""
-							foreach plugin ($anapluginlist)
-									set anaPluginStr="$anaPluginStr""$plugin"","
-							end
-							set anaPluginStr=`echo $anaPluginStr | sed -r 's/.{1}$//'` #remove last ","
-							echo "PLUGINS ""$anaPluginStr" > ana_jana.cfg
-						endif
-					else
-						echo "PLUGINS ReactionFilter" > ana_jana.cfg
-						sed '/PLUGINS/d' jana_config.cfg >> ana_jana.cfg
-					endif
-
-					set thrown_tree_check=`grep mcthrown_tree ana_jana.cfg`
-					if ( "$thrown_tree_check" != "" ) then
-						echo
-						echo
-						echo "WARNING: You have the mcthrown_tree plugin in your jana config file for the analysis launch (see below)!"
-						echo "		This will overwrite the previous thrown_tree and the file will not contain ALL thrown information."
-						echo
-						echo
-					endif
-
-					cat ana_jana.cfg
-
-					hd_root dana_rest_$STANDARD_NAME.hddm --config=ana_jana.cfg -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 -o hd_root_ana.root
-					set anahd_root_return_code=$status
-
-					if ( $anahd_root_return_code != 0 ) then
-					echo
-					echo
-					echo "Something went wrong with ana_hd_root"
-					echo "Status code: "$anahd_root_return_code
-					exit $anahd_root_return_code
-					endif
-
-					rm jana_config.cfg
-					rm ana_jana.cfg
-
-					if ( -f dana_rest.hddm ) then
-						mv dana_rest.hddm dana_rest_ana_$STANDARD_NAME.hddm
-					endif
-
-				endif
-endif #close geantBEAM if
-				if ( "$CLEANGEANT" == "1" && "$GEANT" == "1" ) then
-				rm $STANDARD_NAME'_geant'$GEANTVER'.hddm'
-				rm control.in
-				rm -f geant.hbook
-				rm -f hdgeant.rz
-				if ( "$PWD" != "$MCWRAPPER_CENTRAL" ) then
-						rm temp_Gcontrol.in
-				endif
-				endif
-
-				if ( "$CLEANSMEAR" == "1" && "$SMEAR" == "1" ) then
-				rm $STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm'
-				endif
-				rm -rf smear.root
-
-				if ( "$CLEANRECON" == "1" ) then
-				rm dana_rest*
-				endif
-
-				set rootfiles=`ls *.root`
-				set filename_root=""
-
-				foreach rootfile ($rootfiles)
-				set filename_root=`echo $rootfile | sed -r 's/.{5}$//'`
-					set filetomv="$rootfile"
-					set filecheck=`echo $current_files | grep -c $filetomv`
-
-					if ( "$filecheck" == "0" ) then
-						echo $filetomv
-						set hdroot_test=`echo $filetomv | grep 'hd_root_\|hd_root.root'`
-						set thrown_test=`echo $filetomv | grep tree_thrown`
-						set gen_test=`echo $filetomv | grep gen_`
-						set reaction_test=`echo $filetomv | grep tree_`
-						set std_name_test=`echo $filetomv | grep $STANDARD_NAME`
-						#echo hdroot_test = $hdroot_test
-						if ($hdroot_test !~ "") then
-							if ( ! -d "$OUTDIR/root/monitoring_hists/" ) then
-								#echo "DNE"
-								#echo "$OUTDIR/root/monitoring_hists/"
-							mkdir $OUTDIR/root/monitoring_hists/
-							endif
-							mv $PWD/$filetomv $OUTDIR/root/monitoring_hists/$filename_root\_$STANDARD_NAME.root
-						else if ($thrown_test !~ "") then
-							if ( ! -d "$OUTDIR/root/thrown/" ) then
-								#echo "DNE"
-								#echo "$OUTDIR/root/monitoring_hists/"
-							mkdir $OUTDIR/root/thrown/
-							endif
-							mv $PWD/$filetomv $OUTDIR/root/thrown/$filename_root\_$STANDARD_NAME.root
-						else if ($reaction_test !~ "") then
-							if ( ! -d "$OUTDIR/root/trees/" ) then
-								#echo "DNE"
-								#echo "$OUTDIR/root/monitoring_hists/"
-							mkdir $OUTDIR/root/trees/
-							endif
-							mv $PWD/$filetomv $OUTDIR/root/trees/$filename_root\_$STANDARD_NAME.root
-						else if ($gen_test !~ "") then
-							if ( ! -d "$OUTDIR/root/generator/" ) then
-								#echo "DNE"
-								#echo "$OUTDIR/root/monitoring_hists/"
-							mkdir $OUTDIR/root/generator/
-							endif
-							if ($std_name_test !~ "") then
-								# echo "generator output root file $filetomv already contains $STANDARD_NAME"
-								mv $PWD/$filetomv $OUTDIR/root/generator/$filename_root.root
-							else
-								mv $PWD/$filetomv $OUTDIR/root/generator/$filename_root\_$STANDARD_NAME.root
-							endif
-						else
-							mv $PWD/$filetomv $OUTDIR/root/$filename_root\_$STANDARD_NAME.root
-						endif
-
-					endif
-				end
+			else
+				mv $PWD/$filetomv $OUTDIR/root/$filename_root\_$STANDARD_NAME.root
+			endif
 		endif
+	end
+endif #end "if ( "$GENERATOR" == "geantBEAM" )"
 
 
 rm -rf .hdds_tmp_*
