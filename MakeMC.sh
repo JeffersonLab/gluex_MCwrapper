@@ -175,7 +175,7 @@ fi
 
 export MAKE_MC_USING_XROOTD=0
 #ls /usr/lib64/libXrdPosixPreload.so
-if [[ -f /usr/lib64/libXrdPosixPreload.so && "$BKGFOLDSTR" != "None" && "$SMEAR" != "0" ]]; then
+if [[ -f /usr/lib64/libXrdPosixPreload.so && "$BKGFOLDSTR" != "None" && "$GENR" != "0" && "$GEANT" != "0" && "$SMEAR" != "0" ]]; then
 	export MAKE_MC_USING_XROOTD=1
 	export LD_PRELOAD=/usr/lib64/libXrdPosixPreload.so
 	echo "XROOTD is available for use if needed..."
@@ -626,7 +626,7 @@ fi
 
 bkglocstring=""
 bkgloc_pre=`echo $BKGFOLDSTR | cut -c 1-4`
-if [[ ("$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" == "Random") && "$SMEAR" != "0" ]]; then
+if [[ ("$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" == "Random") && "$GENR" != "0" && "$GEANT" != "0" && "$SMEAR" != "0" ]]; then
 	#find file and run:1
 
 	if [[ "$RANDBGTAG" == "none" && "$bkgloc_pre" != "loc:" ]]; then
