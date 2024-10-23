@@ -1668,37 +1668,38 @@ else
 			echo "status code: "$mcsmear_return_code
 			exit $mcsmear_return_code
 		fi
+	fi
 
-		if [[ "$CLEANGENR" == "1" ]]; then
-			rm beam.config
-			rm $STANDARD_NAME'_beam.conf'
-			if [[ "$GENERATOR" == "genr8" ]]; then
-				rm *.ascii
-			elif [[ "$GENERATOR" == "bggen" || "$GENERATOR" == "bggen_jpsi" || "$GENERATOR" == "bggen_phi_ee" ]]; then
-				rm particle.dat
-				rm pythia.dat
-				rm pythia-geant.map
-				rm -f bggen.nt
-				unlink fort.15
-			elif [[ "$GENERATOR" == "gen_ee_hb" ]]; then
-				rm CFFs_DD_Feb2012.dat
-				rm ee.ascii
-				rm cobrems.root
-				rm tcs_gen.root
-			fi
-			if [[ "$GENERATOR" != "particle_gun" && "$GENERATOR" != "geantBEAM" && "$gen_pre" != "file" ]]; then
-				rm $STANDARD_NAME.hddm
-			fi
-			if [[ "$gen_pre" == "file" ]]; then
-				rm $STANDARD_NAME.hddm
-			fi
+	if [[ "$CLEANGENR" == "1" ]]; then
+		rm beam.config
+		rm $STANDARD_NAME'_beam.conf'
+		if [[ "$GENERATOR" == "genr8" ]]; then
+			rm *.ascii
+		elif [[ "$GENERATOR" == "bggen" || "$GENERATOR" == "bggen_jpsi" || "$GENERATOR" == "bggen_phi_ee" ]]; then
+			rm particle.dat
+			rm pythia.dat
+			rm pythia-geant.map
+			rm -f bggen.nt
+			unlink fort.15
+		elif [[ "$GENERATOR" == "gen_ee_hb" ]]; then
+			rm CFFs_DD_Feb2012.dat
+			rm ee.ascii
+			rm cobrems.root
+			rm tcs_gen.root
 		fi
-
-		if [[ ! -f ./$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' && "$GENR" != "0" && "$GEANT" != "0" && "$SMEAR" != "0" ]]; then
-			echo "An hddm file was not created by mcsmear. Terminating MC production. Please consult logs to diagnose"
-			exit 13
+		if [[ "$GENERATOR" != "particle_gun" && "$GENERATOR" != "geantBEAM" && "$gen_pre" != "file" ]]; then
+			rm $STANDARD_NAME.hddm
+		fi
+		if [[ "$gen_pre" == "file" ]]; then
+			rm $STANDARD_NAME.hddm
 		fi
 	fi
+
+	if [[ ! -f ./$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' && "$GENR" != "0" && "$GEANT" != "0" && "$SMEAR" != "0" ]]; then
+		echo "An hddm file was not created by mcsmear. Terminating MC production. Please consult logs to diagnose"
+		exit 13
+	fi
+	
 
 	if [[ "$GENR" != "0" && "$GEANT" != "0" && "$SMEAR" != "0" && "$RECON" != "0" ]]; then #run reconstruction
 		echo "RUNNING RECONSTRUCTION"
