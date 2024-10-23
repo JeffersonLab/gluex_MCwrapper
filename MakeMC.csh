@@ -684,7 +684,7 @@ if ( "$CUSTOM_ANA_PLUGINS" != "None" ) then
 	endif
 endif
 
-if ( "$GENR" != "0" ) then
+if ( "$GENR" != "0" ) then #run generation
 
 	set gen_pre=`echo $GENERATOR | cut -c1-4`
 
@@ -1370,7 +1370,7 @@ if ( "$GENR" != "0" ) then
 	endif
 endif
 
-if ( "$GENERATOR_POST" != "No" ) then
+if ( "$GENERATOR_POST" != "No" && "$GENR" != "0" ) then #run postprocessing
 	echo "RUNNING POSTPROCESSING "
 	#copy config locally
 	set post_return_code=-1
@@ -1417,7 +1417,7 @@ if ( "$GENERATOR_POST" != "No" ) then
 	endif
 endif
 
-if ( "$GEANT" != "0" ) then
+if ( "$GEANT" != "0" && "$GENR" != "0" ) then #run geant
 	echo "RUNNING GEANT"$GEANTVER
 
 	if ( `echo $eBEAM_ENERGY | grep -o "\." | wc -l` == 0 ) then
@@ -1566,9 +1566,9 @@ if ( "$GENERATOR" == "geantBEAM" ) then
 	echo "SKIP RUNNING MCSMEAR AND RECONSTRUCTION"
 else
 	#check if CONFIG_FILE ends with ".evio"
-	if ( !("$GENR" == "0" && "$GEANT" == "0" && "$SMEAR" == "0" && "$CONFIG_FILE" !~ ".evio" ) ) then
+	if ( "$GENR" != "0" && "$GEANT" != "0" && "$SMEAR" != "0" && "$CONFIG_FILE" !~ ".evio" ) then #run mcsmear
 		echo "RUNNING MCSMEAR"
-		if ( "$GENR" == "0" && "$GEANT" == "0" ) then
+		if ( "$GENR" == "0" && "$GEANT" == "0" ) then #obsolete, needs fixing
 			echo $GENERATOR
 			set geant_file=`echo $GENERATOR | cut -c 6-`
 			echo $geant_file
@@ -1668,16 +1668,16 @@ else
 	endif
 
 
-	if ( ! -f ./$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' ) then
+	if ( ! -f ./$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' && "$GENR" != "0" && "$GEANT" != "0" && "$SMEAR" != "0" ) then
 		echo "An hddm file was not created by mcsmear. Terminating MC production. Please consult logs to diagnose"
 		exit 13
 	endif
 
-	if ( "$RECON" != "0" ) then
+	if ( "$GENR" != "0" && "$GEANT" != "0" && "$SMEAR" != "0" && "$RECON" != "0" ) then #run reconstruction
 		echo "RUNNING RECONSTRUCTION"
 		set file_to_recon=$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm'
 
-		if ("$GENR" == "0" && "$GEANT" == "0" && "$SMEAR" == "0" ) then
+		if ("$GENR" == "0" && "$GEANT" == "0" && "$SMEAR" == "0" ) then #obsolete, needs fixing
 			set file_to_recon="$CONFIG_FILE"
 		endif
 
@@ -1737,7 +1737,7 @@ else
 			mv dana_rest.hddm dana_rest_$STANDARD_NAME.hddm
 		endif
 
-		if ( "$ANAENVIRONMENT" != "no_Analysis_env" && "$reaction_filter" != "" || "$ANAENVIRONMENT" != "no_Analysis_env" && $ana_pre == "file" ) then
+		if ( "$ANAENVIRONMENT" != "no_Analysis_env" && "$reaction_filter" != "" || "$ANAENVIRONMENT" != "no_Analysis_env" && $ana_pre == "file" ) then #run analysis launch
 			echo "new env setup"
 			source /group/halld/Software/build_scripts/gluex_env_clean.csh
 			set xmltest2=`echo $ANAENVIRONMENT | rev | cut -c -4 | rev`
@@ -1855,7 +1855,7 @@ else
 	set rootfiles=`ls *.root`
 	set filename_root=""
 
-	foreach rootfile ($rootfiles)
+	foreach rootfile ($rootfiles) #move root files
 		set filename_root=`echo $rootfile | sed -r 's/.{5}$//'`
 		set filetomv="$rootfile"
 		set filecheck=`echo $current_files | grep -c $filetomv`

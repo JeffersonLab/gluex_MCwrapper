@@ -719,7 +719,7 @@ if [[ "$CUSTOM_ANA_PLUGINS" != "None" ]]; then
 fi
 
 
-if [[ "$GENR" != "0" ]]; then
+if [[ "$GENR" != "0" ]]; then # run generation
 
 	gen_pre=`echo $GENERATOR | cut -c1-4`
 
@@ -1386,7 +1386,7 @@ if [[ "$GENR" != "0" ]]; then
 fi
 
 #POST PROCESSING INSERTION POINT
-if [[ "$GENERATOR_POST" != "No" ]]; then
+if [[ "$GENERATOR_POST" != "No" && "$GENR" != "0" ]]; then #run post processing
 	echo "RUNNING POSTPROCESSING "
 	#copy config locally
 	post_return_code=-1
@@ -1435,7 +1435,7 @@ if [[ "$GENERATOR_POST" != "No" ]]; then
 fi
 
 
-if [[ "$GEANT" != "0" ]]; then
+if [[ "$GEANT" != "0" && "$GENR" != "0" ]]; then #run geant
 	echo "RUNNING GEANT"$GEANTVER
 
 	if [[ `echo $eBEAM_ENERGY | grep -o "\." | wc -l` == 0 ]]; then
@@ -1597,9 +1597,9 @@ if [[ "$GENERATOR" == "geantBEAM" ]]; then
 	echo "SKIP RUNNING MCSMEAR AND RECONSTRUCTION"
 else
 	#check if config file ends in .evio to decide whether or not smear needs to be run for conversion of simulation for reconstruction
-	if [[ !("$GENR" == "0" && "$GEANT" == "0" && "$SMEAR" == "0" && "$CONFIG_FILE" != *.evio ) ]]; then
+	if [[ "$GENR" != "0" && "$GEANT" != "0" && "$SMEAR" != "0" && "$CONFIG_FILE" != *.evio ]]; then #run mcsmear
 		echo "RUNNING MCSMEAR"
-		if [[ "$GENR" == "0" && "$GEANT" == "0" ]]; then
+		if [[ "$GENR" == "0" && "$GEANT" == "0" ]]; then #obsolete, needs fixing
 			echo $GENERATOR
 			geant_file=`echo $GENERATOR | cut -c 6-`
 			echo $geant_file
@@ -1694,17 +1694,17 @@ else
 			fi
 		fi
 
-		if [[ ! -f ./$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' ]]; then
+		if [[ ! -f ./$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' && "$GENR" != "0" && "$GEANT" != "0" && "$SMEAR" != "0" ]]; then
 			echo "An hddm file was not created by mcsmear. Terminating MC production. Please consult logs to diagnose"
 			exit 13
 		fi
 	fi
 
-	if [[ "$RECON" != "0" ]]; then
+	if [[ "$GENR" != "0" && "$GEANT" != "0" && "$SMEAR" != "0" && "$RECON" != "0" ]]; then #run reconstruction
 		echo "RUNNING RECONSTRUCTION"
 		file_to_recon=$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm'
 
-		if [[ "$GENR" == "0" && "$GEANT" == "0" && "$SMEAR" == "0" ]]; then
+		if [[ "$GENR" == "0" && "$GEANT" == "0" && "$SMEAR" == "0" ]]; then #obsolete, needs fixing
 			file_to_recon="$CONFIG_FILE"
 		fi
 
@@ -1759,7 +1759,7 @@ else
 		fi
 
 		# SET UP FOR EMULATION OF ANALYSIS LAUNCH
-		if [[ "$ANAENVIRONMENT" != "no_Analysis_env" && "$reaction_filter" != "" || "$ANAENVIRONMENT" != "no_Analysis_env" && $ana_pre == "file" ]]; then
+		if [[ "$ANAENVIRONMENT" != "no_Analysis_env" && "$reaction_filter" != "" || "$ANAENVIRONMENT" != "no_Analysis_env" && $ana_pre == "file" ]]; then #run analysis launch
 			echo "new env setup"
 			source /group/halld/Software/build_scripts/gluex_env_clean.sh
 			xmltest2=`echo $ANAENVIRONMENT | rev | cut -c -4 | rev`
@@ -1885,7 +1885,7 @@ else
 
 	rootfiles=$(ls *.root)
 	filename_root=""
-	for rootfile in $rootfiles; do
+	for rootfile in $rootfiles; do #move root files
 		filename_root=`echo $rootfile | sed -r 's/.{5}$//'`
 		filetomv="$rootfile"
 		filecheck=`echo $current_files | grep -c $filetomv`
