@@ -171,7 +171,7 @@ if ( "$MCWRAPPER_RUN_LOCATION" == "JLAB" || `hostname` =~ '*.jlab.org' ) then
 endif
 
 setenv MAKE_MC_USING_XROOTD 0
-if ( -f /usr/lib64/libXrdPosixPreload.so && "$BKGFOLDSTR" != "None" ) then
+if ( -f /usr/lib64/libXrdPosixPreload.so && "$BKGFOLDSTR" != "None" && "$SMEAR" != "0" ) then
 	setenv MAKE_MC_USING_XROOTD 1
 	setenv LD_PRELOAD /usr/lib64/libXrdPosixPreload.so
 	echo "XROOTD is available for use if needed..."
@@ -600,7 +600,7 @@ endif
 set bkglocstring=""
 set bkgloc_pre=`echo $BKGFOLDSTR | cut -c 1-4`
 
-if ( "$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" == "Random" ) then
+if ( ("$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" == "Random") && "$SMEAR" != "0" ) then
 	#find file and run:1
 	if ( "$RANDBGTAG" == "none" && "$bkgloc_pre" != "loc:" ) then
 		echo "Random background requested but no tag given. Please provide the desired tag e.g Random:recon-2017_01-ver03"
