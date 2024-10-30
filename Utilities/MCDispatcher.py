@@ -540,9 +540,9 @@ def CheckGenConfig(order):
     if(os.path.isfile(fileSTR)==False and (running_hostname == "scosg16.jlab.org" or running_hostname == "scosg20.jlab.org" or running_hostname=="scosg2201.jlab.org") ):
         print("File not found and on submit node, attempting to copy to "+copyTo)
         #copyTo="/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"
-        copy_loc="ifarm1801-ib"
+        copy_loc="ifarm2401-ib"
         if(running_hostname=="scosg2201.jlab.org"):
-            copy_loc="ifarm1901"
+            copy_loc="ifarm2401"
         print("scp "+runner_name+"@"+copy_loc+":"+fileSTR.lstrip()+" "+copyTo+str(ID)+"_"+name)
         subprocess.call("scp "+runner_name+"@"+copy_loc+":"+fileSTR.lstrip()+" "+copyTo+str(ID)+"_"+name,shell=True)
         #subprocess.call("rsync -ruvt ifarm1402:"+fileSTR+" "+copyTo,shell=True)
@@ -659,8 +659,14 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
 
 
     if(not skip_Test):
-        WritePayloadConfig(order,newLoc)
+        writeout=WritePayloadConfig(order,newLoc)
         RunNumber=str(order["RunNumLow"])
+
+        if writeout == -3:
+            print("Error in writing payload")
+            print("could not find postprocessing file(s)")
+            status=["oh no!!!",-3,"could not find postprocessing file(s)"]
+            return status
 
         print(str(index)+":  "+"Wrote Payload")
         print("original RCDB QUERY:", order["RCDBQuery"])
@@ -1313,9 +1319,9 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
             print("parseGenPostProcessing[i]",parseGenPostProcessing[i])
             if parseGenPostProcessing[i].strip() != "Default":
 
-                copy_loc="ifarm1801-ib"
+                copy_loc="ifarm2401-ib"
                 if(socket.gethostname()=="scosg2201.jlab.org"):
-                    copy_loc="ifarm1801"
+                    copy_loc="ifarm2401"
                 print("scp "+runner_name+"@"+copy_loc+":"+parseGenPostProcessing[i]+" "+"/osgpool/halld/"+runner_name+"/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_genpost_"+str(i)+".config")
                 try:
                     subprocess.call("scp "+runner_name+"@"+copy_loc+":"+parseGenPostProcessing[i]+" "+"/osgpool/halld/"+runner_name+"/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_genpost_"+str(i)+".config", shell=True)
@@ -1358,10 +1364,19 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
             s.send_message(msg)
             s.quit()
 
+            #write message to email_[ProjectID].log file in copy=open("/osgpool/halld/"+runner_name+"/REQUESTED_FAIL_MAILS/email_"+str(row['ID'])+".log", "w+")
+            try:    
+                copy=open("/osgpool/halld/"+runner_name+"/REQUESTED_FAIL_MAILS/email_"+str(row['ID'])+".log", "w+")
+                copy.write("Could not test the project because MCwrapper-bot could not copy the following file: "+parseGenPostProcessing[i]+"\n This may be due to a lack of permissions for "+runner_name+" to read from the containing directory or the file itself may not exist.\n Please correct this issue by following the link: "+'https://halldweb.jlab.org/gluex_sim/SubmitSim.html?prefill='+str(row['ID'])+'&mod=1'+".  Do NOT resubmit this request.")
+                copy.close()
+            except Exception as e:
+                print(e)
+                pass
+
             update_status_query="UPDATE Project SET Tested=-1 WHERE ID="+str(order["ID"])
             curs.execute(update_status_query)
             conn.commit()
-            return
+            return -3
         MCconfig_file.write("GENERATOR_POSTPROCESS="+str(newGenPost_str)+"\n")
 
 
@@ -1397,9 +1412,9 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
     if(order["ReactionLines"] != ""):
         if(order["ReactionLines"][0:5] == "file:"):
             jana_config_file=order["ReactionLines"][5:]
-            copy_loc="ifarm1801-ib"
+            copy_loc="ifarm2401-ib"
             if(socket.gethostname()=="scosg2201.jlab.org"):
-                copy_loc="ifarm1801"
+                copy_loc="ifarm2401"
 
             print("scp "+runner_name+"@"+copy_loc+":"+jana_config_file+" "+"/osgpool/halld/"+runner_name+"/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config")
             subprocess.call("scp "+runner_name+"@"+copy_loc+":"+jana_config_file+" "+"/osgpool/halld/"+runner_name+"/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config",shell=True)
