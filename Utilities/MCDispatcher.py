@@ -86,7 +86,11 @@ def RecallAll():
 
 def BundleFiles(input,output):
     MCWRAPPER_BOT_HOME="/scigroup/mcwrapper/gluex_MCwrapper/"
-    bundlecommand = "ssh ifarm1802 " + "echo hostname; source /group/halld/Software/build_scripts/gluex_env_jlab.csh; /usr/bin/python3.6 " + MCWRAPPER_BOT_HOME + "/Utilities/MCMerger.py -f " + input + "/ " + output + "/"
+    projectName = input.split("/")[-2] if input[-1]=="/" else input.split("/")[-1]
+    mkdircommand="ssh dtn1902 mkdir -p /osgpool/halld/mcwrap/mergetemp/" + projectName
+    print(mkdircommand)
+    subprocess.call(mkdircommand.split(" "))
+    bundlecommand = "ssh dtn1902 \'" + "echo hostname; source /group/halld/Software/build_scripts/gluex_env_jlab.sh; /usr/bin/python3.6 " + MCWRAPPER_BOT_HOME + "/Utilities/MCMerger.py -f -tempdir /osgpool/halld/mcwrap/mergetemp/" + projectName + "/ " + input + " " + output + "\'"
     print(bundlecommand)
     try:
         out = subprocess.check_output(shlex.split(bundlecommand), stderr=subprocess.STDOUT)
@@ -99,14 +103,16 @@ def DeclareAllComplete():
     conn=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
     curs=conn.cursor(MySQLdb.cursors.DictCursor)
 
-    query="SELECT ID,OutputLocation,Email,Completed_Time from Project where Tested=4 && Notified is NULL;"
+    query="SELECT ID,OutputLocation,Email,Completed_Time,Tested from Project where Tested=4 or Tested=400 && Notified is NULL;"
     curs.execute(query)
     rows=curs.fetchall()
     print("DECLARING",rows,"COMPLETE")
     
     for proj in rows:
+        print(proj)
+        print("=====================")
 
-        inputdir= proj["OutputLocation"].replace("/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/","/work/halld/gluex_simulations/REQUESTED_MC/")
+        inputdir= proj["OutputLocation"].replace("/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/","/work/test-xrootd/gluex/mcwrap/REQUESTEDMC_OUTPUT/")
         outputlocation="/".join(proj["OutputLocation"].split("/")[:-1])+"/"
         # outputlocation="/work/halld/gluex_simulations/MERGED_MC/"
 
@@ -118,38 +124,58 @@ def DeclareAllComplete():
         if datetime.datetime.now() < proj["Completed_Time"] + datetime.timedelta(hours=hours_to_wait):
             continue
         
-        print("BundleFiles("+inputdir+","+outputlocation+")")
-        mkdircommand="ssh ifarm1802 mkdir -p "+outputlocation
-        print(mkdircommand)
-        subprocess.call(mkdircommand.split(" "))
-        #close the connection to the database while we run the bundle files
-        conn.close()
-        out=BundleFiles(inputdir,outputlocation)
-        print("final output",out)
-
-        if out == "ERROR":
-            continue
-        
         conn=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
         curs=conn.cursor(MySQLdb.cursors.DictCursor)
-        msg = EmailMessage()
-        msg.set_content('Your Project ID '+str(proj['ID'])+' has been declared completed.  Outstanding jobs have been recalled. Output may be found here:\n'+proj['OutputLocation'])
+        if (proj["Tested"]!=100 and proj["Tested"]!=41 and proj["ID"]>=3440):
+            update_status_tobundle_q="UPDATE Project SET Tested=40 where ID="+str(proj["ID"])
+            print(update_status_tobundle_q)
+            curs.execute(update_status_tobundle_q)
+            conn.commit()
 
-        # me == the sender's email address                                                                                                                                                                                 
-        # you == the recipient's email address                                                                                                                                                                             
-        msg['Subject'] = 'GlueX MC Request #'+str(proj['ID'])+' Declared Completed'
-        msg['From'] = 'MCwrapper-bot'
-        msg['To'] = str(proj['Email'])
+        #print("BundleFiles("+inputdir+","+outputlocation+")")
+        #mkdircommand="ssh dtn1902 mkdir -p "+outputlocation
+        #print(mkdircommand)
+        #subprocess.call(mkdircommand.split(" "))
+        ##close the connection to the database while we run the bundle files
+        #conn.close()
+        #out=BundleFiles(inputdir,outputlocation)
+        #print("final output",out)
+#
+        #if out == "ERROR":
+        #    continue
+        print(proj.keys())
+        if proj["Tested"]==400:
+            #write a file via xrootd with the name of proj["ID"] to xrdfs xroots://dtn-gluex.jlab.org/ ls /gluex/mcwrap/to_be_scrubbed
+            del_comm="touch "+str(proj['ID'])+"; xrdcp "+str(proj['ID'])+" xroots://dtn-gluex.jlab.org//gluex/mcwrap/to_be_scrubbed/; rm "+str(proj['ID'])
+            print(del_comm)
+            try:
+                subprocess.call(del_comm,shell=True)
+            except Exception as e:
+                print(e)
+                pass
 
-        # Send the message via our own SMTP server.                                                                                                                                                                        
-        s = smtplib.SMTP('localhost')
-        s.send_message(msg)
-        s.quit()
+            conn=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
+            curs=conn.cursor(MySQLdb.cursors.DictCursor)
+            msg = EmailMessage()
+            msg.set_content('Your Project ID '+str(proj['ID'])+' has been declared completed.  Outstanding jobs have been recalled. Output may be found here:\n'+proj['OutputLocation'])
 
-        #subprocess.call("echo 'Your Project ID "+str(proj['ID'])+" has been declared completed.  Outstanding jobs have been recalled. Output may be found here:\n"+proj['OutputLocation']+"' | mail -s 'GlueX MC Request #"+str(proj['ID'])+" Completed' "+str(proj['Email']),shell=True)
-        updatequery="UPDATE Project SET Notified=1 where ID="+str(proj["ID"]) #Completed_Time=NOW(),
-        curs.execute(updatequery)
-        conn.commit()
+            # me == the sender's email address                                                                                                                                                                                 
+            # you == the recipient's email address                                                                                                                                                                             
+            msg['Subject'] = 'GlueX MC Request #'+str(proj['ID'])+' Declared Completed'
+            msg['From'] = 'MCwrapper-bot'
+            msg['To'] = str(proj['Email'])
+
+            # Send the message via our own SMTP server.                                                                                                                                                                        
+            s = smtplib.SMTP('localhost')
+            s.send_message(msg)
+            s.quit()
+
+            #subprocess.call("echo 'Your Project ID "+str(proj['ID'])+" has been declared completed.  Outstanding jobs have been recalled. Output may be found here:\n"+proj['OutputLocation']+"' | mail -s 'GlueX MC Request #"+str(proj['ID'])+" Completed' "+str(proj['Email']),shell=True)
+            updatequery="UPDATE Project SET Notified=1,Tested=4 where ID="+str(proj["ID"]) #Completed_Time=NOW(),
+            curs.execute(updatequery)
+            conn.commit()
+
+
 
 def CancelAll():
     query="SELECT ID,OutputLocation,Email from Project where Tested=3;"
@@ -185,7 +211,7 @@ def CancelAll():
         conn.commit()
 
 
-def AutoLaunch():
+def AutoLaunch(RUNNING_LIMIT_OVERRIDE):
     #print "in autolaunch"
     print("RECALLING...")
     RecallAll()
@@ -207,7 +233,7 @@ def AutoLaunch():
 
 
     print("RETRYING...")
-    RetryAllJobs()
+    RetryAllJobs(RUNNING_LIMIT_OVERRIDE)
     print("TESTING...")
     query = "SELECT ID,Email,VersionSet,Tested,UName FROM Project WHERE (Tested = 0) && Dispatched_Time is NULL ORDER BY (SELECT Priority from Users where name=UName) DESC LIMIT 10;"
     print(query)
@@ -268,6 +294,7 @@ def DispatchProject(ID,SYSTEM,PERCENT):
         print("Error: Cannot find Project with ID="+ID)
     
 def RetryAllJobs(rlim=False):
+    print("retrying all jobs. rlim="+str(rlim))
     query= "SELECT ID,Notified FROM Project where Completed_Time is NULL && Is_Dispatched=1.0 && Tested!=2 && Tested!=4 && Tested!=-4 && Tested!=3;"
     print(query)
     curs.execute(query) 
@@ -429,19 +456,38 @@ def RetryJob(ID,AllOSG=False):
     elif(rows[0]["BatchSystem"] == "OSG" or AllOSG):
         #print "OSG JOB FOUND"
         status = subprocess.call("cp "+MCWRAPPER_BOT_HOME+"/examples/OSGShell.config ./MCDispatched_"+str(ID)+".config", shell=True)
+        print("writing payload")
         WritePayloadConfig(proj[0],"True",ID)
+        print("payload written")
         per_file_num=20000
         get_perfile_q="SELECT PerFile from Generator_perfiles where GenName=\""+str(proj[0]["Generator"])+"\";"
+        print(get_perfile_q)
         curs.execute(get_perfile_q) 
         genrow=curs.fetchall()
         try:
+            
             per_file_num=genrow[0]["PerFile"]
         except Exception as e:
+            print("exception in per file num")
+            print("genrow:",genrow)
             print(e)
             pass
+        print("per file num",per_file_num)
         command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched_"+str(ID)+".config "+str(job[0]["RunNumber"])+" "+str(job[0]["NumEvts"])+" per_file="+str(per_file_num)+"  base_file_number="+str(job[0]["FileNumber"])+" generate="+str(proj[0]["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(proj[0]["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(proj[0]["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(proj[0]["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid=-"+str(ID)+" batch=1 tobundle=0"
         print(command)
-        status = subprocess.call(command, shell=True)
+        #command="printenv"
+        #run the command in the environment of the user who submitted the job
+        #print "running command"
+        #print "=========================="
+        #print command
+        #add bearer token to env
+        os.environ["BEARER_TOKEN_FILE"]="/var/run/user/10967/bt_u10967"
+        os.environ["XDG_RUNTIME_DIR"]="/run/user/10967"
+        status_out, status_err = subprocess.Popen(command,shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,env=os.environ,executable='/bin/bash').communicate()
+        print(command,"STATUS:")
+        print(str(status_out,"utf-8"))
+        
+        #status = subprocess.call(command, shell=True)
 
 def CancelJob(ID):
     #deactivate
@@ -496,7 +542,7 @@ def CheckGenConfig(order):
         #copyTo="/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"
         copy_loc="ifarm1801-ib"
         if(running_hostname=="scosg2201.jlab.org"):
-            copy_loc="ifarm1801"
+            copy_loc="ifarm1901"
         print("scp "+runner_name+"@"+copy_loc+":"+fileSTR.lstrip()+" "+copyTo+str(ID)+"_"+name)
         subprocess.call("scp "+runner_name+"@"+copy_loc+":"+fileSTR.lstrip()+" "+copyTo+str(ID)+"_"+name,shell=True)
         #subprocess.call("rsync -ruvt ifarm1402:"+fileSTR+" "+copyTo,shell=True)
@@ -556,6 +602,12 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
     orig_dirname=origOutLoc.split("/")[-2]
     new_dirname="_".join(orig_dirname.split("_")[:-1])+"_"+str(ID)
     new_full_dirname=origOutLoc.replace(orig_dirname,new_dirname)
+
+
+    if new_full_dirname[-1]=="/":
+        xrd_stub_name=new_full_dirname[:-1].split("/")[-1]
+    else:
+        xrd_stub_name=new_full_dirname.split("/")[-1]
 
 
     print("order", order)
@@ -733,6 +785,40 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
         
         print(bcolors.OKGREEN+"TEST SUCCEEDED"+bcolors.ENDC)
         print("rm -rf "+order["OutputLocation"])
+
+        #mkdir for xrootd out
+        
+        try:
+            os.environ["BEARER_TOKEN_FILE"]="/var/run/user/10967/bt_u10967"
+            os.environ["XDG_RUNTIME_DIR"]="/run/user/10967"
+                
+            token_str='eval `ssh-agent`; /usr/bin/ssh-add;'
+            agent_kill_str="; ssh-agent -k"
+
+            
+            XROOTD_OUTPUT_ROOT="/gluex/mcwrap/REQUESTEDMC_OUTPUT/"
+            XROOTD_SERVER="dtn-gluex.jlab.org"
+            mkdir_xrd_cmd="/usr/bin/xrdfs "+XROOTD_SERVER+" mkdir -p -mrwxr-xr-x "+XROOTD_OUTPUT_ROOT+xrd_stub_name   #+"; chmod g+w "+XROOTD_OUTPUT_ROOT+xrd_stub_name
+            #subprocess.call(mkdir_xrd_cmd)
+            print("creating directory on xrd: ",token_str+mkdir_xrd_cmd+agent_kill_str)
+            #print("Creating folder:",mkdir_xrd_cmd)
+            #use POPEN to run this mkdir_xrd_cmd importing the environment which this python script was called in
+            #set my_env to the envronment this python script was called in
+            my_env=os.environ.copy()
+
+            p = Popen(token_str+mkdir_xrd_cmd+agent_kill_str, env=my_env ,stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True)
+            output, errors = p.communicate()
+
+            if str(errors,'utf-8') != "":
+                print("ERROR IN MAKING XROOTD DIR")
+                print(errors)
+                print("============================")
+                print(output)
+            
+        except Exception as e:
+            print(e)
+            pass
+        
         #status = subprocess.call("rm -rf "+order["OutputLocation"],shell=True)
     else:
         try:
@@ -760,7 +846,7 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
     if(status[1]!=-1):
         #print "TEST success"
         #EMAIL SUCCESS AND DISPATCH
-        #print("YAY TESTED")
+        print("YAY TESTED")
         print(MCWRAPPER_BOT_HOME+"/Utilities/MCDispatcher.py dispatch -rlim -sys OSG "+str(row['ID']))
         subprocess.call(MCWRAPPER_BOT_HOME+"/Utilities/MCDispatcher.py dispatch -rlim -sys OSG "+str(row['ID']),shell=True)
     else:
@@ -1344,9 +1430,11 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
     MCconfig_file.write("ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"+str(order["VersionSet"])+"\n")
     print("ADD ANAVER TO PAYLOAD?")
     print(str(order["ANAVersionSet"]))
+    print("adding anaver if needed...")
     if(order["ANAVersionSet"] != None and order["ANAVersionSet"] != "None" ):
         print("ADDING ANNAVER")
         MCconfig_file.write("ANA_ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"+str(order["ANAVersionSet"])+"\n")
+        print("ADDED ANNAVER")
     MCconfig_file.close()
 
 def DispatchToOSG(ID,order,PERCENT):
@@ -1390,7 +1478,8 @@ def DispatchToOSG(ID,order,PERCENT):
         pass
     command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched_"+str(ID)+".config "+str(RunNumber)+" "+str(order["NumEvents"])+" per_file="+str(per_file_num)+" base_file_number="+str(0)+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" logdir=/osgpool/halld/"+runner_name+"/REQUESTEDMC_LOGS/"+order["OutputLocation"].split("/")[7]+" batch=1 tobundle=0"
     print(command)
-    status = subprocess.call(command, shell=True)
+    status_out,status_error= subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=os.environ).communicate()
+    #status = subprocess.call(command, shell=True)
     
 def WritePayloadConfigString(order,foundConfig):
     config_str=""
@@ -1532,6 +1621,7 @@ def main(argv):
             ID=argv[argindex]
 
         if argu[0] == "-":
+            print(argu)
             if argu == "-sys":
                 SYSTEM=str(argv[argindex+1]).upper()
             if argu == "-percent":
@@ -1546,7 +1636,7 @@ def main(argv):
         #print MODE
         #print SYSTEM
         #print ID
-        print("RUNNING",MODE)
+        print("RUNNING",MODE, RUNNING_LIMIT_OVERRIDE)
         if MODE == "DISPATCH":
             if ID != "All":
                 DispatchProject(ID,SYSTEM,PERCENT)
@@ -1585,7 +1675,7 @@ def main(argv):
             CancelJob(ID)
         elif MODE == "AUTOLAUNCH":
             print("AUTOLAUNCHING NOW")
-            AutoLaunch()
+            AutoLaunch(RUNNING_LIMIT_OVERRIDE)
         elif MODE == "REMOVEJOBS":
             RemoveAllJobs()
         elif MODE == "WRITECONFIG":

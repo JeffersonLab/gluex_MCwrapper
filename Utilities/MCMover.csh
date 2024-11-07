@@ -1,7 +1,11 @@
 #!/bin/bash -f                                                                                                                                                                                                      
 #store whoami in a variable
+current_date_time=$(date)
 runner=$(whoami)
 host_name=$(hostname)
+
+echo "Current date and time: $current_date_time" >> /osgpool/halld/$runner/MCWrapper_Logs/MCWrapperMover.log
+
 source /osgpool/halld/$runner/local_setup.sh
 
 if [[ -f /osgpool/halld/$runner/.ALLSTOP ]]; then
@@ -19,9 +23,9 @@ if [[ `ps all -u $runner | grep MCMover.csh | grep -v grep | wc -l` == 2 ]]; the
         ibapp="-ib"
     fi
     #transfer_node=$runner@dtn1902$ibapp
-    transfer_node=$runner@ifarm1802$ibapp
-    LOGtransfer_node=$runner@ifarm1802$ibapp
-    CONFIGtransfer_node=$runner@ifarm1802$ibapp
+    transfer_node=$runner@dtn1902$ibapp
+    LOGtransfer_node=$runner@dtn1902$ibapp
+    CONFIGtransfer_node=$runner@dtn1902$ibapp
 
     list_tmp_loc="/w/halld-scshelf2101/halld3/home/mcwrap/"
 
@@ -38,6 +42,7 @@ if [[ `ps all -u $runner | grep MCMover.csh | grep -v grep | wc -l` == 2 ]]; the
     echo "Finding in $input_dir to move to SLAG" >> /osgpool/halld/$runner/MCWrapper_Logs/MCWrapperMover.log
     find $input_dir -maxdepth 2 -mindepth 2 -type f -exec mv -v {} /osgpool/halld/$runner/SLAG/ \;
 
+    
     #find me the dirs
     movecount=0
     transArray=()
@@ -248,9 +253,14 @@ if [[ `ps all -u $runner | grep MCMover.csh | grep -v grep | wc -l` == 2 ]]; the
     rm -f /tmp/output_files_list.txt
     rm -f /tmp/inputLOG_files_list.txt 
     rm -f /tmp/outputLOG_files_list.txt
+    rm -f /tmp/inputCONFIG_files_list.txt 
+    rm -f /tmp/outputCONFIG_files_list.txt
+    
     #clean empty directories
     #find $input_dir -depth -empty -type d mmin -2880 -exec rmdir {} \;
     
+    current_date_time=$(date)
+    echo "Current date and time: $current_date_time" >> /osgpool/halld/$runner/MCWrapper_Logs/MCWrapperMover.log
 else
     echo "too many running"
 fi

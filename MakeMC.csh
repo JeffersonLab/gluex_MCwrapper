@@ -682,9 +682,9 @@ if ( "$GENR" != "0" ) then
 
     set gen_pre=`echo $GENERATOR | cut -c1-4`
 
-    if ( "$gen_pre" != "file" && "$GENERATOR" != "genr8" && "$GENERATOR" != "bggen" && "$GENERATOR" != "genEtaRegge" && "$GENERATOR" != "gen_2pi_amp" && "$GENERATOR" != "gen_pi0" && "$GENERATOR" != "gen_2pi_primakoff" && "$GENERATOR" != "gen_2pi0_primakoff" && "$GENERATOR" != "gen_omega_3pi" && "$GENERATOR" != "gen_omegapi" && "$GENERATOR" != "gen_2k" && "$GENERATOR" != "bggen_jpsi" && "$GENERATOR" != "gen_ee" && "$GENERATOR" != "gen_ee_hb" && "$GENERATOR" != "particle_gun" && "$GENERATOR" != "geantBEAM" && "$GENERATOR" != "bggen_phi_ee" && "$GENERATOR" != "genBH" && "$GENERATOR" != "gen_omega_radiative" && "$GENERATOR" != "gen_amp" && "$GENERATOR" != "genr8_new" && "$GENERATOR" != "gen_compton" && "$GENERATOR" != "gen_npi" && "$GENERATOR" != "gen_compton_simple" && "$GENERATOR" != "gen_primex_eta_he4" && "$GENERATOR" != "gen_whizard" && "$GENERATOR" != "mc_gen" && "$GENERATOR" != "gen_vec_ps"  && "$GENERATOR" != "bggen_upd"  && "$GENERATOR" != "gen_gcf" && "$GENERATOR" != "gen_ALP" && "$GENERATOR" != "gen_MF" && "$GENERATOR" != "genA" && "$GENERATOR" != "gen_jpsi_hc" ) then
+    if ( "$gen_pre" != "file" && "$GENERATOR" != "genr8" && "$GENERATOR" != "bggen" && "$GENERATOR" != "genEtaRegge" && "$GENERATOR" != "gen_2pi_amp" && "$GENERATOR" != "gen_pi0" && "$GENERATOR" != "gen_2pi_primakoff" && "$GENERATOR" != "gen_2pi0_primakoff" && "$GENERATOR" != "gen_omega_3pi" && "$GENERATOR" != "gen_omegapi" && "$GENERATOR" != "gen_2k" && "$GENERATOR" != "bggen_jpsi" && "$GENERATOR" != "gen_ee" && "$GENERATOR" != "gen_ee_hb" && "$GENERATOR" != "particle_gun" && "$GENERATOR" != "geantBEAM" && "$GENERATOR" != "bggen_phi_ee" && "$GENERATOR" != "genBH" && "$GENERATOR" != "gen_omega_radiative" && "$GENERATOR" != "gen_amp" && "$GENERATOR" != "genr8_new" && "$GENERATOR" != "gen_compton" && "$GENERATOR" != "gen_npi" && "$GENERATOR" != "gen_compton_simple" && "$GENERATOR" != "gen_primex_eta_he4" && "$GENERATOR" != "gen_whizard" && "$GENERATOR" != "mc_gen" && "$GENERATOR" != "gen_vec_ps"  && "$GENERATOR" != "bggen_upd" && "$GENERATOR" != "python"  && "$GENERATOR" != "gen_gcf" && "$GENERATOR" != "gen_ALP" && "$GENERATOR" != "gen_MF" && "$GENERATOR" != "genA" && "$GENERATOR" != "gen_jpsi_hc" ) then
 		echo "NO VALID GENERATOR GIVEN"
-		echo "only [genr8, bggen, genEtaRegge, gen_2pi_amp, gen_pi0, gen_omega_3pi, gen_2k, bggen_jpsi, gen_ee , gen_ee_hb, bggen_phi_ee, particle_gun, geantBEAM, genBH, gen_omega_radiative, gen_amp, gen_compton, gen_npi, gen_compton_simple, gen_primex_eta_he4, gen_whizard, gen_omegapi, mc_gen, gen_vec_ps, bggen_upd, gen_gcf, gen_ALP, gen_MF, genA, gen_jpsi_hc] are supported"
+		echo "only [genr8, bggen, genEtaRegge, gen_2pi_amp, gen_pi0, gen_omega_3pi, gen_2k, bggen_jpsi, gen_ee , gen_ee_hb, bggen_phi_ee, particle_gun, geantBEAM, genBH, gen_omega_radiative, gen_amp, gen_compton, gen_npi, gen_compton_simple, gen_primex_eta_he4, gen_whizard, gen_omegapi, mc_gen, gen_vec_ps, bggen_upd, python, gen_gcf, gen_ALP, gen_MF, genA, gen_jpsi_hc] are supported"
 		echo "something went wrong with initialization"
 		exit 1
     endif
@@ -908,9 +908,11 @@ if ( "$GENR" != "0" ) then
 	else if ( "$GENERATOR" == "bggen_upd" ) then
 		echo "configuring bggen_upd"
 		set STANDARD_NAME="bggen_upd_"$STANDARD_NAME
-		cp $MCWRAPPER_CENTRAL/Generators/bggen_upd/particles.ffr ./
-		cp $MCWRAPPER_CENTRAL/Generators/bggen_upd/pythia.dat ./
-		cp $MCWRAPPER_CENTRAL/Generators/bggen_upd/run_mcwrapper.ffr ./
+		cp $HALLD_SIM_HOME/src/programs/Simulation/bggen_upd/run/particles.ffr ./
+		cp $HALLD_SIM_HOME/src/programs/Simulation/bggen_upd/run/pythia.dat ./
+		mkdir ./spec_fun
+		cp $HALLD_SIM_HOME/src/programs/Simulation/bggen_upd/run/spec_fun/* ./spec_fun/
+		cp $HALLD_SIM_HOME/src/programs/Simulation/bggen_upd/run/run_mcwrapper.ffr ./
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
 	else if ( "$GENERATOR" == "bggen_phi_ee" ) then
 		echo "configuring bggen_phi_ee"
@@ -942,7 +944,10 @@ if ( "$GENR" != "0" ) then
 		set STANDARD_NAME="genBH_"$STANDARD_NAME
 		echo "note: this generator is run completely from command line, thus no config file will be made and/or modified"
 		cp $CONFIG_FILE ./cobrems.root
-        else if ( "$GENERATOR" == "gen_gcf" ) then
+	else if ( "$GENERATOR" == "python" ) then
+		echo "configuring python script"
+		set STANDARD_NAME="python_"$STANDARD_NAME
+		cp $CONFIG_FILE ./$STANDARD_NAME.py        else if ( "$GENERATOR" == "gen_gcf" ) then
                 echo "configuring gen_gcf"
                 set STANDARD_NAME="gen_gcf_"$STANDARD_NAME
                 cp $CONFIG_FILE ./$STANDARD_NAME.conf
@@ -1040,7 +1045,7 @@ if ( "$GENR" != "0" ) then
 		set generator_return_code=$status
 	else if ( "$GENERATOR" == "mc_gen" ) then
 		echo "RUNNING MC_GEN"
-		python $HD_UTILITIES_HOME/psflux/plot_flux_ccdb.py -b $RUN_NUMBER -e $RUN_NUMBER
+		python3.6 $HD_UTILITIES_HOME/psflux/plot_flux_ccdb.py -b $RUN_NUMBER -e $RUN_NUMBER
 		set MCGEN_FLUX_DIR=`printf './flux_%d_%d.ascii' "$RUN_NUMBER" "$RUN_NUMBER"`
 		set ROOTSCRIPT=`printf '$MCWRAPPER_CENTRAL/Generators/mc_gen/Flux_to_Ascii.C("flux_%s_%s.root")' "$RUN_NUMBER" "$RUN_NUMBER" `
 		root -l -b -q $ROOTSCRIPT
@@ -1270,6 +1275,18 @@ if ( "$GENR" != "0" ) then
 		sed -i 's/TEMPMINGENE/'$GEN_MIN_ENERGY'/' run_mcwrapper.ffr
 		sed -i 's/TEMPMAXGENE/'$GEN_MAX_ENERGY'/' run_mcwrapper.ffr
 
+		if ( grep -q "C EELEC" $STANDARD_NAME.conf ) then
+    		sed -i 's/EELEC/C EELEC/g' run_mcwrapper.ffr
+		fi
+
+		if ( grep -q "C EPEAK" $STANDARD_NAME.conf ) then
+    		sed -i 's/EPEAK/C EPEAK/g' run_mcwrapper.ffr
+		fi
+
+		if ( grep -q "C DCOLLIM" $STANDARD_NAME.conf ) then
+    		sed -i 's/DCOLLIM/C DCOLLIM/g' run_mcwrapper.ffr
+		fi
+
 		ln -s $STANDARD_NAME.conf fort.15
         ln -s particles.ffr fort.16
         ln -s run_mcwrapper.ffr fort.17
@@ -1316,6 +1333,13 @@ if ( "$GENR" != "0" ) then
 		echo genBH -n$EVT_TO_GEN -t$NUMTHREADS -m0.5 -e$GEN_MAX_ENERGY -r$RANDOMnum $STANDARD_NAME.hddm
 		genBH -n$EVT_TO_GEN -t$NUMTHREADS -m0.5 -e$GEN_MAX_ENERGY -r$RANDOMnum $STANDARD_NAME.hddm
 		sed -i 's/class="mc_s"/'class=\"s\"'/' $STANDARD_NAME.hddm
+		set generator_return_code=$status
+	else if ( "$GENERATOR" == "python" ) then
+		set RANDOMnum=`bash -c 'echo $RANDOM'`
+		set optionals_line=`head -n 1 $STANDARD_NAME.py | sed -r 's/.//'`
+		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.py
+		echo $GENERATOR $STANDARD_NAME.py --run $formatted_runNumber --nevents $EVT_TO_GEN --out $STANDARD_NAME.hddm --seed $RANDOMnum $optionals_line
+		$GENERATOR $STANDARD_NAME.py --run $formatted_runNumber --nevents $EVT_TO_GEN --out $STANDARD_NAME.hddm --seed $RANDOMnum $optionals_line
 		set generator_return_code=$status
         else if ( "$GENERATOR" == "gen_gcf" ) then
 		echo "RUNNING GEN_GCF"
@@ -1744,7 +1768,7 @@ endif
 					mv dana_rest.hddm dana_rest_$STANDARD_NAME.hddm
 				endif
 
-				if ( "$ANAENVIRONMENT" != "no_Analysis_env" && "$reaction_filter" != "" ) then
+				if ( "$ANAENVIRONMENT" != "no_Analysis_env" && "$reaction_filter" != "" || "$ANAENVIRONMENT" != "no_Analysis_env" && $ana_pre == "file" ) then
 					echo "new env setup"
 					source /group/halld/Software/build_scripts/gluex_env_clean.csh
 					set xmltest2=`echo $ANAENVIRONMENT | rev | cut -c -4 | rev`
@@ -1922,6 +1946,9 @@ rm -rf rcdb.sqlite
 
 if ( "$gen_pre" != "file" && "$GENERATOR" != "gen_ee_hb" && "$GENR" == "1" ) then
     mv $PWD/*.conf $OUTDIR/configurations/generation/
+endif
+if ( "$GENERATOR" == "python" ) then
+    mv $PWD/*.py $OUTDIR/configurations/generation/
 endif
 
 set hddmfiles=`ls | grep .hddm`
