@@ -1944,7 +1944,7 @@ endif #close geantBEAM if
 						echo $filetomv
 						set hdroot_test=`echo $filetomv | grep 'hd_root_\|hd_root.root'`
 						set thrown_test=`echo $filetomv | grep tree_thrown`
-						set gen_test=`echo $filetomv | grep gen_`
+						set gen_test=`echo $filetomv | grep gen`
 						set reaction_test=`echo $filetomv | grep tree_`
 						set std_name_test=`echo $filetomv | grep $STANDARD_NAME`
 						#echo hdroot_test = $hdroot_test

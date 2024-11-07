@@ -1981,7 +1981,7 @@ fi
 				echo $filetomv
 			    hdroot_test=`echo $filetomv | grep 'hd_root_\|hd_root.root'`
 				thrown_test=`echo $filetomv | grep tree_thrown`
-				gen_test=`echo $filetomv | grep gen_`
+				gen_test=`echo $filetomv | grep gen`
 				reaction_test=`echo $filetomv | grep tree_`
 				std_name_test=`echo $filetomv | grep $STANDARD_NAME`
 				#echo hdroot_test = $hdroot_test
