@@ -94,7 +94,7 @@ def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,N
         status = subprocess.call(mkdircom, shell=True)
 
 
-        add_command = "swif2 add-job -workflow " + WORKFLOW #+ " -name " + JOBNAME
+        add_command = "swif add-job -workflow " + WORKFLOW #+ " -name " + JOBNAME
         # project/track
         add_command += " -project " + PROJECT + " -track " + TRACK
         # resources
@@ -1642,7 +1642,7 @@ def main(argv):
                                 if BATCHSYS.upper()=="SWIF":
                                         #status = subprocess.call("swif create "+WORKFLOW,shell=True)
                                         swif_add_job(WORKFLOW, RUNNUM, BASEFILENUM,str(SCRIPT_TO_RUN),COMMAND_dict,VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID)
-                                        swifrun = "swif2 run "+WORKFLOW
+                                        swifrun = "swif run "+WORKFLOW
                                         subprocess.call(swifrun.split(" "))
                                 elif BATCHSYS.upper()=="SWIF2":
                                         #status = subprocess.call("swif2 create "+WORKFLOW,shell=True)

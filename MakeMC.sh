@@ -1000,26 +1000,27 @@ if [[ "$GENR" != "0" ]]; then
 	elif [[ "$GENERATOR" == "python" ]]; then
 	        echo "configuring python script"
 		STANDARD_NAME="python_"$STANDARD_NAME
-		cp $CONFIG_FILE ./$STANDARD_NAME.py    elif [[ "$GENERATOR" == "gen_gcf" ]]; then
-                echo "configuring gen_gcf"
-                STANDARD_NAME="gen_gcf_"$STANDARD_NAME
-                cp $CONFIG_FILE ./$STANDARD_NAME.conf
-    elif [[ "$GENERATOR" == "gen_ALP" ]]; then
-                echo "configuring gen_ALP"
-                set STANDARD_NAME="gen_ALP_"$STANDARD_NAME
-                cp $CONFIG_FILE ./$STANDARD_NAME.conf
-    elif [[ "$GENERATOR" == "gen_MF" ]]; then
-                echo "configuring gen_MF"
-                set STANDARD_NAME="gen_MF_"$STANDARD_NAME
-                cp $CONFIG_FILE ./$STANDARD_NAME.conf
-    elif [[ "$GENERATOR" == "gen_jpsi_hc" ]]; then
-                echo "configuring gen_jpsi_hc"
-                set STANDARD_NAME="gen_jpsi_hc_"$STANDARD_NAME
-                cp $CONFIG_FILE ./$STANDARD_NAME.conf
-    elif [[ "$GENERATOR" == "genA" ]]; then
-                echo "configuring genA"
-                set STANDARD_NAME="genA_"$STANDARD_NAME
-                cp $CONFIG_FILE ./$STANDARD_NAME.conf
+		cp $CONFIG_FILE ./$STANDARD_NAME.py
+	elif [[ "$GENERATOR" == "gen_gcf" ]]; then
+		echo "configuring gen_gcf"
+		STANDARD_NAME="gen_gcf_"$STANDARD_NAME
+		cp $CONFIG_FILE ./$STANDARD_NAME.conf
+	elif [[ "$GENERATOR" == "gen_ALP" ]]; then
+		echo "configuring gen_ALP"
+		set STANDARD_NAME="gen_ALP_"$STANDARD_NAME
+		cp $CONFIG_FILE ./$STANDARD_NAME.conf
+	elif [[ "$GENERATOR" == "gen_MF" ]]; then
+		echo "configuring gen_MF"
+		set STANDARD_NAME="gen_MF_"$STANDARD_NAME
+		cp $CONFIG_FILE ./$STANDARD_NAME.conf
+	elif [[ "$GENERATOR" == "gen_jpsi_hc" ]]; then
+		echo "configuring gen_jpsi_hc"
+		set STANDARD_NAME="gen_jpsi_hc_"$STANDARD_NAME
+		cp $CONFIG_FILE ./$STANDARD_NAME.conf
+	elif [[ "$GENERATOR" == "genA" ]]; then
+		echo "configuring genA"
+		set STANDARD_NAME="genA_"$STANDARD_NAME
+		cp $CONFIG_FILE ./$STANDARD_NAME.conf
 
     fi
 
@@ -1412,41 +1413,40 @@ if [[ "$GENR" != "0" ]]; then
 		echo $GENERATOR $STANDARD_NAME.py --run $formatted_runNumber --nevents $EVT_TO_GEN --out $STANDARD_NAME.hddm --seed $RANDOMnum $optionals_line
 		$GENERATOR $STANDARD_NAME.py --run $formatted_runNumber --nevents $EVT_TO_GEN --out $STANDARD_NAME.hddm --seed $RANDOMnum $optionals_line
 		generator_return_code=$?
-        elif [[ "$GENERATOR" == "gen_gcf" ]]; then
-        echo "RUNNING GEN_GCF"
-        #optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
-        #echo $optionals_line
-        sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
-	echo gen_gcf -C $STANDARD_NAME.conf -B $STANDARD_NAME'_beam.conf' -H $STANDARD_NAME.hddm -n $EVT_TO_GEN -z $RUN_NUMBER -r $formatted_fileNumber #$optionals_line
-	gen_gcf -C $STANDARD_NAME.conf -B $STANDARD_NAME'_beam.conf' -H $STANDARD_NAME.hddm -n $EVT_TO_GEN -z $RUN_NUMBER -r $formatted_fileNumber #$optionals_line
-	generator_return_code=$?
-        elif [[ "$GENERATOR" == "gen_ALP" ]]; then
-        echo "RUNNING GEN_ALP"
-        #optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
-        #echo $optionals_line
-        sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
-	echo gen_ALP -C $STANDARD_NAME.conf -B $STANDARD_NAME'_beam.conf' -H $STANDARD_NAME.hddm -R $STANDARD_NAME.root -n $EVT_TO_GEN -z $RUN_NUMBER -r $formatted_fileNumber #$optionals_line
-        gen_ALP -C $STANDARD_NAME.conf -B $STANDARD_NAME'_beam.conf' -H $STANDARD_NAME.hddm -R $STANDARD_NAME.root -n $EVT_TO_GEN -z $RUN_NUMBER -r $formatted_fileNumber #$optionals_line
-        generator_return_code=$?
+	elif [[ "$GENERATOR" == "gen_gcf" ]]; then
+		echo "RUNNING GEN_GCF"
+		#optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
+		#echo $optionals_line
+		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
+		echo gen_gcf -C $STANDARD_NAME.conf -B $STANDARD_NAME'_beam.conf' -H $STANDARD_NAME.hddm -n $EVT_TO_GEN -z $RUN_NUMBER -r $formatted_fileNumber #$optionals_line
+		gen_gcf -C $STANDARD_NAME.conf -B $STANDARD_NAME'_beam.conf' -H $STANDARD_NAME.hddm -n $EVT_TO_GEN -z $RUN_NUMBER -r $formatted_fileNumber #$optionals_line
+		generator_return_code=$?
+	elif [[ "$GENERATOR" == "gen_ALP" ]]; then
+		echo "RUNNING GEN_ALP"
+		#optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
+		#echo $optionals_line
+		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
+		echo gen_ALP -C $STANDARD_NAME.conf -B $STANDARD_NAME'_beam.conf' -H $STANDARD_NAME.hddm -R $STANDARD_NAME.root -n $EVT_TO_GEN -z $RUN_NUMBER -r $formatted_fileNumber #$optionals_line
+		gen_ALP -C $STANDARD_NAME.conf -B $STANDARD_NAME'_beam.conf' -H $STANDARD_NAME.hddm -R $STANDARD_NAME.root -n $EVT_TO_GEN -z $RUN_NUMBER -r $formatted_fileNumber #$optionals_line
+		generator_return_code=$?
 	elif [[ "$GENERATOR" == "gen_MF" ]]; then
-        echo "RUNNING GEN_MF"
-	sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
-        echo gen_MF -C $STANDARD_NAME.conf -B $STANDARD_NAME'_beam.conf' -H $STANDARD_NAME.hddm -n $EVT_TO_GEN -z $RUN_NUMBER -r $formatted_fileNumber
-	gen_MF -C $STANDARD_NAME.conf -B $STANDARD_NAME'_beam.conf' -H $STANDARD_NAME.hddm -n $EVT_TO_GEN -z $RUN_NUMBER -r $formatted_fileNumber 
-	generator_return_code=$?
+		echo "RUNNING GEN_MF"
+		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
+		echo gen_MF -C $STANDARD_NAME.conf -B $STANDARD_NAME'_beam.conf' -H $STANDARD_NAME.hddm -n $EVT_TO_GEN -z $RUN_NUMBER -r $formatted_fileNumber
+		gen_MF -C $STANDARD_NAME.conf -B $STANDARD_NAME'_beam.conf' -H $STANDARD_NAME.hddm -n $EVT_TO_GEN -z $RUN_NUMBER -r $formatted_fileNumber 
+		generator_return_code=$?
 	elif [[ "$GENERATOR" == "gen_jpsi_hc" ]]; then
-        echo "RUNNING GEN_jpsi_hc"
-        sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
-        echo gen_jpsi_hc -C $STANDARD_NAME.conf -B $STANDARD_NAME'_beam.conf' -H $STANDARD_NAME.hddm -n $EVT_TO_GEN -z $RUN_NUMBER -r $formatted_fileNumber
-        gen_jpsi_hc -C $STANDARD_NAME.conf -B $STANDARD_NAME'_beam.conf' -H $STANDARD_NAME.hddm -n $EVT_TO_GEN -z $RUN_NUMBER -r $formatted_fileNumber
-        generator_return_code=$?
-    elif [[ "$GENERATOR" == "genA" ]]; then
-        echo "RUNNING GENA"
-        sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
-        echo genA -C $STANDARD_NAME.conf -H $STANDARD_NAME.hddm -n $EVT_TO_GEN -z $RUN_NUMBER -r $formatted_fileNumber
-        genA -C $STANDARD_NAME.conf -H $STANDARD_NAME.hddm -n $EVT_TO_GEN -z $RUN_NUMBER -r $formatted_fileNumber
-        generator_return_code=$?
-
+		echo "RUNNING GEN_jpsi_hc"
+		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
+		echo gen_jpsi_hc -C $STANDARD_NAME.conf -B $STANDARD_NAME'_beam.conf' -H $STANDARD_NAME.hddm -n $EVT_TO_GEN -z $RUN_NUMBER -r $formatted_fileNumber
+		gen_jpsi_hc -C $STANDARD_NAME.conf -B $STANDARD_NAME'_beam.conf' -H $STANDARD_NAME.hddm -n $EVT_TO_GEN -z $RUN_NUMBER -r $formatted_fileNumber
+		generator_return_code=$?
+	elif [[ "$GENERATOR" == "genA" ]]; then
+		echo "RUNNING GENA"
+		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
+		echo genA -C $STANDARD_NAME.conf -H $STANDARD_NAME.hddm -n $EVT_TO_GEN -z $RUN_NUMBER -r $formatted_fileNumber
+		genA -C $STANDARD_NAME.conf -H $STANDARD_NAME.hddm -n $EVT_TO_GEN -z $RUN_NUMBER -r $formatted_fileNumber
+		generator_return_code=$?
 	fi
 
 
@@ -2083,7 +2083,7 @@ fi
 cd ..
 
 rm -rf .hdds_tmp_*
-rm -rf *.astate
+
 if [[ `ls $RUNNING_DIR/${RUN_NUMBER}_${FILE_NUMBER} | wc -l` == 0 ]]; then
 	rm -rf $RUNNING_DIR/${RUN_NUMBER}_${FILE_NUMBER}
 else
