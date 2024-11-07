@@ -47,8 +47,8 @@ try:
 except:
         pass
 
-MCWRAPPER_VERSION="2.8.0"
-MCWRAPPER_DATE="03/21/24"
+MCWRAPPER_VERSION="2.9.0"
+MCWRAPPER_DATE="06/07/24"
 
 #group sync test
 #====================================================
@@ -207,6 +207,75 @@ def swif2_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,ACCOUNT,PARTIT
                 #recordFirstAttempt(PROJECT_ID,RUNNO,FILENO,"SWIF",SWIF_ID_NUM,COMMAND['num_events'],NCORES,RAM)
         elif int(PROJECT_ID) < 0:
                 recordAttempt(abs(int(PROJECT_ID)),RUNNO,FILENO,"SWIF",SWIF_ID_NUM,COMMAND['num_events'],NCORES,RAM)
+
+
+def swif2cont_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,ACCOUNT,PARTITION,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR,LOG_DIR, PROJECT_ID):
+        STUBNAME=""
+        if(COMMAND['custom_tag_string'] != "I_dont_have_one"):
+                STUBNAME=COMMAND['custom_tag_string']+"_"
+        # PREPARE NAMES
+        STUBNAME = STUBNAME+str(RUNNO) + "_" + str(FILENO)
+
+        JOBNAME = WORKFLOW + "_" + STUBNAME
+
+        # CREATE ADD-JOB COMMAND
+        # job
+        #try removing the name specification
+
+        mkdircom="mkdir -p "+LOG_DIR+"/log/"
+        status = subprocess.call(mkdircom, shell=True)
+
+
+        add_command = "swif2 add-job -workflow " + WORKFLOW #+ " -name " + JOBNAME
+        # account/partition (used to be project/track in swif)
+        add_command += " -account " + ACCOUNT + " -partition " + PARTITION
+        # resources
+        add_command += " -create -cores " + NCORES + " -disk " + DISK + " -ram " + RAM + " -time " + TIMELIMIT + " -os " + OS
+        # stdout
+        add_command += " -stdout " + LOG_DIR + "/log/" + str(RUNNO) + "_stdout." + STUBNAME + ".out"
+        # stderr
+        add_command += " -stderr " + LOG_DIR + "/log/" + str(RUNNO) + "_stderr." + STUBNAME + ".err"
+        # tags
+        add_command += " -tag run_number " + str(RUNNO)
+        # tags
+        add_command += " -tag file_number " + str(FILENO)
+        # script with options command
+        # add_command += " -fail-save-dir "+DATA_OUTPUT_BASE_DIR
+
+        add_command += " singularity exec --bind /scigroup/mcwrapper/ --bind /u --bind /group/halld/ --bind /scratch/slurm/ --bind /lustre/enp/swif2 --bind /cvmfs --bind /work/osgpool/ --bind /work/halld --bind /cache/halld --bind /volatile/halld --bind /work/halld2 /cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_prod:v1 "+os.environ.get('MCWRAPPER_CENTRAL')+"/MakeMC.sh "+getCommandString(COMMAND,"SWIF")
+        # print(getCommandString(COMMAND,"SBATCH_SLURM"))
+        # add_command += " "+SCRIPT  +" "+ getCommandString(COMMAND,"SWIF")
+
+        if(VERBOSE == True):
+                print( "job add command is \n" + str(add_command))
+
+        if(int(NCORES)==1 and int(RAM[:-2]) >= 10 and RAM[-2:]=="GB" ):
+                print( "SciComp has a limit on RAM requested per thread, as RAM is the limiting factor.")
+                print( "This will likely cause an AUGER-SUBMIT error.")
+                print( "Please either increase NCORES or decrease RAM requested and try again.")
+                exit(1)
+        # ADD JOB
+        if add_command.find(';')!=-1 or add_command.find('&')!=-1 :#THIS CHECK HELPS PROTECT AGAINST A POTENTIAL HACK VIA CONFIG FILES
+                print( "Nice try.....you cannot use ; or &")
+                exit(1)
+        #status = subprocess.call(add_command.split(" "))
+        SWIF_ID_NUM="-1"
+
+        if( int(PROJECT_ID) <=0 ):
+                print(add_command)
+                jobSubout=subprocess.check_output(add_command.split(" "))
+                print(jobSubout)
+                idnumline=jobSubout.split("\n")[0].strip().split("=")
+
+                if(len(idnumline) == 2 ):
+                        SWIF_ID_NUM=str(idnumline[1])
+
+        if int(PROJECT_ID) > 0:
+                recordJob(PROJECT_ID,RUNNO,FILENO,SWIF_ID_NUM,COMMAND['num_events'])
+                #recordFirstAttempt(PROJECT_ID,RUNNO,FILENO,"SWIF",SWIF_ID_NUM,COMMAND['num_events'],NCORES,RAM)
+        elif int(PROJECT_ID) < 0:
+                recordAttempt(abs(int(PROJECT_ID)),RUNNO,FILENO,"SWIF",SWIF_ID_NUM,COMMAND['num_events'],NCORES,RAM)
+
 
 #====================================================
 #Takes in a few pertinant pieces of info and submits a job to qsub.  This has not been fully integrated into the autonomous side
@@ -681,7 +750,7 @@ def JSUB_add_job(VERBOSE, WORKFLOW, PROJECT,TRACK, RUNNUM, FILENUM, SCRIPT_TO_RU
 #if project ID is greater than 0 then it is a project ID and this call is going to record a new job (NOT ACTUALLY MAKING THE ATTEMPT)
 #if project ID == 0 then it is neither and just scrape the batch_ID....do nothing.  Note: this scheme requires the first id in the tables to be 1 and not 0)
 #====================================================
-def  SLURMcont_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID ):
+def  SLURMcont_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCORES, RAM, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID ):
         STUBNAME=""
         if(COMMAND['custom_tag_string'] != "I_dont_have_one"):
                 STUBNAME=COMMAND['custom_tag_string']+"_"
@@ -700,6 +769,7 @@ def  SLURMcont_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAN
         f.write("#SBATCH --time="+TIMELIMIT+"\n")
         f.write("#SBATCH --tasks-per-node=1"+"\n")
         f.write("#SBATCH --cpus-per-task="+NCORES+"\n")
+        f.write("#SBATCH --mem="+RAM+"\n")
 
         #f.write("#SBATCH -A gluex"+"\n")
         f.write("#SBATCH -p production"+"\n")
@@ -708,8 +778,8 @@ def  SLURMcont_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAN
 
         #f.write("srun "+SCRIPT_TO_RUN+" "+COMMAND+"\n")
         #/group/halld/www/halldweb/html/dist/gluex_centos7.img /cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_prod:v1
-        f.write("module use /apps/modulefiles; module load singularity/3.4.0; singularity exec --bind /cvmfs --bind /work/osgpool/ --bind /work/halld --bind /cache/halld --bind /work/halld2 /cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_prod:v1 $MCWRAPPER_CENTRAL/MakeMC.sh "+getCommandString(COMMAND,"SBATCH_SLURM")+"\n")
-
+        f.write("singularity exec --bind /scigroup/mcwrapper/ --bind /u --bind /group/halld/ --bind /scratch/slurm/ --bind /cvmfs --bind /work/osgpool/ --bind /work/halld --bind /cache/halld --bind /volatile/halld --bind /work/halld2 /cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_prod:v1 $MCWRAPPER_CENTRAL/MakeMC.sh "+getCommandString(COMMAND,"SBATCH_SLURM")+"\n")
+        #print(getCommandString(COMMAND,"SBATCH_SLURM"))
         f.close()
 
         if( int(PROJECT_ID) <=0 ):
@@ -1585,6 +1655,11 @@ def main(argv):
                                         swif2_add_job(WORKFLOW, RUNNUM, BASEFILENUM,str(SCRIPT_TO_RUN),COMMAND_dict,VERBOSE,ACCOUNT,PARTITION,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR,LOG_DIR, PROJECT_ID)
                                         swifrun = "swif2 run "+WORKFLOW
                                         subprocess.call(swifrun.split(" "))
+                                elif BATCHSYS.upper()=="SWIF2CONT":
+                                        #status = subprocess.call("swif2 create "+WORKFLOW,shell=True)
+                                        swif2cont_add_job(WORKFLOW, RUNNUM, BASEFILENUM,str(SCRIPT_TO_RUN),COMMAND_dict,VERBOSE,ACCOUNT,PARTITION,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR,LOG_DIR, PROJECT_ID)
+                                        swifrun = "swif2 run "+WORKFLOW
+                                        subprocess.call(swifrun.split(" "))
                                 elif BATCHSYS.upper()=="QSUB":
                                         qsub_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, RAM, QUEUENAME, LOG_DIR, PROJECT_ID )
                                 elif BATCHSYS.upper()=="CONDOR":
@@ -1592,7 +1667,7 @@ def main(argv):
                                 elif BATCHSYS.upper()=="OSG":
                                         OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM, SCRIPT_TO_RUN, COMMAND_dict, NCORES, RAM, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID,TO_BUNDLE )
                                 elif BATCHSYS.upper()=="SLURMCONT":
-                                        SLURMcont_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
+                                        SLURMcont_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM, SCRIPT_TO_RUN, COMMAND_dict, NCORES, RAM,DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
                                 elif BATCHSYS.upper()=="SLURM":
                                         SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
         else:
@@ -1718,6 +1793,9 @@ def main(argv):
                                                         elif BATCHSYS.upper()=="SWIF2":
                                                                 #status = subprocess.call("swif2 create "+WORKFLOW,shell=True)
                                                                 swif2_add_job(WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1,str(SCRIPT_TO_RUN),COMMAND_dict,VERBOSE,ACCOUNT,PARTITION,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR,LOG_DIR, PROJECT_ID)
+                                                        elif BATCHSYS.upper()=="SWIF2CONT":
+                                                                #status = subprocess.call("swif2 create "+WORKFLOW,shell=True)
+                                                                swif2cont_add_job(WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1,str(SCRIPT_TO_RUN),COMMAND_dict,VERBOSE,ACCOUNT,PARTITION,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR,LOG_DIR, PROJECT_ID)
                                                         elif BATCHSYS.upper()=="QSUB":
                                                                 qsub_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, RAM, QUEUENAME, LOG_DIR, PROJECT_ID )
                                                         elif BATCHSYS.upper()=="CONDOR":
@@ -1770,6 +1848,9 @@ def main(argv):
                                                 elif BATCHSYS.upper()=="SWIF2":
                                                         #status = subprocess.call("swif2 create "+WORKFLOW,shell=True)
                                                         swif2_add_job(WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1,str(SCRIPT_TO_RUN),COMMAND_dict,VERBOSE,ACCOUNT,PARTITION,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR,LOG_DIR, PROJECT_ID)
+                                                elif BATCHSYS.upper()=="SWIF2CONT":
+                                                        #status = subprocess.call("swif2 create "+WORKFLOW,shell=True)
+                                                        swif2cont_add_job(WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1,str(SCRIPT_TO_RUN),COMMAND_dict,VERBOSE,ACCOUNT,PARTITION,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR,LOG_DIR, PROJECT_ID)
                                                 elif BATCHSYS.upper()=="QSUB":
                                                         qsub_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, RAM, QUEUENAME, LOG_DIR, PROJECT_ID )
                                                 elif BATCHSYS.upper()=="CONDOR":
@@ -1777,7 +1858,7 @@ def main(argv):
                                                 elif BATCHSYS.upper()=="OSG":
                                                         OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, RAM, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID, TO_BUNDLE )
                                                 elif BATCHSYS.upper()=="SLURMCONT":
-                                                        SLURMcont_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
+                                                        SLURMcont_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, RAM, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
                                                 elif BATCHSYS.upper()=="SLURM":
                                                         SLURM_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
 
@@ -1789,9 +1870,9 @@ def main(argv):
                         swifrun = "swif run "+WORKFLOW
                         subprocess.call(swifrun.split(" "))
 
-                if BATCHRUN == 1 and BATCHSYS.upper() == "SWIF2":
+                if BATCHRUN == 1 and (BATCHSYS.upper() == "SWIF2" or BATCHSYS.upper() == "SWIF2CONT"):
                         print( "All Jobs created.  Please call \"swif2 run "+WORKFLOW+"\" to run")
-                elif BATCHRUN == 2 and BATCHSYS.upper()=="SWIF2":
+                elif BATCHRUN == 2 and (BATCHSYS.upper() == "SWIF2" or BATCHSYS.upper() == "SWIF2CONT"):
                         swifrun = "swif2 run "+WORKFLOW
                         subprocess.call(swifrun.split(" "))
 
@@ -1852,7 +1933,8 @@ def GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,RUNNUM):
                         running_hostname=socket.gethostname()
                         if running_hostname == "scosg16.jlab.org" or running_hostname == "scosg20.jlab.org" or running_hostname == "scosg2201.jlab.org":
                                 os.system("mkdir -p /tmp/"+RANDBGTAG)
-                                os.system("scp sci-xrootd.jlab.org:/osgpool/halld/"+"/random_triggers/"+RANDBGTAG+"/run"+formattedRUNNUM+"_random.hddm /tmp/"+RANDBGTAG)
+                                print("scp dtn1902:/work/test-xrootd/gluex/mcwrap"+"/random_triggers/"+RANDBGTAG+"/run"+formattedRUNNUM+"_random.hddm /tmp/"+RANDBGTAG)
+                                os.system("scp dtn1902:/work/test-xrootd/gluex/mcwrap"+"/random_triggers/"+RANDBGTAG+"/run"+formattedRUNNUM+"_random.hddm /tmp/"+RANDBGTAG)
 
                         if not os.path.isfile(realpath):
                                 print("can't find file to scan.")

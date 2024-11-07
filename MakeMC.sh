@@ -1,5 +1,9 @@
 #!/bin/bash
 
+if [[ $SINGULARITY_NAME != "" ]]; then
+	echo "RUNNING IN A SINGULARITY CONTAINER: "$SINGULARITY_NAME
+fi
+
 # SET INPUTS
 export BATCHRUN=$1
 shift
@@ -146,7 +150,7 @@ export PROJECT_DIR_NAME=$1
 export USER_BC=`which bc`
 export USER_PYTHON=`which python`
 export USER_STAT=`which stat`
-
+export BEARER_TOKEN_FILE=${_CONDOR_CREDS}/jlab_gluex.use
 
 length_count=$((`echo $RUN_NUMBER | wc -c` - 1))
 
@@ -160,9 +164,16 @@ formatted_runNumber=$formatted_runNumber$RUN_NUMBER
 flength_count=$((`echo $FILE_NUMBER | wc -c` - 1))
 
 export XRD_RANDOMS_URL=root://sci-xrootd.jlab.org//osgpool/halld/
+export RANDOMS_PREPEND=""
+if [[ "$BATCHSYS" == "OSG" && "$BATCHRUN"=="1" ]]; then
+	export XRD_RANDOMS_URL=xroots://dtn-gluex.jlab.org/
+	export RANDOMS_PREPEND="/gluex/mcwrap/"
+fi
 
-if [[ "$MCWRAPPER_RUN_LOCATION" == "JLAB" || `hostname` == *'.jlab.org'* ]]; then
+if [[ ("$MCWRAPPER_RUN_LOCATION" == "JLAB" || `hostname` == *'.jlab.org'*) && "$BATCHSYS" != "slurmcont" ]]; then
 	#export XRD_RANDOMS_URL=root://sci-xrootd-ib.qcd.jlab.org//osgpool/halld/
+	echo "JLAB DETECTED RESETTING RUNNING DIR"
+	echo "changing "$RUNNING_DIR" to ./"
 	export RUNNING_DIR="./"
 fi
 
@@ -172,10 +183,25 @@ if [[ -f /usr/lib64/libXrdPosixPreload.so && "$BKGFOLDSTR" != "None" ]]; then
 	export MAKE_MC_USING_XROOTD=1
 	export LD_PRELOAD=/usr/lib64/libXrdPosixPreload.so
 	echo "XROOTD is available for use if needed..."
-	#con_test=`ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | grep "cannot access"`
-	#echo `ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1`
+
 	if [[ "$BKGFOLDSTR" == "Random" ]]; then
-		if [[ `ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1` != "r" ]]; then
+		#check if xrdfs $XRD_RANDOMS_URL ls /gluex/mcwrap/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | wc -l returns 1 or an ERROR
+		httokendecode -H
+		echo "XRD_RANDOMS_URL: $XRD_RANDOMS_URL"
+		echo "RANDBGTAG: $RANDBGTAG"
+		echo "formatted_runNumber: $formatted_runNumber"
+
+		echo `ls $XRD_RANDOMS_URL/$RANDOMS_PREPEND/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm`
+		export con_test=`ls $XRD_RANDOMS_URL/$RANDOMS_PREPEND/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1`
+
+		export contest=`xrdfs $XRD_RANDOMS_URL ls $RANDOMS_PREPEND/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | wc -l`
+		#echo "Executing command: xrdfs $XRD_RANDOMS_URL ls /gluex/mcwrap/random_triggers/$RANDBGTAG/run${formatted_runNumber}_random.hddm | wc -l"
+		#xrdfs $XRD_RANDOMS_URL ls /gluex/mcwrap/random_triggers/$RANDBGTAG/run${formatted_runNumber}_random.hddm | wc -l
+		#export con_test=$(xrdfs $XRD_RANDOMS_URL ls /gluex/mcwrap/random_triggers/$RANDBGTAG/run${formatted_runNumber}_random.hddm)
+		echo "random trigger connection test: $con_test"
+		echo xrdfs $XRD_RANDOMS_URL ls $RANDOMS_PREPEND/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm
+		echo "random trigger connection test2: $contest"
+		if [[ $con_test != "r" && $contest == 0 ]]; then
 			echo "JLab Connection test failed. Falling back to UConn...."
 			#echo "attempting to copy the needed file from an alternate source..."
 			#rsync scosg16.jlab.org:/osgpool/halld/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm ./
@@ -184,7 +210,10 @@ if [[ -f /usr/lib64/libXrdPosixPreload.so && "$BKGFOLDSTR" != "None" ]]; then
 				echo "Cannot connect to the file.  Disabling xrootd...."
 				export MAKE_MC_USING_XROOTD=0
 			fi
+		#else
+		#	export XRD_RANDOMS_URL=$XRD_RANDOMS_URL/gluex/mcwrap/
 		fi
+		
 	fi
 fi
 
@@ -216,9 +245,10 @@ fi
 
 
 if [[ ! -d $RUNNING_DIR/${RUN_NUMBER}_${FILE_NUMBER} ]]; then
-mkdir $RUNNING_DIR/${RUN_NUMBER}_${FILE_NUMBER}
+echo "making work directory "$RUNNING_DIR/${RUN_NUMBER}_${FILE_NUMBER}
+mkdir -p $RUNNING_DIR/${RUN_NUMBER}_${FILE_NUMBER}
 fi
-
+echo "cd $RUNNING_DIR/${RUN_NUMBER}_${FILE_NUMBER}"
 cd $RUNNING_DIR/${RUN_NUMBER}_${FILE_NUMBER}
 
 if [[ "$ccdbSQLITEPATH" != "no_sqlite" && "$ccdbSQLITEPATH" != "batch_default" && "$ccdbSQLITEPATH" != "jlab_batch_default" ]]; then
@@ -466,6 +496,7 @@ export GEN_MAX_ENERGY=$eBEAM_ENERGY
 fi
 
 # PRINT INPUTS
+echo "Using : " $BATCHSYS
 echo "This job has been configured to run at: " $MCWRAPPER_RUN_LOCATION" : "`hostname`
 echo "Job started: " `date`
 echo "Simulating the Experiment: " $EXPERIMENT
@@ -474,6 +505,7 @@ echo "rcdbsqlite path: " $rcdbSQLITEPATH $RCDB_CONNECTION
 echo "Producing file number: "$FILE_NUMBER
 echo "Containing: " $EVT_TO_GEN"/""$PER_FILE"" events"
 echo "Running location:" $RUNNING_DIR
+echo "Current Working Directory:" $PWD
 echo "Output location: "$OUTDIR
 echo "Project directory name: "$PROJECT_DIR_NAME
 echo "Environment file: " $ENVIRONMENT
@@ -1667,7 +1699,7 @@ else
 			mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
 			mcsmear_return_code=$?
 		else
-			xrdcopy $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm ./run$formatted_runNumber\_random.hddm
+			xrdcopy $XRD_RANDOMS_URL/$RANDOMS_PREPEND/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm ./run$formatted_runNumber\_random.hddm
 			echo "mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm ./run$formatted_runNumber\_random.hddm:1+$fold_skip_num"
             mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm ./run$formatted_runNumber\_random.hddm\:1\+$fold_skip_num
 			mcsmear_return_code=$?
@@ -1918,8 +1950,8 @@ fi
 
 		if [[ "$CLEANSMEAR" == "1" && "$SMEAR" == "1" ]]; then
 		    rm $STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm'
-		    rm -rf smear.root
 		fi
+		rm -rf smear.root
 
 		if [[ "$CLEANRECON" == "1" ]]; then
 		    rm dana_rest*
@@ -2000,7 +2032,7 @@ if [[ "$BATCHSYS" == "OSG" ]]; then
 #copy the OUT_DIR back to location via xrdcp
 echo "xrd version:" 
 echo `xrdcp --version`
-export BEARER_TOKEN_FILE=${_CONDOR_CREDS}/jlab_gluex.use
+
 #get everything after the last / in PROJECT_DIR_NAME
 project_dir_name=`echo $PROJECT_DIR_NAME | sed -r 's/.*\///'`
 export COPYBACK_DIR=xroots://dtn-gluex.jlab.org//gluex/mcwrap/REQUESTEDMC_OUTPUT/$project_dir_name/
@@ -2025,7 +2057,7 @@ xrdfs dtn-gluex.jlab.org mkdir /gluex/mcwrap/REQUESTEDMC_OUTPUT/$project_dir_nam
 
 echo "Copying back to $COPYBACK_DIR"
 echo "xrdcp -rfv $OUTDIR $COPYBACK_DIR"
-xrdcp -rfv $OUTDIR $COPYBACK_DIR
+xrdcp -rfv -d 3 $OUTDIR $COPYBACK_DIR
 transfer_return_code=$?
 if [[ $transfer_return_code != 0 ]]; then
 	echo

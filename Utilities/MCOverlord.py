@@ -1022,6 +1022,8 @@ def main(argv):
                         print(len(Alljobs),target_amount,maxspawnNum)
                         if(len(Alljobs)<target_amount):
                             target_amount=int(len(Alljobs)/5)
+                        if(target_amount==0):
+                            target_amount=1
                         spawnNum=min(int(len(Alljobs)/target_amount),maxspawnNum)
                         #find the min between spawnNum and reduced
 
