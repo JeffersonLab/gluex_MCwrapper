@@ -987,7 +987,7 @@ if [[ "$GENR" != "0" ]]; then
 		echo "configuring the particle gun"
 		STANDARD_NAME="particle_gun_"$STANDARD_NAME
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
-	elif [[ "$GENERATOR" == "geantBEAM" ]]; then
+  elif [[ "$GENERATOR" == "geantBEAM" ]]; then
 		echo "configuring geantBEAM"
 		STANDARD_NAME="geantBeam"$STANDARD_NAME
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
