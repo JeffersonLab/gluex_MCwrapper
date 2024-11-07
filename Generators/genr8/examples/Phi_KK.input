@@ -11,6 +11,20 @@
 %        the output for viewing/debuging, but remember not to use "-n" 
 %        for data that is used as input to HDFast.
 %
+%
+%
+% Warning by Jon Zarling:
+% The default behavior of the mcthrown_tree plugin is to store the
+% 4-vectors only if there is a reconstructed hit in the tagger. This
+% is needed for properly applying tagged flux normalizations. There's
+% a little snag when using genr8 though- it looks like if you force a
+% monoenergetic beam photon (the old way, before beam config files
+% were supported with genr8) you'll guarantee a tagger hit for each
+% event. Therefore, you'll be off by a factor of 1/tagger_efficiency
+% anytime you try to normalize.
+%
+%
+%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 %

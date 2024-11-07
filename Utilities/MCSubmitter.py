@@ -10,6 +10,7 @@ from subprocess import call
 from subprocess import Popen, PIPE
 import socket
 import pprint
+import pwd
 
 
 
@@ -31,6 +32,11 @@ class bcolors:
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
 
+runner_name=pwd.getpwuid( os.getuid() )[0]
+
+if( not (runner_name=="tbritton" or runner_name=="mcwrap")):
+    print("ERROR: You must be tbritton or mcwrap to run this script")
+    sys.exit(1)
 
 def WritePayloadConfig(order,foundConfig,batch_system):
     
@@ -65,7 +71,7 @@ def WritePayloadConfig(order,foundConfig,batch_system):
         if batch_system == "OSG":
             MCconfig_file.write("GENERATOR="+str(order["Generator"])+"/"+str(order["Generator_Config"])+"\n")
         elif batch_system == "SWIF":
-            location=order["Generator_Config"].replace("/osgpool/halld/tbritton/","/work/halld/home/tbritton/")
+            location=order["Generator_Config"].replace("/osgpool/halld/"+runner_name+"/","/work/halld/home/"+runner_name+"/")
             scp_order="scp "+str(order["Generator_Config"])+" ifarm:"+location
             print("COPYING GENERATOR file")
             print(scp_order)
@@ -76,7 +82,7 @@ def WritePayloadConfig(order,foundConfig,batch_system):
         if batch_system == "OSG":
             MCconfig_file.write("GENERATOR_CONFIG="+str(order["Generator_Config"])+"\n")
         elif batch_system == "SWIF":
-            location=order["Generator_Config"].replace("/osgpool/halld/tbritton/","/work/halld/home/tbritton/")
+            location=order["Generator_Config"].replace("/osgpool/halld/"+runner_name+"/","/work/halld/home/"+runner_name+"/")
             scp_order="scp "+str(order["Generator_Config"])+" ifarm:"+location
             print("COPYING GENERATOR CONFIG")
             print(scp_order)
@@ -93,7 +99,7 @@ def WritePayloadConfig(order,foundConfig,batch_system):
     outputstring="/".join(splitLoc[7:-1])
     #order["OutputLocation"]).split("/")[7]
     if batch_system == "OSG":
-        MCconfig_file.write("DATA_OUTPUT_BASE_DIR=/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/"+str(outputstring)+"\n")
+        MCconfig_file.write("DATA_OUTPUT_BASE_DIR=/osgpool/halld/"+runner_name+"/REQUESTEDMC_OUTPUT/"+str(outputstring)+"\n")
     elif batch_system == "SWIF":
         MCconfig_file.write("DATA_OUTPUT_BASE_DIR=/cache/halld/gluex_simulations/REQUESTED_MC/"+str(outputstring)+"\n")
     #print "FOUND CONFIG="+foundConfig
@@ -103,7 +109,7 @@ def WritePayloadConfig(order,foundConfig,batch_system):
 
     if(order["ReactionLines"] != ""):
         if(order["ReactionLines"][0:5] != "file:"):
-            jana_config_file=open("/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config","w")
+            jana_config_file=open("/osgpool/halld/"+runner_name+"/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config","w")
             janaplugins="PLUGINS danarest,monitoring_hists,mcthrown_tree"
             if(order["ReactionLines"]):
                 janaplugins+=",ReactionFilter\n"+order["ReactionLines"]
@@ -114,12 +120,12 @@ def WritePayloadConfig(order,foundConfig,batch_system):
 
 
         if batch_system == "OSG":
-            MCconfig_file.write("CUSTOM_PLUGINS=file:/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config\n")
+            MCconfig_file.write("CUSTOM_PLUGINS=file:/osgpool/halld/"+runner_name+"/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config\n")
         elif batch_system == "SWIF":
-            scp_jana = "scp "+"/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config ifarm:"+"/work/halld/home/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config"
+            scp_jana = "scp "+"/osgpool/halld/"+runner_name+"/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config ifarm:"+"/work/halld/home/"+runner_name+"/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config"
             print(scp_jana)
             subprocess.call(scp_jana,shell=True)
-            MCconfig_file.write("CUSTOM_PLUGINS=file:/work/halld/home/tbritton/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config\n")
+            MCconfig_file.write("CUSTOM_PLUGINS=file:/work/halld/home/"+runner_name+"/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config\n")
 
 
     MCconfig_file.write("ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"+str(order["VersionSet"])+"\n")
@@ -138,11 +144,27 @@ def SubmitList(SubList,job_IDs_submitted):
     #for row in SubList:
         #print("Row",row)
         row=list_to_Submit[row_index]
+        #print("checking for already submitted")
         if row['ID'] in job_IDs_submitted:
             print("Job "+str(row['ID'])+" already submitted")
             row_index+=1
             continue
-
+        #print("job not already submitted")
+        #get freespace on node
+        space_cmd="df -H | grep /osgpool/halld"
+        #print(space_cmd)
+        cmd=subprocess.Popen(space_cmd,shell=True,stdout=PIPE,stderr=PIPE)
+        #print("communicating")
+        out, err = cmd.communicate()
+        #print("communicated")
+        #print(out.split()[4])
+        percent_full=float(str(out.split()[4],"utf-8").strip("%"))
+        print("percent full is "+str(percent_full))
+        if percent_full > 75.0:
+            print("Node is too full to submit new jobs")
+            return
+        
+        print("about to bundle")
         bundled=False
         bundle_query="select ID,FileNumber from Jobs where Project_ID in (SELECT Project_ID from Jobs where ID="+str(row['ID'])+") and RunNumber in (SELECT RunNumber from Jobs where ID="+str(row['ID'])+") and NumEvts in (SELECT NumEvts from Jobs where ID="+str(row['ID'])+") and IsActive=1;"
         curs.execute(bundle_query)
@@ -194,7 +216,8 @@ def SubmitList(SubList,job_IDs_submitted):
             print(e)
             pass
 
-        command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCSubDispatched.config "+str(RunNumber)+" "+str(row["NumEvts"])+" per_file="+str(per_file_num)+" base_file_number="+str(row["FileNumber"])+" generate="+str(proj[0]["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(proj[0]["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(proj[0]["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(proj[0]["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid=-"+str(row['ID'])+" logdir=/osgpool/halld/tbritton/REQUESTEDMC_LOGS/"+proj[0]["OutputLocation"].split("/")[7]+" batch=2 submitter=1 tobundle=1"
+        
+        command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCSubDispatched.config "+str(RunNumber)+" "+str(row["NumEvts"])+" per_file="+str(per_file_num)+" base_file_number="+str(row["FileNumber"])+" generate="+str(proj[0]["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(proj[0]["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(proj[0]["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(proj[0]["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid=-"+str(row['ID'])+" logdir=/osgpool/halld/"+runner_name+"/REQUESTEDMC_LOGS/"+proj[0]["OutputLocation"].split("/")[7]+" batch=2 submitter=1 tobundle=1"
         print(command)
         #status = subprocess.call("printenv > /tmp/Submitter_env")
         status = subprocess.call(command, shell=True)
@@ -233,7 +256,7 @@ def SubmitList(SubList,job_IDs_submitted):
 def decideSystem(row):
 
     return "OSG"
-    command="condor_q | grep 'Total for tbritton'" #"condor_q | grep tbritton"
+    command="condor_q | grep 'Total for mcwrap'" #"condor_q | grep tbritton"
     print(command)
     jobSubout=""
     try:
@@ -290,11 +313,11 @@ def main(argv):
     int_i=0
     more_sub=True
     rows=[]
-    if(os.path.isfile("/osgpool/halld/tbritton/.ALLSTOP")==True):
+    if(os.path.isfile("/osgpool/halld/"+runner_name+"/.ALLSTOP")==True):
         print("ALL STOP DETECTED")
         exit(1)
 
-    numprocesses_running=subprocess.check_output(["echo `ps all -u tbritton | grep MCSubmitter.py | grep -v grep | wc -l`"], shell=True)
+    numprocesses_running=subprocess.check_output(["echo `ps all -u "+runner_name+" | grep MCSubmitter.py | grep -v grep | wc -l`"], shell=True)
     #print(args)
 
     job_IDs_submitted=[]
@@ -318,10 +341,11 @@ def main(argv):
                 rows=[]
                 int_i+=1
                 print("=============================================================")
-                query="SELECT UName,RunNumber,FileNumber,Tested,NumEvts,BKG,Notified,Jobs.ID,Project_ID,Priority,IsActive from Jobs,Project,Users where Tested=1 && Notified is NULL && IsActive=1 && Jobs.ID not in (Select Job_ID from Attempts) and Project_ID = Project.ID and Users.id = Project.user_id order by Priority desc limit "+str(Block_size)+";"
+                query="SELECT UName, RunNumber, FileNumber, Tested, NumEvts, BKG, Notified, Jobs.ID, Project_ID, Priority, IsActive FROM Jobs INNER JOIN Project ON Jobs.Project_ID = Project.ID INNER JOIN Users ON Project.user_id = Users.id LEFT JOIN Attempts ON Jobs.ID = Attempts.Job_ID WHERE Tested = 1 AND Notified IS NULL AND IsActive = 1 AND Attempts.Job_ID IS NULL ORDER BY Priority DESC LIMIT "+str(Block_size)+";"
+                #query="SELECT UName,RunNumber,FileNumber,Tested,NumEvts,BKG,Notified,Jobs.ID,Project_ID,Priority,IsActive from Jobs,Project,Users where Tested=1 && Notified is NULL && IsActive=1 && Jobs.ID not in (Select Job_ID from Attempts) and Project_ID = Project.ID and Users.id = Project.user_id order by Priority desc limit "+str(Block_size)+";"
                 #query = "SELECT UName,RunNumber,FileNumber,Tested,NumEvts,BKG,Notified,Jobs.ID,Project_ID,Priority,IsActive from Jobs,Project,Users where Tested=1 && Notified is NULL && IsActive=1 && Jobs.ID not in (Select Job_ID from Attempts) and Project_ID = Project.ID and Users.id = Project.user_id order by Priority desc limit "+str(Block_size)
                 if(Block_size==1):
-                    query ="SELECT UName,RunNumber,FileNumber,Tested,NumEvts,BKG,Notified,Jobs.ID,Project_ID,Priority,IsActive from Jobs,Project,Users where Tested=1 && Notified is NULL && IsActive=1 && Jobs.ID not in (Select Job_ID from Attempts) and Project_ID = Project.ID and Users.id = Project.user_id order by Priority desc;"
+                    query ="SELECT UName, RunNumber, FileNumber, Tested, NumEvts, BKG, Notified, Jobs.ID, Project_ID, Priority, IsActive FROM Jobs INNER JOIN Project ON Jobs.Project_ID = Project.ID INNER JOIN Users ON Project.user_id = Users.id LEFT JOIN Attempts ON Jobs.ID = Attempts.Job_ID WHERE Tested = 1 AND Notified IS NULL AND IsActive = 1 AND Attempts.Job_ID IS NULL ORDER BY Priority DESC;"
 
                 
                 print("Query:", query)

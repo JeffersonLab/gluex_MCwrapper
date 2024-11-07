@@ -351,7 +351,7 @@ c where they lie.  The remaining energy is dumped in the correct volume
 c so this is OK in most cases, but it can cut into the yield of
 c Cerenkov photons (eg. in a lead glass calorimeter) at the end of
 c a particle track.  If this might be important, set ABAN to 0.
-CKOV 0
+CKOV TEMPCKOV
 LABS 1
 
 c The following card prevents GEANT tracking code from abandoning the

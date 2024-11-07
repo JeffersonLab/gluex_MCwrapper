@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 ##########################################################################################################################
 #
 # 2017/03 Thomas Britton
@@ -47,8 +47,8 @@ try:
 except:
         pass
 
-MCWRAPPER_VERSION="2.6.2"
-MCWRAPPER_DATE="05/25/22"
+MCWRAPPER_VERSION="2.7.0"
+MCWRAPPER_DATE="01/18/23"
 
 #group sync test
 #====================================================
@@ -64,6 +64,19 @@ def BundleJob(job_id):
         print("count:",len(alljobs))
         print(alljobs)
         return alljobs
+
+#====================================================
+#simple function to email Project owner that their requested Project contains no events and set the Project.Tested to -2
+#====================================================
+def email_no_events(PROJECT_ID):
+        email_query="select Email from Projects where ID="+str(PROJECT_ID)+";"
+        dbcursor.execute(email_query)
+        allemails = dbcursor.fetchall()
+        if len(allemails)==1:
+                Project_update_q="update Projects set Tested=-2 where ID="+str(PROJECT_ID)+";"
+                dbcursor.execute(Project_update_q)
+                dbcnx.commit()
+
 
 def swif_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,PROJECT,TRACK,NCORES,DISK,RAM,TIMELIMIT,OS,DATA_OUTPUT_BASE_DIR, PROJECT_ID):
         STUBNAME=""
@@ -278,7 +291,7 @@ def  qsub_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NC
 #this has not been fleshed out because of OSG integration.
 #essentially take OSG_add_job and remove the OSG specific stuff (path remapping and + flags)
 #====================================================
-def  condor_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, PROJECT_ID, CONDOR_MAGIC ):
+def  condor_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCORES,  DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, PROJECT_ID, CONDOR_MAGIC ):
         #print(CONDOR_MAGIC)
         STUBNAME=""
         if(COMMAND['custom_tag_string'] != "I_dont_have_one"):
@@ -329,7 +342,7 @@ def  condor_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, 
 #if project ID is greater than 0 then it is a project ID and this call is going to record a new job (NOT ACTUALLY MAKING THE ATTEMPT)
 #if project ID == 0 then it is neither and just scrape the batch_ID....do nothing.  Note: this scheme requires the first id in the tables to be 1 and not 0)
 #====================================================
-def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID,bundled ):
+def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCORES, RAM, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID,bundled ):
         
         ship_random_triggers=False
         STUBNAME=""
@@ -439,6 +452,12 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
                 additional_passins+=COMMAND_parts['custom_plugins'][5:]+", "
                 COMMAND_parts['custom_plugins']="file:../"+janaconfig_to_use #"file:/srv/"+janaconfig_to_use
 
+        if COMMAND_parts['custom_ana_plugins'] != "None" and COMMAND_parts['custom_ana_plugins'][:5]=="file:" :
+                anajanaconfig_parts=COMMAND_parts['custom_ana_plugins'].split("/")
+                anajanaconfig_to_use=anajanaconfig_parts[len(anajanaconfig_parts)-1]
+                additional_passins+=COMMAND_parts['custom_ana_plugins'][5:]+", "
+                COMMAND_parts['custom_ana_plugins']="file:../"+anajanaconfig_to_use #"file:/srv/"+anajanaconfig_to_use
+
         if COMMAND_parts['ccdb_sqlite_path'] != "no_sqlite" and COMMAND_parts['ccdb_sqlite_path'] != "batch_default":
                 ccdbsqlite_parts=COMMAND_parts['ccdb_sqlite_path'].split("/")
                 ccdbsqlite_to_use=ccdbsqlite_parts[len(ccdbsqlite_parts)-1]
@@ -472,15 +491,26 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
         #f.write("Arguments  = "+SCRIPT_TO_RUN+" "+COMMAND+"\n")
         f.write("Arguments  = "+"./"+script_to_use+" "+getCommandString(COMMAND_parts,"OSG",numJobsInBundle)+"\n")
         f.write("Requirements = (HAS_SINGULARITY == TRUE) && (HAS_CVMFS_oasis_opensciencegrid_org == True) && (TARGET.GLIDEIN_Entry_Name =!= \"OSG_US_ODU-Ubuntu\")"+"\n")
+        #f.write("Requirements = (HAS_SINGULARITY == TRUE) && (HAS_CVMFS_oasis_opensciencegrid_org == True) && (TARGET.GLIDEIN_Entry_Name =!= \"OSG_US_ODU-Ubuntu\") &&  GLIDEIN_ResourceName==\"ComputeCanada-Cedar\""+"\n")
+        #f.write("Requirements = (HAS_SINGULARITY == TRUE) && (HAS_CVMFS_oasis_opensciencegrid_org == True) && (TARGET.GLIDEIN_Entry_Name =!= \"OSG_US_ODU-Ubuntu\") &&  GLIDEIN_ResourceName==\"JLab-FARM-CE\""+"\n")
         #f.write("Requirements = (HAS_SINGULARITY == TRUE) && (HAS_CVMFS_oasis_opensciencegrid_org == True) && (GLIDEIN_SITE=!=\"UConn\") && (GLIDEIN_SITE=!=\"Cedar\")"+"\n")
 #        f.write("Requirements = (HAS_SINGULARITY == TRUE) && (HAS_CVMFS_oasis_opensciencegrid_org == True) && (GLIDEIN_SITE==\"UConn\")"+"\n")
         #f.write('wantjobrouter=true'+"\n")
-        f.write('+SingularityImage = "/cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_prod:v1"'+"\n")
+        
+        
+        if("data_mirror_test" in DATA_OUTPUT_BASE_DIR):
+                f.write('+SingularityImage = "/cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_devel:latest"'+"\n")
+                f.write("use_oauth_services = jlab_gluex"+"\n")
+        else:
+                f.write('+SingularityImage = "/cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_prod:v1"'+"\n")
+                #f.write("use_oauth_services = jlab_gluex"+"\n")
+
         f.write('+SingularityBindCVMFS = True'+"\n")
         #f.write('+UNDESIRED_Sites = "OSG_US_ODU-Ubuntu"'+"\n")
         f.write('+SingularityAutoLoad = True'+"\n")
+        
 #        f.write('+CVMFSReposList = "oasis.opensciencegrid.org"'+"\n")
-#        f.write('+DesiredSites="UConn"'+"\n")
+        #f.write('+DesiredSites="JLab-FARM-CE"'+"\n")
         f.write('should_transfer_files = YES'+"\n")
         f.write('when_to_transfer_output = ON_EXIT'+"\n")
         f.write('concurrency_limits = GluexProduction'+"\n")
@@ -495,10 +525,14 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
         f.write("log = "+LOG_DIR+"/log/"+"OSG_"+JOBNAME+".log\n")
         f.write("initialdir = "+RUNNING_DIR+"\n")
 
+        
+        f.write("request_cpus = "+str(NCORES)+"\n")
         if DATA_OUTPUT_BASE_DIR == "/lustre/expphy/cache/halld/halld-scratch/REQUESTED_MC/wmcginle_phi_eta_gamma_more2_20190806093041am/":
                 f.write("request_memory = 5.0GB"+"\n")
         else:
-                f.write("request_memory = 4.0GB"+"\n")
+                f.write("request_memory = "+str(RAM)+"\n")
+
+        f.write("request_disk = 5.0GB"+"\n")
         #f.write("transfer_input_files = "+ENVFILE+"\n")
         f.write("transfer_input_files = "+SCRIPT_TO_RUN+", "+ENVFILE+additional_passins+"\n")
 
@@ -824,9 +858,9 @@ def recordAttempt(JOB_ID,RUNNO,FILENO,BatchSYS,BatchJobID, NUMEVTS,NCORES, RAM):
 #====================================================
 def getCommandString(COMMAND,USER,numbundled=1):
         if(USER=="OSG" and numbundled!=1):
-                return COMMAND['batchrun']+" "+COMMAND['environment_file']+" "+COMMAND['ana_environment_file']+" "+COMMAND['generator_config']+" "+COMMAND['output_directory']+" "+COMMAND['run_number']+" "+"$(Process)"+" "+COMMAND['num_events']+" "+COMMAND['jana_calib_context']+" "+COMMAND['jana_calibtime']+" "+COMMAND['do_gen']+" "+COMMAND['do_geant']+" "+COMMAND['do_mcsmear']+" "+COMMAND['do_recon']+" "+COMMAND['clean_gen']+" "+COMMAND['clean_geant']+" "+COMMAND['clean_mcsmear']+" "+COMMAND['clean_recon']+" "+COMMAND['batch_system']+" "+COMMAND['num_cores']+" "+COMMAND['generator']+" "+COMMAND['geant_version']+" "+COMMAND['background_to_include']+" "+COMMAND['custom_Gcontrol']+" "+COMMAND['eBeam_energy']+" "+COMMAND['coherent_peak']+" "+COMMAND['min_generator_energy']+" "+COMMAND['max_generator_energy']+" "+COMMAND['custom_tag_string']+" "+COMMAND['custom_plugins']+" "+COMMAND['events_per_file']+" "+COMMAND['running_directory']+" "+COMMAND['ccdb_sqlite_path']+" "+COMMAND['rcdb_sqlite_path']+" "+COMMAND['background_tagger_only']+" "+COMMAND['radiator_thickness']+" "+COMMAND['background_rate']+" "+COMMAND['random_background_tag']+" "+COMMAND['recon_calibtime']+" "+COMMAND['no_geant_secondaries']+" "+COMMAND['mcwrapper_version']+" "+COMMAND['no_bcal_sipm_saturation']+" "+COMMAND['flux_to_generate']+" "+COMMAND['flux_histogram']+" "+COMMAND['polarization_to_generate']+" "+COMMAND['polarization_histogram']+" "+COMMAND['eBeam_current']+" "+COMMAND['experiment']+" "+COMMAND['num_rand_trigs']+" "+COMMAND['location']+" "+COMMAND['generator_post']+" "+COMMAND['generator_post_config']+" "+COMMAND['generator_post_configevt']+" "+COMMAND['generator_post_configdec']+" "+COMMAND['geant_vertex_area']+" "+COMMAND['geant_vertex_length']+" "+COMMAND['mcsmear_notag']
+                return COMMAND['batchrun']+" "+COMMAND['environment_file']+" "+COMMAND['ana_environment_file']+" "+COMMAND['generator_config']+" "+COMMAND['output_directory']+" "+COMMAND['run_number']+" "+"$(Process)"+" "+COMMAND['num_events']+" "+COMMAND['jana_calib_context']+" "+COMMAND['jana_calibtime']+" "+COMMAND['do_gen']+" "+COMMAND['do_geant']+" "+COMMAND['do_mcsmear']+" "+COMMAND['do_recon']+" "+COMMAND['clean_gen']+" "+COMMAND['clean_geant']+" "+COMMAND['clean_mcsmear']+" "+COMMAND['clean_recon']+" "+COMMAND['batch_system']+" "+COMMAND['num_cores']+" "+COMMAND['generator']+" "+COMMAND['geant_version']+" "+COMMAND['background_to_include']+" "+COMMAND['custom_Gcontrol']+" "+COMMAND['eBeam_energy']+" "+COMMAND['coherent_peak']+" "+COMMAND['min_generator_energy']+" "+COMMAND['max_generator_energy']+" "+COMMAND['custom_tag_string']+" "+COMMAND['custom_plugins']+" "+COMMAND['custom_ana_plugins']+" "+COMMAND['events_per_file']+" "+COMMAND['running_directory']+" "+COMMAND['ccdb_sqlite_path']+" "+COMMAND['rcdb_sqlite_path']+" "+COMMAND['background_tagger_only']+" "+COMMAND['radiator_thickness']+" "+COMMAND['background_rate']+" "+COMMAND['random_background_tag']+" "+COMMAND['recon_calibtime']+" "+COMMAND['no_geant_secondaries']+" "+COMMAND['mcwrapper_version']+" "+COMMAND['no_bcal_sipm_saturation']+" "+COMMAND['flux_to_generate']+" "+COMMAND['flux_histogram']+" "+COMMAND['polarization_to_generate']+" "+COMMAND['polarization_histogram']+" "+COMMAND['eBeam_current']+" "+COMMAND['experiment']+" "+COMMAND['num_rand_trigs']+" "+COMMAND['location']+" "+COMMAND['generator_post']+" "+COMMAND['generator_post_config']+" "+COMMAND['generator_post_configevt']+" "+COMMAND['generator_post_configdec']+" "+COMMAND['geant_vertex_area']+" "+COMMAND['geant_vertex_length']+" "+COMMAND['mcsmear_notag']+" "+COMMAND['project_directory_name']
         else:
-                return COMMAND['batchrun']+" "+COMMAND['environment_file']+" "+COMMAND['ana_environment_file']+" "+COMMAND['generator_config']+" "+COMMAND['output_directory']+" "+COMMAND['run_number']+" "+COMMAND['file_number']+" "+COMMAND['num_events']+" "+COMMAND['jana_calib_context']+" "+COMMAND['jana_calibtime']+" "+COMMAND['do_gen']+" "+COMMAND['do_geant']+" "+COMMAND['do_mcsmear']+" "+COMMAND['do_recon']+" "+COMMAND['clean_gen']+" "+COMMAND['clean_geant']+" "+COMMAND['clean_mcsmear']+" "+COMMAND['clean_recon']+" "+COMMAND['batch_system']+" "+COMMAND['num_cores']+" "+COMMAND['generator']+" "+COMMAND['geant_version']+" "+COMMAND['background_to_include']+" "+COMMAND['custom_Gcontrol']+" "+COMMAND['eBeam_energy']+" "+COMMAND['coherent_peak']+" "+COMMAND['min_generator_energy']+" "+COMMAND['max_generator_energy']+" "+COMMAND['custom_tag_string']+" "+COMMAND['custom_plugins']+" "+COMMAND['events_per_file']+" "+COMMAND['running_directory']+" "+COMMAND['ccdb_sqlite_path']+" "+COMMAND['rcdb_sqlite_path']+" "+COMMAND['background_tagger_only']+" "+COMMAND['radiator_thickness']+" "+COMMAND['background_rate']+" "+COMMAND['random_background_tag']+" "+COMMAND['recon_calibtime']+" "+COMMAND['no_geant_secondaries']+" "+COMMAND['mcwrapper_version']+" "+COMMAND['no_bcal_sipm_saturation']+" "+COMMAND['flux_to_generate']+" "+COMMAND['flux_histogram']+" "+COMMAND['polarization_to_generate']+" "+COMMAND['polarization_histogram']+" "+COMMAND['eBeam_current']+" "+COMMAND['experiment']+" "+COMMAND['num_rand_trigs']+" "+COMMAND['location']+" "+COMMAND['generator_post']+" "+COMMAND['generator_post_config']+" "+COMMAND['generator_post_configevt']+" "+COMMAND['generator_post_configdec']+" "+COMMAND['geant_vertex_area']+" "+COMMAND['geant_vertex_length']+" "+COMMAND['mcsmear_notag']
+                return COMMAND['batchrun']+" "+COMMAND['environment_file']+" "+COMMAND['ana_environment_file']+" "+COMMAND['generator_config']+" "+COMMAND['output_directory']+" "+COMMAND['run_number']+" "+COMMAND['file_number']+" "+COMMAND['num_events']+" "+COMMAND['jana_calib_context']+" "+COMMAND['jana_calibtime']+" "+COMMAND['do_gen']+" "+COMMAND['do_geant']+" "+COMMAND['do_mcsmear']+" "+COMMAND['do_recon']+" "+COMMAND['clean_gen']+" "+COMMAND['clean_geant']+" "+COMMAND['clean_mcsmear']+" "+COMMAND['clean_recon']+" "+COMMAND['batch_system']+" "+COMMAND['num_cores']+" "+COMMAND['generator']+" "+COMMAND['geant_version']+" "+COMMAND['background_to_include']+" "+COMMAND['custom_Gcontrol']+" "+COMMAND['eBeam_energy']+" "+COMMAND['coherent_peak']+" "+COMMAND['min_generator_energy']+" "+COMMAND['max_generator_energy']+" "+COMMAND['custom_tag_string']+" "+COMMAND['custom_plugins']+" "+COMMAND['custom_ana_plugins']+" "+COMMAND['events_per_file']+" "+COMMAND['running_directory']+" "+COMMAND['ccdb_sqlite_path']+" "+COMMAND['rcdb_sqlite_path']+" "+COMMAND['background_tagger_only']+" "+COMMAND['radiator_thickness']+" "+COMMAND['background_rate']+" "+COMMAND['random_background_tag']+" "+COMMAND['recon_calibtime']+" "+COMMAND['no_geant_secondaries']+" "+COMMAND['mcwrapper_version']+" "+COMMAND['no_bcal_sipm_saturation']+" "+COMMAND['flux_to_generate']+" "+COMMAND['flux_histogram']+" "+COMMAND['polarization_to_generate']+" "+COMMAND['polarization_histogram']+" "+COMMAND['eBeam_current']+" "+COMMAND['experiment']+" "+COMMAND['num_rand_trigs']+" "+COMMAND['location']+" "+COMMAND['generator_post']+" "+COMMAND['generator_post_config']+" "+COMMAND['generator_post_configevt']+" "+COMMAND['generator_post_configdec']+" "+COMMAND['geant_vertex_area']+" "+COMMAND['geant_vertex_length']+" "+COMMAND['mcsmear_notag']+" "+COMMAND['project_directory_name']
 def LoadCCDB():
         sqlite_connect_str = "mysql://ccdb_user@hallddb.jlab.org/ccdb"
         provider = ccdb.AlchemyProvider()                           # this class has all CCDB manipulation functions
@@ -1026,6 +1060,7 @@ def main(argv):
         CUSTOM_MAKEMC="DEFAULT"
         CUSTOM_GCONTROL="0"
         CUSTOM_PLUGINS="None"
+        CUSTOM_ANA_PLUGINS="None"
 
         BATCHSYS="NULL"
         QUEUENAME="DEF"
@@ -1225,6 +1260,8 @@ def main(argv):
                         TAGSTR=rm_comments[0].strip()
                 elif str(parts[0]).upper()=="CUSTOM_PLUGINS" :
                         CUSTOM_PLUGINS=rm_comments[0].strip()
+                elif str(parts[0]).upper()=="CUSTOM_ANA_PLUGINS" :
+                        CUSTOM_ANA_PLUGINS=rm_comments[0].strip()
                 elif str(parts[0]).upper()=="BATCH_SYSTEM" :
                         batch_sys_parts=rm_comments[0].strip().split(":")
                         BATCHSYS=batch_sys_parts[0]
@@ -1477,6 +1514,7 @@ def main(argv):
         COMMAND_dict['max_generator_energy']=str(MAX_GEN_ENERGY)
         COMMAND_dict['custom_tag_string']=str(TAGSTR)
         COMMAND_dict['custom_plugins']=str(CUSTOM_PLUGINS)
+        COMMAND_dict['custom_ana_plugins']=str(CUSTOM_ANA_PLUGINS)
         COMMAND_dict['events_per_file']=str(PERFILE)
         COMMAND_dict['running_directory']=str(RUNNING_DIR)
         COMMAND_dict['ccdb_sqlite_path']=str(ccdbSQLITEPATH)
@@ -1505,6 +1543,7 @@ def main(argv):
         COMMAND_dict['geant_vertex_area']=str(VERTEX_AREA)
         COMMAND_dict['geant_vertex_length']=str(VERTEX_LENGTH)
         COMMAND_dict['mcsmear_notag']=str(SMEAR_NOTAG)
+        COMMAND_dict['project_directory_name']=str(DATA_OUTPUT_BASE_DIR)
 
 
         if(COMMAND_dict['generator'][:4]=="file:" and len(RunType) != 1):
@@ -1544,7 +1583,7 @@ def main(argv):
                                 elif BATCHSYS.upper()=="CONDOR":
                                         condor_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, PROJECT_ID, CONDOR_MAGIC )
                                 elif BATCHSYS.upper()=="OSG":
-                                        OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID,TO_BUNDLE )
+                                        OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM, SCRIPT_TO_RUN, COMMAND_dict, NCORES, RAM, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID,TO_BUNDLE )
                                 elif BATCHSYS.upper()=="SLURMCONT":
                                         SLURMcont_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
                                 elif BATCHSYS.upper()=="SLURM":
@@ -1611,6 +1650,11 @@ def main(argv):
                                 flux_sum = flux_sum + flux
 
                         print("Events from rcdb: "+str(event_sum))
+                        if(event_sum==0 and PROJECT_ID>0):
+                                print("No events found in the requested range matching the RCDB query, exiting")
+                                email_no_events(PROJECT_ID)
+
+
                         print("Flux from ccdb: "+str(flux_sum))
                         sum2=0.
                         sum2_trig=0.
@@ -1647,7 +1691,7 @@ def main(argv):
                                         if BGFOLD == "Random" or BGFOLD=="DEFAULT" or BGFOLD[0:3] == "loc":
                                                 RANDOM_NUM_EVT=GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,runs[0])
                                                 COMMAND_dict['num_rand_trigs']=str(RANDOM_NUM_EVT)
-                                        COMMAND=getCommandString(COMMAND_dict,"NONSUB") #str(BATCHRUN)+" "+ENVFILE+" "+GENCONFIG+" "+str(outdir)+" "+str(runs[0])+" "+str(BASEFILENUM+FILENUM_this_run+-1)+" "+str(num_this_file)+" "+str(VERSION)+" "+str(CALIBTIME)+" "+str(GENR)+" "+str(GEANT)+" "+str(SMEAR)+" "+str(RECON)+" "+str(CLEANGENR)+" "+str(CLEANGEANT)+" "+str(CLEANSMEAR)+" "+str(CLEANRECON)+" "+str(BATCHSYS)+" "+str(NCORES).split(':')[-1]+" "+str(GENERATOR)+" "+str(GEANTVER)+" "+str(BGFOLD)+" "+str(CUSTOM_GCONTROL)+" "+str(eBEAM_ENERGY)+" "+str(COHERENT_PEAK)+" "+str(MIN_GEN_ENERGY)+" "+str(MAX_GEN_ENERGY)+" "+str(TAGSTR)+" "+str(CUSTOM_PLUGINS)+" "+str(PERFILE)+" "+str(RUNNING_DIR)+" "+str(ccdbSQLITEPATH)+" "+str(rcdbSQLITEPATH)+" "+str(BGTAGONLY)+" "+str(RADIATOR_THICKNESS)+" "+str(BGRATE)+" "+str(RANDBGTAG)+" "+str(RECON_CALIBTIME)+" "+str(NOSECONDARIES)+" "+str(MCWRAPPER_VERSION)+" "+str(NOSIPMSATURATION)+" "+str(FLUX_TO_GEN)+" "+str(FLUX_HIST)+" "+str(POL_TO_GEN)+" "+str(POL_HIST)+" "+str(eBEAM_CURRENT)+" "+str(PROJECT)
+                                        COMMAND=getCommandString(COMMAND_dict,"NONSUB") #str(BATCHRUN)+" "+ENVFILE+" "+GENCONFIG+" "+str(outdir)+" "+str(runs[0])+" "+str(BASEFILENUM+FILENUM_this_run+-1)+" "+str(num_this_file)+" "+str(VERSION)+" "+str(CALIBTIME)+" "+str(GENR)+" "+str(GEANT)+" "+str(SMEAR)+" "+str(RECON)+" "+str(CLEANGENR)+" "+str(CLEANGEANT)+" "+str(CLEANSMEAR)+" "+str(CLEANRECON)+" "+str(BATCHSYS)+" "+str(NCORES).split(':')[-1]+" "+str(GENERATOR)+" "+str(GEANTVER)+" "+str(BGFOLD)+" "+str(CUSTOM_GCONTROL)+" "+str(eBEAM_ENERGY)+" "+str(COHERENT_PEAK)+" "+str(MIN_GEN_ENERGY)+" "+str(MAX_GEN_ENERGY)+" "+str(TAGSTR)+" "+str(CUSTOM_PLUGINS)+" "+str(CUSTOM_ANA_PLUGINS)+" "+str(PERFILE)+" "+str(RUNNING_DIR)+" "+str(ccdbSQLITEPATH)+" "+str(rcdbSQLITEPATH)+" "+str(BGTAGONLY)+" "+str(RADIATOR_THICKNESS)+" "+str(BGRATE)+" "+str(RANDBGTAG)+" "+str(RECON_CALIBTIME)+" "+str(NOSECONDARIES)+" "+str(MCWRAPPER_VERSION)+" "+str(NOSIPMSATURATION)+" "+str(FLUX_TO_GEN)+" "+str(FLUX_HIST)+" "+str(POL_TO_GEN)+" "+str(POL_HIST)+" "+str(eBEAM_CURRENT)+" "+str(PROJECT)
 
 
                                         if BATCHRUN == 0 or BATCHSYS.upper()=="NULL":
@@ -1672,7 +1716,7 @@ def main(argv):
                                                         elif BATCHSYS.upper()=="CONDOR":
                                                                 condor_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, PROJECT_ID, CONDOR_MAGIC )
                                                         elif BATCHSYS.upper()=="OSG":
-                                                                OSG_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID, TO_BUNDLE)
+                                                                OSG_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, RAM, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID, TO_BUNDLE)
                                                         elif BATCHSYS.upper()=="SLURMCONT":
                                                                 SLURM_add_job(VERBOSE, WORKFLOW, runs[0], BASEFILENUM+FILENUM_this_run+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
                                                         elif BATCHSYS.upper()=="SLURM":
@@ -1700,8 +1744,7 @@ def main(argv):
                                         RANDOM_NUM_EVT=GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,RUNNUM)
                                         COMMAND_dict['num_rand_trigs']=str(RANDOM_NUM_EVT)
 
-                                COMMAND=getCommandString(COMMAND_dict,"INTERACTIVE") #str(BATCHRUN)+" "+ENVFILE+" "+GENCONFIG+" "+str(outdir)+" "+str(RUNNUM)+" "+str(BASEFILENUM+FILENUM+-1)+" "+str(num)+" "+str(VERSION)+" "+str(CALIBTIME)+" "+str(GENR)+" "+str(GEANT)+" "+str(SMEAR)+" "+str(RECON)+" "+str(CLEANGENR)+" "+str(CLEANGEANT)+" "+str(CLEANSMEAR)+" "+str(CLEANRECON)+" "+str(BATCHSYS).upper()+" "+str(NCORES).split(':')[-1]+" "+str(GENERATOR)+" "+str(GEANTVER)+" "+str(BGFOLD)+" "+str(CUSTOM_GCONTROL)+" "+str(eBEAM_ENERGY)+" "+str(COHERENT_PEAK)+" "+str(MIN_GEN_ENERGY)+" "+str(MAX_GEN_ENERGY)+" "+str(TAGSTR)+" "+str(CUSTOM_PLUGINS)+" "+str(PERFILE)+" "+str(RUNNING_DIR)+" "+str(ccdbSQLITEPATH)+" "+str(rcdbSQLITEPATH)+" "+str(BGTAGONLY)+" "+str(RADIATOR_THICKNESS)+" "+str(BGRATE)+" "+str(RANDBGTAG)+" "+str(RECON_CALIBTIME)+" "+str(NOSECONDARIES)+" "+str(MCWRAPPER_VERSION)+" "+str(NOSIPMSATURATION)+" "+str(FLUX_TO_GEN)+" "+str(FLUX_HIST)+" "+str(POL_TO_GEN)+" "+str(POL_HIST)+" "+str(eBEAM_CURRENT)+" "+str(PROJECT)
-
+                                COMMAND=getCommandString(COMMAND_dict,"INTERACTIVE") #str(BATCHRUN)+" "+ENVFILE+" "+GENCONFIG+" "+str(outdir)+" "+str(RUNNUM)+" "+str(BASEFILENUM+FILENUM+-1)+" "+str(num)+" "+str(VERSION)+" "+str(CALIBTIME)+" "+str(GENR)+" "+str(GEANT)+" "+str(SMEAR)+" "+str(RECON)+" "+str(CLEANGENR)+" "+str(CLEANGEANT)+" "+str(CLEANSMEAR)+" "+str(CLEANRECON)+" "+str(BATCHSYS).upper()+" "+str(NCORES).split(':')[-1]+" "+str(GENERATOR)+" "+str(GEANTVER)+" "+str(BGFOLD)+" "+str(CUSTOM_GCONTROL)+" "+str(eBEAM_ENERGY)+" "+str(COHERENT_PEAK)+" "+str(MIN_GEN_ENERGY)+" "+str(MAX_GEN_ENERGY)+" "+str(TAGSTR)+" "+str(CUSTOM_PLUGINS)+" "+str(CUSTOM_ANA_PLUGINS)+" "+str(PERFILE)+" "+str(RUNNING_DIR)+" "+str(ccdbSQLITEPATH)+" "+str(rcdbSQLITEPATH)+" "+str(BGTAGONLY)+" "+str(RADIATOR_THICKNESS)+" "+str(BGRATE)+" "+str(RANDBGTAG)+" "+str(RECON_CALIBTIME)+" "+str(NOSECONDARIES)+" "+str(MCWRAPPER_VERSION)+" "+str(NOSIPMSATURATION)+" "+str(FLUX_TO_GEN)+" "+str(FLUX_HIST)+" "+str(POL_TO_GEN)+" "+str(POL_HIST)+" "+str(eBEAM_CURRENT)+" "+str(PROJECT)
 
                                 #either call MakeMC.csh or add a job depending on swif flag
                                 if BATCHRUN == 0 or BATCHSYS.upper()=="NULL":
@@ -1725,7 +1768,7 @@ def main(argv):
                                                 elif BATCHSYS.upper()=="CONDOR":
                                                         condor_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, PROJECT_ID, CONDOR_MAGIC )
                                                 elif BATCHSYS.upper()=="OSG":
-                                                        OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID, TO_BUNDLE )
+                                                        OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, RAM, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID, TO_BUNDLE )
                                                 elif BATCHSYS.upper()=="SLURMCONT":
                                                         SLURMcont_add_job(VERBOSE, WORKFLOW, RUNNUM, BASEFILENUM+FILENUM+-1, SCRIPT_TO_RUN, COMMAND_dict, NCORES, DATA_OUTPUT_BASE_DIR, TIMELIMIT, RUNNING_DIR, ENVFILE, ANAENVFILE, LOG_DIR, RANDBGTAG, PROJECT_ID )
                                                 elif BATCHSYS.upper()=="SLURM":
@@ -1782,7 +1825,8 @@ def GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,RUNNUM):
                 path_base=path_base+"run"+formattedRUNNUM+"_random.hddm"
                 #print(path_base)
 
-                if socket.gethostname() == "scosg16.jlab.org" or socket.gethostname() == "scosg20.jlab.org":
+                running_hostname=socket.gethostname()
+                if running_hostname == "scosg16.jlab.org" or running_hostname == "scosg20.jlab.org" or running_hostname == "scosg2201.jlab.org":
                         #os.system("scp sci-xrootd.jlab.org:/osgpool/halld/"+"/random_triggers/"+RANDBGTAG+"/run"+formattedRUNNUM+"_random.hddm /tmp/")
                         path_base="/tmp/"+RANDBGTAG+"/run"+formattedRUNNUM+"_random.hddm"
 
@@ -1798,7 +1842,8 @@ def GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,RUNNUM):
                 #print matches
                 if len(matches) == 0:
                         print("Attempting to scan and tag this random trigger file")
-                        if socket.gethostname() == "scosg16.jlab.org" or socket.gethostname() == "scosg20.jlab.org":
+                        running_hostname=socket.gethostname()
+                        if running_hostname == "scosg16.jlab.org" or running_hostname == "scosg20.jlab.org" or running_hostname == "scosg2201.jlab.org":
                                 os.system("mkdir -p /tmp/"+RANDBGTAG)
                                 os.system("scp sci-xrootd.jlab.org:/osgpool/halld/"+"/random_triggers/"+RANDBGTAG+"/run"+formattedRUNNUM+"_random.hddm /tmp/"+RANDBGTAG)
 
