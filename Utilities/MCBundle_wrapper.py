@@ -90,17 +90,22 @@ except:
 #             dbcnx.commit()
 #         dbcnx.close()
 
-def BundleFiles(inputdir,output):
+def BundleFiles(inputdir,output,merge_dir):
     MCWRAPPER_BOT_HOME="/scigroup/mcwrapper/gluex_MCwrapper/"
     projectName = inputdir.split("/")[-2] if inputdir[-1]=="/" else inputdir.split("/")[-1]
-    mkdircommand="mkdir -p /osgpool/halld/mcwrap/mergetemp/" + projectName
+    mkdircommand="mkdir -p " + merge_dir + projectName
     print(mkdircommand)
     subprocess.call(mkdircommand.split(" "))
     mkdircommand="mkdir -p "+output
     print(mkdircommand)
     subprocess.call(mkdircommand.split(" "))
-    # bundlecommand = "echo hostname; source /group/halld/Software/build_scripts/gluex_env_jlab.sh; /usr/bin/python3.6 " + MCWRAPPER_BOT_HOME + "/Utilities/MCMerger.py -f -tempdir /osgpool/halld/mcwrap/mergetemp/" + projectName + "/ " + inputdir + " " + output
-    bundlecommand = "/usr/bin/python3.6 " + MCWRAPPER_BOT_HOME + "/Utilities/MCMerger.py -tempdir /osgpool/halld/mcwrap/mergetemp/" + projectName + "/ " + inputdir + " " + output + " -noclean"# + " > "+projectName+"_"+str(datetime.now())+".log"
+    hostname = os.getenv('HOSTNAME')
+    if hostname == "dtn2303.jlab.org":
+        python_cmd = "/usr/bin/python3"
+    else:
+        python_cmd = "/usr/bin/python3.6"
+    # bundlecommand = "echo hostname; source /group/halld/Software/build_scripts/gluex_env_jlab.sh; /usr/bin/python3.6 " + MCWRAPPER_BOT_HOME + "/Utilities/MCMerger.py -f -tempdir " + merge_dir + projectName + "/ " + inputdir + " " + output
+    bundlecommand = python_cmd + " " + MCWRAPPER_BOT_HOME + "/Utilities/MCMerger.py -tempdir " + merge_dir + projectName + "/ " + inputdir + " " + output + " -noclean"# + " > "+projectName+"_"+str(datetime.now())+".log"
     print("BUNDLING WITH",bundlecommand)
     try:
         suboutput = subprocess.check_output(shlex.split(bundlecommand), stderr=subprocess.STDOUT)
@@ -112,14 +117,14 @@ def BundleFiles(inputdir,output):
             print("Bundling ongoing")
             return "ONGOING"
         print("Bundler return code", out)
-        subprocess.run([f"rm /osgpool/halld/mcwrap/mergetemp/{projectName}/.merging"], shell=True)
+        subprocess.run([f"rm {merge_dir}/{projectName}/.merging"], shell=True)
         if out==0:
             return "SUCCESS"
         else:
             return "ERROR"
     except subprocess.CalledProcessError as e:
         print(e.output)
-        subprocess.run([f"rm /osgpool/halld/mcwrap/mergetemp/{projectName}/.merging"], shell=True)
+        subprocess.run([f"rm {merge_dir}/{projectName}/.merging"], shell=True)
         return "ERROR"
 
 def main(argv):
@@ -128,6 +133,13 @@ def main(argv):
     spawnNum=2
     print(f"numprocesses_running: {int(numprocesses_running)}")
 
+
+    hostname = os.getenv('HOSTNAME')
+    if hostname == "dtn2303.jlab.org":
+        merge_dir = "/export/halld/mcwrap/mergetemp/"
+    else:
+        merge_dir = "/osgpool/halld/mcwrap/mergetemp/"
+
     if(int(numprocesses_running)>spawnNum):
         print(f"{int(numprocesses_running)} process(es) of MCBundle_wrapper.py already running.  Exiting.")
         exit(0)
@@ -135,7 +147,7 @@ def main(argv):
         print(f"{int(numprocesses_running)} process(es) of MCBundle_wrapper.py running.  Continuing.")
         #get projects with Tested>=20
         # tobundle_q="SELECT * FROM Project WHERE Tested=20 OR Tested=40 LIMIT 1"
-        tobundle_q="SELECT * FROM Project WHERE (Tested=20 OR Tested=40) AND Notified is NULL AND ID != 3700 and ID != 3923 and ID != 3924 and ID != 3954 and ID != 3956 order by ID asc LIMIT 1"
+        tobundle_q="SELECT * FROM Project WHERE (Tested=20 OR Tested=40) AND Notified is NULL order by ID asc LIMIT 1"
         # tobundle_q="SELECT * FROM Project WHERE (Tested=20 OR Tested=40) AND Notified is NULL AND ID != 3476 AND ID != 3700 order by NumEvents asc LIMIT 1"
         print(tobundle_q)
         dbcnx=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
@@ -159,9 +171,9 @@ def main(argv):
 
             projectName = inputdir.split("/")[-2] if inputdir[-1]=="/" else inputdir.split("/")[-1]
             #check if already being bundled
-            print("/osgpool/halld/mcwrap/mergetemp/"+projectName+"/.merging")
+            print(merge_dir+projectName+"/.merging")
             
-            if os.path.isfile("/osgpool/halld/mcwrap/mergetemp/"+projectName+"/.merging"):
+            if os.path.isfile(merge_dir+projectName+"/.merging"):
                 print("Currently being bundled")
                 continue
 
@@ -190,7 +202,7 @@ def main(argv):
             dbcnx.close()
 
             print("BEGINNING BUNDLE")
-            out=BundleFiles(inputdir,outputlocation)
+            out=BundleFiles(inputdir,outputlocation,merge_dir)
             
             dbcnx=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
             dbcursor=dbcnx.cursor(MySQLdb.cursors.DictCursor)

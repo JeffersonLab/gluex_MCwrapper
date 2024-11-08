@@ -46,7 +46,7 @@ try:
 except:
         pass
 
-MCWRAPPER_VERSION="2.10.0"
+MCWRAPPER_VERSION="2.10.1"
 MCWRAPPER_DATE="09/26/24"
 
 #group sync test
