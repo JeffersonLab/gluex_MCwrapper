@@ -24,6 +24,18 @@ endif
 
 setenv ANAENVIRONMENT $1
 shift
+setenv GENERATOR_OS $1
+shift
+setenv POSTGEN_OS $1
+shift
+setenv SIMULATION_OS $1
+shift
+setenv MCSMEAR_OS $1
+shift
+setenv RECON_OS $1
+shift
+setenv ANA_OS $1
+shift
 setenv CONFIG_FILE $1
 shift
 setenv OUTDIR $1
@@ -103,7 +115,13 @@ setenv BGRATE $1
 shift
 setenv RANDBGTAG $1
 shift
+setenv RECON_VERSION $1
+shift
 setenv RECON_CALIBTIME $1
+shift
+setenv ANA_VERSION $1
+shift
+setenv ANA_CALIBTIME $1
 shift
 setenv GEANT_NOSECONDARIES $1
 shift
@@ -162,8 +180,8 @@ if ( "$BATCHSYS" == "OSG" && "$BATCHRUN" == "1" ) then
 endif
 
 
-setenv XRD_RANDOMS_URL root://sci-xrootd.jlab.org//osgpool/halld/
-#setenv XRD_RANDOMS_URL xroots://dtn-gluex.jlab.org//gluex/mcwrap/
+#setenv XRD_RANDOMS_URL root://sci-xrootd.jlab.org//osgpool/halld/
+setenv XRD_RANDOMS_URL root://dtn2303.jlab.org/work/osgpool/halld/
 
 if ( "$MCWRAPPER_RUN_LOCATION" == "JLAB" || `hostname` =~ '*.jlab.org' ) then
 #	setenv XRD_RANDOMS_URL root://sci-xrootd-ib.qcd.jlab.org//osgpool/halld/
@@ -259,7 +277,13 @@ endif
 #xrdcopy $XRD_RANDOMS_URL/ccdb.sqlite ./
 #setenv CCDB_CONNECTION sqlite:///$PWD/ccdb.sqlite
 #setenv JANA_CALIB_URL ${CCDB_CONNECTION}
-
+@ RCDBVERSION=`echo $RCDB_VERSION | cut -c3-4`
+set RCDBFILE="rcdb.sqlite"
+if ( $RCDBVERSION < 8 ) then
+	echo "RCDB needs a version 1 sqlite file"
+	set RCDBFILE="rcdb_v1.sqlite"
+endif
+echo $RCDBFILE
 if ( "$rcdbSQLITEPATH" != "no_sqlite" && "$rcdbSQLITEPATH" != "batch_default" ) then
 	if ( `$USER_STAT --file-system --format=%T $PWD` == "lustre" ) then
 		echo "Attempting to use sqlite on a lustre file system. This does not work. Try running on a different file system!"
@@ -270,7 +294,7 @@ if ( "$rcdbSQLITEPATH" != "no_sqlite" && "$rcdbSQLITEPATH" != "batch_default" ) 
 	setenv RCDB_CONNECTION sqlite:///$PWD/rcdb.sqlite
 else if ( "$rcdbSQLITEPATH" == "batch_default" ) then
 	#echo "keeping the RCDB on mysql now"
-	setenv RCDB_CONNECTION sqlite:////group/halld/www/halldweb/html/dist/rcdb.sqlite
+	setenv RCDB_CONNECTION sqlite:////group/halld/www/halldweb/html/dist/$RCDBFILE
 endif
 
 echo ""
@@ -476,7 +500,10 @@ echo "Environment file: " $ENVIRONMENT
 echo "Analysis Environment file: " $ANAENVIRONMENT
 echo "Context: "$JANA_CALIB_CONTEXT
 echo "Geometry URL: "$JANA_GEOMETRY_URL
+echo "Reconstruction version: "$RECON_VERSION
 echo "Reconstruction calibtime: "$RECON_CALIBTIME
+echo "Analysis version: "$ANA_VERSION
+echo "Analysis calibtime: "$ANA_CALIBTIME
 echo "Run Number: "$RUN_NUMBER
 echo "Electron beam current to use: "$beam_on_current" uA"
 echo "Electron beam energy to use: "$eBEAM_ENERGY" GeV"
@@ -506,6 +533,13 @@ echo "With additional analysis launch plugins: "$CUSTOM_ANA_PLUGINS
 echo "=============================================="
 echo ""
 echo ""
+echo "==========OS USED=========="
+echo "Generator  "$GENERATOR_OS
+echo "Postgen    "$POSTGEN_OS
+echo "Simulation "$SIMULATION_OS
+echo "mcsmear    "$MCSMEAR_OS
+echo "Recon      "$RECON_OS
+echo "Analysis   "$ANA_OS
 echo "=======SOFTWARE USED======="
 echo "MCwrapper version v"$MCWRAPPER_VERSION
 echo "MCwrapper location" $MCWRAPPER_CENTRAL
@@ -1687,7 +1721,7 @@ else
 		endif
 
 		if ( "$RECON_CALIBTIME" != "notime" ) then
-			set reconwholecontext = "variation=$VERSION calibtime=$RECON_CALIBTIME"
+			set reconwholecontext = "variation=$RECON_VERSION calibtime=$RECON_CALIBTIME"
 			setenv JANA_CALIB_CONTEXT "$reconwholecontext"
 		endif
 		set reaction_filter=""
@@ -1768,6 +1802,11 @@ else
 				setenv JANA_CALIB_URL ${CCDB_CONNECTION}
 			endif
 
+			if ( "$ANA_CALIBTIME" != "notime" ) then
+				set anawholecontext = "variation=$ANA_VERSION calibtime=$ANA_CALIBTIME"
+				setenv JANA_CALIB_CONTEXT "$anawholecontext"
+			endif
+
 			if ( "$rcdbSQLITEPATH" != "no_sqlite" && "$rcdbSQLITEPATH" != "batch_default" ) then
 				if (`$USER_STAT --file-system --format=%T $PWD` == "lustre" ) then
 					echo "Attempting to use sqlite on a lustre file system. This does not work. Try running on a different file system!"
@@ -1777,7 +1816,7 @@ else
 				setenv RCDB_CONNECTION sqlite:///$PWD/rcdb.sqlite
 			else if ( "$rcdbSQLITEPATH" == "batch_default" ) then
 				#echo "keeping the RCDB on mysql now"
-				setenv RCDB_CONNECTION sqlite:////group/halld/www/halldweb/html/dist/rcdb.sqlite
+				setenv RCDB_CONNECTION sqlite:////group/halld/www/halldweb/html/dist/$RCDBFILE
 			endif
 
 			echo "EMULATING ANALYSIS LAUNCH"

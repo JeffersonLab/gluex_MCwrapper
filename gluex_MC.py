@@ -47,9 +47,19 @@ except:
         pass
 
 MCWRAPPER_VERSION="2.10.1"
-MCWRAPPER_DATE="09/26/24"
+MCWRAPPER_DATE="11/19/24"
 
-#group sync test
+def getOSName(versionset):
+        vsdbcnx=mysql.connector.connect(user='vsuser', database='vsdb', host='hallddb.jlab.org')
+        vscursor = vsdbcnx.cursor()
+        query="select OSName from versionSet inner join OSVersions on ID=OSVersions.ID where versionSet.filename='"+versionset+"'"
+        vscursor.execute(query)
+        OSNames=vscursor.fetchall()
+        if len(OSNames) != 1:
+                return "AmbiguousOS"
+
+        return OSNames[0]["OSName"]
+
 #====================================================
 #Takes in a few pertinant pieces of info.  Creates (if needed) a swif workflow and adds a job to it.
 #if project ID is less than 0 its an attempt ID and is recorded as such
@@ -947,9 +957,9 @@ def recordAttempt(JOB_ID,RUNNO,FILENO,BatchSYS,BatchJobID, NUMEVTS,NCORES, RAM):
 #====================================================
 def getCommandString(COMMAND,USER,numbundled=1):
         if(USER=="OSG" and numbundled!=1):
-                return COMMAND['batchrun']+" "+COMMAND['environment_file']+" "+COMMAND['ana_environment_file']+" "+COMMAND['generator_config']+" "+COMMAND['output_directory']+" "+COMMAND['run_number']+" "+"$(Process)"+" "+COMMAND['num_events']+" "+COMMAND['jana_calib_context']+" "+COMMAND['jana_calibtime']+" "+COMMAND['do_gen']+" "+COMMAND['do_geant']+" "+COMMAND['do_mcsmear']+" "+COMMAND['do_recon']+" "+COMMAND['clean_gen']+" "+COMMAND['clean_geant']+" "+COMMAND['clean_mcsmear']+" "+COMMAND['clean_recon']+" "+COMMAND['batch_system']+" "+COMMAND['num_cores']+" "+COMMAND['generator']+" "+COMMAND['geant_version']+" "+COMMAND['background_to_include']+" "+COMMAND['custom_Gcontrol']+" "+COMMAND['eBeam_energy']+" "+COMMAND['coherent_peak']+" "+COMMAND['min_generator_energy']+" "+COMMAND['max_generator_energy']+" "+COMMAND['custom_tag_string']+" "+COMMAND['custom_plugins']+" "+COMMAND['custom_ana_plugins']+" "+COMMAND['events_per_file']+" "+COMMAND['running_directory']+" "+COMMAND['ccdb_sqlite_path']+" "+COMMAND['rcdb_sqlite_path']+" "+COMMAND['background_tagger_only']+" "+COMMAND['radiator_thickness']+" "+COMMAND['background_rate']+" "+COMMAND['random_background_tag']+" "+COMMAND['recon_calibtime']+" "+COMMAND['no_geant_secondaries']+" "+COMMAND['mcwrapper_version']+" "+COMMAND['no_bcal_sipm_saturation']+" "+COMMAND['flux_to_generate']+" "+COMMAND['flux_histogram']+" "+COMMAND['polarization_to_generate']+" "+COMMAND['polarization_histogram']+" "+COMMAND['eBeam_current']+" "+COMMAND['experiment']+" "+COMMAND['num_rand_trigs']+" "+COMMAND['location']+" "+COMMAND['generator_post']+" "+COMMAND['generator_post_config']+" "+COMMAND['generator_post_configevt']+" "+COMMAND['generator_post_configdec']+" "+COMMAND['geant_vertex_area']+" "+COMMAND['geant_vertex_length']+" "+COMMAND['mcsmear_notag']+" "+COMMAND['project_directory_name']
+                return COMMAND['batchrun']+" "+COMMAND['environment_file']+" "+COMMAND['ana_environment_file']+" "+COMMAND['generator_os']+" "+COMMAND['postgen_os']+" "+COMMAND['simulation_os']+" "+COMMAND['mcsmear_os']+" "+COMMAND['recon_os']+" "+COMMAND['ana_os']+" "+COMMAND['generator_config']+" "+COMMAND['output_directory']+" "+COMMAND['run_number']+" "+"$(Process)"+" "+COMMAND['num_events']+" "+COMMAND['jana_calib_context']+" "+COMMAND['jana_calibtime']+" "+COMMAND['do_gen']+" "+COMMAND['do_geant']+" "+COMMAND['do_mcsmear']+" "+COMMAND['do_recon']+" "+COMMAND['clean_gen']+" "+COMMAND['clean_geant']+" "+COMMAND['clean_mcsmear']+" "+COMMAND['clean_recon']+" "+COMMAND['batch_system']+" "+COMMAND['num_cores']+" "+COMMAND['generator']+" "+COMMAND['geant_version']+" "+COMMAND['background_to_include']+" "+COMMAND['custom_Gcontrol']+" "+COMMAND['eBeam_energy']+" "+COMMAND['coherent_peak']+" "+COMMAND['min_generator_energy']+" "+COMMAND['max_generator_energy']+" "+COMMAND['custom_tag_string']+" "+COMMAND['custom_plugins']+" "+COMMAND['custom_ana_plugins']+" "+COMMAND['events_per_file']+" "+COMMAND['running_directory']+" "+COMMAND['ccdb_sqlite_path']+" "+COMMAND['rcdb_sqlite_path']+" "+COMMAND['background_tagger_only']+" "+COMMAND['radiator_thickness']+" "+COMMAND['background_rate']+" "+COMMAND['random_background_tag']+" "+COMMAND['recon_version']+" "+COMMAND['recon_calibtime']+" "+COMMAND['ana_version']+" "+COMMAND['ana_calibtime']+" "+COMMAND['no_geant_secondaries']+" "+COMMAND['mcwrapper_version']+" "+COMMAND['no_bcal_sipm_saturation']+" "+COMMAND['flux_to_generate']+" "+COMMAND['flux_histogram']+" "+COMMAND['polarization_to_generate']+" "+COMMAND['polarization_histogram']+" "+COMMAND['eBeam_current']+" "+COMMAND['experiment']+" "+COMMAND['num_rand_trigs']+" "+COMMAND['location']+" "+COMMAND['generator_post']+" "+COMMAND['generator_post_config']+" "+COMMAND['generator_post_configevt']+" "+COMMAND['generator_post_configdec']+" "+COMMAND['geant_vertex_area']+" "+COMMAND['geant_vertex_length']+" "+COMMAND['mcsmear_notag']+" "+COMMAND['project_directory_name']
         else:
-                return COMMAND['batchrun']+" "+COMMAND['environment_file']+" "+COMMAND['ana_environment_file']+" "+COMMAND['generator_config']+" "+COMMAND['output_directory']+" "+COMMAND['run_number']+" "+COMMAND['file_number']+" "+COMMAND['num_events']+" "+COMMAND['jana_calib_context']+" "+COMMAND['jana_calibtime']+" "+COMMAND['do_gen']+" "+COMMAND['do_geant']+" "+COMMAND['do_mcsmear']+" "+COMMAND['do_recon']+" "+COMMAND['clean_gen']+" "+COMMAND['clean_geant']+" "+COMMAND['clean_mcsmear']+" "+COMMAND['clean_recon']+" "+COMMAND['batch_system']+" "+COMMAND['num_cores']+" "+COMMAND['generator']+" "+COMMAND['geant_version']+" "+COMMAND['background_to_include']+" "+COMMAND['custom_Gcontrol']+" "+COMMAND['eBeam_energy']+" "+COMMAND['coherent_peak']+" "+COMMAND['min_generator_energy']+" "+COMMAND['max_generator_energy']+" "+COMMAND['custom_tag_string']+" "+COMMAND['custom_plugins']+" "+COMMAND['custom_ana_plugins']+" "+COMMAND['events_per_file']+" "+COMMAND['running_directory']+" "+COMMAND['ccdb_sqlite_path']+" "+COMMAND['rcdb_sqlite_path']+" "+COMMAND['background_tagger_only']+" "+COMMAND['radiator_thickness']+" "+COMMAND['background_rate']+" "+COMMAND['random_background_tag']+" "+COMMAND['recon_calibtime']+" "+COMMAND['no_geant_secondaries']+" "+COMMAND['mcwrapper_version']+" "+COMMAND['no_bcal_sipm_saturation']+" "+COMMAND['flux_to_generate']+" "+COMMAND['flux_histogram']+" "+COMMAND['polarization_to_generate']+" "+COMMAND['polarization_histogram']+" "+COMMAND['eBeam_current']+" "+COMMAND['experiment']+" "+COMMAND['num_rand_trigs']+" "+COMMAND['location']+" "+COMMAND['generator_post']+" "+COMMAND['generator_post_config']+" "+COMMAND['generator_post_configevt']+" "+COMMAND['generator_post_configdec']+" "+COMMAND['geant_vertex_area']+" "+COMMAND['geant_vertex_length']+" "+COMMAND['mcsmear_notag']+" "+COMMAND['project_directory_name']
+                return COMMAND['batchrun']+" "+COMMAND['environment_file']+" "+COMMAND['ana_environment_file']+" "+COMMAND['generator_os']+" "+COMMAND['postgen_os']+" "+COMMAND['simulation_os']+" "+COMMAND['mcsmear_os']+" "+COMMAND['recon_os']+" "+COMMAND['ana_os']+" "+COMMAND['generator_config']+" "+COMMAND['output_directory']+" "+COMMAND['run_number']+" "+COMMAND['file_number']+" "+COMMAND['num_events']+" "+COMMAND['jana_calib_context']+" "+COMMAND['jana_calibtime']+" "+COMMAND['do_gen']+" "+COMMAND['do_geant']+" "+COMMAND['do_mcsmear']+" "+COMMAND['do_recon']+" "+COMMAND['clean_gen']+" "+COMMAND['clean_geant']+" "+COMMAND['clean_mcsmear']+" "+COMMAND['clean_recon']+" "+COMMAND['batch_system']+" "+COMMAND['num_cores']+" "+COMMAND['generator']+" "+COMMAND['geant_version']+" "+COMMAND['background_to_include']+" "+COMMAND['custom_Gcontrol']+" "+COMMAND['eBeam_energy']+" "+COMMAND['coherent_peak']+" "+COMMAND['min_generator_energy']+" "+COMMAND['max_generator_energy']+" "+COMMAND['custom_tag_string']+" "+COMMAND['custom_plugins']+" "+COMMAND['custom_ana_plugins']+" "+COMMAND['events_per_file']+" "+COMMAND['running_directory']+" "+COMMAND['ccdb_sqlite_path']+" "+COMMAND['rcdb_sqlite_path']+" "+COMMAND['background_tagger_only']+" "+COMMAND['radiator_thickness']+" "+COMMAND['background_rate']+" "+COMMAND['random_background_tag']+" "+COMMAND['recon_version']+" "+COMMAND['recon_calibtime']+" "+COMMAND['ana_version']+" "+COMMAND['ana_calibtime']+" "+COMMAND['no_geant_secondaries']+" "+COMMAND['mcwrapper_version']+" "+COMMAND['no_bcal_sipm_saturation']+" "+COMMAND['flux_to_generate']+" "+COMMAND['flux_histogram']+" "+COMMAND['polarization_to_generate']+" "+COMMAND['polarization_histogram']+" "+COMMAND['eBeam_current']+" "+COMMAND['experiment']+" "+COMMAND['num_rand_trigs']+" "+COMMAND['location']+" "+COMMAND['generator_post']+" "+COMMAND['generator_post_config']+" "+COMMAND['generator_post_configevt']+" "+COMMAND['generator_post_configdec']+" "+COMMAND['geant_vertex_area']+" "+COMMAND['geant_vertex_length']+" "+COMMAND['mcsmear_notag']+" "+COMMAND['project_directory_name']
 def LoadCCDB():
         sqlite_connect_str = "mysql://ccdb_user@hallddb.jlab.org/ccdb"
         provider = ccdb.AlchemyProvider()                           # this class has all CCDB manipulation functions
@@ -1132,6 +1142,13 @@ def main(argv):
         CUSTOM_PLUGINS="None"
         CUSTOM_ANA_PLUGINS="None"
 
+        GENERATOR_OS="DEFAULT"
+        POSTGEN_OS="DEFAULT"
+        SIMULATION_OS="DEFAULT"
+        MCSMEAR_OS="DEFAULT"
+        RECON_OS="DEFAULT"
+        ANA_OS="DEFAULT"
+
         BATCHSYS="NULL"
         QUEUENAME="DEF"
         #-------SWIF ONLY-------------
@@ -1147,7 +1164,7 @@ def main(argv):
         DISK       = "10GB"            # Max Disk usage
         RAM        = "20GB"            # Max RAM usage
         TIMELIMIT  = "300minutes"      # Max walltime
-        OS         = "centos77"        # Specify CentOS65 machines
+        OS         = "el9"        # Specify CentOS65 machines
 
         PROJECT_ID=0 #internally used when needed
         IS_SUBMITTER=0
@@ -1155,7 +1172,10 @@ def main(argv):
         #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         VERSION  = "mc"
         CALIBTIME="notime"
+        RECON_VERSION="mc"
         RECON_CALIBTIME="notime"
+        ANA_VERSION="mc"
+        ANA_CALIBTIME="notime"
         BASEFILENUM=0
         PERFILE=10000
         GENR=1
@@ -1314,7 +1334,18 @@ def main(argv):
                                         SMEAR_NOTAG="1"
                                 else:
                                         BGFOLD=part
-
+                elif str(parts[0]).upper()=="GENERATOR_OS" :
+                        GENERATOR_OS=rm_comments[0].strip()
+                elif str(parts[0]).upper()=="POSTGEN_OS" :
+                        POSTGEN_OS=rm_comments[0].strip()
+                elif str(parts[0]).upper()=="SIMULATION_OS" :
+                        SIMULATION_OS=rm_comments[0].strip()
+                elif str(parts[0]).upper()=="MCSMEAR_OS" :
+                        MCSMEAR_OS=rm_comments[0].strip()
+                elif str(parts[0]).upper()=="RECON_OS" :
+                        RECON_OS=rm_comments[0].strip()
+                elif str(parts[0]).upper()=="ANA_OS" :
+                        ANA_OS=rm_comments[0].strip()
                 elif str(parts[0]).upper()=="EBEAM_ENERGY" :
                         eBEAM_ENERGY=rm_comments[0].strip()
                 elif str(parts[0]).upper()=="EBEAM_CURRENT" :
@@ -1340,8 +1371,14 @@ def main(argv):
                                 QUEUENAME=batch_sys_parts[1]
                 elif str(parts[0]).upper()=="RUNNING_DIRECTORY" :
                         RUNNING_DIR=rm_comments[0].strip()
+                elif str(parts[0]).upper()=="RECON_VERSION" :
+                        RECON_VERSION=rm_comments[0].strip()
                 elif str(parts[0]).upper()=="RECON_CALIBTIME" :
                         RECON_CALIBTIME=rm_comments[0].strip()
+                elif str(parts[0]).upper()=="ANA_VERSION" :
+                        ANA_VERSION=rm_comments[0].strip()
+                elif str(parts[0]).upper()=="ANA_CALIBTIME" :
+                        ANA_CALIBTIME=rm_comments[0].strip()
                 elif str(parts[0]).upper()=="VARIATION":
                         #print(parts)
                         #print rm_comments
@@ -1558,6 +1595,12 @@ def main(argv):
         COMMAND_dict={'batchrun':str(BATCHRUN)}
         COMMAND_dict['environment_file']=ENVFILE
         COMMAND_dict['ana_environment_file']=ANAENVFILE
+        COMMAND_dict['generator_os']=GENERATOR_OS
+        COMMAND_dict['postgen_os']=POSTGEN_OS
+        COMMAND_dict['simulation_os']=SIMULATION_OS
+        COMMAND_dict['mcsmear_os']=MCSMEAR_OS
+        COMMAND_dict['recon_os']=RECON_OS
+        COMMAND_dict['ana_os']=ANA_OS
         COMMAND_dict['generator_config']=GENCONFIG
         COMMAND_dict['output_directory']=str(outdir)
         COMMAND_dict['run_number']=str(RUNNUM)
@@ -1594,7 +1637,10 @@ def main(argv):
         COMMAND_dict['radiator_thickness']=str(RADIATOR_THICKNESS)
         COMMAND_dict['background_rate']=str(BGRATE)
         COMMAND_dict['random_background_tag']=str(RANDBGTAG)
+        COMMAND_dict['recon_version']=str(RECON_VERSION)
         COMMAND_dict['recon_calibtime']=str(RECON_CALIBTIME)
+        COMMAND_dict['ana_version']=str(ANA_VERSION)
+        COMMAND_dict['ana_calibtime']=str(ANA_CALIBTIME)
         COMMAND_dict['no_geant_secondaries']=str(NOSECONDARIES)
         COMMAND_dict['mcwrapper_version']=str(MCWRAPPER_VERSION)
         COMMAND_dict['no_bcal_sipm_saturation']=str(NOSIPMSATURATION)

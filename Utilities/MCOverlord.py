@@ -394,7 +394,8 @@ def checkProjectsForCompletion(comp_assignment):
 
                 #print "echo 'Your Project ID "+str(proj['ID'])+" has been completed.  Output may be found:\n"+proj['OutputLocation']+"' | mail -s 'GlueX MC Request #"+str(proj['ID'])+" Completed' "+str(proj['Email'])
                 msg = EmailMessage()
-                msg.set_content('Your Project ID '+str(proj['ID'])+' has been completed.  Output may be found here:\n'+str(proj['OutputLocation']))
+                final_location = proj['OutputLocation'].replace("/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/","/volatile/halld/gluex_simulations/REQUESTED_MC/")
+                msg.set_content('Your Project ID '+str(proj['ID'])+' has been completed.  While awaiting copy to tape output may be found here:\n'+str(final_location)+'\n\n'+"After successful copy the data may be accessed from tape/cache through typical methods.")
 
                 # me == the sender's email address                                                                                                                                                                                 
                 # you == the recipient's email address                                                                                                                                                                             

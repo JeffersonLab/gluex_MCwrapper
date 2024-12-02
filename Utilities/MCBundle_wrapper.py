@@ -96,7 +96,7 @@ def BundleFiles(inputdir,output,merge_dir):
     mkdircommand="mkdir -p " + merge_dir + projectName
     print(mkdircommand)
     subprocess.call(mkdircommand.split(" "))
-    mkdircommand="mkdir -p "+output
+    mkdircommand="mkdir -p " + output
     print(mkdircommand)
     subprocess.call(mkdircommand.split(" "))
     hostname = os.getenv('HOSTNAME')
@@ -139,6 +139,11 @@ def main(argv):
         merge_dir = "/export/halld/mcwrap/mergetemp/"
     else:
         merge_dir = "/osgpool/halld/mcwrap/mergetemp/"
+    
+    if hostname == "dtn2303.jlab.org":
+        staging_dir = "/lustre24/expphy/volatile/halld/gluex_simulations/REQUESTED_MC/"
+    else:
+        staging_dir = "/volatile/halld/gluex_simulations/REQUESTED_MC/"
 
     if(int(numprocesses_running)>spawnNum):
         print(f"{int(numprocesses_running)} process(es) of MCBundle_wrapper.py already running.  Exiting.")
@@ -165,7 +170,8 @@ def main(argv):
             inputdir = inputdir.replace("ppauli/","") if "ppauli/" in inputdir else inputdir
 
             outputlocation="/".join(proj["OutputLocation"].split("/")[:-1])+"/"
-            outputlocation=outputlocation.replace("/lustre19/","/lustre24/")
+            # outputlocation=outputlocation.replace("/lustre19/","/lustre24/")
+            outputlocation=outputlocation.replace("/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/",staging_dir)  # cache is now read-only, use staging directory
             #update project status
             print(proj["ID"])
 

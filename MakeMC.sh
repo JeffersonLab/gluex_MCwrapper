@@ -23,6 +23,18 @@ fi
 
 export ANAENVIRONMENT=$1
 shift
+export GENERATOR_OS=$1
+shift
+export POSTGEN_OS=$1
+shift
+export SIMULATION_OS=$1
+shift
+export MCSMEAR_OS=$1
+shift
+export RECON_OS=$1
+shift
+export ANA_OS=$1
+shift
 export CONFIG_FILE=$1
 shift
 export OUTDIR=$1
@@ -103,7 +115,13 @@ export BGRATE=$1
 shift
 export RANDBGTAG=$1
 shift
+export RECON_VERSION=$1
+shift
 export RECON_CALIBTIME=$1
+shift
+export ANA_VERSION=$1
+shift
+export ANA_CALIBTIME=$1
 shift
 export GEANT_NOSCONDARIES=$1
 shift
@@ -159,8 +177,10 @@ done
 formatted_runNumber=$formatted_runNumber$RUN_NUMBER
 flength_count=$((`echo $FILE_NUMBER | wc -c` - 1))
 
-export XRD_RANDOMS_URL=root://sci-xrootd.jlab.org//osgpool/halld/
-export RANDOMS_PREPEND=""
+export XRD_RANDOMS_URL=root://dtn2303.jlab.org
+export RANDOMS_PREPEND=/work/osgpool/halld/
+#export XRD_RANDOMS_URL=root://sci-xrootd.jlab.org//osgpool/halld/
+#export RANDOMS_PREPEND=""
 if [[ "$BATCHSYS" == "OSG" && "$BATCHRUN"=="1" ]]; then
 	export XRD_RANDOMS_URL=xroots://dtn-gluex.jlab.org/
 	export RANDOMS_PREPEND="/gluex/mcwrap/"
@@ -280,7 +300,13 @@ fi
 
 #export JANA_GEOMETRY_URL="ccdb:///GEOMETRY/main_HDDS.xml context=\"$VERSION\""
 
-
+RCDBVERSION=`echo $RCDB_VERSION | cut -c3-4`
+RCDBVERSION=$((10#$RCDBVERSION)) #make sure leading zero doesn't cause issue in string
+RCDBFILE="rcdb.sqlite"
+if [[ $RCDBVERSION -lt 8 ]]; then
+	echo "RCDB needs a version 1 sqlite file"
+	RCDBFILE="rcdb_v1.sqlite"
+fi
 if [[ "$rcdbSQLITEPATH" != "no_sqlite" && "$rcdbSQLITEPATH" != "batch_default" ]]; then
 	if [[ `$USER_STAT --file-system --format=%T $PWD` == "lustre" ]]; then
 		echo "Attempting to use sqlite on a lustre file system. This does not work. Try running on a different file system!"
@@ -291,7 +317,7 @@ if [[ "$rcdbSQLITEPATH" != "no_sqlite" && "$rcdbSQLITEPATH" != "batch_default" ]
 	export RCDB_CONNECTION=sqlite:///$PWD/rcdb.sqlite
 elif [[ "$rcdbSQLITEPATH" == "batch_default" ]]; then
 	#echo "keeping the RCDB on mysql now"
-	export RCDB_CONNECTION=sqlite:////group/halld/www/halldweb/html/dist/rcdb.sqlite
+	export RCDB_CONNECTION=sqlite:////group/halld/www/halldweb/html/dist/$RCDBFILE
 fi
 
 echo ""
@@ -504,7 +530,10 @@ echo "Environment file: " $ENVIRONMENT
 echo "Analysis Environment file: " $ANAENVIRONMENT
 echo "Context: "$JANA_CALIB_CONTEXT
 echo "Geometry URL: "$JANA_GEOMETRY_URL
+echo "Reconstruction version: "$RECON_VERSION
 echo "Reconstruction calibtime: "$RECON_CALIBTIME
+echo "Analysis version: "$ANA_VERSION
+echo "Analysis calibtime: "$ANA_CALIBTIME
 echo "Run Number: "$RUN_NUMBER
 echo "Electron beam current to use: "$beam_on_current" uA"
 echo "Electron beam energy to use: "$eBEAM_ENERGY" GeV"
@@ -534,6 +563,13 @@ echo "With additional analysis launch plugins: "$CUSTOM_ANA_PLUGINS
 echo "=============================================="
 echo ""
 echo ""
+echo "==========OS USED=========="
+echo "Generator  "$GENERATOR_OS
+echo "Postgen    "$POSTGEN_OS
+echo "Simulation "$SIMULATION_OS
+echo "mcsmear    "$MCSMEAR_OS
+echo "Recon      "$RECON_OS
+echo "Analysis   "$ANA_OS
 echo "=======SOFTWARE USED======="
 echo "MCwrapper version v"$MCWRAPPER_VERSION
 echo "MCwrapper location" $MCWRAPPER_CENTRAL
@@ -1632,6 +1668,10 @@ else
 				mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
 				mcsmear_return_code=$?
 			else
+				echo "PELICAN TEST"
+				ls /usr/bin/
+				/usr/bin/pelican object ls osdf://jlab-osdf/gluex/work/halld/mcwrap/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm
+				echo "END PELICAN TEST"
 				xrdcopy $XRD_RANDOMS_URL/$RANDOMS_PREPEND/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm ./run$formatted_runNumber\_random.hddm
 				echo "mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm ./run$formatted_runNumber\_random.hddm:1+$fold_skip_num"
 				mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm ./run$formatted_runNumber\_random.hddm\:1\+$fold_skip_num
@@ -1714,7 +1754,7 @@ else
 			additional_hdroot="-PKALMAN:ADD_VERTEX_POINT=1"
 		fi
 		if [[ "$RECON_CALIBTIME" != "notime" ]]; then
-			reconwholecontext="variation=$VERSION calibtime=$RECON_CALIBTIME"
+			reconwholecontext="variation=$RECON_VERSION calibtime=$RECON_CALIBTIME"
 			export JANA_CALIB_CONTEXT="$reconwholecontext"
 		fi
 		reaction_filter=""
@@ -1799,6 +1839,11 @@ else
 				export JANA_CALIB_URL=${CCDB_CONNECTION}
 			fi
 
+			if [[ "$ANA_CALIBTIME" != "notime" ]]; then
+				anawholecontext="variation=$ANA_VERSION calibtime=$ANA_CALIBTIME"
+				export JANA_CALIB_CONTEXT="$anawholecontext"
+			fi
+
 			if [[ "$rcdbSQLITEPATH" != "no_sqlite" && "$rcdbSQLITEPATH" != "batch_default" ]]; then
 				if [[ `$USER_STAT --file-system --format=%T $PWD` == "lustre" ]]; then
 					echo "Attempting to use sqlite on a lustre file system. This does not work. Try running on a different file system!"
@@ -1808,7 +1853,7 @@ else
 				export RCDB_CONNECTION=sqlite:///$PWD/rcdb.sqlite
 			elif [[ "$rcdbSQLITEPATH" == "batch_default" ]]; then
 				#echo "keeping the RCDB on mysql now"
-				export RCDB_CONNECTION=sqlite:////group/halld/www/halldweb/html/dist/rcdb.sqlite
+				export RCDB_CONNECTION=sqlite:////group/halld/www/halldweb/html/dist/$RCDBFILE
 			fi
 
 
@@ -1983,8 +2028,8 @@ if [[ "$BATCHSYS" == "OSG" ]]; then
 	xrdfs dtn-gluex.jlab.org mkdir /gluex/mcwrap/REQUESTEDMC_OUTPUT/$project_dir_name
 
 	echo "Copying back to $COPYBACK_DIR"
-	echo "xrdcp -rfv $OUTDIR $COPYBACK_DIR"
-	xrdcp -rfv -d 3 $OUTDIR $COPYBACK_DIR
+	echo "xrdcp -rf $OUTDIR $COPYBACK_DIR"
+	xrdcp -rf -d 3 $OUTDIR $COPYBACK_DIR
 	transfer_return_code=$?
 	if [[ $transfer_return_code != 0 ]]; then
 		echo
