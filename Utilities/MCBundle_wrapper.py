@@ -99,7 +99,7 @@ def BundleFiles(inputdir,output,merge_dir):
     mkdircommand="mkdir -p " + output
     print(mkdircommand)
     subprocess.call(mkdircommand.split(" "))
-    hostname = os.getenv('HOSTNAME')
+    hostname = subprocess.check_output(["hostname"], shell=True).decode().strip()
     if hostname == "dtn2303.jlab.org":
         python_cmd = "/usr/bin/python3"
     else:
@@ -130,11 +130,13 @@ def BundleFiles(inputdir,output,merge_dir):
 def main(argv):
     runner_name=pwd.getpwuid( os.getuid() )[0]
     numprocesses_running=subprocess.check_output(["echo `ps all -u "+runner_name+" | grep MCBundle_wrapper.py | grep -v grep | wc -l`"], shell=True)
-    spawnNum=2
+    spawnNum=3
     print(f"numprocesses_running: {int(numprocesses_running)}")
 
 
-    hostname = os.getenv('HOSTNAME')
+    hostname = subprocess.check_output(["hostname"], shell=True).decode().strip()
+    print("Hostname:",hostname)
+
     if hostname == "dtn2303.jlab.org":
         merge_dir = "/export/halld/mcwrap/mergetemp/"
     else:
