@@ -50,15 +50,20 @@ MCWRAPPER_VERSION="2.10.1"
 MCWRAPPER_DATE="11/19/24"
 
 def getOSName(versionset):
+        #only keep what comes after last "/" in versionset, in case it is full path
+        versionset=versionset[versionset.rfind("/")+1:]
+
         vsdbcnx=mysql.connector.connect(user='vsuser', database='vsdb', host='hallddb.jlab.org')
         vscursor = vsdbcnx.cursor()
-        query="select OSName from versionSet inner join OSVersions on ID=OSVersions.ID where versionSet.filename='"+versionset+"'"
+        query="select OSName from versionSet inner join OSVersions on versionSet.OS_ID=OSVersions.ID where versionSet.filename='"+versionset+"'"
+        # print(query)
         vscursor.execute(query)
         OSNames=vscursor.fetchall()
+        # print(OSNames)
         if len(OSNames) != 1:
                 return "AmbiguousOS"
 
-        return OSNames[0]["OSName"]
+        return OSNames[0][0]
 
 #====================================================
 #Takes in a few pertinant pieces of info.  Creates (if needed) a swif workflow and adds a job to it.
@@ -1143,12 +1148,12 @@ def main(argv):
         CUSTOM_PLUGINS="None"
         CUSTOM_ANA_PLUGINS="None"
 
-        GENERATOR_OS="DEFAULT"
-        POSTGEN_OS="DEFAULT"
-        SIMULATION_OS="DEFAULT"
-        MCSMEAR_OS="DEFAULT"
-        RECON_OS="DEFAULT"
-        ANA_OS="DEFAULT"
+        GENERATOR_OS="LOCAL"
+        POSTGEN_OS="LOCAL"
+        SIMULATION_OS="LOCAL"
+        MCSMEAR_OS="LOCAL"
+        RECON_OS="LOCAL"
+        ANA_OS="LOCAL"
 
         BATCHSYS="NULL"
         QUEUENAME="DEF"
@@ -1339,17 +1344,17 @@ def main(argv):
                                 else:
                                         BGFOLD=part
                 elif str(parts[0]).upper()=="GENERATOR_OS" :
-                        GENERATOR_OS=rm_comments[0].strip()
+                        GENERATOR_OS=rm_comments[0].strip().upper()
                 elif str(parts[0]).upper()=="POSTGEN_OS" :
-                        POSTGEN_OS=rm_comments[0].strip()
+                        POSTGEN_OS=rm_comments[0].strip().upper()
                 elif str(parts[0]).upper()=="SIMULATION_OS" :
-                        SIMULATION_OS=rm_comments[0].strip()
+                        SIMULATION_OS=rm_comments[0].strip().upper()
                 elif str(parts[0]).upper()=="MCSMEAR_OS" :
-                        MCSMEAR_OS=rm_comments[0].strip()
+                        MCSMEAR_OS=rm_comments[0].strip().upper()
                 elif str(parts[0]).upper()=="RECON_OS" :
-                        RECON_OS=rm_comments[0].strip()
+                        RECON_OS=rm_comments[0].strip().upper()
                 elif str(parts[0]).upper()=="ANA_OS" :
-                        ANA_OS=rm_comments[0].strip()
+                        ANA_OS=rm_comments[0].strip().upper()
                 elif str(parts[0]).upper()=="EBEAM_ENERGY" :
                         eBEAM_ENERGY=rm_comments[0].strip()
                 elif str(parts[0]).upper()=="EBEAM_CURRENT" :
@@ -1535,6 +1540,59 @@ def main(argv):
         #username = getpass.getuser()
         #print(username)
         #exit
+
+        # check which OS to use if set to DB (query db)
+        env_os_name = getOSName(ENVFILE)
+        print("env_os_name:",env_os_name,ENVFILE)
+        ana_os_name = getOSName(ANAENVFILE)
+        print("ana_os_name:",ana_os_name,ANAENVFILE)
+        runningOS = "CENTOS7" if "CentOS7" in env_os_name else ("ALMA9" if "Alma9" in env_os_name else "UNKNOWN")
+        anaOS = "CENTOS7" if "CentOS7" in ana_os_name else ("ALMA9" if "Alma9" in ana_os_name else "UNKNOWN")
+
+        if GENERATOR_OS == "DB":
+                GENERATOR_OS = runningOS
+        if POSTGEN_OS == "DB":
+                POSTGEN_OS = runningOS
+        if SIMULATION_OS == "DB":
+                SIMULATION_OS = runningOS
+        if MCSMEAR_OS == "DB":
+                MCSMEAR_OS = runningOS
+        if RECON_OS == "DB":
+                RECON_OS = runningOS
+        if ANA_OS == "DB":
+                ANA_OS = anaOS
+
+        print("GENERATOR_OS:",GENERATOR_OS)
+        print("POSTGEN_OS:",POSTGEN_OS)
+        print("SIMULATION_OS:",SIMULATION_OS)
+        print("MCSMEAR_OS:",MCSMEAR_OS)
+        print("RECON_OS:",RECON_OS)
+        print("ANA_OS:",ANA_OS)
+
+        if GENERATOR_OS not in ["CENTOS7", "ALMA9", "LOCAL"]:
+                print("Generator OS not set to a valid OS.  Please set to CENTOS7, ALMA9 or LOCAL.")
+                exit(1)
+        if POSTGEN_OS not in ["CENTOS7", "ALMA9", "LOCAL"]:
+                print("Post-Generator OS not set to a valid OS.  Please set to CENTOS7, ALMA9 or LOCAL.")
+                exit(1)
+        if SIMULATION_OS not in ["CENTOS7", "ALMA9", "LOCAL"]:
+                print("Simulation OS not set to a valid OS.  Please set to CENTOS7, ALMA9 or LOCAL.")
+                exit(1)
+        if MCSMEAR_OS not in ["CENTOS7", "ALMA9", "LOCAL"]:
+                print("MC Smear OS not set to a valid OS.  Please set to CENTOS7, ALMA9 or LOCAL.")
+                exit(1)
+        if RECON_OS not in ["CENTOS7", "ALMA9", "LOCAL"]:
+                print("Reconstruction OS not set to a valid OS.  Please set to CENTOS7, ALMA9 or LOCAL.")
+                exit(1)
+        if ANA_OS not in ["CENTOS7", "ALMA9", "LOCAL"]:
+                print("Analysis OS not set to a valid OS.  Please set to CENTOS7, ALMA9 or LOCAL.")
+                if  ANAENVFILE == "no_Analysis_env":
+                        print("Keep going as it is not needed.")
+                else:
+                        exit(1)
+
+
+        exit(1)
 
         #calculate files needed to gen
         FILES_TO_GEN=int(EVTS/PERFILE)

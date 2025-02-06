@@ -566,6 +566,8 @@ echo "=============================================="
 echo ""
 echo ""
 echo "==========OS USED=========="
+runningOS=$(echo `$BUILD_SCRIPTS/osrelease.pl`)
+echo "Local OS   "$runningOS
 echo "Generator  "$GENERATOR_OS
 echo "Postgen    "$POSTGEN_OS
 echo "Simulation "$SIMULATION_OS
@@ -594,6 +596,12 @@ echo `which hd_root`
 echo ""
 echo ""
 
+#set up container switching business by making sure the correct directories are bound
+if [[ -z "$APPTAINER_BIND" ]]; then
+	export APPTAINER_BIND="/gluex_install/"
+else
+	export APPTAINER_BIND="$APPTAINER_BIND,/gluex_install/"
+fi
 
 
 if [[ "$CUSTOM_GCONTROL" == "0" && "$GEANT" == "1" ]]; then
@@ -1041,6 +1049,18 @@ if [[ "$GENR" != "0" ]]; then # run generation
 	#RANDOMnum_forGeneration=`bash -c 'echo $RANDOM'`
 	cp beam.config $STANDARD_NAME\_beam.conf
 
+	# Define running command, needed to run inside a container
+	runGen=''
+	if [[ "$GENERATOR_OS" == "CENTOS7" ]]; then
+		runGen="/gluex_install/gxrun/gxrun -os 7 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v $ENVIRONMENT"
+	elif [[ "$GENERATOR_OS" == "ALMA9" && "$runningOS" != "Linux_Alma9-x86_64-gcc11.5.0-cntr" ]]; then
+		runGen="/gluex_install/gxrun/gxrun -os 9 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v $ENVIRONMENT"
+	fi
+	echo "============================"
+	echo "running command:"
+	echo "runGen: "$runGen
+	echo "============================"
+
 	if [[ "$GENERATOR" == "genr8" ]]; then
 		echo "RUNNING GENR8"
 		RUNNUM=$formatted_runNumber+$formatted_fileNumber
@@ -1048,17 +1068,19 @@ if [[ "$GENR" != "0" ]]; then # run generation
 		#sed -i 's/TEMPMAXE/'$GEN_MAX_ENERGY'/' $STANDARD_NAME.conf
 		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
 		# RUN genr8 and convert
-		genr8 -r$formatted_runNumber -M$EVT_TO_GEN -A$STANDARD_NAME.ascii < $STANDARD_NAME.conf #$config_file_name
+		echo $runGen genr8 -r$formatted_runNumber -M$EVT_TO_GEN -A$STANDARD_NAME.ascii < $STANDARD_NAME.conf #$config_file_name
+		$runGen genr8 -r$formatted_runNumber -M$EVT_TO_GEN -A$STANDARD_NAME.ascii < $STANDARD_NAME.conf #$config_file_name
 		generator_return_code=$?
-		genr8_2_hddm -V"0 0 0 0" $STANDARD_NAME.ascii
+		$runGen genr8_2_hddm -V"0 0 0 0" $STANDARD_NAME.ascii
 	elif [[ "$GENERATOR" == "genr8_new" ]]; then
 		echo "RUNNING NEW GENR8"
 		RUNNUM=$formatted_runNumber+$formatted_fileNumber
 		#sed -i 's/TEMPCOHERENT/'$COHERENT_PEAK'/' $STANDARD_NAME.conf
 		# RUN genr8 and convert
-		genr8_new -r$formatted_runNumber -M$EVT_TO_GEN -C$GEN_MIN_ENERGY,$GEN_MAX_ENERGY -o$STANDARD_NAME.gamp < $STANDARD_NAME.conf #$config_file_name
+		echo $runGen genr8_new -r$formatted_runNumber -M$EVT_TO_GEN -C$GEN_MIN_ENERGY,$GEN_MAX_ENERGY -o$STANDARD_NAME.gamp < $STANDARD_NAME.conf #$config_file_name
+		$runGen genr8_new -r$formatted_runNumber -M$EVT_TO_GEN -C$GEN_MIN_ENERGY,$GEN_MAX_ENERGY -o$STANDARD_NAME.gamp < $STANDARD_NAME.conf #$config_file_name
 		generator_return_code=$?
-		gamp_2_hddm -r$formatted_runNumber -V"0 0 0 0" $STANDARD_NAME.gamp
+		$runGen gamp_2_hddm -r$formatted_runNumber -V"0 0 0 0" $STANDARD_NAME.gamp
 	elif [[ "$GENERATOR" == "bggen" ]]; then
 		RANDOMnum=`bash -c 'echo $RANDOM'`
 
@@ -1075,8 +1097,8 @@ if [[ "$GENR" != "0" ]]; then # run generation
 		sed -i 's/TEMPMAXGENE/'$GEN_MAX_ENERGY'/' $STANDARD_NAME.conf
 
 		ln -s $STANDARD_NAME.conf fort.15
-		echo bggen
-		bggen
+		echo $runGen bggen
+		$runGen bggen
 		generator_return_code=$?
 		mv bggen.hddm $STANDARD_NAME.hddm
 		rm -f bggen.his
@@ -1092,7 +1114,8 @@ if [[ "$GENR" != "0" ]]; then # run generation
 
 		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
 
-		genEtaRegge -R$RUN_NUMBER -N$EVT_TO_GEN -O$STANDARD_NAME.hddm -I$STANDARD_NAME.conf
+		echo $runGen genEtaRegge -R$RUN_NUMBER -N$EVT_TO_GEN -O$STANDARD_NAME.hddm -I$STANDARD_NAME.conf
+		$runGen genEtaRegge -R$RUN_NUMBER -N$EVT_TO_GEN -O$STANDARD_NAME.hddm -I$STANDARD_NAME.conf
 		generator_return_code=$?
 	elif [[ "$GENERATOR" == "genScalarRegge" ]]; then
 		echo "RUNNING GENSCALARREGGE"
@@ -1106,14 +1129,15 @@ if [[ "$GENR" != "0" ]]; then # run generation
 
 		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
 
-		genScalarRegge -R$RUN_NUMBER -N$EVT_TO_GEN -O$STANDARD_NAME.hddm -I$STANDARD_NAME.conf
+		echo $runGen genScalarRegge -R$RUN_NUMBER -N$EVT_TO_GEN -O$STANDARD_NAME.hddm -I$STANDARD_NAME.conf
+		$runGen genScalarRegge -R$RUN_NUMBER -N$EVT_TO_GEN -O$STANDARD_NAME.hddm -I$STANDARD_NAME.conf
 		generator_return_code=$?
 	elif [[ "$GENERATOR" == "mc_gen" ]]; then
 		echo "RUNNING MC_GEN"
-		python $HD_UTILITIES_HOME/psflux/plot_flux_ccdb.py -b $RUN_NUMBER -e $RUN_NUMBER
+		$runGen python $HD_UTILITIES_HOME/psflux/plot_flux_ccdb.py -b $RUN_NUMBER -e $RUN_NUMBER
 		MCGEN_FLUX_DIR=`printf './flux_%d_%d.ascii' "$RUN_NUMBER" "$RUN_NUMBER"`
 		ROOTSCRIPT=`printf '$MCWRAPPER_CENTRAL/Generators/mc_gen/Flux_to_Ascii.C("flux_%s_%s.root")' "$RUN_NUMBER" "$RUN_NUMBER" `
-		root -l -b -q $ROOTSCRIPT
+		$runGen root -l -b -q $ROOTSCRIPT
 
 		sed -i 's/TEMPTRIG/'$EVT_TO_GEN'/' $STANDARD_NAME.conf
 		sed -i 's/TEMPMINGENE/'$GEN_MIN_ENERGY'/' $STANDARD_NAME.conf
@@ -1122,12 +1146,12 @@ if [[ "$GENR" != "0" ]]; then # run generation
 		sed -i 's|TEMPOUTNAME|'./'|' $STANDARD_NAME.conf
 		MCGEN_Translator=`grep Translator $STANDARD_NAME.conf`
 
-		echo mc_gen $STANDARD_NAME.conf
-		mc_gen $STANDARD_NAME.conf
+		echo $runGen mc_gen $STANDARD_NAME.conf
+		$runGen mc_gen $STANDARD_NAME.conf
 		rm flux_*
 		mv *.ascii $STANDARD_NAME.ascii
 		Translator=${MCGEN_Translator##!Translator:}
-		GEN2HDDM_$Translator -r$RUN_NUMBER $STANDARD_NAME.ascii
+		$runGen GEN2HDDM_$Translator -r$RUN_NUMBER $STANDARD_NAME.ascii
 		#if [[ "$MCGEN_Translator" == "\!Translator:ppbar" ]]; then
 		#	GEN2HDDM_ppbar -r$RUN_NUMBER $STANDARD_NAME.ascii
 		#elif [[ "$MCGEN_Translator" == "\!Translator:lamlambar" ]]; then
@@ -1151,8 +1175,8 @@ if [[ "$GENR" != "0" ]]; then # run generation
 			sed -i 's/TEMPPOLFRAC/'.4'/' $STANDARD_NAME.conf
 			sed -i 's/TEMPPOLANGLE/'$polarization_angle'/' $STANDARD_NAME.conf
 		fi
-		echo gen_amp -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
-		gen_amp -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
+		echo $runGen gen_amp -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
+		$runGen gen_amp -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
 		generator_return_code=$?
 	elif [[ "$GENERATOR" == "gen_amp_V2" ]]; then
 		echo "RUNNING GEN_AMP_V2"
@@ -1169,8 +1193,8 @@ if [[ "$GENR" != "0" ]]; then # run generation
 				sed -i 's/TEMPPOLFRAC/'.4'/' $STANDARD_NAME.conf
 				sed -i 's/TEMPPOLANGLE/'$polarization_angle'/' $STANDARD_NAME.conf
 		fi
-		echo gen_amp_V2 -ac $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
-		gen_amp_V2 -ac $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
+		echo $runGen gen_amp_V2 -ac $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
+		$runGen gen_amp_V2 -ac $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
 		generator_return_code=$?
 	elif [[ "$GENERATOR" == "gen_2pi_amp" ]]; then
 		echo "RUNNING GEN_2PI_AMP"
@@ -1184,8 +1208,8 @@ if [[ "$GENR" != "0" ]]; then # run generation
 			sed -i 's/TEMPPOLANGLE/'$polarization_angle'/' $STANDARD_NAME.conf
 		fi
 		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
-		echo gen_2pi_amp -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
-		gen_2pi_amp -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
+		echo $runGen gen_2pi_amp -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
+		$runGen gen_2pi_amp -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
 		generator_return_code=$?
 	elif [[ "$GENERATOR" == "gen_omega_3pi" ]]; then
 		echo "RUNNING GEN_OMEGA_3PI"
@@ -1199,8 +1223,8 @@ if [[ "$GENR" != "0" ]]; then # run generation
 			sed -i 's/TEMPPOLANGLE/'$polarization_angle'/' $STANDARD_NAME.conf
 		fi
 		echo $optionals_line
-		echo gen_omega_3pi -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -m $eBEAM_ENERGY -p $COHERENT_PEAK $optionals_line
-		gen_omega_3pi -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -m $eBEAM_ENERGY -p $COHERENT_PEAK $optionals_line
+		echo $runGen gen_omega_3pi -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -m $eBEAM_ENERGY -p $COHERENT_PEAK $optionals_line
+		$runGen gen_omega_3pi -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -m $eBEAM_ENERGY -p $COHERENT_PEAK $optionals_line
 		generator_return_code=$?
 	elif [[ "$GENERATOR" == "gen_omegapi" ]]; then
 		echo "RUNNING GEN_OMEGAPI"
@@ -1214,8 +1238,8 @@ if [[ "$GENR" != "0" ]]; then # run generation
 			sed -i 's/TEMPPOLANGLE/'$polarization_angle'/' $STANDARD_NAME.conf
 		fi
 		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
-		echo gen_omegapi -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
-		gen_omegapi -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
+		echo $runGen gen_omegapi -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
+		$runGen gen_omegapi -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
 		generator_return_code=$?
 	elif [[ "$GENERATOR" == "gen_vec_ps" ]]; then
 		echo "RUNNING GEN_VEC_PS"
@@ -1229,8 +1253,8 @@ if [[ "$GENR" != "0" ]]; then # run generation
 			sed -i 's/TEMPPOLANGLE/'$polarization_angle'/' $STANDARD_NAME.conf
 		fi
 		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
-		echo gen_vec_ps -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
-		gen_vec_ps -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
+		echo $runGen gen_vec_ps -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
+		$runGen gen_vec_ps -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
 		generator_return_code=$?
 	elif [[ "$GENERATOR" == "gen_omega_radiative" ]]; then
 		echo "RUNNING GEN_OMEGA_RADIATIVE"
@@ -1244,65 +1268,71 @@ if [[ "$GENR" != "0" ]]; then # run generation
 		fi
 		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
 		echo $optionals_line
-		echo gen_omega_radiative -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -m $eBEAM_ENERGY -p $COHERENT_PEAK $optionals_line
-		gen_omega_radiative -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -m $eBEAM_ENERGY -p $COHERENT_PEAK $optionals_line
+		echo $runGen gen_omega_radiative -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -m $eBEAM_ENERGY -p $COHERENT_PEAK $optionals_line
+		$runGen gen_omega_radiative -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -m $eBEAM_ENERGY -p $COHERENT_PEAK $optionals_line
 		generator_return_code=$?
 	elif [[ "$GENERATOR" == "gen_2pi_primakoff" ]]; then
 		echo "RUNNING GEN_2PI_PRIMAKOFF"
 		optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
 		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
 		echo $optionals_line
-		echo gen_2pi_primakoff -c $STANDARD_NAME.conf -o $STANDARD_NAME.hddm -hd $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
-		gen_2pi_primakoff -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
+		echo $runGen gen_2pi_primakoff -c $STANDARD_NAME.conf -o $STANDARD_NAME.hddm -hd $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
+		$runGen gen_2pi_primakoff -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
 		generator_return_code=$?
 	elif [[ "$GENERATOR" == "gen_2pi0_primakoff" ]]; then
 		echo "RUNNING GEN_2PI0_PRIMAKOFF"
 		optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
 		echo $optionals_line
 		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
-		echo gen_2pi0_primakoff -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
-		gen_2pi0_primakoff -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
+		echo $runGen gen_2pi0_primakoff -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
+		$runGen gen_2pi0_primakoff -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
 		generator_return_code=$?
 	elif [[ "$GENERATOR" == "gen_pi0" ]]; then
 		echo "RUNNING GEN_PI0"
 		optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
 		echo $optionals_line
 		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
-		gen_pi0 -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -s $formatted_fileNumber -m $eBEAM_ENERGY $optionals_line
+		echo $runGen gen_pi0 -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -s $formatted_fileNumber -m $eBEAM_ENERGY $optionals_line
+		$runGen gen_pi0 -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -s $formatted_fileNumber -m $eBEAM_ENERGY $optionals_line
 		generator_return_code=$?
 	elif [[ "$GENERATOR" == "gen_compton" ]]; then
 		echo "RUNNING GEN_COMPTON"
 		optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
 		echo $optionals_line
 		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
-		gen_compton -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -s $formatted_fileNumber -m $eBEAM_ENERGY $optionals_line
+		echo $runGen gen_compton -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -s $formatted_fileNumber -m $eBEAM_ENERGY $optionals_line
+		$runGen gen_compton -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -s $formatted_fileNumber -m $eBEAM_ENERGY $optionals_line
 	elif [[ "$GENERATOR" == "gen_compton_simple" ]]; then
 		echo "RUNNING GEN_COMPTON_SIMPLE"
 		optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
 		echo $optionals_line
 		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
-		gen_compton_simple -c $STANDARD_NAME'_beam.conf' -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -s $formatted_fileNumber -m $eBEAM_ENERGY $optionals_line
+		echo $runGen gen_compton_simple -c $STANDARD_NAME'_beam.conf' -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -s $formatted_fileNumber -m $eBEAM_ENERGY $optionals_line
+		$runGen gen_compton_simple -c $STANDARD_NAME'_beam.conf' -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -s $formatted_fileNumber -m $eBEAM_ENERGY $optionals_line
 		generator_return_code=$?
 	elif [[ "$GENERATOR" == "gen_primex_eta_he4" ]]; then
 		echo "RUNNING GEN_PRIMEX_ETA_HE4"
 		optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
 		echo $optionals_line
 		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
-		gen_primex_eta_he4 -e $STANDARD_NAME.conf -c $STANDARD_NAME'_beam.conf' -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.txt -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -s $formatted_fileNumber -m $eBEAM_ENERGY $optionals_line
+		echo $runGen gen_primex_eta_he4 -e $STANDARD_NAME.conf -c $STANDARD_NAME'_beam.conf' -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.txt -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -s $formatted_fileNumber -m $eBEAM_ENERGY $optionals_line
+		$runGen gen_primex_eta_he4 -e $STANDARD_NAME.conf -c $STANDARD_NAME'_beam.conf' -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.txt -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -s $formatted_fileNumber -m $eBEAM_ENERGY $optionals_line
 		generator_return_code=$?
 	elif [[ "$GENERATOR" == "gen_whizard" ]]; then
 		echo "RUNNING GEN_WHIZARD"
 		optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
 		echo $optionals_line
 		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
-		gen_whizard -e $STANDARD_NAME.conf -c $STANDARD_NAME'_beam.conf' -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.txt -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -s $formatted_fileNumber -m $eBEAM_ENERGY $optionals_line
+		echo $runGen gen_whizard -e $STANDARD_NAME.conf -c $STANDARD_NAME'_beam.conf' -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.txt -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -s $formatted_fileNumber -m $eBEAM_ENERGY $optionals_line
+		$runGen gen_whizard -e $STANDARD_NAME.conf -c $STANDARD_NAME'_beam.conf' -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.txt -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -s $formatted_fileNumber -m $eBEAM_ENERGY $optionals_line
 		generator_return_code=$?
 	elif [[ "$GENERATOR" == "gen_npi" ]]; then
 		echo "RUNNING GEN_NPI"
 		optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
 		echo $optionals_line
 		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
-		gen_npi -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -s $formatted_fileNumber -m $eBEAM_ENERGY $optionals_line
+		echo $runGen gen_npi -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -s $formatted_fileNumber -m $eBEAM_ENERGY $optionals_line
+		$runGen gen_npi -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -s $formatted_fileNumber -m $eBEAM_ENERGY $optionals_line
 		generator_return_code=$?
 	elif [[ "$GENERATOR" == "gen_2k" ]]; then
 		echo "RUNNING GEN_2K"
@@ -1310,8 +1340,8 @@ if [[ "$GENR" != "0" ]]; then # run generation
 		#set RANDOMnum=`bash -c 'echo $RANDOM'`
 		echo $optionals_line
 		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
-		echo gen_2k -c $STANDARD_NAME.conf -o $STANDARD_NAME.hddm -hd $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
-		gen_2k -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
+		echo $runGen gen_2k -c $STANDARD_NAME.conf -o $STANDARD_NAME.hddm -hd $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
+		$runGen gen_2k -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
 		generator_return_code=$?
 	elif [[ "$GENERATOR" == "bggen_jpsi" ]]; then
 		RANDOMnum=`bash -c 'echo $RANDOM'`
@@ -1328,7 +1358,8 @@ if [[ "$GENR" != "0" ]]; then # run generation
 		sed -i 's/TEMPMAXGENE/'$GEN_MAX_ENERGY'/' $STANDARD_NAME.conf
 
 		ln -s $STANDARD_NAME.conf fort.15
-		bggen_jpsi
+		echo $runGen bggen_jpsi
+		$runGen bggen_jpsi
 		generator_return_code=$?
 		mv bggen.hddm $STANDARD_NAME.hddm
 	elif [[ "$GENERATOR" == "bggen_phi_ee" ]]; then
@@ -1346,7 +1377,8 @@ if [[ "$GENR" != "0" ]]; then # run generation
 		sed -i 's/TEMPMAXGENE/'$GEN_MAX_ENERGY'/' $STANDARD_NAME.conf
 
 		ln -s $STANDARD_NAME.conf fort.15
-		bggen_jpsi
+		echo $runGen bggen_jpsi
+		$runGen bggen_jpsi
 		generator_return_code=$?
 		mv bggen.hddm $STANDARD_NAME.hddm
 	elif [[ "$GENERATOR" == "bggen_upd" ]]; then
@@ -1374,7 +1406,8 @@ if [[ "$GENR" != "0" ]]; then # run generation
 		ln -s $STANDARD_NAME.conf fort.15
 		ln -s particles.ffr fort.16
 		ln -s run_mcwrapper.ffr fort.17
-		bggen_upd
+		echo $runGen bggen_upd
+		$runGen bggen_upd
 		generator_return_code=$?
 		mv bggen.hddm $STANDARD_NAME.hddm
 	elif [[ "$GENERATOR" == "gen_ee" ]]; then
@@ -1384,26 +1417,27 @@ if [[ "$GENR" != "0" ]]; then # run generation
 		optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
 		echo $optionals_line
 		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
-		gen_ee -d$STANDARD_NAME.conf -c$STANDARD_NAME'_beam.conf' -o$STANDARD_NAME.hddm -n$EVT_TO_GEN -z$RUN_NUMBER -l$GEN_MIN_ENERGY -u$GEN_MAX_ENERGY -r$RANDOMnum $optionals_line
+		echo $runGen gen_ee -d$STANDARD_NAME.conf -c$STANDARD_NAME'_beam.conf' -o$STANDARD_NAME.hddm -n$EVT_TO_GEN -z$RUN_NUMBER -l$GEN_MIN_ENERGY -u$GEN_MAX_ENERGY -r$RANDOMnum $optionals_line
+		$runGen gen_ee -d$STANDARD_NAME.conf -c$STANDARD_NAME'_beam.conf' -o$STANDARD_NAME.hddm -n$EVT_TO_GEN -z$RUN_NUMBER -l$GEN_MIN_ENERGY -u$GEN_MAX_ENERGY -r$RANDOMnum $optionals_line
 		generator_return_code=$?
 	elif [[ "$GENERATOR" == "gen_ee_hb" ]]; then
-		echo gen_ee_hb -N$RUN_NUMBER -n$EVT_TO_GEN
-		gen_ee_hb -N$RUN_NUMBER -n$EVT_TO_GEN
+		echo $runGen gen_ee_hb -N$RUN_NUMBER -n$EVT_TO_GEN
+		$runGen gen_ee_hb -N$RUN_NUMBER -n$EVT_TO_GEN
 		generator_return_code=$?
 		mv genOut.hddm $STANDARD_NAME.hddm
 	elif [[ "$GENERATOR" == "genBH" ]]; then
 		RANDOMnum=`bash -c 'echo $RANDOM'`
 		echo "Random number used: "$RANDOMnum
-		echo genBH -n$EVT_TO_GEN -t$NUMTHREADS -m0.5 -e$GEN_MAX_ENERGY -r$RANDOMnum $STANDARD_NAME.hddm
-		genBH -n$EVT_TO_GEN -t$NUMTHREADS -m0.5 -e$GEN_MAX_ENERGY -r$RANDOMnum $STANDARD_NAME.hddm
+		echo $runGen genBH -n$EVT_TO_GEN -t$NUMTHREADS -m0.5 -e$GEN_MAX_ENERGY -r$RANDOMnum $STANDARD_NAME.hddm
+		$runGen genBH -n$EVT_TO_GEN -t$NUMTHREADS -m0.5 -e$GEN_MAX_ENERGY -r$RANDOMnum $STANDARD_NAME.hddm
 		sed -i 's/class="mc_s"/'class=\"s\"'/' $STANDARD_NAME.hddm
 		generator_return_code=$?
 	elif [[ "$GENERATOR" == "python" ]]; then
 		RANDOMnum=`bash -c 'echo $RANDOM'`
 		optionals_line=`head -n 1 $STANDARD_NAME.py | sed -r 's/.//'`
 		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.py
-		echo $GENERATOR $STANDARD_NAME.py --run $formatted_runNumber --nevents $EVT_TO_GEN --out $STANDARD_NAME.hddm --seed $RANDOMnum $optionals_line
-		$GENERATOR $STANDARD_NAME.py --run $formatted_runNumber --nevents $EVT_TO_GEN --out $STANDARD_NAME.hddm --seed $RANDOMnum $optionals_line
+		echo $runGen $GENERATOR $STANDARD_NAME.py --run $formatted_runNumber --nevents $EVT_TO_GEN --out $STANDARD_NAME.hddm --seed $RANDOMnum $optionals_line
+		$runGen $GENERATOR $STANDARD_NAME.py --run $formatted_runNumber --nevents $EVT_TO_GEN --out $STANDARD_NAME.hddm --seed $RANDOMnum $optionals_line
 		generator_return_code=$?
 	fi
 
@@ -1426,6 +1460,17 @@ fi
 #POST PROCESSING INSERTION POINT
 if [[ "$GENERATOR_POST" != "No" && "$GENR" != "0" ]]; then #run post processing
 	echo "RUNNING POSTPROCESSING "
+	# defining running command, needed to run inside a container
+	runPostgen=''
+	if [[ "$POSTGEN_OS" == "CENTOS7" ]]; then
+		runPostgen="/gluex_install/gxrun/gxrun -os 7 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v $ENVIRONMENT"
+	elif [[ "$POSTGEN_OS" == "ALMA9" && "$runningOS" != "Linux_Alma9-x86_64-gcc11.5.0-cntr" ]]; then
+		runPostgen="/gluex_install/gxrun/gxrun -os 9 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v $ENVIRONMENT"
+	fi
+	echo "============================"
+	echo "running command:"
+	echo "runPostgen: "$runPostgen
+	echo "============================"
 	#copy config locally
 	post_return_code=-1
 	echo $GENERATOR_POST_CONFIG
@@ -1456,8 +1501,8 @@ if [[ "$GENERATOR_POST" != "No" && "$GENR" != "0" ]]; then #run post processing
 			fi
 			export EVTGEN_DECAY_FILE=$PWD/postdec'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf
 		fi
-		echo decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm -upost'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf $STANDARD_NAME.hddm
-		decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm -upost'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf $STANDARD_NAME.hddm
+		echo $runPostgen decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm -upost'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf $STANDARD_NAME.hddm
+		$runPostgen decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm -upost'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf $STANDARD_NAME.hddm
 		post_return_code=$?
 		STANDARD_NAME=$STANDARD_NAME'_decay_evtgen'
 	fi
@@ -1559,9 +1604,22 @@ if [[ "$GEANT" != "0" && "$GENR" != "0" ]]; then #run geant
 	cp $PWD/control'_'$formatted_runNumber'_'$formatted_fileNumber.in $OUTDIR/configurations/geant/
 	mv $PWD/control'_'$formatted_runNumber'_'$formatted_fileNumber.in $PWD/control.in
 
+	# defining running command, needed to run inside a container
+	runSim=''
+	if [[ "$SIMULATION_OS" == "CENTOS7" ]]; then
+		runSim="/gluex_install/gxrun/gxrun -os 7 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v $ENVIRONMENT"
+	elif [[ "$SIMULATION_OS" == "ALMA9" && "$runningOS" != "Linux_Alma9-x86_64-gcc11.5.0-cntr" ]]; then
+		runSim="/gluex_install/gxrun/gxrun -os 9 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v $ENVIRONMENT"
+	fi
+	echo "============================"
+	echo "running command:"
+	echo "runSim: "$runSim
+	echo "============================"
+
 	if [[ "$GEANTVER" == "3" ]]; then
 
-		hdgeant -xml=ccdb://GEOMETRY/main_HDDS.xml,run=$RUN_NUMBER
+		echo $runSim hdgeant -xml=ccdb://GEOMETRY/main_HDDS.xml,run=$RUN_NUMBER
+		$runSim hdgeant -xml=ccdb://GEOMETRY/main_HDDS.xml,run=$RUN_NUMBER
 		geant_return_code=$?
 
 	elif [[ "$GEANTVER" == "4" ]]; then
@@ -1579,7 +1637,8 @@ if [[ "$GEANT" != "0" && "$GENR" != "0" ]]; then #run geant
 		echo "/run/beamOn $EVT_TO_GEN" >> run.mac
 		echo "exit" >> run.mac
 
-		hdgeant4 -t$NUMTHREADS run.mac
+		echo $runSim hdgeant4 -t$NUMTHREADS run.mac
+		$runSim hdgeant4 -t$NUMTHREADS run.mac
 		geant_return_code=$?
 		rm run.mac
 	else
@@ -1637,6 +1696,19 @@ else
 	#check if config file ends in .evio to decide whether or not smear needs to be run for conversion of simulation for reconstruction
 	if [[ "$GENR" != "0" && "$GEANT" != "0" && "$SMEAR" != "0" && "$CONFIG_FILE" != *.evio ]]; then #run mcsmear
 		echo "RUNNING MCSMEAR"
+
+		# defining running command, needed to run inside a container
+		runSmear=''
+		if [[ "$MCSMEAR_OS" == "CENTOS7" ]]; then
+			runSmear="/gluex_install/gxrun/gxrun -os 7 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v $ENVIRONMENT"
+		elif [[ "$MCSMEAR_OS" == "ALMA9" && "$runningOS" != "Linux_Alma9-x86_64-gcc11.5.0-cntr" ]]; then
+			runSmear="/gluex_install/gxrun/gxrun -os 9 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v $ENVIRONMENT"
+		fi
+		echo "============================"
+		echo "running command:"
+		echo "runSmear: "$runSmear
+		echo "============================"
+
 		if [[ "$GENR" == "0" && "$GEANT" == "0" ]]; then #obsolete, needs fixing
 			echo $GENERATOR
 			geant_file=`echo $GENERATOR | cut -c 6-`
@@ -1645,7 +1717,8 @@ else
 		fi
 		if [[ "$BKGFOLDSTR" == "BeamPhotons" || "$BKGFOLDSTR" == "None" || "$BKGFOLDSTR" == "TagOnly" ]]; then
 			echo "running MCsmear without folding in random background"
-			mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3000 -o$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' $STANDARD_NAME'_geant'$GEANTVER'.hddm'
+			echo $runSmear mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3000 -o$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' $STANDARD_NAME'_geant'$GEANTVER'.hddm'
+			$runSmear mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3000 -o$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' $STANDARD_NAME'_geant'$GEANTVER'.hddm'
 			mcsmear_return_code=$?
 		elif [[ "$BKGFOLDSTR" == "DEFAULT" || "$BKGFOLDSTR" == "Random" ]]; then
 			rm -f count.py
@@ -1666,17 +1739,18 @@ else
 			fold_skip_num=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
 			echo "skipping: "$fold_skip_num
 			if [[ $MAKE_MC_USING_XROOTD == 0 ]]; then
-				echo "mcsmear "$MCSMEAR_Flags " -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"$RANDBGRATE""+"$fold_skip_num
-				mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:$RANDBGRATE\+$fold_skip_num
+				echo "$runSmear mcsmear "$MCSMEAR_Flags " -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"$RANDBGRATE""+"$fold_skip_num
+				$runSmear mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:$RANDBGRATE\+$fold_skip_num
 				mcsmear_return_code=$?
 			else
 				echo "PELICAN TEST"
+				httokendecode -H
 				ls /usr/bin/
 				/usr/bin/pelican object ls osdf://jlab-osdf/gluex/work/halld/mcwrap/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm
 				echo "END PELICAN TEST"
 				xrdcopy $XRD_RANDOMS_URL/$RANDOMS_PREPEND/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm ./run$formatted_runNumber\_random.hddm
-				echo "mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm ./run$formatted_runNumber\_random.hddm:$RANDBGRATE+$fold_skip_num"
-				mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm ./run$formatted_runNumber\_random.hddm\:$RANDBGRATE\+$fold_skip_num
+				echo "$runSmear mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm ./run$formatted_runNumber\_random.hddm:$RANDBGRATE+$fold_skip_num"
+				$runSmear mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm ./run$formatted_runNumber\_random.hddm\:$RANDBGRATE\+$fold_skip_num
 				mcsmear_return_code=$?
 				#echo "mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm:1+$fold_skip_num"
 				#mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $XRD_RANDOMS_URL/random_triggers//$RANDBGTAG/run$formatted_runNumber\_random.hddm\:1\+$fold_skip_num
@@ -1693,13 +1767,13 @@ else
 				totalnum=$RANDOM_TRIG_NUM_EVT
 			fi
 			fold_skip_num=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
-			echo "mcsmear "$MCSMEAR_Flags " -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
-			mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
+			echo "$runSmear mcsmear "$MCSMEAR_Flags " -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1""+"$fold_skip_num
+			$runSmear mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
 			mcsmear_return_code=$?
 		else
 			#trust the user and use their string
-			echo 'mcsmear -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o'$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm'' '$STANDARD_NAME'_geant'$GEANTVER'.hddm'' '$BKGFOLDSTR
-			mcsmear -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' $STANDARD_NAME'_geant'$GEANTVER'.hddm' $BKGFOLDSTR
+			echo $runSmear ' mcsmear -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o'$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm'' '$STANDARD_NAME'_geant'$GEANTVER'.hddm'' '$BKGFOLDSTR
+			$runSmear mcsmear -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' $STANDARD_NAME'_geant'$GEANTVER'.hddm' $BKGFOLDSTR
 			mcsmear_return_code=$?
 		fi
 
@@ -1759,11 +1833,24 @@ else
 			reconwholecontext="variation=$RECON_VERSION calibtime=$RECON_CALIBTIME"
 			export JANA_CALIB_CONTEXT="$reconwholecontext"
 		fi
+
+		# defining running command, needed to run inside a container
+		runRecon=''
+		if [[ "$RECON_OS" == "CENTOS7" ]]; then
+			runRecon="/gluex_install/gxrun/gxrun -os 7 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v $ENVIRONMENT"
+		elif [[ "$RECON_OS" == "ALMA9" && "$runningOS" != "Linux_Alma9-x86_64-gcc11.5.0-cntr" ]]; then
+			runRecon="/gluex_install/gxrun/gxrun -os 9 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v $ENVIRONMENT"
+		fi
+		echo "============================"
+		echo "running command:"
+		echo "runRecon: "$runRecon
+		echo "============================"
+
 		reaction_filter=""
 		if [[ "$recon_pre" == "file" ]]; then
 			echo "using config file: "$jana_config_file
-			echo hd_root $file_to_recon --config=jana_config.cfg -PNTHREADS=$NUMTHREADS $additional_hdroot
-			hd_root $file_to_recon --config=jana_config.cfg -PNTHREADS=$NUMTHREADS $additional_hdroot
+			echo $runRecon hd_root $file_to_recon --config=jana_config.cfg -PNTHREADS=$NUMTHREADS $additional_hdroot
+			$runRecon hd_root $file_to_recon --config=jana_config.cfg -PNTHREADS=$NUMTHREADS $additional_hdroot
 			hd_root_return_code=$?
 			reaction_filter=`grep ReactionFilter jana_config.cfg`
 			#file_options = `tail jana_config.cfg -n+2` # get everything from line 2 on. Lines counting starts with 1
@@ -1784,8 +1871,8 @@ else
 
 			PluginStr=`echo $PluginStr | sed -r 's/.{1}$//'`
 			echo "Running hd_root with: ""$PluginStr"
-			echo "hd_root ""$STANDARD_NAME"'_geant'"$GEANTVER"'_smeared.hddm'" -PPLUGINS=""$PluginStr ""-PNTHREADS=""$NUMTHREADS"
-			hd_root $file_to_recon -PPLUGINS=$PluginStr -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 $additional_hdroot
+			echo "$runRecon hd_root ""$STANDARD_NAME"'_geant'"$GEANTVER"'_smeared.hddm'" -PPLUGINS=""$PluginStr ""-PNTHREADS=""$NUMTHREADS"
+			$runRecon hd_root $file_to_recon -PPLUGINS=$PluginStr -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 $additional_hdroot
 			hd_root_return_code=$?
 		fi
 
@@ -1862,6 +1949,18 @@ else
 			echo "EMULATING ANALYSIS LAUNCH"
 			echo "changed software to: "`which hd_root`
 
+			# defining running command, needed to run inside a container
+			runAna=''
+			if [[ "$ANA_OS" == "CENTOS7" ]]; then
+				runAna="/gluex_install/gxrun/gxrun -os 7 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v "$ANAENVIRONMENT
+			elif [[ "$ANA_OS" == "ALMA9" && "$runningOS" != "Linux_Alma9-x86_64-gcc11.5.0-cntr" ]]; then
+				runAna="/gluex_install/gxrun/gxrun -os 9 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v "$ANAENVIRONMENT
+			fi
+			echo "============================"
+			echo "running command:"
+			echo "runAna: "$runAna
+			echo "============================"
+
 			if [[ "$CUSTOM_ANA_PLUGINS" != "None" ]]; then
 				if [[ $ana_pre == "file" ]]; then
 					echo "Use $jana_ana_config_file"
@@ -1892,7 +1991,8 @@ else
 
 			cat ana_jana.cfg
 
-			hd_root dana_rest_$STANDARD_NAME.hddm --config=ana_jana.cfg -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 -o hd_root_ana.root
+			echo $runAna hd_root dana_rest_$STANDARD_NAME.hddm --config=ana_jana.cfg -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 -o hd_root_ana.root
+			$runAna hd_root dana_rest_$STANDARD_NAME.hddm --config=ana_jana.cfg -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 -o hd_root_ana.root
 			anahd_root_return_code=$?
 
 			if [[ $anahd_root_return_code != 0 ]]; then

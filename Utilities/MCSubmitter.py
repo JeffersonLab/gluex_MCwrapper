@@ -131,6 +131,14 @@ def WritePayloadConfig(order,foundConfig,batch_system):
     MCconfig_file.write("ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"+str(order["VersionSet"])+"\n")
     if(order["ANAVersionSet"] != None and order["ANAVersionSet"] != "None" ):
         MCconfig_file.write("ANA_ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"+str(order["ANAVersionSet"])+"\n")
+
+    MCconfig_file.write("GENERATOR_OS=db")
+    MCconfig_file.write("POSTGEN_OS=db")
+    MCconfig_file.write("SIMULATION_OS=db")
+    MCconfig_file.write("MCSMEAR_OS=db")
+    MCconfig_file.write("RECON_OS=db")
+    MCconfig_file.write("ANA_OS=db")
+    
     MCconfig_file.close()
 
 def SubmitList(SubList,job_IDs_submitted):

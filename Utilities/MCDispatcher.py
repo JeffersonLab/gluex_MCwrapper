@@ -1465,6 +1465,14 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
         print("ADDING ANNAVER")
         MCconfig_file.write("ANA_ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"+str(order["ANAVersionSet"])+"\n")
         print("ADDED ANNAVER")
+
+    MCconfig_file.write("GENERATOR_OS=db")
+    MCconfig_file.write("POSTGEN_OS=db")
+    MCconfig_file.write("SIMULATION_OS=db")
+    MCconfig_file.write("MCSMEAR_OS=db")
+    MCconfig_file.write("RECON_OS=db")
+    MCconfig_file.write("ANA_OS=db")
+
     MCconfig_file.close()
 
 def DispatchToOSG(ID,order,PERCENT):
@@ -1616,6 +1624,13 @@ def WritePayloadConfigString(order,foundConfig):
         #print("ADDING ANNAVER")
         config_str+="ANA_ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"+str(order["ANAVersionSet"])+"\n"
     #print("---------------------------------")
+
+    config_str+="GENERATOR_OS=db"+"\n"
+    config_str+="POSTGEN_OS=db"+"\n"
+    config_str+="SIMULATION_OS=db"+"\n"
+    config_str+="MCSMEAR_OS=db"+"\n"
+    config_str+="RECON_OS=db"+"\n"
+    config_str+="ANA_OS=db"+"\n"
     print(config_str)
     return config_str
 
