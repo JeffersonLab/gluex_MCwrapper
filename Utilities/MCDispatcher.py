@@ -1467,12 +1467,12 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
         MCconfig_file.write("ANA_ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"+str(order["ANAVersionSet"])+"\n")
         print("ADDED ANNAVER")
 
-    MCconfig_file.write("GENERATOR_OS=db")
-    MCconfig_file.write("POSTGEN_OS=db")
-    MCconfig_file.write("SIMULATION_OS=db")
-    MCconfig_file.write("MCSMEAR_OS=db")
-    MCconfig_file.write("RECON_OS=db")
-    MCconfig_file.write("ANA_OS=db")
+    MCconfig_file.write("GENERATOR_OS=db"+"\n")
+    MCconfig_file.write("POSTGEN_OS=db"+"\n")
+    MCconfig_file.write("SIMULATION_OS=db"+"\n")
+    MCconfig_file.write("MCSMEAR_OS=db"+"\n")
+    MCconfig_file.write("RECON_OS=db"+"\n")
+    MCconfig_file.write("ANA_OS=db"+"\n")
 
     MCconfig_file.close()
 
