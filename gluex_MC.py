@@ -1592,8 +1592,6 @@ def main(argv):
                         exit(1)
 
 
-        exit(1)
-
         #calculate files needed to gen
         FILES_TO_GEN=int(EVTS/PERFILE)
         REMAINING_GEN=EVTS%PERFILE
