@@ -256,7 +256,7 @@ def swif2cont_add_job(WORKFLOW, RUNNO, FILENO,SCRIPT,COMMAND, VERBOSE,ACCOUNT,PA
         # script with options command
         # add_command += " -fail-save-dir "+DATA_OUTPUT_BASE_DIR
 
-        add_command += " singularity exec --bind /scigroup/mcwrapper/ --bind /u --bind /group/halld/ --bind /scratch/slurm/ --bind /lustre/enp/swif2 --bind /cvmfs --bind /work/osgpool/ --bind /work/halld --bind /cache/halld --bind /volatile/halld --bind /work/halld2 /cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_prod:v1 "+SCRIPT  +" "+getCommandString(COMMAND,"SWIF")
+        add_command += " singularity exec --bind /scigroup/mcwrapper/ --bind /u --bind /group/halld/ --bind /scratch/slurm/ --bind /lustre/enp/swif2 --bind /cvmfs --bind /work/osgpool/ --bind /work/halld --bind /cache/halld --bind /volatile/halld --bind /work/halld2 /cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_almalinux_9:latest "+SCRIPT  +" "+getCommandString(COMMAND,"SWIF")
         # print(getCommandString(COMMAND,"SBATCH_SLURM"))
         # add_command += " "+SCRIPT  +" "+ getCommandString(COMMAND,"SWIF")
 
@@ -793,7 +793,7 @@ def  SLURMcont_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAN
 
         #f.write("srun "+SCRIPT_TO_RUN+" "+COMMAND+"\n")
         #/group/halld/www/halldweb/html/dist/gluex_centos7.img /cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_prod:v1
-        f.write("singularity exec --bind /scigroup/mcwrapper/ --bind /u --bind /group/halld/ --bind /scratch/slurm/ --bind /cvmfs --bind /work/osgpool/ --bind /work/halld --bind /cache/halld --bind /volatile/halld --bind /work/halld2 /cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_prod:v1 $MCWRAPPER_CENTRAL/MakeMC.sh "+getCommandString(COMMAND,"SBATCH_SLURM")+"\n")
+        f.write("singularity exec --bind /scigroup/mcwrapper/ --bind /u --bind /group/halld/ --bind /scratch/slurm/ --bind /cvmfs --bind /work/osgpool/ --bind /work/halld --bind /cache/halld --bind /volatile/halld --bind /work/halld2 /cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_almalinux_9:latest $MCWRAPPER_CENTRAL/MakeMC.sh "+getCommandString(COMMAND,"SBATCH_SLURM")+"\n")
         #print(getCommandString(COMMAND,"SBATCH_SLURM"))
         f.close()
 

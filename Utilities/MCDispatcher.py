@@ -1078,10 +1078,10 @@ def TestProject(ID,versionSet,commands_to_call=""):
     f.write(command)
     f.close()
 
-   
-    print("singularity exec --cleanenv --bind "+pwd+":"+pwd+" --bind /osgpool/halld/"+runner_name+":/osgpool/halld/"+runner_name+" --bind /group/halld/:/group/halld/ --bind /scigroup/mcwrapper/gluex_MCwrapper:/scigroup/mcwrapper/gluex_MCwrapper /cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest /bin/sh "+pwd+"/TestProject_runscript_"+str(ID)+".sh")
+  
+    print("singularity exec --cleanenv --bind "+pwd+":"+pwd+" --bind /osgpool/halld/"+runner_name+":/osgpool/halld/"+runner_name+" --bind /group/halld/:/group/halld/ --bind /scigroup/mcwrapper/gluex_MCwrapper:/scigroup/mcwrapper/gluex_MCwrapper  /cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_almalinux_9:latest /bin/sh "+pwd+"/TestProject_runscript_"+str(ID)+".sh")
     if RunNumber != -1:
-        p = Popen("singularity exec --cleanenv --bind "+pwd+":"+pwd+" --bind /osgpool/halld/"+runner_name+":/osgpool/halld/"+runner_name+" --bind /group/halld/:/group/halld/ --bind /scigroup/mcwrapper/gluex_MCwrapper:/scigroup/mcwrapper/gluex_MCwrapper /cvmfs/singularity.opensciencegrid.org/markito3/gluex_docker_prod:latest /bin/sh "+pwd+"/TestProject_runscript_"+str(ID)+".sh", env=my_env ,stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True)
+        p = Popen("singularity exec --cleanenv --bind "+pwd+":"+pwd+" --bind /osgpool/halld/"+runner_name+":/osgpool/halld/"+runner_name+" --bind /group/halld/:/group/halld/ --bind /scigroup/mcwrapper/gluex_MCwrapper:/scigroup/mcwrapper/gluex_MCwrapper  /cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_almalinux_9:latest /bin/sh "+pwd+"/TestProject_runscript_"+str(ID)+".sh", env=my_env ,stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True)
     
     #print p
     #print "p defined"
