@@ -624,13 +624,16 @@ echo ""
 
 if ( "$CUSTOM_GCONTROL" == "0" && "$GEANT" == "1" ) then
 	#echo $MCWRAPPER_CENTRAL
-
+	set MCWRAPPER_CENTRAL_CNTR=`$runSim printenv MCWRAPPER_CENTRAL | tail -n1`
 	if ( "$EXPERIMENT" == "GlueX" ) then
-		$runSim cp $MCWRAPPER_CENTRAL/Gcontrol.in ./temp_Gcontrol.in
+		echo $runSim cp $MCWRAPPER_CENTRAL_CNTR/Gcontrol.in ./temp_Gcontrol.in
+		$runSim cp $MCWRAPPER_CENTRAL_CNTR/Gcontrol.in ./temp_Gcontrol.in
 	else if ( "$EXPERIMENT" == "CPP" ) then
-		$runSim cp $MCWRAPPER_CENTRAL/Gcontrol_cpp.in ./temp_Gcontrol.in
+		echo $runSim cp $MCWRAPPER_CENTRAL_CNTR/Gcontrol_cpp.in ./temp_Gcontrol.in
+		$runSim cp $MCWRAPPER_CENTRAL_CNTR/Gcontrol_cpp.in ./temp_Gcontrol.in
 	else
-		$runSim cp $MCWRAPPER_CENTRAL/Gcontrol.in ./temp_Gcontrol.in
+		echo $runSim cp $MCWRAPPER_CENTRAL_CNTR/Gcontrol.in ./temp_Gcontrol.in
+		$runSim cp $MCWRAPPER_CENTRAL_CNTR/Gcontrol.in ./temp_Gcontrol.in
 	endif
 
 	chmod 777 ./temp_Gcontrol.in
@@ -925,9 +928,10 @@ if ( "$GENR" != "0" ) then #run generation
 	else if ( "$GENERATOR" == "bggen" ) then
 		echo "configuring bggen"
 		set STANDARD_NAME="bggen_"$STANDARD_NAME
-		$runSim cp $MCWRAPPER_CENTRAL/Generators/bggen/particle.dat ./
-		$runSim cp $MCWRAPPER_CENTRAL/Generators/bggen/pythia.dat ./
-		$runSim cp $MCWRAPPER_CENTRAL/Generators/bggen/pythia-geant.map ./
+		set MCWRAPPER_CENTRAL_CNTR=`$runGen printenv MCWRAPPER_CENTRAL | tail -n1`
+		$runGen cp $MCWRAPPER_CENTRAL_CNTR/Generators/bggen/particle.dat ./
+		$runGen cp $MCWRAPPER_CENTRAL_CNTR/Generators/bggen/pythia.dat ./
+		$runGen cp $MCWRAPPER_CENTRAL_CNTR/Generators/bggen/pythia-geant.map ./
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
 	else if ( "$GENERATOR" == "genEtaRegge" ) then
 		echo "configuring genEtaRegge"
@@ -1008,25 +1012,28 @@ if ( "$GENR" != "0" ) then #run generation
 	else if ( "$GENERATOR" == "bggen_jpsi" ) then
 		echo "configuring bggen_jpsi"
 		set STANDARD_NAME="bggen_jpsi_"$STANDARD_NAME
-		$runSim cp $MCWRAPPER_CENTRAL/Generators/bggen_jpsi/particle.dat ./
-		$runSim cp $MCWRAPPER_CENTRAL/Generators/bggen_jpsi/pythia.dat ./
-		$runSim cp $MCWRAPPER_CENTRAL/Generators/bggen_jpsi/pythia-geant.map ./
+		set MCWRAPPER_CENTRAL_CNTR=`$runGen printenv MCWRAPPER_CENTRAL | tail -n1`
+		$runGen cp $MCWRAPPER_CENTRAL_CNTR/Generators/bggen_jpsi/particle.dat ./
+		$runGen cp $MCWRAPPER_CENTRAL_CNTR/Generators/bggen_jpsi/pythia.dat ./
+		$runGen cp $MCWRAPPER_CENTRAL_CNTR/Generators/bggen_jpsi/pythia-geant.map ./
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
 	else if ( "$GENERATOR" == "bggen_upd" ) then
 		echo "configuring bggen_upd"
 		set STANDARD_NAME="bggen_upd_"$STANDARD_NAME
-		$runSim cp $HALLD_SIM_HOME/src/programs/Simulation/bggen_upd/run/particles.ffr ./
-		$runSim cp $HALLD_SIM_HOME/src/programs/Simulation/bggen_upd/run/pythia.dat ./
+		set HALLD_SIM_HOME_CNTR=`$runGen printenv HALLD_SIM_HOME | tail -n1`
+		$runGen cp $HALLD_SIM_HOME_CNTR/src/programs/Simulation/bggen_upd/run/particles.ffr ./
+		$runGen cp $HALLD_SIM_HOME_CNTR/src/programs/Simulation/bggen_upd/run/pythia.dat ./
 		mkdir ./spec_fun
-		$runSim cp $HALLD_SIM_HOME/src/programs/Simulation/bggen_upd/run/spec_fun/* ./spec_fun/
-		$runSim cp $HALLD_SIM_HOME/src/programs/Simulation/bggen_upd/run/run_mcwrapper.ffr ./
+		$runGen cp $HALLD_SIM_HOME_CNTR/src/programs/Simulation/bggen_upd/run/spec_fun/* ./spec_fun/
+		$runGen cp $HALLD_SIM_HOME_CNTR/src/programs/Simulation/bggen_upd/run/run_mcwrapper.ffr ./
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
 	else if ( "$GENERATOR" == "bggen_phi_ee" ) then
 		echo "configuring bggen_phi_ee"
 		set STANDARD_NAME="bggen_phi_ee_"$STANDARD_NAME
-		$runSim cp $MCWRAPPER_CENTRAL/Generators/bggen_phi_ee/particle.dat ./
-		$runSim cp $MCWRAPPER_CENTRAL/Generators/bggen_phi_ee/pythia.dat ./
-		$runSim cp $MCWRAPPER_CENTRAL/Generators/bggen_phi_ee/pythia-geant.map ./
+		set MCWRAPPER_CENTRAL_CNTR=`$runGen printenv MCWRAPPER_CENTRAL | tail -n1`
+		$runGen cp $MCWRAPPER_CENTRAL_CNTR/Generators/bggen_phi_ee/particle.dat ./
+		$runGen cp $MCWRAPPER_CENTRAL_CNTR/Generators/bggen_phi_ee/pythia.dat ./
+		$runGen cp $MCWRAPPER_CENTRAL_CNTR/Generators/bggen_phi_ee/pythia-geant.map ./
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
 	else if ( "$GENERATOR" == "gen_ee" ) then
 		echo "configuring gen_ee"
@@ -1037,7 +1044,8 @@ if ( "$GENR" != "0" ) then #run generation
 		set STANDARD_NAME="gen_ee_hb_"$STANDARD_NAME
 		echo "note: this generator is run completely from command line, thus no config file will be made and/or modified"
 		cp $CONFIG_FILE ./cobrems.root
-		$runSim cp $MCWRAPPER_CENTRAL/Generators/gen_ee_hb/CFFs_DD_Feb2012.dat ./
+		set MCWRAPPER_CENTRAL_CNTR=`$runGen printenv MCWRAPPER_CENTRAL | tail -n1`
+		$runGen cp $MCWRAPPER_CENTRAL_CNTR/Generators/gen_ee_hb/CFFs_DD_Feb2012.dat ./
 	else if ( "$GENERATOR" == "particle_gun" ) then
 		echo "configuring the particle gun"
 		set STANDARD_NAME="particle_gun_"$STANDARD_NAME
@@ -1168,8 +1176,10 @@ if ( "$GENR" != "0" ) then #run generation
 		echo "RUNNING MC_GEN"
 		python3.6 $HD_UTILITIES_HOME/psflux/plot_flux_ccdb.py -b $RUN_NUMBER -e $RUN_NUMBER
 		set MCGEN_FLUX_DIR=`printf './flux_%d_%d.ascii' "$RUN_NUMBER" "$RUN_NUMBER"`
-		set ROOTSCRIPT=`printf '$MCWRAPPER_CENTRAL/Generators/mc_gen/Flux_to_Ascii.C("flux_%s_%s.root")' "$RUN_NUMBER" "$RUN_NUMBER" `
-		root -l -b -q $ROOTSCRIPT
+		set MCWRAPPER_CENTRAL_CNTR=`$runGen printenv MCWRAPPER_CENTRAL | tail -n1`
+		set ROOTSCRIPT=`printf '$MCWRAPPER_CENTRAL_CNTR/Generators/mc_gen/Flux_to_Ascii.C("flux_%s_%s.root")' "$RUN_NUMBER" "$RUN_NUMBER" `
+		echo $runGen root -l -b -q $ROOTSCRIPT
+		$runGen root -l -b -q $ROOTSCRIPT
 
 		echo $MCGEN_FLUX_DIR
 
