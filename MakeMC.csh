@@ -5,7 +5,6 @@ echo `date`
 if ($?SINGULARITY_NAME) then
 	echo "RUNNING IN A SINGULARITY CONTAINER: "$SINGULARITY_NAME
 endif
-set runningOS=`$BUILD_SCRIPTS/osrelease.pl`
 
 
 # SET INPUTS
@@ -22,6 +21,7 @@ if ( "$BATCHRUN" != "0" ) then
 		source $ENVIRONMENT
 	endif
 endif
+set runningOS=`$BUILD_SCRIPTS/osrelease.pl`
 
 setenv ANAENVIRONMENT $1
 shift

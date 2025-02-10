@@ -3,7 +3,6 @@
 if [[ $SINGULARITY_NAME != "" ]]; then
 	echo "RUNNING IN A SINGULARITY CONTAINER: "$SINGULARITY_NAME
 fi
-runningOS=$(echo `$BUILD_SCRIPTS/osrelease.pl`)
 
 # SET INPUTS
 export BATCHRUN=$1
@@ -13,14 +12,15 @@ shift
 
 if [[ "$BATCHRUN" != "0" ]]; then
 
-xmltest=`echo $ENVIRONMENT | rev | cut -c -4 | rev`
-if [[ "$xmltest" == ".xml" ]]; then
-	source /group/halld/Software/build_scripts/gluex_env_jlab.sh $ENVIRONMENT
-else
-	source $ENVIRONMENT
-fi
+	xmltest=`echo $ENVIRONMENT | rev | cut -c -4 | rev`
+	if [[ "$xmltest" == ".xml" ]]; then
+		source /group/halld/Software/build_scripts/gluex_env_jlab.sh $ENVIRONMENT
+	else
+		source $ENVIRONMENT
+	fi
 
 fi
+runningOS=$(echo `$BUILD_SCRIPTS/osrelease.pl`)
 
 export ANAENVIRONMENT=$1
 shift
