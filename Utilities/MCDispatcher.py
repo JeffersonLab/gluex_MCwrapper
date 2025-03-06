@@ -471,6 +471,7 @@ def RetryJob(ID,AllOSG=False):
             print("exception in per file num")
             print("genrow:",genrow)
             print(e)
+            print("Using default per_file_num")
             pass
         print("per file num",per_file_num)
         command="python2 "+MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched_"+str(ID)+".config "+str(job[0]["RunNumber"])+" "+str(job[0]["NumEvts"])+" per_file="+str(per_file_num)+"  base_file_number="+str(job[0]["FileNumber"])+" generate="+str(proj[0]["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(proj[0]["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(proj[0]["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(proj[0]["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid=-"+str(ID)+" batch=1 tobundle=0"
