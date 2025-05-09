@@ -723,10 +723,9 @@ if [[ "$GENR" != "0" ]]; then # run generation
 
 	gen_pre=`echo $GENERATOR | cut -c1-4`
 
-    if [[ "$gen_pre" != "file" && "$GENERATOR" != "genr8" && "$GENERATOR" != "bggen" && "$GENERATOR" != "genEtaRegge" && "$GENERATOR" != "genScalarRegge" && "$GENERATOR" != "gen_2pi_amp" && "$GENERATOR" != "gen_pi0" && "$GENERATOR" != "gen_2pi_primakoff" && "$GENERATOR" != "gen_2pi0_primakoff" && "$GENERATOR" != "gen_omega_3pi" && "$GENERATOR" != "gen_omegapi" && "$GENERATOR" != "gen_2k" && "$GENERATOR" != "bggen_jpsi" && "$GENERATOR" != "gen_ee" && "$GENERATOR" != "gen_ee_hb" && "$GENERATOR" != "particle_gun" && "$GENERATOR" != "geantBEAM" && "$GENERATOR" != "bggen_phi_ee" && "$GENERATOR" != "genBH" && "$GENERATOR" != "gen_omega_radiative" && "$GENERATOR" != "gen_amp" && "$GENERATOR" != "gen_amp_V2" && "$GENERATOR" != "genr8_new" && "$GENERATOR" != "gen_compton" && "$GENERATOR" != "gen_npi" && "$GENERATOR" != "gen_compton_simple" && "$GENERATOR" != "gen_primex_eta_he4" && "$GENERATOR" != "gen_whizard" && "$GENERATOR" != "mc_gen" && "$GENERATOR" != "gen_vec_ps" && "$GENERATOR" != "bggen_upd" && "$GENERATOR" != "python"  ]]; then
+    if [[ "$gen_pre" != "file" && "$GENERATOR" != "genr8" && "$GENERATOR" != "bggen" && "$GENERATOR" != "genEtaRegge" && "$GENERATOR" != "genScalarRegge" && "$GENERATOR" != "gen_2pi_amp" && "$GENERATOR" != "gen_pi0" && "$GENERATOR" != "gen_2pi_primakoff" && "$GENERATOR" != "gen_2pi0_primakoff" && "$GENERATOR" != "gen_omega_3pi" && "$GENERATOR" != "gen_omegapi" && "$GENERATOR" != "gen_2k" && "$GENERATOR" != "bggen_jpsi" && "$GENERATOR" != "gen_ee" && "$GENERATOR" != "gen_ee_hb" && "$GENERATOR" != "particle_gun" && "$GENERATOR" != "geantBEAM" && "$GENERATOR" != "bggen_phi_ee" && "$GENERATOR" != "genBH" && "$GENERATOR" != "gen_omega_radiative" && "$GENERATOR" != "gen_amp" && "$GENERATOR" != "gen_amp_V2" && "$GENERATOR" != "genr8_new" && "$GENERATOR" != "gen_compton" && "$GENERATOR" != "gen_npi" && "$GENERATOR" != "gen_compton_simple" && "$GENERATOR" != "gen_primex_eta_he4" && "$GENERATOR" != "gen_whizard" && "$GENERATOR" != "mc_gen" && "$GENERATOR" != "gen_vec_ps" && "$GENERATOR" != "bggen_upd" && "$GENERATOR" != "python"  && "$GENERATOR" != "gen_gcf" && "$GENERATOR" != "gen_ALP" && "$GENERATOR" != "gen_MF" && "$GENERATOR" != "genA" && "$GENERATOR" != "gen_jpsi_hc" && "$GENERATOR" != "gen_coherent"]]; then
 		echo "NO VALID GENERATOR GIVEN"
-		echo "only [genr8, bggen, genEtaRegge, genScalarRegge, gen_2pi_amp, gen_pi0, gen_omega_3pi, gen_2k, bggen_jpsi, gen_ee, gen_ee_hb, bggen_phi_ee, particle_gun, geantBEAM, genBH, gen_omega_radiative, gen_amp, gen_compton, gen_npi, gen_compton_simple, gen_primex_eta_he4, gen_whizard, gen_omegapi, mc_gen, gen_vec_ps, gen_gcf, gen_ALP, gen_MF, genA, gen_jpsi_hc, python] are supported"
-
+		echo "only [genr8, bggen, genEtaRegge, genScalarRegge, gen_2pi_amp, gen_pi0, gen_omega_3pi, gen_2k, bggen_jpsi, gen_ee, gen_ee_hb,  bggen_phi_ee, particle_gun, geantBEAM, genBH, gen_omega_radiative, gen_amp, gen_amp_V2, gen_compton, gen_npi, gen_compton_simple, gen_primex_eta_he4, gen_whizard, gen_omegapi, mc_gen, gen_vec_ps, bggen_upd, python, gen_gcf, gen_ALP, gen_MF, genA, gen_jpsi_hc, gen_coherent] are supported"
 		exit 1
 	fi
 
@@ -990,30 +989,34 @@ if [[ "$GENR" != "0" ]]; then # run generation
 		STANDARD_NAME="genBH_"$STANDARD_NAME
 		echo "note: this generator is run completely from command line, thus no config file will be made and/or modified"
 		cp $CONFIG_FILE ./cobrems.root
-    elif [[ "$GENERATOR" == "gen_gcf" ]]; then
-                echo "configuring gen_gcf"
-                STANDARD_NAME="gen_gcf_"$STANDARD_NAME
-                cp $CONFIG_FILE ./$STANDARD_NAME.conf
-    elif [[ "$GENERATOR" == "gen_ALP" ]]; then
-                echo "configuring gen_ALP"
-                set STANDARD_NAME="gen_ALP_"$STANDARD_NAME
-                cp $CONFIG_FILE ./$STANDARD_NAME.conf
-    elif [[ "$GENERATOR" == "gen_MF" ]]; then
-                echo "configuring gen_MF"
-                set STANDARD_NAME="gen_MF_"$STANDARD_NAME
-                cp $CONFIG_FILE ./$STANDARD_NAME.conf
-    elif [[ "$GENERATOR" == "gen_jpsi_hc" ]]; then
-                echo "configuring gen_jpsi_hc"
-                set STANDARD_NAME="gen_jpsi_hc_"$STANDARD_NAME
-                cp $CONFIG_FILE ./$STANDARD_NAME.conf
-    elif [[ "$GENERATOR" == "genA" ]]; then
-                echo "configuring genA"
-                set STANDARD_NAME="genA_"$STANDARD_NAME
-                cp $CONFIG_FILE ./$STANDARD_NAME.conf
-    elif [[ "$GENERATOR" == "python" ]]; then
-	echo "configuring python script"
-	STANDARD_NAME="python_"$STANDARD_NAME
-	cp $CONFIG_FILE ./$STANDARD_NAME.py
+	elif [[ "$GENERATOR" == "python" ]]; then
+	        echo "configuring python script"
+		STANDARD_NAME="python_"$STANDARD_NAME
+		cp $CONFIG_FILE ./$STANDARD_NAME.py
+	elif [[ "$GENERATOR" == "gen_gcf" ]]; then
+		echo "configuring gen_gcf"
+		STANDARD_NAME="gen_gcf_"$STANDARD_NAME
+		cp $CONFIG_FILE ./$STANDARD_NAME.conf
+	elif [[ "$GENERATOR" == "gen_ALP" ]]; then
+		echo "configuring gen_ALP"
+		set STANDARD_NAME="gen_ALP_"$STANDARD_NAME
+		cp $CONFIG_FILE ./$STANDARD_NAME.conf
+	elif [[ "$GENERATOR" == "gen_MF" ]]; then
+		echo "configuring gen_MF"
+		set STANDARD_NAME="gen_MF_"$STANDARD_NAME
+		cp $CONFIG_FILE ./$STANDARD_NAME.conf
+	elif [[ "$GENERATOR" == "gen_jpsi_hc" ]]; then
+		echo "configuring gen_jpsi_hc"
+		set STANDARD_NAME="gen_jpsi_hc_"$STANDARD_NAME
+		cp $CONFIG_FILE ./$STANDARD_NAME.conf
+	elif [[ "$GENERATOR" == "genA" ]]; then
+		echo "configuring genA"
+		set STANDARD_NAME="genA_"$STANDARD_NAME
+		cp $CONFIG_FILE ./$STANDARD_NAME.conf
+    elif [[ "$GENERATOR" == "gen_coherent" ]]; then
+		echo "configuring gen_coherent"
+		set STANDARD_NAME="gen_coherent_"$STANDARD_NAME
+		cp $CONFIG_FILE ./$STANDARD_NAME.conf
 
     fi
 
@@ -1382,49 +1385,54 @@ if [[ "$GENR" != "0" ]]; then # run generation
 		genBH -n$EVT_TO_GEN -t$NUMTHREADS -m0.5 -e$GEN_MAX_ENERGY -r$RANDOMnum $STANDARD_NAME.hddm
 		sed -i 's/class="mc_s"/'class=\"s\"'/' $STANDARD_NAME.hddm
 		generator_return_code=$?
-        elif [[ "$GENERATOR" == "gen_gcf" ]]; then
-        echo "RUNNING GEN_GCF"
-        #optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
-        #echo $optionals_line
-        sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
-	echo gen_gcf -C $STANDARD_NAME.conf -B $STANDARD_NAME'_beam.conf' -H $STANDARD_NAME.hddm -n $EVT_TO_GEN -z $RUN_NUMBER -r $formatted_fileNumber #$optionals_line
-	gen_gcf -C $STANDARD_NAME.conf -B $STANDARD_NAME'_beam.conf' -H $STANDARD_NAME.hddm -n $EVT_TO_GEN -z $RUN_NUMBER -r $formatted_fileNumber #$optionals_line
-	generator_return_code=$?
-        elif [[ "$GENERATOR" == "gen_ALP" ]]; then
-        echo "RUNNING GEN_ALP"
-        #optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
-        #echo $optionals_line
-        sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
-	echo gen_ALP -C $STANDARD_NAME.conf -B $STANDARD_NAME'_beam.conf' -H $STANDARD_NAME.hddm -R $STANDARD_NAME.root -n $EVT_TO_GEN -z $RUN_NUMBER -r $formatted_fileNumber #$optionals_line
-        gen_ALP -C $STANDARD_NAME.conf -B $STANDARD_NAME'_beam.conf' -H $STANDARD_NAME.hddm -R $STANDARD_NAME.root -n $EVT_TO_GEN -z $RUN_NUMBER -r $formatted_fileNumber #$optionals_line
-        generator_return_code=$?
+	elif [[ "$GENERATOR" == "python" ]]; then
+		RANDOMnum=`bash -c 'echo $RANDOM'`
+	        optionals_line=`head -n 1 $STANDARD_NAME.py | sed -r 's/.//'`
+		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.py
+		echo $GENERATOR $STANDARD_NAME.py --run $formatted_runNumber --nevents $EVT_TO_GEN --out $STANDARD_NAME.hddm --seed $RANDOMnum $optionals_line
+		$GENERATOR $STANDARD_NAME.py --run $formatted_runNumber --nevents $EVT_TO_GEN --out $STANDARD_NAME.hddm --seed $RANDOMnum $optionals_line
+		generator_return_code=$?
+	elif [[ "$GENERATOR" == "gen_gcf" ]]; then
+		echo "RUNNING GEN_GCF"
+		#optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
+		#echo $optionals_line
+		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
+		echo gen_gcf -C $STANDARD_NAME.conf -B $STANDARD_NAME'_beam.conf' -H $STANDARD_NAME.hddm -n $EVT_TO_GEN -z $RUN_NUMBER -r $formatted_fileNumber #$optionals_line
+		gen_gcf -C $STANDARD_NAME.conf -B $STANDARD_NAME'_beam.conf' -H $STANDARD_NAME.hddm -n $EVT_TO_GEN -z $RUN_NUMBER -r $formatted_fileNumber #$optionals_line
+		generator_return_code=$?
+	elif [[ "$GENERATOR" == "gen_ALP" ]]; then
+		echo "RUNNING GEN_ALP"
+		#optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
+		#echo $optionals_line
+		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
+		echo gen_ALP -C $STANDARD_NAME.conf -B $STANDARD_NAME'_beam.conf' -H $STANDARD_NAME.hddm -R $STANDARD_NAME.root -n $EVT_TO_GEN -z $RUN_NUMBER -r $formatted_fileNumber #$optionals_line
+		gen_ALP -C $STANDARD_NAME.conf -B $STANDARD_NAME'_beam.conf' -H $STANDARD_NAME.hddm -R $STANDARD_NAME.root -n $EVT_TO_GEN -z $RUN_NUMBER -r $formatted_fileNumber #$optionals_line
+		generator_return_code=$?
 	elif [[ "$GENERATOR" == "gen_MF" ]]; then
-        echo "RUNNING GEN_MF"
-	sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
-        echo gen_MF -C $STANDARD_NAME.conf -B $STANDARD_NAME'_beam.conf' -H $STANDARD_NAME.hddm -n $EVT_TO_GEN -z $RUN_NUMBER -r $formatted_fileNumber
-	gen_MF -C $STANDARD_NAME.conf -B $STANDARD_NAME'_beam.conf' -H $STANDARD_NAME.hddm -n $EVT_TO_GEN -z $RUN_NUMBER -r $formatted_fileNumber 
-	generator_return_code=$?
+		echo "RUNNING GEN_MF"
+		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
+		echo gen_MF -C $STANDARD_NAME.conf -B $STANDARD_NAME'_beam.conf' -H $STANDARD_NAME.hddm -n $EVT_TO_GEN -z $RUN_NUMBER -r $formatted_fileNumber
+		gen_MF -C $STANDARD_NAME.conf -B $STANDARD_NAME'_beam.conf' -H $STANDARD_NAME.hddm -n $EVT_TO_GEN -z $RUN_NUMBER -r $formatted_fileNumber 
+		generator_return_code=$?
 	elif [[ "$GENERATOR" == "gen_jpsi_hc" ]]; then
-        echo "RUNNING GEN_jpsi_hc"
-        sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
-        echo gen_jpsi_hc -C $STANDARD_NAME.conf -B $STANDARD_NAME'_beam.conf' -H $STANDARD_NAME.hddm -n $EVT_TO_GEN -z $RUN_NUMBER -r $formatted_fileNumber
-        gen_jpsi_hc -C $STANDARD_NAME.conf -B $STANDARD_NAME'_beam.conf' -H $STANDARD_NAME.hddm -n $EVT_TO_GEN -z $RUN_NUMBER -r $formatted_fileNumber
-        generator_return_code=$?
-    elif [[ "$GENERATOR" == "genA" ]]; then
-        echo "RUNNING GENA"
-        sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
-        echo genA -C $STANDARD_NAME.conf -H $STANDARD_NAME.hddm -n $EVT_TO_GEN -z $RUN_NUMBER -r $formatted_fileNumber
-        genA -C $STANDARD_NAME.conf -H $STANDARD_NAME.hddm -n $EVT_TO_GEN -z $RUN_NUMBER -r $formatted_fileNumber
-        generator_return_code=$?
-    elif [[ "$GENERATOR" == "python" ]]; then
-	RANDOMnum=`bash -c 'echo $RANDOM'`
-	optionals_line=`head -n 1 $STANDARD_NAME.py | sed -r 's/.//'`
-	sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.py
-	echo $GENERATOR $STANDARD_NAME.py --run $formatted_runNumber --nevents $EVT_TO_GEN --out $STANDARD_NAME.hddm --seed $RANDOMnum $optionals_line
-	$GENERATOR $STANDARD_NAME.py --run $formatted_runNumber --nevents $EVT_TO_GEN --out $STANDARD_NAME.hddm --seed $RANDOMnum $optionals_line
-	generator_return_code=$?
-	
-    fi
+		echo "RUNNING GEN_jpsi_hc"
+		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
+		echo gen_jpsi_hc -C $STANDARD_NAME.conf -B $STANDARD_NAME'_beam.conf' -H $STANDARD_NAME.hddm -n $EVT_TO_GEN -z $RUN_NUMBER -r $formatted_fileNumber
+		gen_jpsi_hc -C $STANDARD_NAME.conf -B $STANDARD_NAME'_beam.conf' -H $STANDARD_NAME.hddm -n $EVT_TO_GEN -z $RUN_NUMBER -r $formatted_fileNumber
+		generator_return_code=$?
+	elif [[ "$GENERATOR" == "genA" ]]; then
+		echo "RUNNING GENA"
+		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
+		echo genA -C $STANDARD_NAME.conf -H $STANDARD_NAME.hddm -n $EVT_TO_GEN -z $RUN_NUMBER -r $formatted_fileNumber
+		genA -C $STANDARD_NAME.conf -H $STANDARD_NAME.hddm -n $EVT_TO_GEN -z $RUN_NUMBER -r $formatted_fileNumber
+		generator_return_code=$?
+    elif [[ "$GENERATOR" == "gen_coherent" ]]; then
+		echo "RUNNING GEN_COHERENT"
+		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
+		echo gen_coherent -C $STANDARD_NAME.conf -B $STANDARD_NAME'_beam.conf' -H $STANDARD_NAME.hddm -n $EVT_TO_GEN -z $RUN_NUMBER -r $formatted_fileNumber
+		gen_coherent -C $STANDARD_NAME.conf -B $STANDARD_NAME'_beam.conf' -H $STANDARD_NAME.hddm -n $EVT_TO_GEN -z $RUN_NUMBER -r $formatted_fileNumber 
+		generator_return_code=$?
+	fi
 
 
 	if [[ $generator_return_code != 0 ]]; then
@@ -1948,45 +1956,45 @@ else
 		filetomv="$rootfile"
 		filecheck=`echo $current_files | grep -c $filetomv`
 
-		if [[ "$filecheck" == "0" ]]; then
-			echo $filetomv
-			hdroot_test=`echo $filetomv | grep 'hd_root_\|hd_root.root'`
-			thrown_test=`echo $filetomv | grep tree_thrown`
-			gen_test=`echo $filetomv | grep gen_`
-			reaction_test=`echo $filetomv | grep tree_`
-			std_name_test=`echo $filetomv | grep $STANDARD_NAME`
-			#echo hdroot_test = $hdroot_test
-			if [[ $hdroot_test != "" ]]; then
-				if [[ ! -d "$OUTDIR/root/monitoring_hists/" ]]; then
-					mkdir $OUTDIR/root/monitoring_hists/
-				fi
-				mv $PWD/$filetomv $OUTDIR/root/monitoring_hists/$filename_root\_$STANDARD_NAME.root
-			elif [[ $thrown_test != "" ]]; then
-				if [[ ! -d "$OUTDIR/root/thrown/" ]]; then
-					mkdir $OUTDIR/root/thrown/
-				fi
-				mv $PWD/$filetomv $OUTDIR/root/thrown/$filename_root\_$STANDARD_NAME.root
-			elif [[ $reaction_test != "" ]]; then
-				if [[ ! -d "$OUTDIR/root/trees/" ]]; then
-					mkdir $OUTDIR/root/trees/
-				fi
-				mv $PWD/$filetomv $OUTDIR/root/trees/$filename_root\_$STANDARD_NAME.root
-			elif [[ $gen_test != "" ]]; then
-				if [[ ! -d "$OUTDIR/root/generator/" ]]; then
-					mkdir $OUTDIR/root/generator/
-				fi
-				if [[ $std_name_test != "" ]]; then
-					# echo "generator output root file $filename_root.root already contains $STANDARD_NAME"
-					mv $PWD/$filetomv $OUTDIR/root/generator/$filename_root.root
+			if [[ "$filecheck" == "0" ]]; then
+				echo $filetomv
+			    hdroot_test=`echo $filetomv | grep 'hd_root_\|hd_root.root'`
+				thrown_test=`echo $filetomv | grep tree_thrown`
+				gen_test=`echo $filetomv | grep gen`
+				reaction_test=`echo $filetomv | grep tree_`
+				std_name_test=`echo $filetomv | grep $STANDARD_NAME`
+				#echo hdroot_test = $hdroot_test
+				if [[ $hdroot_test != "" ]]; then
+					if [[ ! -d "$OUTDIR/root/monitoring_hists/" ]]; then
+    					mkdir $OUTDIR/root/monitoring_hists/
+					fi
+					mv $PWD/$filetomv $OUTDIR/root/monitoring_hists/$filename_root\_$STANDARD_NAME.root
+				elif [[ $thrown_test != "" ]]; then
+					if [[ ! -d "$OUTDIR/root/thrown/" ]]; then
+						mkdir $OUTDIR/root/thrown/
+					fi
+					mv $PWD/$filetomv $OUTDIR/root/thrown/$filename_root\_$STANDARD_NAME.root
+				elif [[ $reaction_test != "" ]]; then
+					if [[ ! -d "$OUTDIR/root/trees/" ]]; then
+						mkdir $OUTDIR/root/trees/
+					fi
+					mv $PWD/$filetomv $OUTDIR/root/trees/$filename_root\_$STANDARD_NAME.root
+				elif [[ $gen_test != "" ]]; then
+					if [[ ! -d "$OUTDIR/root/generator/" ]]; then
+						mkdir $OUTDIR/root/generator/
+					fi
+					if [[ $std_name_test != "" ]]; then
+						# echo "generator output root file $filename_root.root already contains $STANDARD_NAME"
+						mv $PWD/$filetomv $OUTDIR/root/generator/$filename_root.root
+					else
+						mv $PWD/$filetomv $OUTDIR/root/generator/$filename_root\_$STANDARD_NAME.root
+					fi
 				else
-					mv $PWD/$filetomv $OUTDIR/root/generator/$filename_root\_$STANDARD_NAME.root
+					mv $PWD/$filetomv $OUTDIR/root/$filename_root\_$STANDARD_NAME.root
 				fi
-			else
-				mv $PWD/$filetomv $OUTDIR/root/$filename_root\_$STANDARD_NAME.root
 			fi
-		fi
-	done
-fi
+		done
+	fi
 
 rm -rf .hdds_tmp_*
 rm -rf ccdb.sqlite
