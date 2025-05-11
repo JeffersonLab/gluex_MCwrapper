@@ -13,7 +13,8 @@ shift
 setenv ENVIRONMENT $1
 shift
 
-if ( "$BATCHRUN" != "0" ) then
+if ( "$BATCHRUN" != "0" || $?SINGULARITY_NAME ) then
+	echo "Setting up environment..."
 	set xmltest=`echo $ENVIRONMENT | rev | cut -c -4 | rev`
 	if ( "$xmltest" == ".xml" ) then
 		source /group/halld/Software/build_scripts/gluex_env_jlab.csh $ENVIRONMENT
@@ -286,6 +287,7 @@ set RCDBFILE="rcdb.sqlite"
 if ( $RCDBVERSION < 8 ) then
 	echo "RCDB needs a version 1 sqlite file"
 	set RCDBFILE="rcdb_v1.sqlite"
+	setenv RCDB_CONNECTION mysql://rcdb@hallddb.jlab.org/rcdb
 endif
 echo $RCDBFILE
 if ( "$rcdbSQLITEPATH" != "no_sqlite" && "$rcdbSQLITEPATH" != "batch_default" ) then
@@ -1983,7 +1985,7 @@ else
 				echo
 				echo "Something went wrong with ana_hd_root"
 				echo "Status code: "$anahd_root_return_code
-				exit $anahd_root_r eturn_code
+				exit $anahd_root_return_code
 			endif
 
 			rm jana_config.cfg
