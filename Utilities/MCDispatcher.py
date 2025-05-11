@@ -755,7 +755,9 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
             f=open('TestProject_runscript_'+str(ID)+'.sh','w')
             f.write("#!/bin/bash -l"+"\n")
             f.write("export SHELL=/bin/bash"+"\n")
-            # f.write("source /group/halld/Software/build_scripts/gluex_env_jlab.sh /group/halld/www/halldweb/html/halld_versions/"+versionSet+"\n")
+            f.write("export BEARER_TOKEN_FILE=/var/run/user/10967/bt_u10967"+"\n")
+            f.write("export XDG_RUNTIME_DIR=/run/user/10967"+"\n")
+            f.write("#source /group/halld/Software/build_scripts/gluex_env_jlab.sh /group/halld/www/halldweb/html/halld_versions/"+versionSet+"\n")
             f.write("source /group/halld/Software/build_scripts/gluex_env_jlab.sh /group/halld/www/halldweb/html/halld_versions/version.xml\n")
             f.write("export MCWRAPPER_CENTRAL="+MCWRAPPER_BOT_HOME+"\n")
             f.write(command)
@@ -768,9 +770,9 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
         output="Error in rcdb query"
         errors="Error in rcdb query:"+str(query_to_do)
         sing_img="/cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_almalinux_9:latest"
-        print("singularity exec --cleanenv --bind /cvmfs/singularity.opensciencegrid.org/ --bind "+pwd+":"+pwd+" --bind /osgpool/halld/"+runner_name+":/osgpool/halld/"+runner_name+" --bind /group/halld/:/group/halld/ --bind /scigroup/mcwrapper/gluex_MCwrapper:/scigroup/mcwrapper/gluex_MCwrapper "+sing_img+" /bin/sh "+pwd+"/TestProject_runscript_"+str(ID)+".sh")
+        print("singularity exec --cleanenv --bind /cvmfs/singularity.opensciencegrid.org/ --bind /var/run/user/  --bind "+pwd+":"+pwd+" --bind /osgpool/halld/"+runner_name+":/osgpool/halld/"+runner_name+" --bind /group/halld/:/group/halld/ --bind /scigroup/mcwrapper/gluex_MCwrapper:/scigroup/mcwrapper/gluex_MCwrapper "+sing_img+" /bin/sh "+pwd+"/TestProject_runscript_"+str(ID)+".sh")
         if RunNumber != -1:
-            p = Popen("singularity exec --cleanenv --bind /cvmfs/singularity.opensciencegrid.org/ --bind "+pwd+":"+pwd+" --bind /osgpool/halld/"+runner_name+":/osgpool/halld/"+runner_name+" --bind /group/halld/:/group/halld/ --bind /scigroup/mcwrapper/gluex_MCwrapper:/scigroup/mcwrapper/gluex_MCwrapper "+ sing_img +" /bin/sh "+pwd+"/TestProject_runscript_"+str(ID)+".sh", env=my_env ,stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True)
+            p = Popen("singularity exec --cleanenv --bind /cvmfs/singularity.opensciencegrid.org/ --bind /var/run/user/  --bind "+pwd+":"+pwd+" --bind /osgpool/halld/"+runner_name+":/osgpool/halld/"+runner_name+" --bind /group/halld/:/group/halld/ --bind /scigroup/mcwrapper/gluex_MCwrapper:/scigroup/mcwrapper/gluex_MCwrapper "+ sing_img +" /bin/sh "+pwd+"/TestProject_runscript_"+str(ID)+".sh", env=my_env ,stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True)
             output, errors = p.communicate()
     
 
@@ -1075,16 +1077,18 @@ def TestProject(ID,versionSet,commands_to_call=""):
     f=open('TestProject_runscript_'+str(ID)+'.sh','w')
     f.write("#!/bin/bash -l"+"\n")
     f.write("export SHELL=/bin/bash"+"\n")
-    # f.write("source /group/halld/Software/build_scripts/gluex_env_jlab.sh /group/halld/www/halldweb/html/halld_versions/"+versionSet+"\n")
+    f.write("export BEARER_TOKEN_FILE=/var/run/user/10967/bt_u10967"+"\n")
+    f.write("export XDG_RUNTIME_DIR=/run/user/10967"+"\n")
+    f.write("#source /group/halld/Software/build_scripts/gluex_env_jlab.sh /group/halld/www/halldweb/html/halld_versions/"+versionSet+"\n")
     f.write("source /group/halld/Software/build_scripts/gluex_env_jlab.sh /group/halld/www/halldweb/html/halld_versions/version.xml\n")
     f.write("export MCWRAPPER_CENTRAL="+MCWRAPPER_BOT_HOME+"\n")
     f.write(command)
     f.close()
 
   
-    print("singularity exec --cleanenv --bind /cvmfs/singularity.opensciencegrid.org/ --bind "+pwd+":"+pwd+" --bind /osgpool/halld/"+runner_name+":/osgpool/halld/"+runner_name+" --bind /group/halld/:/group/halld/ --bind /scigroup/mcwrapper/gluex_MCwrapper:/scigroup/mcwrapper/gluex_MCwrapper  /cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_almalinux_9:latest /bin/sh "+pwd+"/TestProject_runscript_"+str(ID)+".sh")
+    print("singularity exec --cleanenv --bind /cvmfs/singularity.opensciencegrid.org/ --bind /var/run/user/ --bind "+pwd+":"+pwd+" --bind /osgpool/halld/"+runner_name+":/osgpool/halld/"+runner_name+" --bind /group/halld/:/group/halld/ --bind /scigroup/mcwrapper/gluex_MCwrapper:/scigroup/mcwrapper/gluex_MCwrapper  /cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_almalinux_9:latest /bin/sh "+pwd+"/TestProject_runscript_"+str(ID)+".sh")
     if RunNumber != -1:
-        p = Popen("singularity exec --cleanenv --bind /cvmfs/singularity.opensciencegrid.org/ --bind "+pwd+":"+pwd+" --bind /osgpool/halld/"+runner_name+":/osgpool/halld/"+runner_name+" --bind /group/halld/:/group/halld/ --bind /scigroup/mcwrapper/gluex_MCwrapper:/scigroup/mcwrapper/gluex_MCwrapper  /cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_almalinux_9:latest /bin/sh "+pwd+"/TestProject_runscript_"+str(ID)+".sh", env=my_env ,stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True)
+        p = Popen("singularity exec --cleanenv --bind /cvmfs/singularity.opensciencegrid.org/ --bind /var/run/user/  --bind "+pwd+":"+pwd+" --bind /osgpool/halld/"+runner_name+":/osgpool/halld/"+runner_name+" --bind /group/halld/:/group/halld/ --bind /scigroup/mcwrapper/gluex_MCwrapper:/scigroup/mcwrapper/gluex_MCwrapper  /cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_almalinux_9:latest /bin/sh "+pwd+"/TestProject_runscript_"+str(ID)+".sh", env=my_env ,stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True)
     
     #print p
     #print "p defined"
