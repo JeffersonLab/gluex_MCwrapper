@@ -130,7 +130,7 @@ def BundleFiles(inputdir,output,merge_dir):
 def main(argv):
     runner_name=pwd.getpwuid( os.getuid() )[0]
     numprocesses_running=subprocess.check_output(["echo `ps all -u "+runner_name+" | grep MCBundle_wrapper.py | grep -v grep | wc -l`"], shell=True)
-    spawnNum=1
+    spawnNum=3
     print(f"numprocesses_running: {int(numprocesses_running)}")
 
 
@@ -155,7 +155,7 @@ def main(argv):
         #get projects with Tested>=20
         # tobundle_q="SELECT * FROM Project WHERE Tested=20 OR Tested=40 LIMIT 1"
         tobundle_q="SELECT * FROM Project WHERE (Tested=20 OR Tested=40) AND Notified is NULL order by ID asc LIMIT 1"
-        # tobundle_q="SELECT * FROM Project WHERE (Tested=20 OR Tested=40) AND Notified is NULL AND ID > 4102 order by NumEvents asc LIMIT 1"
+        # tobundle_q="SELECT * FROM Project WHERE (Tested=20 OR Tested=40) AND Notified is NULL AND ID > 4137 order by NumEvents asc LIMIT 1"
         print(tobundle_q)
         dbcnx=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
         dbcursor=dbcnx.cursor(MySQLdb.cursors.DictCursor)
