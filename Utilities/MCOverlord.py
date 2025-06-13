@@ -99,24 +99,24 @@ def CheckForFile(rootLoc,expFile):
     token_str='eval `ssh-agent`; /usr/bin/ssh-add;'
     agent_kill_str="; ssh-agent -k"
 
-    XROOTD_OUTPUT_ROOT="/gluex/mcwrap/REQUESTEDMC_OUTPUT/"
-    XROOTD_SERVER="dtn-gluex.jlab.org"
-    xrd_file_check="/usr/bin/xrdfs "+XROOTD_SERVER+" ls "+XROOTD_OUTPUT_ROOT+rootLoc+"/"+subloc+"/"+expFile
-    print(token_str+xrd_file_check+agent_kill_str)
+    PELICAN_SERVER="osdf://jlab-osdf/gluex/osgpool/"
+    file_check="pelican object ls "+PELICAN_SERVER+rootLoc+"/"+subloc+"/"+expFile
+
+    print(token_str+file_check+agent_kill_str)
     my_env=os.environ.copy()
 
-    p = Popen(token_str+xrd_file_check+agent_kill_str, env=my_env ,stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True,close_fds=True)
+    p = Popen(token_str+file_check+agent_kill_str, env=my_env ,stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True,close_fds=True)
     output, errors = p.communicate()
 
-    print("check for file:",xrd_file_check)
+    print("check for file:",file_check)
     #print("output:",output)
     #print("errors:",errors)
 
-    xrd_found=False
+    pelican_found=False
 
-    if "Unable to locate" not in str(errors, 'utf-8') and XROOTD_OUTPUT_ROOT+rootLoc+"/"+subloc+"/"+expFile in str(output, 'utf-8'):
-        print("FILE FOUND VIA XROOTD")
-        xrd_found=True
+    if "Failure getting "+PELICAN_SERVER not in str(errors, 'utf-8') and expFile in str(output, 'utf-8'):
+        print("FILE FOUND VIA PELICAN")
+        pelican_found=True
     #if( os.path.isfile('/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/'+rootLoc+"/"+subloc+"/"+expFile) ):
     #    print(rootLoc+"/"+subloc+"/"+expFile+"   found on OSG pool")
 
@@ -130,7 +130,7 @@ def CheckForFile(rootLoc,expFile):
 
     #if(os.path.isfile('/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/'+rootLoc+"/"+subloc+"/"+expFile) or os.path.isfile('/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) or os.path.isfile('/mss/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) ):
     #if(os.path.isfile('/osgpool/halld/'+runner_name+'/REQUESTEDMC_OUTPUT/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote(runner_name+'@dtn1902','/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote(runner_name+'@dtn1902','/mss/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) ):
-    if(os.path.isfile('/osgpool/halld/'+runner_name+'/REQUESTEDMC_OUTPUT/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote(runner_name+'@dtn1902','/work/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) or xrd_found ):
+    if(os.path.isfile('/osgpool/halld/'+runner_name+'/REQUESTEDMC_OUTPUT/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote(runner_name+'@dtn1902','/work/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) or pelican_found ):
         found=True
     else:
         print(rootLoc+"/"+subloc+"/"+expFile+"   NOT FOUND")
@@ -370,7 +370,8 @@ def checkProjectsForCompletion(comp_assignment):
             #    dbcursor_comp=dbcnx_comp.cursor(MySQLdb.cursors.DictCursor)
             #    continue
             if proj["Tested"]==100:
-                del_comm="touch "+str(proj['ID'])+"; xrdcp "+str(proj['ID'])+" xroots://dtn-gluex.jlab.org//gluex/mcwrap/to_be_scrubbed/; rm "+str(proj['ID'])
+                #write a file via pelican with the name of proj["ID"] to /work/osgpool/halld/to_be_scrubbed
+                del_comm="touch "+str(proj['ID'])+"; pelican object put "+str(proj['ID'])+" osdf://jlab-osdf/gluex/osgpool/to_be_scrubbed/"+str(proj['ID'])+"; rm "+str(proj['ID'])
                 print(del_comm)
                 try:
                     subprocess.call(del_comm,shell=True)
@@ -394,7 +395,7 @@ def checkProjectsForCompletion(comp_assignment):
 
                 #print "echo 'Your Project ID "+str(proj['ID'])+" has been completed.  Output may be found:\n"+proj['OutputLocation']+"' | mail -s 'GlueX MC Request #"+str(proj['ID'])+" Completed' "+str(proj['Email'])
                 msg = EmailMessage()
-                final_location = proj['OutputLocation'].replace("/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/","/volatile/halld/gluex_simulations/REQUESTED_MC/")
+                final_location = proj['OutputLocation'].replace("/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/","/work/osgpool/halld/REQUESTED_MC/")
                 msg.set_content('Your Project ID '+str(proj['ID'])+' has been completed.  While awaiting copy to tape output may be found here:\n'+str(final_location)+'\n\n'+"After successful copy the data may be accessed from tape/cache through typical methods.")
 
                 # me == the sender's email address                                                                                                                                                                                 

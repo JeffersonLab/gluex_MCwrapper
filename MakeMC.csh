@@ -184,12 +184,10 @@ if ( "$BATCHSYS" == "OSG" && "$BATCHRUN" == "1" ) then
 endif
 
 
-#setenv XRD_RANDOMS_URL root://sci-xrootd.jlab.org//osgpool/halld/
 setenv XRD_RANDOMS_URL root://dtn2303.jlab.org/work/osgpool/halld/
 setenv RANDOMS_PREPEND ""
 setenv LD_PRELOAD ""
 if ( "$MCWRAPPER_RUN_LOCATION" == "JLAB" || `hostname` =~ '*.jlab.org' ) then
-#	setenv XRD_RANDOMS_URL root://sci-xrootd-ib.qcd.jlab.org//osgpool/halld/
 	setenv RUNNING_DIR "./"
 endif
 

@@ -145,8 +145,8 @@ def DeclareAllComplete():
         #    continue
         print(proj.keys())
         if proj["Tested"]==400:
-            #write a file via xrootd with the name of proj["ID"] to xrdfs xroots://dtn-gluex.jlab.org/ ls /gluex/mcwrap/to_be_scrubbed
-            del_comm="touch "+str(proj['ID'])+"; xrdcp "+str(proj['ID'])+" xroots://dtn-gluex.jlab.org//gluex/mcwrap/to_be_scrubbed/; rm "+str(proj['ID'])
+            #write a file via pelican with the name of proj["ID"] to /work/osgpool/halld/to_be_scrubbed
+            del_comm="touch "+str(proj['ID'])+"; pelican object put "+str(proj['ID'])+" osdf://jlab-osdf/gluex/osgpool/to_be_scrubbed/"+str(proj['ID'])+"; rm "+str(proj['ID'])
             print(del_comm)
             try:
                 subprocess.call(del_comm,shell=True)
@@ -811,22 +811,21 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
             token_str='eval `ssh-agent`; /usr/bin/ssh-add;'
             agent_kill_str="; ssh-agent -k"
 
-            
-            XROOTD_OUTPUT_ROOT="/gluex/mcwrap/REQUESTEDMC_OUTPUT/"
-            XROOTD_SERVER="dtn-gluex.jlab.org"
-            mkdir_xrd_cmd="/usr/bin/xrdfs "+XROOTD_SERVER+" mkdir -p -mrwxr-xr-x "+XROOTD_OUTPUT_ROOT+xrd_stub_name   #+"; chmod g+w "+XROOTD_OUTPUT_ROOT+xrd_stub_name
-            #subprocess.call(mkdir_xrd_cmd)
-            print("creating directory on xrd: ",token_str+mkdir_xrd_cmd+agent_kill_str)
-            #print("Creating folder:",mkdir_xrd_cmd)
-            #use POPEN to run this mkdir_xrd_cmd importing the environment which this python script was called in
+            PELICAN_SERVER="osdf://jlab-osdf/gluex/osgpool/"
+            #can't use mkdir via pelican, so create a file and put it in the new directory
+            mkdir_cmd="touch createdir; pelican object put createdir "+PELICAN_SERVER+"REQUESTEDMC_OUTPUT/"+xrd_stub_name+"/.createdir; rm createdir"
+
+            print("creating directory on osdf: ",token_str+mkdir_cmd+agent_kill_str)
+
+            #use POPEN to run this mkdir_cmd importing the environment which this python script was called in
             #set my_env to the envronment this python script was called in
             my_env=os.environ.copy()
 
-            p = Popen(token_str+mkdir_xrd_cmd+agent_kill_str, env=my_env ,stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True)
+            p = Popen(token_str+mkdir_cmd+agent_kill_str, env=my_env ,stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True)
             output, errors = p.communicate()
 
             if str(errors,'utf-8') != "":
-                print("ERROR IN MAKING XROOTD DIR")
+                print("ERROR IN MAKING DIR VIA PELICAN")
                 print(errors)
                 print("============================")
                 print(output)

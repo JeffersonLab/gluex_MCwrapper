@@ -182,23 +182,43 @@ flength_count=$((`echo $FILE_NUMBER | wc -c` - 1))
 
 export XRD_RANDOMS_URL=root://dtn2303.jlab.org
 export RANDOMS_PREPEND=/work/osgpool/halld/
-#export XRD_RANDOMS_URL=root://sci-xrootd.jlab.org//osgpool/halld/
-#export RANDOMS_PREPEND=""
 if [[ "$BATCHSYS" == "OSG" && "$BATCHRUN"=="1" ]]; then
-	export XRD_RANDOMS_URL=xroots://dtn-gluex.jlab.org/
-	export RANDOMS_PREPEND="/gluex/mcwrap/"
+	export XRD_RANDOMS_URL=osdf://jlab-osdf/gluex/work/halld/mcwrap/random_triggers/
+	export RANDOMS_PREPEND=""
 fi
 
 if [[ ("$MCWRAPPER_RUN_LOCATION" == "JLAB" || `hostname` == *'.jlab.org'*) && "$BATCHSYS" != "slurmcont" ]]; then
-	#export XRD_RANDOMS_URL=root://sci-xrootd-ib.qcd.jlab.org//osgpool/halld/
 	echo "JLAB DETECTED RESETTING RUNNING DIR"
 	echo "changing "$RUNNING_DIR" to ./"
 	export RUNNING_DIR="./"
 fi
 
 export MAKE_MC_USING_XROOTD=0
+export MAKE_MC_USING_PELICAN=0
 #ls /usr/lib64/libXrdPosixPreload.so
-if [[ -f /usr/lib64/libXrdPosixPreload.so && "$BKGFOLDSTR" != "None" && "$GENR" != "0" && "$GEANT" != "0" && "$SMEAR" != "0" ]]; then
+if [[ "$BATCHSYS" == "OSG" && "$BATCHRUN"=="1" ]]; then
+	echo ""
+	echo "random trigger pelican test"
+	httokendecode -H
+	#check if /usr/bin/pelican exists
+	if [[ -f /usr/bin/pelican ]]; then
+		echo "Pelican is available for use if needed..."
+		echo "which pelican"
+		which pelican
+		echo "RANDBGTAG: $RANDBGTAG"
+		echo "formatted_runNumber: $formatted_runNumber"
+		export contest=`/usr/bin/pelican object ls osdf://jlab-osdf/gluex/work/halld/mcwrap/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1`
+		echo "random trigger pelican connection test: $contest"
+		if [[ $contest != "r" ]]; then
+			echo "Pelican Connection test failed. Falling back to XROOTD...."
+		else
+			export MAKE_MC_USING_PELICAN=1
+		fi
+	else
+		echo "Pelican is not available."
+		echo ""
+	fi
+elif [[ -f /usr/lib64/libXrdPosixPreload.so && "$BKGFOLDSTR" != "None" && "$GENR" != "0" && "$GEANT" != "0" && "$SMEAR" != "0" ]]; then
 	export MAKE_MC_USING_XROOTD=1
 	export LD_PRELOAD=/usr/lib64/libXrdPosixPreload.so
 	echo "XROOTD is available for use if needed..."
@@ -638,6 +658,7 @@ echo "=======SOFTWARE USED======="
 echo "MCwrapper version v"$MCWRAPPER_VERSION
 echo "MCwrapper location" $MCWRAPPER_CENTRAL
 echo "LDPRELOAD: " $LD_PRELOAD
+echo "Streaming via pelican? "$MAKE_MC_USING_PELICAN
 echo "Streaming via xrootd? "$MAKE_MC_USING_XROOTD "Event Count: "$RANDOM_TRIG_NUM_EVT
 echo "BC "$USER_BC
 echo "python "$USER_PYTHON
@@ -782,9 +803,8 @@ if [[ ("$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" ==
 			fi
 		fi
 	fi
-	#set bkglocstring="/w/halld-scifs1a/home/tbritton/converted.hddm"
 
-	if [[ ! -f $bkglocstring && "$MAKE_MC_USING_XROOTD" == "0" ]]; then
+	if [[ ! -f $bkglocstring && "$MAKE_MC_USING_XROOTD" == "0" && "$MAKE_MC_USING_PELICAN" == "0" ]]; then
 		echo "something went wrong with initialization"
 		echo "Could not find mix-in file "$bkglocstring
 		exit 1000
@@ -1755,17 +1775,11 @@ else
 			fi
 			fold_skip_num=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
 			echo "skipping: "$fold_skip_num
-			if [[ $MAKE_MC_USING_XROOTD == 0 ]]; then
+			if [[ $MAKE_MC_USING_XROOTD == 0 && $MAKE_MC_USING_PELICAN == 0 ]]; then
 				echo "$runSmear mcsmear "$MCSMEAR_Flags " -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"$RANDBGRATE""+"$fold_skip_num
 				$runSmear mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:$RANDBGRATE\+$fold_skip_num
 				mcsmear_return_code=$?
-			else
-				echo "PELICAN TEST"
-				httokendecode -H
-				which pelican
-				/usr/bin/pelican object ls osdf://jlab-osdf/gluex/work/halld/mcwrap/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm
-				echo "END PELICAN TEST"
-				#xrdcopy -v --retry 5 $XRD_RANDOMS_URL/$RANDOMS_PREPEND/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm ./run$formatted_runNumber\_random.hddm
+			elif [[ $MAKE_MC_USING_PELICAN == 1 ]]; then
 				echo /usr/bin/pelican object get osdf://jlab-osdf/gluex/work/halld/mcwrap/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm ./run$formatted_runNumber\_random.hddm
 				/usr/bin/pelican object get osdf://jlab-osdf/gluex/work/halld/mcwrap/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm ./run$formatted_runNumber\_random.hddm
 				echo ls -lh run$formatted_runNumber\_random.hddm
@@ -1773,8 +1787,12 @@ else
 				echo "$runSmear mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm ./run$formatted_runNumber\_random.hddm:$RANDBGRATE+$fold_skip_num"
 				$runSmear mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm ./run$formatted_runNumber\_random.hddm\:$RANDBGRATE\+$fold_skip_num
 				mcsmear_return_code=$?
-				#echo "mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm:1+$fold_skip_num"
-				#mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $XRD_RANDOMS_URL/random_triggers//$RANDBGTAG/run$formatted_runNumber\_random.hddm\:1\+$fold_skip_num
+				rm -f ./run$formatted_runNumber\_random.hddm
+			elif [[ $MAKE_MC_USING_XROOTD == 1 ]]; then
+				xrdcopy $XRD_RANDOMS_URL/$RANDOMS_PREPEND/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm ./run$formatted_runNumber\_random.hddm
+				echo "mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm ./run$formatted_runNumber\_random.hddm:1+$fold_skip_num"
+				mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm ./run$formatted_runNumber\_random.hddm\:1\+$fold_skip_num
+				mcsmear_return_code=$?
 				rm -f ./run$formatted_runNumber\_random.hddm
 			fi
 		elif [[ "$bkgloc_pre" == "loc:" ]]; then
@@ -2132,50 +2150,19 @@ fi
 echo `ls`
 
 if [[ "$BATCHSYS" == "OSG" ]]; then
-	#copy the OUT_DIR back to location via xrdcp
-	echo "xrd version:" 
-	echo `xrdcp --version`
 
-	#get everything after the last / in PROJECT_DIR_NAME
-	project_dir_name=`echo $PROJECT_DIR_NAME | sed -r 's/.*\///'`
-	export COPYBACK_DIR=xroots://dtn-gluex.jlab.org//gluex/mcwrap/REQUESTEDMC_OUTPUT/$project_dir_name/
-	echo `ls -lbh $OUTDIR`
-
-
-	#echo "Testing a single file"
-	#echo "TEST DATA" >> ./test.txt
-	#ls
-	#echo "xrdcp -f ./test.txt $COPYBACK_DIR"
-	#xrdcp -f ./test.txt $COPYBACK_DIR
-
-	echo "ping server"
-	xrdfs dtn-gluex.jlab.org query stats l
 	echo "check token"
 	httokendecode -H
-	#echo "ls check"
-	#echo `xrdfs dtn-gluex.jlab.org ls /gluex/mcwrap/REQUESTEDMC_OUTPUT/`
-	echo "making directory"
-	echo "xrdfs dtn-gluex.jlab.org mkdir /gluex/mcwrap/REQUESTEDMC_OUTPUT/$project_dir_name"
-	xrdfs dtn-gluex.jlab.org mkdir /gluex/mcwrap/REQUESTEDMC_OUTPUT/$project_dir_name
-
-	echo "Copying back to $COPYBACK_DIR"
-	echo "xrdcp -rf $OUTDIR $COPYBACK_DIR"
-	xrdcp -rf -d 3 $OUTDIR $COPYBACK_DIR
-	transfer_return_code=$?
-	if [[ $transfer_return_code != 0 ]]; then
-		echo
-		echo
-		echo "Something went wrong with xrdcp"
-		echo "status code: "$transfer_return_code
-		exit $transfer_return_code
-	fi
-
 
 	#copy the OUT_DIR back to location via pelican
 	echo "pelican version:"
 	echo `pelican --version`
+
+	#get everything after the last / in PROJECT_DIR_NAME
+	project_dir_name=`echo $PROJECT_DIR_NAME | sed -r 's/.*\///'`
+
 	echo `ls -lbh $OUTDIR`
-	export PELICAN_COPY_DIR=osdf://jlab-osdf/gluex/volatile/home/mcwrap/REQUESTEDMC_OUTPUT/$project_dir_name/
+	export PELICAN_COPY_DIR=osdf://jlab-osdf/gluex/osgpool/REQUESTEDMC_OUTPUT/$project_dir_name/
 	echo "Copying back to $PELICAN_COPY_DIR"
 	echo "pelican object put -r $OUTDIR $PELICAN_COPY_DIR"
 	pelican object put -r $OUTDIR $PELICAN_COPY_DIR
@@ -2185,6 +2172,7 @@ if [[ "$BATCHSYS" == "OSG" ]]; then
 		echo
 		echo "Something went wrong with pelican"
 		echo "status code: "$transfer_return_code
+		exit $transfer_return_code
 	fi
 
 fi
