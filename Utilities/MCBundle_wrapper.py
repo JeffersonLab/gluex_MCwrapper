@@ -143,7 +143,7 @@ def main(argv):
         merge_dir = "/osgpool/halld/mcwrap/mergetemp/"
     
     if hostname == "dtn2303.jlab.org":
-        staging_dir = "/lustre24/expphy/volatile/halld/gluex_simulations/REQUESTED_MC/"
+        staging_dir = "/lustre24/expphy/work/osgpool/halld//REQUESTED_MC/"
     else:
         staging_dir = "/volatile/halld/gluex_simulations/REQUESTED_MC/"
 
