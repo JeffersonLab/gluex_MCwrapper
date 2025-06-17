@@ -11,14 +11,17 @@ export ENVIRONMENT=$1
 shift
 
 if [[ "$BATCHRUN" != "0" || $SINGULARITY_NAME != "" ]]; then
-	echo "Setting up environment..."
+	echo "Clean up current environment..."
+	source /group/halld/Software/build_scripts/gluex_env_clean.sh
+	echo "Setting up new environment..."
 	xmltest=`echo $ENVIRONMENT | rev | cut -c -4 | rev`
 	if [[ "$xmltest" == ".xml" ]]; then
+		echo source /group/halld/Software/build_scripts/gluex_env_jlab.sh $ENVIRONMENT
 		source /group/halld/Software/build_scripts/gluex_env_jlab.sh $ENVIRONMENT
 	else
+		echo source $ENVIRONMENT
 		source $ENVIRONMENT
 	fi
-
 fi
 runningOS=$(echo `$BUILD_SCRIPTS/osrelease.pl`)
 
@@ -1790,8 +1793,8 @@ else
 				rm -f ./run$formatted_runNumber\_random.hddm
 			elif [[ $MAKE_MC_USING_XROOTD == 1 ]]; then
 				xrdcopy $XRD_RANDOMS_URL/$RANDOMS_PREPEND/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm ./run$formatted_runNumber\_random.hddm
-				echo "mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm ./run$formatted_runNumber\_random.hddm:1+$fold_skip_num"
-				mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm ./run$formatted_runNumber\_random.hddm\:1\+$fold_skip_num
+				echo "$runSmear mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm ./run$formatted_runNumber\_random.hddm:1+$fold_skip_num"
+				$runSmear mcsmear $MCSMEAR_Flags -PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400 -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm ./run$formatted_runNumber\_random.hddm\:1\+$fold_skip_num
 				mcsmear_return_code=$?
 				rm -f ./run$formatted_runNumber\_random.hddm
 			fi
@@ -1888,8 +1891,23 @@ else
 		reaction_filter=""
 		if [[ "$recon_pre" == "file" ]]; then
 			echo "using config file: "$jana_config_file
-			echo $runRecon hd_root $file_to_recon --config=jana_config.cfg -PNTHREADS=$NUMTHREADS $additional_hdroot
-			$runRecon hd_root $file_to_recon --config=jana_config.cfg -PNTHREADS=$NUMTHREADS $additional_hdroot
+			$runRecon jana -version
+			jana_return_code=$?
+			if [[ $jana_return_code != 0 ]]; then
+				export JANA_MAJOR_VERSION=2
+				
+			else
+				export JANA_MAJOR_VERSION=0 #dirty hack because they changed command line parameters in jana 2.0
+			fi
+			echo "Using JANA_MAJOR_VERSION: $JANA_MAJOR_VERSION"
+			if [ $JANA_MAJOR_VERSION -ge 2 ]; then
+				echo $runRecon hd_root $file_to_recon --loadconfigs jana_config.cfg -PNTHREADS=$NUMTHREADS -Pjana:warmup_timeout=500 -Pjana:timeout=500 $additional_hdroot
+				$runRecon hd_root $file_to_recon --loadconfigs jana_config.cfg -PNTHREADS=$NUMTHREADS -Pjana:warmup_timeout=500 -Pjana:timeout=500 $additional_hdroot
+			else
+				echo $runRecon hd_root $file_to_recon --config=jana_config.cfg -PNTHREADS=$NUMTHREADS $additional_hdroot
+				$runRecon hd_root $file_to_recon --config=jana_config.cfg -PNTHREADS=$NUMTHREADS $additional_hdroot
+			fi
+			
 			hd_root_return_code=$?
 			reaction_filter=`grep ReactionFilter jana_config.cfg`
 			#file_options = `tail jana_config.cfg -n+2` # get everything from line 2 on. Lines counting starts with 1
@@ -1910,8 +1928,23 @@ else
 
 			PluginStr=`echo $PluginStr | sed -r 's/.{1}$//'`
 			echo "Running hd_root with: ""$PluginStr"
-			echo "$runRecon hd_root ""$STANDARD_NAME"'_geant'"$GEANTVER"'_smeared.hddm'" -PPLUGINS=""$PluginStr ""-PNTHREADS=""$NUMTHREADS"
-			$runRecon hd_root $file_to_recon -PPLUGINS=$PluginStr -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 $additional_hdroot
+			$runRecon jana -version
+			jana_return_code=$?
+			if [[ $jana_return_code != 0 ]]; then
+				export JANA_MAJOR_VERSION=2
+				
+			else
+				export JANA_MAJOR_VERSION=0 #dirty hack because they changed command line parameters in jana 2.0
+			fi
+			echo "Using JANA_MAJOR_VERSION: $JANA_MAJOR_VERSION"
+			if [ $JANA_MAJOR_VERSION -ge 2 ]; then
+				echo "$runRecon hd_root ""$STANDARD_NAME"'_geant'"$GEANTVER"'_smeared.hddm'" -PPLUGINS=""$PluginStr ""-PNTHREADS=""$NUMTHREADS"
+				$runRecon hd_root $file_to_recon -PPLUGINS=$PluginStr -PNTHREADS=$NUMTHREADS -Pjana:warmup_timeout=500 -Pjana:timeout=500 $additional_hdroot
+			else
+				echo "$runRecon hd_root ""$STANDARD_NAME"'_geant'"$GEANTVER"'_smeared.hddm'" -PPLUGINS=""$PluginStr ""-PNTHREADS=""$NUMTHREADS"
+				$runRecon hd_root $file_to_recon -PPLUGINS=$PluginStr -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 $additional_hdroot
+			fi
+			
 			hd_root_return_code=$?
 		fi
 
@@ -2038,8 +2071,24 @@ else
 
 			cat ana_jana.cfg
 
-			echo $runAna hd_root dana_rest_$STANDARD_NAME.hddm --config=ana_jana.cfg -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 -o hd_root_ana.root
-			$runAna hd_root dana_rest_$STANDARD_NAME.hddm --config=ana_jana.cfg -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 -o hd_root_ana.root
+			
+			$runAna jana -version
+			jana_return_code=$?
+			if [[ $jana_return_code != 0 ]]; then
+				export JANA_MAJOR_VERSION=2
+				
+			else
+				export JANA_MAJOR_VERSION=0 #dirty hack because they changed command line parameters in jana 2.0
+			fi
+			echo "Using JANA_MAJOR_VERSION: $JANA_MAJOR_VERSION"
+			if [ $JANA_MAJOR_VERSION -ge 2 ]; then
+				echo $runAna hd_root dana_rest_$STANDARD_NAME.hddm --loadconfigs ana_jana.cfg -PNTHREADS=$NUMTHREADS -Pjana:warmup_timeout=500 -Pjana:timeout=500  -o hd_root_ana.root
+				$runAna hd_root dana_rest_$STANDARD_NAME.hddm --loadconfigs ana_jana.cfg -PNTHREADS=$NUMTHREADS -Pjana:warmup_timeout=500 -Pjana:timeout=500  -o hd_root_ana.root
+			else
+				echo $runAna hd_root dana_rest_$STANDARD_NAME.hddm --config=ana_jana.cfg -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 -o hd_root_ana.root
+				$runAna hd_root dana_rest_$STANDARD_NAME.hddm --config=ana_jana.cfg -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 -o hd_root_ana.root
+			fi
+			
 			anahd_root_return_code=$?
 
 			if [[ $anahd_root_return_code != 0 ]]; then

@@ -14,11 +14,15 @@ setenv ENVIRONMENT $1
 shift
 
 if ( "$BATCHRUN" != "0" || $?SINGULARITY_NAME ) then
-	echo "Setting up environment..."
+	echo "Clean up current environment..."
+	source /group/halld/Software/build_scripts/gluex_env_clean.csh
+	echo "Setting up new environment..."
 	set xmltest=`echo $ENVIRONMENT | rev | cut -c -4 | rev`
 	if ( "$xmltest" == ".xml" ) then
+		echo source /group/halld/Software/build_scripts/gluex_env_jlab.csh $ENVIRONMENT
 		source /group/halld/Software/build_scripts/gluex_env_jlab.csh $ENVIRONMENT
 	else
+		echo source $ENVIRONMENT
 		source $ENVIRONMENT
 	endif
 endif
@@ -1831,9 +1835,23 @@ else
 		#set file_options=""
 		if ( "$recon_pre" == "file" ) then
 			echo "using config file: "$jana_config_file
-
-			echo $runRecon hd_root $file_to_recon --config=jana_config.cfg -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 $additional_hdroot
-			$runRecon hd_root $file_to_recon --config=jana_config.cfg -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 $additional_hdroot
+			$runRecon jana -version
+			set jana_return_code=$status
+			if ( $jana_return_code != 0 ) then
+				set JANA_MAJOR_VERSION=2
+			else
+				set JANA_MAJOR_VERSION=0
+			endif
+			echo "Using JANA_MAJOR_VERSION: $JANA_MAJOR_VERSION"
+			if ( $JANA_MAJOR_VERSION >= 2 ) then
+				echo $runRecon hd_root $file_to_recon --loadconfigs jana_config.cfg -PNTHREADS=$NUMTHREADS -Pjana:warmup_timeout=500 -Pjana:timeout=500 $additional_hdroot
+				$runRecon hd_root $file_to_recon --loadconfigs jana_config.cfg -PNTHREADS=$NUMTHREADS -Pjana:warmup_timeout=500 -Pjana:timeout=500 $additional_hdroot
+			else
+				echo $runRecon hd_root $file_to_recon --config=jana_config.cfg -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 $additional_hdroot
+				$runRecon hd_root $file_to_recon --config=jana_config.cfg -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 $additional_hdroot
+			endif
+			
+			
 			set hd_root_return_code=$status
 
 			set reaction_filter = `grep ReactionFilter jana_config.cfg`
@@ -1856,8 +1874,22 @@ else
 
 			set PluginStr=`echo $PluginStr | sed -r 's/.{1}$//'`
 			echo "Running hd_root with:""$PluginStr"
-			echo "$runRecon hd_root ""$STANDARD_NAME"'_geant'"$GEANTVER"'_smeared.hddm'" -PPLUGINS=""$PluginStr ""-PNTHREADS=""$NUMTHREADS"
-			$runRecon hd_root $file_to_recon -PPLUGINS=$PluginStr -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 $additional_hdroot
+			$runRecon jana -version
+			set jana_return_code=$status
+			if ( $jana_return_code != 0 ) then
+				set JANA_MAJOR_VERSION=2
+			else
+				set JANA_MAJOR_VERSION=0
+			endif
+			echo "Using JANA_MAJOR_VERSION: $JANA_MAJOR_VERSION"
+			if ( $JANA_MAJOR_VERSION >= 2 ) then
+				echo "$runRecon hd_root ""$STANDARD_NAME"'_geant'"$GEANTVER"'_smeared.hddm'" -PPLUGINS=""$PluginStr ""-PNTHREADS=""$NUMTHREADS"
+				$runRecon hd_root $file_to_recon -PPLUGINS=$PluginStr -PNTHREADS=$NUMTHREADS -Pjana:warmup_timeout=500 -Pjana:timeout=500 $additional_hdroot
+			else
+				echo "$runRecon hd_root ""$STANDARD_NAME"'_geant'"$GEANTVER"'_smeared.hddm'" -PPLUGINS=""$PluginStr ""-PNTHREADS=""$NUMTHREADS"
+				$runRecon hd_root $file_to_recon -PPLUGINS=$PluginStr -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 $additional_hdroot
+			endif
+			
 			set hd_root_return_code=$status
 
 		endif
@@ -1974,8 +2006,22 @@ else
 
 			cat ana_jana.cfg
 
-			echo $runAna hd_root dana_rest_$STANDARD_NAME.hddm --config=ana_jana.cfg -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 -o hd_root_ana.root
-			$runAna hd_root dana_rest_$STANDARD_NAME.hddm --config=ana_jana.cfg -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 -o hd_root_ana.root
+			$runAna jana -version
+			set jana_return_code=$status
+			if ( $jana_return_code != 0 ) then
+				set JANA_MAJOR_VERSION=2
+			else
+				set JANA_MAJOR_VERSION=0
+			endif
+			echo "Using JANA_MAJOR_VERSION: $JANA_MAJOR_VERSION"
+			if ( $JANA_MAJOR_VERSION >= 2 ) then
+				echo $runAna hd_root dana_rest_$STANDARD_NAME.hddm --loadconfigs ana_jana.cfg -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 -o hd_root_ana.root
+				$runAna hd_root dana_rest_$STANDARD_NAME.hddm --loadconfigs ana_jana.cfg -PNTHREADS=$NUMTHREADS -Pjana:warmup_timeout=500 -Pjana:timeout=500 -o hd_root_ana.root
+			else
+				echo $runAna hd_root dana_rest_$STANDARD_NAME.hddm --config=ana_jana.cfg -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 -o hd_root_ana.root
+				$runAna hd_root dana_rest_$STANDARD_NAME.hddm --config=ana_jana.cfg -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 -o hd_root_ana.root
+			endif
+
 			set anahd_root_return_code=$status
 
 			if ( $anahd_root_return_code != 0 ) then
