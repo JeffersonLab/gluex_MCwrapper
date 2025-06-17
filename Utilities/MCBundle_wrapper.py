@@ -59,7 +59,7 @@ except:
 # def BundleAll(tobundle):
 #     for proj in tobundle:
 #         print(proj)
-#         inputdir= proj["OutputLocation"].replace("/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/","/work/test-xrootd/gluex/mcwrap/REQUESTEDMC_OUTPUT/")
+#         inputdir= proj["OutputLocation"].replace("/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/","/work/osgpool/halld/REQUESTEDMC_OUTPUT/")
 #         outputlocation="/".join(proj["OutputLocation"].split("/")[:-1])+"/"
         
 #         #update project status
@@ -143,7 +143,7 @@ def main(argv):
         merge_dir = "/osgpool/halld/mcwrap/mergetemp/"
     
     if hostname == "dtn2303.jlab.org":
-        staging_dir = "/lustre24/expphy/work/osgpool/halld//REQUESTED_MC/"
+        staging_dir = "/work/osgpool/halld//REQUESTED_MC/"
     else:
         staging_dir = "/volatile/halld/gluex_simulations/REQUESTED_MC/"
 
@@ -166,7 +166,7 @@ def main(argv):
         
         for proj in tobundle:
             print(proj)
-            inputdir= proj["OutputLocation"].replace("/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/","/work/test-xrootd/gluex/mcwrap/REQUESTEDMC_OUTPUT/")
+            inputdir= proj["OutputLocation"].replace("/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/","/work/osgpool/halld/REQUESTEDMC_OUTPUT/")
             
             #dirty hack to treat special case of ppauli subdir, NEED TO RESOLVE ASAP
             inputdir = inputdir.replace("ppauli/","") if "ppauli/" in inputdir else inputdir

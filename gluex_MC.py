@@ -2034,8 +2034,8 @@ def GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,RUNNUM):
                         running_hostname=socket.gethostname()
                         if running_hostname == "scosg16.jlab.org" or running_hostname == "scosg20.jlab.org" or running_hostname == "scosg2201.jlab.org":
                                 os.system("mkdir -p /tmp/"+RANDBGTAG)
-                                print("scp dtn1902:/work/test-xrootd/gluex/mcwrap"+"/random_triggers/"+RANDBGTAG+"/run"+formattedRUNNUM+"_random.hddm /tmp/"+RANDBGTAG)
-                                os.system("scp dtn1902:/work/test-xrootd/gluex/mcwrap"+"/random_triggers/"+RANDBGTAG+"/run"+formattedRUNNUM+"_random.hddm /tmp/"+RANDBGTAG)
+                                print("scp dtn2303:/work/osgpool/halld/random_triggers/"+RANDBGTAG+"/run"+formattedRUNNUM+"_random.hddm /tmp/"+RANDBGTAG)
+                                os.system("scp dtn2303:/work/osgpool/halld/random_triggers/"+RANDBGTAG+"/run"+formattedRUNNUM+"_random.hddm /tmp/"+RANDBGTAG)
 
                         if not os.path.isfile(realpath):
                                 print("can't find file to scan.")

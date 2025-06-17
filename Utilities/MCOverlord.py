@@ -99,7 +99,7 @@ def CheckForFile(rootLoc,expFile):
     token_str='eval `ssh-agent`; /usr/bin/ssh-add;'
     agent_kill_str="; ssh-agent -k"
 
-    PELICAN_SERVER="osdf://jlab-osdf/gluex/osgpool/"
+    PELICAN_SERVER="osdf://jlab-osdf/gluex/osgpool/REQUESTEDMC_OUTPUT/"
     file_check="pelican object ls "+PELICAN_SERVER+rootLoc+"/"+subloc+"/"+expFile
 
     print(token_str+file_check+agent_kill_str)
@@ -353,7 +353,7 @@ def checkProjectsForCompletion(comp_assignment):
                 dbcursor_comp.execute(updateProjectStatus_tobundle_q)
                 dbcnx_comp.commit()
             ##inputdir= proj["OutputLocation"].replace("/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/","/work/halld/gluex_simulations/REQUESTED_MC/")
-            #inputdir= proj["OutputLocation"].replace("/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/","/work/test-xrootd/gluex/mcwrap/REQUESTEDMC_OUTPUT/")
+            #inputdir= proj["OutputLocation"].replace("/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/","/work/osgpool/halld/REQUESTEDMC_OUTPUT/")
             #outputlocation="/".join(proj["OutputLocation"].split("/")[:-1])+"/"
             ##outputlocation="/lustre19/expphy/cache/halld/gluex_simulations/MERGED_MC/"+inputdir.replace("/work/halld/gluex_simulations/REQUESTED_MC/","")+"/"
             #print("BundleFiles("+inputdir+","+outputlocation+")")

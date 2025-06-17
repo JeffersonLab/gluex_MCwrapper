@@ -91,7 +91,7 @@ def CheckForFile(rootLoc,expFile):
     token_str='eval `ssh-agent`; /usr/bin/ssh-add;'
     agent_kill_str="; ssh-agent -k"
 
-    PELICAN_SERVER="osdf://jlab-osdf/gluex/osgpool/"
+    PELICAN_SERVER="osdf://jlab-osdf/gluex/osgpool/REQUESTEDMC_OUTPUT/"
     file_check="pelican object ls "+PELICAN_SERVER+rootLoc+"/"+subloc+"/"+expFile
 
     print(token_str+file_check+agent_kill_str)

@@ -112,7 +112,7 @@ def DeclareAllComplete():
         print(proj)
         print("=====================")
 
-        inputdir= proj["OutputLocation"].replace("/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/","/work/test-xrootd/gluex/mcwrap/REQUESTEDMC_OUTPUT/")
+        inputdir= proj["OutputLocation"].replace("/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/","/work/osgpool/halld/REQUESTEDMC_OUTPUT/")
         outputlocation="/".join(proj["OutputLocation"].split("/")[:-1])+"/"
         # outputlocation="/work/halld/gluex_simulations/MERGED_MC/"
 
