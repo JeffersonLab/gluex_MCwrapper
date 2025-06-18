@@ -59,7 +59,7 @@ except:
 # def BundleAll(tobundle):
 #     for proj in tobundle:
 #         print(proj)
-#         inputdir= proj["OutputLocation"].replace("/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/","/work/test-xrootd/gluex/mcwrap/REQUESTEDMC_OUTPUT/")
+#         inputdir= proj["OutputLocation"].replace("/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/","/work/osgpool/halld/REQUESTEDMC_OUTPUT/")
 #         outputlocation="/".join(proj["OutputLocation"].split("/")[:-1])+"/"
         
 #         #update project status
@@ -96,10 +96,10 @@ def BundleFiles(inputdir,output,merge_dir):
     mkdircommand="mkdir -p " + merge_dir + projectName
     print(mkdircommand)
     subprocess.call(mkdircommand.split(" "))
-    mkdircommand="mkdir -p "+output
+    mkdircommand="mkdir -p " + output
     print(mkdircommand)
     subprocess.call(mkdircommand.split(" "))
-    hostname = os.getenv('HOSTNAME')
+    hostname = subprocess.check_output(["hostname"], shell=True).decode().strip()
     if hostname == "dtn2303.jlab.org":
         python_cmd = "/usr/bin/python3"
     else:
@@ -130,15 +130,22 @@ def BundleFiles(inputdir,output,merge_dir):
 def main(argv):
     runner_name=pwd.getpwuid( os.getuid() )[0]
     numprocesses_running=subprocess.check_output(["echo `ps all -u "+runner_name+" | grep MCBundle_wrapper.py | grep -v grep | wc -l`"], shell=True)
-    spawnNum=2
+    spawnNum=3
     print(f"numprocesses_running: {int(numprocesses_running)}")
 
 
-    hostname = os.getenv('HOSTNAME')
+    hostname = subprocess.check_output(["hostname"], shell=True).decode().strip()
+    print("Hostname:",hostname)
+
     if hostname == "dtn2303.jlab.org":
         merge_dir = "/export/halld/mcwrap/mergetemp/"
     else:
         merge_dir = "/osgpool/halld/mcwrap/mergetemp/"
+    
+    if hostname == "dtn2303.jlab.org":
+        staging_dir = "/work/osgpool/halld//REQUESTED_MC/"
+    else:
+        staging_dir = "/volatile/halld/gluex_simulations/REQUESTED_MC/"
 
     if(int(numprocesses_running)>spawnNum):
         print(f"{int(numprocesses_running)} process(es) of MCBundle_wrapper.py already running.  Exiting.")
@@ -148,7 +155,7 @@ def main(argv):
         #get projects with Tested>=20
         # tobundle_q="SELECT * FROM Project WHERE Tested=20 OR Tested=40 LIMIT 1"
         tobundle_q="SELECT * FROM Project WHERE (Tested=20 OR Tested=40) AND Notified is NULL order by ID asc LIMIT 1"
-        # tobundle_q="SELECT * FROM Project WHERE (Tested=20 OR Tested=40) AND Notified is NULL AND ID != 3476 AND ID != 3700 order by NumEvents asc LIMIT 1"
+        # tobundle_q="SELECT * FROM Project WHERE (Tested=20 OR Tested=40) AND Notified is NULL AND ID > 4137 order by NumEvents asc LIMIT 1"
         print(tobundle_q)
         dbcnx=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
         dbcursor=dbcnx.cursor(MySQLdb.cursors.DictCursor)
@@ -159,13 +166,14 @@ def main(argv):
         
         for proj in tobundle:
             print(proj)
-            inputdir= proj["OutputLocation"].replace("/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/","/work/test-xrootd/gluex/mcwrap/REQUESTEDMC_OUTPUT/")
+            inputdir= proj["OutputLocation"].replace("/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/","/work/osgpool/halld/REQUESTEDMC_OUTPUT/")
             
             #dirty hack to treat special case of ppauli subdir, NEED TO RESOLVE ASAP
             inputdir = inputdir.replace("ppauli/","") if "ppauli/" in inputdir else inputdir
 
             outputlocation="/".join(proj["OutputLocation"].split("/")[:-1])+"/"
-            outputlocation=outputlocation.replace("/lustre19/","/lustre24/")
+            # outputlocation=outputlocation.replace("/lustre19/","/lustre24/")
+            outputlocation=outputlocation.replace("/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/",staging_dir)  # cache is now read-only, use staging directory
             #update project status
             print(proj["ID"])
 

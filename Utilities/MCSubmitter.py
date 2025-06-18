@@ -131,6 +131,14 @@ def WritePayloadConfig(order,foundConfig,batch_system):
     MCconfig_file.write("ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"+str(order["VersionSet"])+"\n")
     if(order["ANAVersionSet"] != None and order["ANAVersionSet"] != "None" ):
         MCconfig_file.write("ANA_ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"+str(order["ANAVersionSet"])+"\n")
+
+    MCconfig_file.write("GENERATOR_OS=db"+"\n")
+    MCconfig_file.write("POSTGEN_OS=db"+"\n")
+    MCconfig_file.write("SIMULATION_OS=db"+"\n")
+    MCconfig_file.write("MCSMEAR_OS=db"+"\n")
+    MCconfig_file.write("RECON_OS=db"+"\n")
+    MCconfig_file.write("ANA_OS=db"+"\n")
+
     MCconfig_file.close()
 
 def SubmitList(SubList,job_IDs_submitted):
@@ -221,7 +229,7 @@ def SubmitList(SubList,job_IDs_submitted):
         os.environ["BEARER_TOKEN_FILE"]="/var/run/user/10967/bt_u10967"
         os.environ["XDG_RUNTIME_DIR"]="/run/user/10967"
 
-        command=MCWRAPPER_BOT_HOME+"/gluex_MC.py MCSubDispatched.config "+str(RunNumber)+" "+str(row["NumEvts"])+" per_file="+str(per_file_num)+" base_file_number="+str(row["FileNumber"])+" generate="+str(proj[0]["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(proj[0]["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(proj[0]["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(proj[0]["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid=-"+str(row['ID'])+" logdir=/osgpool/halld/"+runner_name+"/REQUESTEDMC_LOGS/"+proj[0]["OutputLocation"].split("/")[7]+" batch=2 submitter=1 tobundle=1"
+        command="python2 "+MCWRAPPER_BOT_HOME+"/gluex_MC.py MCSubDispatched.config "+str(RunNumber)+" "+str(row["NumEvts"])+" per_file="+str(per_file_num)+" base_file_number="+str(row["FileNumber"])+" generate="+str(proj[0]["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(proj[0]["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(proj[0]["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(proj[0]["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid=-"+str(row['ID'])+" logdir=/osgpool/halld/"+runner_name+"/REQUESTEDMC_LOGS/"+proj[0]["OutputLocation"].split("/")[7]+" batch=2 submitter=1 tobundle=1"
         print("COMMAND",command)
         #status = subprocess.call("printenv > /tmp/Submitter_env")
         #status = subprocess.call(command, shell=True)
