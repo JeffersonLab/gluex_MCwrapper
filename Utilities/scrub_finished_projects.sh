@@ -8,7 +8,7 @@ for file in /work/osgpool/halld/to_be_scrubbed/*; do
         # Remove the file extension
         dirname="${filename%.*}"
         # Check if the directory exists and remove it
-        dir_to_remove=`ls -d /work/osgpool/halld/REQUESTEDMC_OUTPUT/*$dirname`
+        dir_to_remove=$(ls -d /work/osgpool/halld/REQUESTEDMC_OUTPUT/*$dirname)
         if [ -d "$dir_to_remove" ]; then
             echo "Removing directory: $dir_to_remove"
             rm -rf "$dir_to_remove"
