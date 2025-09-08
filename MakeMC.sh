@@ -1749,6 +1749,17 @@ else
 	if [[ "$GENR" != "0" && "$GEANT" != "0" && "$SMEAR" != "0" && "$CONFIG_FILE" != *.evio ]]; then #run mcsmear
 		echo "RUNNING MCSMEAR"
 		
+		# Detect which version of jana is being used:
+		echo "using config file: "$jana_config_file
+		$runSmear jana -version
+		jana_return_code=$?
+		if [[ $jana_return_code != 0 ]]; then
+			export JANA_MAJOR_VERSION=2
+		else
+			export JANA_MAJOR_VERSION=0 #dirty hack because they changed command line parameters in jana 2.0
+		fi
+		echo "Using JANA_MAJOR_VERSION: $JANA_MAJOR_VERSION"
+		
 		if [[ "$GENR" == "0" && "$GEANT" == "0" ]]; then #obsolete, needs fixing
 			echo $GENERATOR
 			geant_file=`echo $GENERATOR | cut -c 6-`
@@ -1758,15 +1769,12 @@ else
 		if [[ "$BKGFOLDSTR" == "BeamPhotons" || "$BKGFOLDSTR" == "None" || "$BKGFOLDSTR" == "TagOnly" ]]; then
 			echo "running MCsmear without folding in random background"
 			
-			#-----------------------------------------------------------------------------------------#
 			# Set timeout syntax according to which jana version is being used:
-			JANA_TIMEOUT_STR="-PTHREAD_TIMEOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3000"
-			$runSmear jana -version
-			jana_return_code=$?
-			if [[ $jana_return_code != 0 ]]; then
-				JANA_TIMEOUT_STR="-Pjana:warmup_timeout=3600 -Pjana:timeout=3000"
+			if [ $JANA_MAJOR_VERSION -ge 2 ]; then
+				export JANA_TIMEOUT_STR="-Pjana:warmup_timeout=3600 -Pjana:timeout=3000"
+			else
+				export JANA_TIMEOUT_STR="-PTHREAD_TIMEOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3000"
 			fi
-			#-----------------------------------------------------------------------------------------#
 			
 			echo $runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' $STANDARD_NAME'_geant'$GEANTVER'.hddm'
 			$runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' $STANDARD_NAME'_geant'$GEANTVER'.hddm'
@@ -1790,15 +1798,12 @@ else
 			fold_skip_num=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
 			echo "skipping: "$fold_skip_num
 			
-			#-----------------------------------------------------------------------------------------#
 			# Set timeout syntax according to which jana version is being used:
-			JANA_TIMEOUT_STR="-PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400"
-			$runSmear jana -version
-			jana_return_code=$?
-			if [[ $jana_return_code != 0 ]]; then
-				JANA_TIMEOUT_STR="-Pjana:warmup_timeout=6400 -Pjana:timeout=6400"
+			if [ $JANA_MAJOR_VERSION -ge 2 ]; then
+				export JANA_TIMEOUT_STR="-Pjana:warmup_timeout=6400 -Pjana:timeout=6400"
+			else
+				export JANA_TIMEOUT_STR="-PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400"
 			fi
-			#-----------------------------------------------------------------------------------------#
 			
 			if [[ $MAKE_MC_USING_XROOTD == 0 && $MAKE_MC_USING_PELICAN == 0 ]]; then
 				echo $runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:$RANDBGRATE\+$fold_skip_num
@@ -1832,15 +1837,12 @@ else
 			fi
 			fold_skip_num=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
 			
-			#-----------------------------------------------------------------------------------------#
 			# Set timeout syntax according to which jana version is being used:
-			JANA_TIMEOUT_STR="-PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400"
-			$runSmear jana -version
-			jana_return_code=$?
-			if [[ $jana_return_code != 0 ]]; then
-				JANA_TIMEOUT_STR="-Pjana:warmup_timeout=6400 -Pjana:timeout=6400"
+			if [ $JANA_MAJOR_VERSION -ge 2 ]; then
+				export JANA_TIMEOUT_STR="-Pjana:warmup_timeout=6400 -Pjana:timeout=6400"
+			else
+				export JANA_TIMEOUT_STR="-PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400"
 			fi
-			#-----------------------------------------------------------------------------------------#
 			
 			echo $runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
 			$runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
@@ -1848,15 +1850,12 @@ else
 		else
 			#trust the user and use their string
 			
-			#-----------------------------------------------------------------------------------------#
 			# Set timeout syntax according to which jana version is being used:
-			JANA_TIMEOUT_STR="-PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400"
-			$runSmear jana -version
-			jana_return_code=$?
-			if [[ $jana_return_code != 0 ]]; then
-				JANA_TIMEOUT_STR="-Pjana:warmup_timeout=6400 -Pjana:timeout=6400"
+			if [ $JANA_MAJOR_VERSION -ge 2 ]; then
+				export JANA_TIMEOUT_STR="-Pjana:warmup_timeout=6400 -Pjana:timeout=6400"
+			else
+				export JANA_TIMEOUT_STR="-PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400"
 			fi
-			#-----------------------------------------------------------------------------------------#
 			
 			echo $runSmear mcsmear $JANA_TIMEOUT_STR -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $BKGFOLDSTR
 			$runSmear mcsmear $JANA_TIMEOUT_STR -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $BKGFOLDSTR
