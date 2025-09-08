@@ -1750,7 +1750,6 @@ else
 		echo "RUNNING MCSMEAR"
 		
 		# Detect which version of jana is being used:
-		echo "using config file: "$jana_config_file
 		$runSmear jana -version
 		jana_return_code=$?
 		if [[ $jana_return_code != 0 ]]; then
