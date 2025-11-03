@@ -1057,14 +1057,10 @@ if [[ "$GENR" != "0" ]]; then # run generation
 	elif [[ "$GENERATOR" == "gen_primex_eta_he4" ]]; then
 		echo "configuring gen_primex_eta_he4"
 		STANDARD_NAME="gen_primex_eta_he4_"$STANDARD_NAME
-		mkdir ./sf
-		$runGen cp $HALLD_SIM_HOME_CNTR/src/programs/Simulation/gen_primex_eta_he4/sf/* ./sf/
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
 	elif [[ "$GENERATOR" == "gen_generic_root" ]]; then
 		echo "configuring gen_generic_root"
 		STANDARD_NAME="gen_generic_root_"$STANDARD_NAME
-		mkdir ./sf
-		$runGen cp $HALLD_SIM_HOME_CNTR/src/programs/Simulation/gen_generic_root/sf/* ./sf/
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
 	elif [[ "$GENERATOR" == "gen_whizard" ]]; then
 		echo "configuring gen_whizard"
