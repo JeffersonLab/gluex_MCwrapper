@@ -1345,6 +1345,7 @@ if ( "$GENR" != "0" ) then #run generation
 		echo $runGen gen_compton_simple -c $STANDARD_NAME'_beam.conf' -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -s $formatted_fileNumber -m $eBEAM_ENERGY $optionals_line
 		$runGen gen_compton_simple -c $STANDARD_NAME'_beam.conf' -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -s $formatted_fileNumber -m $eBEAM_ENERGY $optionals_line
 		set generator_return_code=$status
+		
 	else if ( "$GENERATOR" == "gen_primex_eta_he4" ) then
 		echo "RUNNING GEN_PRIMEX_ETA_HE4"
 		set optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
@@ -1353,6 +1354,7 @@ if ( "$GENR" != "0" ) then #run generation
 		echo $runGen gen_primex_eta_he4 -e $STANDARD_NAME.conf -c $STANDARD_NAME'_beam.conf' -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.txt -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -s $formatted_fileNumber -m $eBEAM_ENERGY $optionals_line
 		$runGen gen_primex_eta_he4 -e $STANDARD_NAME.conf -c $STANDARD_NAME'_beam.conf' -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.txt -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -s $formatted_fileNumber -m $eBEAM_ENERGY $optionals_line
 		set generator_return_code=$status
+		
 	else if ( "$GENERATOR" == "gen_generic_root" ) then
 		echo "RUNNING GEN_GENERIC_ROOT"
 		set optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
@@ -1361,6 +1363,7 @@ if ( "$GENR" != "0" ) then #run generation
 		echo $runGen gen_generic_root -e $STANDARD_NAME.conf -c $STANDARD_NAME'_beam.conf' -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.txt -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -s $formatted_fileNumber -m $eBEAM_ENERGY $optionals_line
 		$runGen gen_generic_root -e $STANDARD_NAME.conf -c $STANDARD_NAME'_beam.conf' -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.txt -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -s $formatted_fileNumber -m $eBEAM_ENERGY $optionals_line
 		set generator_return_code=$status
+		
 	 else if ( "$GENERATOR" == "gen_whizard" ) then
 		echo "RUNNING GEN_WHIZARD"
 		set optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
@@ -1369,6 +1372,7 @@ if ( "$GENR" != "0" ) then #run generation
 		echo $runGen gen_whizard -e $STANDARD_NAME.conf -c $STANDARD_NAME'_beam.conf' -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.txt -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -s $formatted_fileNumber -m $eBEAM_ENERGY $optionals_line
 		$runGen gen_whizard -e $STANDARD_NAME.conf -c $STANDARD_NAME'_beam.conf' -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.txt -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -s $formatted_fileNumber -m $eBEAM_ENERGY $optionals_line
 		set generator_return_code=$status
+		
 	else if ( "$GENERATOR" == "gen_npi" ) then
 		echo "RUNNING GEN_NPI"
 		set optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
