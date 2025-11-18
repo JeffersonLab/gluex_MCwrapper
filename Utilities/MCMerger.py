@@ -75,8 +75,9 @@ def bash_root(name_map, path, mc_dir):
                 for run in name_map["trees"][tup]["run_nums"]:
                     if os.path.isfile(checkpointpath + '/' + dir_type + '/' +  fold_name + '/' + tup[0] + run + tup[1] + '.done'):
                         continue
-                    success = subprocess.run([f"/home/mcwrap/tools/hadd -v 1 -f {path + '/' + dir_type + '/' +  fold_name + '/' + tup[0] + run + tup[1]} {mc_dir + '/' + 'root' + '/' +  dir_type + '/' + tup[0]+run}*{tup[1]}"], shell=True)
+                    # success = subprocess.run([f"/home/mcwrap/tools/hadd -v 1 -f {path + '/' + dir_type + '/' +  fold_name + '/' + tup[0] + run + tup[1]} {mc_dir + '/' + 'root' + '/' +  dir_type + '/' + tup[0]+run}*{tup[1]}"], shell=True)
                     # success = subprocess.run([f"hadd -v 1 -f {path + '/' + dir_type + '/' +  fold_name + '/' + tup[0] + run + tup[1]} {mc_dir + '/' + 'root' + '/' +  dir_type + '/' + tup[0]+run}*{tup[1]}"], shell=True)
+                    success = subprocess.run([f"/home/mcwrap/sw/root-6.24.04/install/bin/hadd -v 1 -f {path + '/' + dir_type + '/' +  fold_name + '/' + tup[0] + run + tup[1]} {mc_dir + '/' + 'root' + '/' +  dir_type + '/' + tup[0]+run}*{tup[1]}"], shell=True)
                     return_code += success.returncode
                     if success.returncode == 0:
                         open(checkpointpath + '/' + dir_type + '/' +  fold_name + '/' + tup[0] + run + tup[1] + '.done', 'a').close()
@@ -99,8 +100,9 @@ def bash_root(name_map, path, mc_dir):
                 for run in name_map[dir_type][tup]["run_nums"]:
                     if os.path.isfile(checkpointpath + '/' + dir_type + '/' +  tup[0] + run + tup[1] + '.done'):
                         continue
-                    success = subprocess.run([f"/home/mcwrap/tools/hadd -v 1 -f {path + '/' + dir_type + '/' +  tup[0] + run + tup[1]} {mc_dir + '/' + 'root' + '/' +  dir_type + '/' + tup[0]+run}*{tup[1]}"], shell=True)
+                    # success = subprocess.run([f"/home/mcwrap/tools/hadd -v 1 -f {path + '/' + dir_type + '/' +  tup[0] + run + tup[1]} {mc_dir + '/' + 'root' + '/' +  dir_type + '/' + tup[0]+run}*{tup[1]}"], shell=True)
                     # success = subprocess.run([f"hadd -v 1 -f {path + '/' + dir_type + '/' +  tup[0] + run + tup[1]} {mc_dir + '/' + 'root' + '/' +  dir_type + '/' + tup[0]+run}*{tup[1]}"], shell=True)
+                    success = subprocess.run([f"/home/mcwrap/sw/root-6.24.04/install/bin/hadd -v 1 -f {path + '/' + dir_type + '/' +  tup[0] + run + tup[1]} {mc_dir + '/' + 'root' + '/' +  dir_type + '/' + tup[0]+run}*{tup[1]}"], shell=True)
                     return_code += success.returncode
                     if success.returncode == 0:
                         open(checkpointpath + '/' + dir_type + '/' +  tup[0] + run + tup[1] + '.done', 'a').close()
