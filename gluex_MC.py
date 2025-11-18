@@ -46,8 +46,8 @@ try:
 except:
         pass
 
-MCWRAPPER_VERSION="2.11.0"
-MCWRAPPER_DATE="06/18/25"
+MCWRAPPER_VERSION="2.12.0"
+MCWRAPPER_DATE="11/18/25"
 
 def getOSName(versionset):
         #only keep what comes after last "/" in versionset, in case it is full path
@@ -1929,9 +1929,11 @@ def main(argv):
                                 if BGFOLD == "Random" or BGFOLD=="DEFAULT" or BGFOLD[0:3] == "loc":
                                         RANDOM_NUM_EVT=GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,RUNNUM)
                                         COMMAND_dict['num_rand_trigs']=str(RANDOM_NUM_EVT)
+                                        print("RANDOM_NUM_EVT =",RANDOM_NUM_EVT)
 
                                 COMMAND=getCommandString(COMMAND_dict,"INTERACTIVE") #str(BATCHRUN)+" "+ENVFILE+" "+GENCONFIG+" "+str(outdir)+" "+str(RUNNUM)+" "+str(BASEFILENUM+FILENUM+-1)+" "+str(num)+" "+str(VERSION)+" "+str(CALIBTIME)+" "+str(GENR)+" "+str(GEANT)+" "+str(SMEAR)+" "+str(RECON)+" "+str(CLEANGENR)+" "+str(CLEANGEANT)+" "+str(CLEANSMEAR)+" "+str(CLEANRECON)+" "+str(BATCHSYS).upper()+" "+str(NCORES).split(':')[-1]+" "+str(GENERATOR)+" "+str(GEANTVER)+" "+str(BGFOLD)+" "+str(CUSTOM_GCONTROL)+" "+str(eBEAM_ENERGY)+" "+str(COHERENT_PEAK)+" "+str(MIN_GEN_ENERGY)+" "+str(MAX_GEN_ENERGY)+" "+str(TAGSTR)+" "+str(CUSTOM_PLUGINS)+" "+str(CUSTOM_ANA_PLUGINS)+" "+str(PERFILE)+" "+str(RUNNING_DIR)+" "+str(ccdbSQLITEPATH)+" "+str(rcdbSQLITEPATH)+" "+str(BGTAGONLY)+" "+str(RADIATOR_THICKNESS)+" "+str(BGRATE)+" "+str(RANDBGTAG)+" "+str(RECON_CALIBTIME)+" "+str(NOSECONDARIES)+" "+str(MCWRAPPER_VERSION)+" "+str(NOSIPMSATURATION)+" "+str(FLUX_TO_GEN)+" "+str(FLUX_HIST)+" "+str(POL_TO_GEN)+" "+str(POL_HIST)+" "+str(eBEAM_CURRENT)+" "+str(PROJECT)
-
+                                print("COMMAND PRINTOUT:",str(SCRIPT_TO_RUN)+" "+COMMAND)
+                                
                                 #either call MakeMC.csh or add a job depending on swif flag
                                 if BATCHRUN == 0 or BATCHSYS.upper()=="NULL":
                                         os.system(str(SCRIPT_TO_RUN)+" "+COMMAND)

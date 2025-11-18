@@ -185,7 +185,7 @@ flength_count=$((`echo $FILE_NUMBER | wc -c` - 1))
 
 export XRD_RANDOMS_URL=root://dtn2303.jlab.org
 export RANDOMS_PREPEND=/work/osgpool/halld/
-if [[ "$BATCHSYS" == "OSG" && "$BATCHRUN"=="1" ]]; then
+if [[ "$BATCHSYS" == "OSG" && "$BATCHRUN"=="1" || `hostname` == 'scosg2201.jlab.org' ]]; then
 	export XRD_RANDOMS_URL=osdf://jlab-osdf/gluex/work/halld/mcwrap/random_triggers/
 	export RANDOMS_PREPEND=""
 fi
@@ -199,10 +199,11 @@ fi
 export MAKE_MC_USING_XROOTD=0
 export MAKE_MC_USING_PELICAN=0
 #ls /usr/lib64/libXrdPosixPreload.so
-if [[ "$BATCHSYS" == "OSG" && "$BATCHRUN"=="1" ]]; then
+if [[ "$BATCHSYS" == "OSG" && "$BATCHRUN"=="1" || `hostname` == 'scosg2201.jlab.org' ]]; then
 	echo ""
 	echo "random trigger pelican test"
 	httokendecode -H
+	#echo `ls /usr/bin/`
 	#check if /usr/bin/pelican exists
 	if [[ -f /usr/bin/pelican ]]; then
 		echo "Pelican is available for use if needed..."
@@ -261,7 +262,7 @@ fi
 #override xrootd
 #export MAKE_MC_USING_XROOTD=0
 
-if [[ "$BATCHSYS" == "OSG" && "$BATCHRUN"=="1" ]]; then
+if [[ "$BATCHSYS" == "OSG" && "$BATCHRUN"=="1" || `hostname` == 'scosg2201.jlab.org' ]]; then
 	export USER_BC='/usr/bin/bc'
 	export USER_STAT='/usr/bin/stat'
 fi
@@ -360,6 +361,8 @@ else
 	export APPTAINER_BIND="$APPTAINER_BIND,/gluex_install/"
 	export SINGULARITY_BIND=$APPTAINER_BIND
 fi
+#echo "APPTAINER_BIND: $APPTAINER_BIND"
+#echo "SINGULARITY_BIND: $SINGULARITY_BIND"
 
 # Define running command for generation, needed to run inside a container
 runGen=''
@@ -782,7 +785,7 @@ if [[ ("$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" ==
 
 	if [[ "$bkgloc_pre" == "loc:" ]]; then
 		rand_bkg_loc=`echo $BKGFOLDSTR | cut -c 5-`
-		if [[ "$BATCHSYS" == "OSG" && $BATCHRUN != 0 ]]; then
+		if [[ "$BATCHSYS" == "OSG" && $BATCHRUN != 0 || `hostname` == 'scosg2201.jlab.org' ]]; then
 			if [[ "$MAKE_MC_USING_XROOTD" == "0" ]]; then
 				bkglocstring="/srv""/run$formatted_runNumber""_random.hddm"
 			else
@@ -793,7 +796,7 @@ if [[ ("$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" ==
 		fi
 	else
 		#bkglocstring="/cache/halld/""$runperiod""/sim/random_triggers/""run$formatted_runNumber""_random.hddm"
-		if [[ "$BATCHSYS" == "OSG" && $BATCHRUN != 0 ]]; then
+		if [[ "$BATCHSYS" == "OSG" && $BATCHRUN != 0 || `hostname` == 'scosg2201.jlab.org' ]]; then
 			if [[ "$MAKE_MC_USING_XROOTD" == "0" ]]; then
 				bkglocstring="/srv""/run$formatted_runNumber""_random.hddm"
 			else
