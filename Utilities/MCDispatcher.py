@@ -1414,7 +1414,13 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
     
     if(query_to_do != ""):
         MCconfig_file.write("RCDB_QUERY="+query_to_do+"\n")
-
+    
+    if(order["eBeamEnergy"] != None):
+        MCconfig_file.write("eBEAM_ENERGY="+str(order["eBeamEnergy"])+"\n")
+    
+    if(order["eBeamCurrent"] != None):
+        MCconfig_file.write("eBEAM_CURRENT="+str(order["eBeamCurrent"])+"\n")
+    
     if(order["ReactionLines"] != ""):
         if(order["ReactionLines"][0:5] == "file:"):
             jana_config_file=order["ReactionLines"][5:]
@@ -1594,7 +1600,8 @@ def WritePayloadConfigString(order,foundConfig):
     #order["OutputLocation"]).split("/")[7]
     config_str+="DATA_OUTPUT_BASE_DIR=/osgpool/halld/"+runner_name+"/REQUESTEDMC_OUTPUT/"+str(outputstring)+"\n"
     #print "FOUND CONFIG="+foundConfig
-
+    
+    query_to_do=""
     if(order["RunNumLow"] != order["RunNumHigh"]):
         query_to_do="@is_production and @status_approved"
 
@@ -1606,9 +1613,16 @@ def WritePayloadConfigString(order,foundConfig):
     
         if(order["RCDBQuery"] != ""):
             query_to_do=order["RCDBQuery"]
-
+    
     config_str+="RCDB_QUERY="+query_to_do+"\n"
-        
+    
+    if(order["eBeamEnergy"] != None):
+        config_str+="eBEAM_ENERGY="+str(order["eBeamEnergy"])+"\n"
+    #else:
+        #print("\nELECTRON BEAM ENERGY SET TO 'RCDB'\n")
+    
+    if(order["eBeamCurrent"] != None):
+        config_str+="eBEAM_CURRENT="+str(order["eBeamCurrent"])+"\n"
 
     if(order["ReactionLines"] != ""):
         if(order["ReactionLines"][0:5] != "file:"):

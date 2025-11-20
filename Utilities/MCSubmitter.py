@@ -106,7 +106,13 @@ def WritePayloadConfig(order,foundConfig,batch_system):
 
     if(order["RCDBQuery"] != ""):
         MCconfig_file.write("RCDB_QUERY="+order["RCDBQuery"]+"\n")
-
+    
+    if(order["eBeamEnergy"] != None):
+        MCconfig_file.write("eBEAM_ENERGY="+str(order["eBeamEnergy"])+"\n")
+    
+    if(order["eBeamCurrent"] != None):
+        MCconfig_file.write("eBEAM_CURRENT="+str(order["eBeamCurrent"])+"\n")
+    
     if(order["ReactionLines"] != ""):
         if(order["ReactionLines"][0:5] != "file:"):
             jana_config_file=open("/osgpool/halld/"+runner_name+"/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config","w")

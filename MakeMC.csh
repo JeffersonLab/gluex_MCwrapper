@@ -1000,7 +1000,7 @@ if ( "$GENR" != "0" ) then #run generation
 	else if ( "$GENERATOR" == "gen_primex_eta_he4" ) then
 		echo "configuring gen_primex_eta_he4"
 		STANDARD_NAME="gen_primex_eta_he4_"$STANDARD_NAME
-                cp $CONFIG_FILE ./$STANDARD_NAME.conf
+		cp $CONFIG_FILE ./$STANDARD_NAME.conf
 	else if ( "$GENERATOR" == "gen_generic_root" ) then
 		echo "configuring gen_generic_root"
 		STANDARD_NAME="gen_generic_root_"$STANDARD_NAME
