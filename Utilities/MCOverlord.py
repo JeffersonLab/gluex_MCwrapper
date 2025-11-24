@@ -117,20 +117,11 @@ def CheckForFile(rootLoc,expFile):
     if "Failure getting "+PELICAN_SERVER not in str(errors, 'utf-8') and expFile in str(output, 'utf-8'):
         print("FILE FOUND VIA PELICAN")
         pelican_found=True
-    #if( os.path.isfile('/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/'+rootLoc+"/"+subloc+"/"+expFile) ):
-    #    print(rootLoc+"/"+subloc+"/"+expFile+"   found on OSG pool")
 
-    #if( os.path.isfile('/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) ):
-    #    print(rootLoc+"/"+subloc+"/"+expFile+"   found on cache")
+    # 11/20/25: dtn1902 no longer exists. I removed the call to "exists_remote()" entirely, because ssh to dtn2303 requires a password
+    #if(os.path.isfile('/osgpool/halld/'+runner_name+'/REQUESTEDMC_OUTPUT/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote(runner_name+'@dtn1902','/work/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) or pelican_found ):
 
-    #if( os.path.isfile('/mss/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) ):
-    #    print(rootLoc+"/"+subloc+"/"+expFile+"   found on tape")
-
-    #tbritton@dtn1902-ib:
-
-    #if(os.path.isfile('/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/'+rootLoc+"/"+subloc+"/"+expFile) or os.path.isfile('/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) or os.path.isfile('/mss/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) ):
-    #if(os.path.isfile('/osgpool/halld/'+runner_name+'/REQUESTEDMC_OUTPUT/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote(runner_name+'@dtn1902','/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote(runner_name+'@dtn1902','/mss/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) ):
-    if(os.path.isfile('/osgpool/halld/'+runner_name+'/REQUESTEDMC_OUTPUT/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote(runner_name+'@dtn1902','/work/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) or pelican_found ):
+    if(pelican_found or os.path.isfile('/osgpool/halld/'+runner_name+'/REQUESTEDMC_OUTPUT/'+rootLoc+"/"+subloc+"/"+expFile) ):
         found=True
     else:
         print(rootLoc+"/"+subloc+"/"+expFile+"   NOT FOUND")
@@ -870,9 +861,28 @@ def checkOSG(Jobs_List):
                                 if len(attempt_BKG_parts) != 1:
                                     locally_found=False
                                     try:
-                                        check_out=subprocess.check_output('ssh '+runner_name+'@dtn1902 ls /osgpool/halld/random_triggers/'+str(attempt_BKG_parts[1])+"/run"+str(thisJOB_RunNumber).zfill(6)+'_random.hddm', shell=True)
-                                        print("Found:",check_out)
-                                        locally_found=True
+                                        # Copy the scheme used inside the 'checkForFile()' function:
+                                        random_file_dir=attempt_BKG_parts[1].split("+")[0]
+                                        random_file_name="run"+str(thisJOB_RunNumber).zfill(6)+"_random.hddm"
+
+                                        PELICAN_SERVER="osdf://jlab-osdf/gluex/osgpool/halld/random_triggers/"
+                                        pelican_check="pelican object ls "+PELICAN_SERVER+random_file_dir+"/"+random_file_name
+
+                                        os.environ["BEARER_TOKEN_FILE"]="/var/run/user/10967/bt_u10967"
+                                        os.environ["XDG_RUNTIME_DIR"]="/run/user/10967"
+                                        my_env=os.environ.copy()
+
+                                        token_str='eval `ssh-agent`; /usr/bin/ssh-add;'
+                                        agent_kill_str="; ssh-agent -k"
+                                        #print(token_str+pelican_check+agent_kill_str)
+
+                                        p = Popen(token_str+pelican_check+agent_kill_str, env=my_env ,stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True,close_fds=True)
+                                        output, errors = p.communicate()
+
+                                        if "Failure getting "+PELICAN_SERVER not in str(errors, 'utf-8') and random_file_name in str(output, 'utf-8'):
+                                            print("FILE FOUND VIA PELICAN")
+                                            locally_found=True
+
                                     except Exception as e:
                                         print(e)
                                         locally_found=False
