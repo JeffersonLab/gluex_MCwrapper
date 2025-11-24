@@ -1370,10 +1370,10 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
             s.send_message(msg)
             s.quit()
 
-            #write message to email_[ProjectID].log file in copy=open("/osgpool/halld/"+runner_name+"/REQUESTED_FAIL_MAILS/email_"+str(row['ID'])+".log", "w+")
+            #write message to email_[ProjectID].log file in copy=open("/osgpool/halld/"+runner_name+"/REQUESTED_FAIL_MAILS/email_"+str(order['ID'])+".log", "w+")
             try:    
-                copy=open("/osgpool/halld/"+runner_name+"/REQUESTED_FAIL_MAILS/email_"+str(row['ID'])+".log", "w+")
-                copy.write("Could not test the project because MCwrapper-bot could not copy the following file: "+parseGenPostProcessing[i]+"\n This may be due to a lack of permissions for "+runner_name+" to read from the containing directory or the file itself may not exist.\n Please correct this issue by following the link: "+'https://halldweb.jlab.org/gluex_sim/SubmitSim.html?prefill='+str(row['ID'])+'&mod=1'+".  Do NOT resubmit this request.")
+                copy=open("/osgpool/halld/"+runner_name+"/REQUESTED_FAIL_MAILS/email_"+str(order['ID'])+".log", "w+")
+                copy.write("Could not test the project because MCwrapper-bot could not copy the following file: "+parseGenPostProcessing[i]+"\n This may be due to a lack of permissions for "+runner_name+" to read from the containing directory or the file itself may not exist.\n Please correct this issue by following the link: "+'https://halldweb.jlab.org/gluex_sim/SubmitSim.html?prefill='+str(order['ID'])+'&mod=1'+".  Do NOT resubmit this request.")
                 copy.close()
             except Exception as e:
                 print(e)
