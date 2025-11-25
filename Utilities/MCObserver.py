@@ -55,17 +55,18 @@ dbpass = ''
 dbname = 'gluex_mc'
 
 try:
-        dbcnx=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
-        dbcursor=dbcnx.cursor(MySQLdb.cursors.DictCursor)
+    dbcnx=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
+    dbcursor=dbcnx.cursor(MySQLdb.cursors.DictCursor)
 except:
-        print("WARNING: CANNOT CONNECT TO DATABASE.  JOBS WILL NOT BE CONTROLLED OR MONITORED")
-        pass
+    print("WARNING: CANNOT CONNECT TO DATABASE.  JOBS WILL NOT BE CONTROLLED OR MONITORED")
+    pass
 
 runner_name=pwd.getpwuid( os.getuid() )[0]
 
 if( not (runner_name=="tbritton" or runner_name=="mcwrap")):
     print("ERROR: You must be tbritton or mcwrap to run this script")
     sys.exit(1)
+
 
 def exists_remote(host, path):
     """Test if a file exists at path on a host accessible with SSH."""
@@ -77,6 +78,7 @@ def exists_remote(host, path):
         return False
     raise Exception('SSH failed')
 
+
 def CheckForFile(rootLoc,expFile):
     found=False
     subloc="hddm"
@@ -87,7 +89,7 @@ def CheckForFile(rootLoc,expFile):
 
     os.environ["BEARER_TOKEN_FILE"]="/var/run/user/10967/bt_u10967"
     os.environ["XDG_RUNTIME_DIR"]="/run/user/10967"
-                
+
     token_str='eval `ssh-agent`; /usr/bin/ssh-add;'
     agent_kill_str="; ssh-agent -k"
 
@@ -129,7 +131,7 @@ def checkJobFilesForCompletion(comp_assignment):
     outdir_root="/osgpool/halld/"+runner_name+"/REQUESTEDMC_OUTPUT/"
     print("checking "+str(len(comp_assignment)))
     for attempt in comp_assignment:#OutstandingProjects:
-        
+
         jobinfoq="SELECT * from Jobs where ID="+str(attempt["Job_ID"])
         dbcursor.execute(jobinfoq)
         job = dbcursor.fetchall()[0]
@@ -152,9 +154,8 @@ def checkJobFilesForCompletion(comp_assignment):
         #print("NumFiles:",len(files))
         #print(dirs)
 
-       
         #DISTINCT ID ------in query below
-       
+
         #print(fulfilledJobs)
 
         #print("Jobs fulfilled:",str(len(fulfilledJobs)))
@@ -163,8 +164,7 @@ def checkJobFilesForCompletion(comp_assignment):
 
         rootLoc=proj['OutputLocation'].split("REQUESTED_MC")[1]#.replace("/","")
         nullify_list=[]
-        
-        
+
         #print("Data already Verified?",job['DataVerified'])
         if(job['DataVerified'] !=0 ):
             continue
@@ -181,7 +181,7 @@ def checkJobFilesForCompletion(comp_assignment):
             postproc_append="_"+proj['GenPostProcessing'].split(":")[0]
 
         Expected_returned_files=[]
-            
+
         if(str(proj['RunGeneration'])=="1" and str(proj['SaveGeneration'])=="1" and str(proj['Generator'])!="particle_gun"):
             Expected_returned_files.append(STANDARD_NAME+postproc_append+".hddm")
 
@@ -190,14 +190,13 @@ def checkJobFilesForCompletion(comp_assignment):
 
         if(str(proj['RunSmear'])=="1" and str(proj['SaveSmear'])=="1"):
             Expected_returned_files.append(STANDARD_NAME+'_geant'+str(proj['GeantVersion'])+'_smeared'+postproc_append+'.hddm')
-            
+
         if(str(proj['RunReconstruction'])=="1" and str(proj['SaveReconstruction'])=="1"):
             Expected_returned_files.append('dana_rest_'+STANDARD_NAME+postproc_append+'.hddm')
             Expected_returned_files.append('hd_root_'+STANDARD_NAME+postproc_append+'.root')
-            
+
         found_AllexpFile=True
 
-            
         for expFile in Expected_returned_files:
             #print(expFile)
             #print("checking for",expFile,"@",rootLoc)
@@ -206,26 +205,23 @@ def checkJobFilesForCompletion(comp_assignment):
                 #print(expFile+"   NOT FOUND!!!!")
                 found_AllexpFile=False
                 break
-            
-            
+
         if found_AllexpFile:
 
             Update_q="UPDATE Attempts Set Status=44,ExitCode=0 where ID="+str(attempt["ID"])
             print(Update_q)
             dbcursor_comp.execute(Update_q)
             dbcnx_comp.commit()
-               
+
         else:
             continue
-            
 
 
-########################################################## MAIN ##########################################################
 def array_split(lst,n):
     to_return=[]
     for i in range(0,n):
         to_return.append([])
-    
+
     for count, ele in enumerate(lst):
         #print(ele)
         index=count%n
@@ -237,63 +233,64 @@ def array_split(lst,n):
 
     return to_return
 
+
+########################################################## MAIN ##########################################################
+
 def main(argv):
 
-        runnum=0
-        runmax=-1
-        spawnNum=10
-        numOverRide=False
+    runnum=0
+    runmax=-1
+    spawnNum=10
+    numOverRide=False
 
-        if(len(argv) !=0):
-            numOverRide=True
-        
-        numprocesses_running=subprocess.check_output(["echo `ps all -u "+runner_name+" | grep MCObserver.py | grep -v grep | wc -l`"], shell=True)
+    if(len(argv) !=0):
+        numOverRide=True
 
-        print(int(numprocesses_running))
-        if(int(numprocesses_running) <2 or numOverRide):
-            while(runnum<runmax or runmax==-1):
-                runnum=runnum+1
-                
-                try:
-                    queryosgjobs="SELECT * from Attempts WHERE BatchSystem='OSG' && SubmitHost=\""+MCWRAPPER_BOT_HOST_NAME+"\" && Status !='4' && Status !='3' && Status!= '6' && Status != '5' && Status != '44';"# || (Status='4' && ExitCode != 0 && ProgramFailed is NULL) ORDER BY ID desc;"
-                    #print queryosgjobs
-                    dbcursor.execute(queryosgjobs)
-                    Alljobs = list(dbcursor.fetchall())
-                    #print(Alljobs[:5])
-                    random.shuffle(Alljobs)
-                    #print(Alljobs[:5])
-                    Monitoring_assignments=array_split(Alljobs,spawnNum)
-                    spawns=[]
-                    for i in range(0,spawnNum):
-                        time.sleep(random.randint(1,spawnNum))
-                        print("block "+str(i))
-                        print(len(Monitoring_assignments[i]))
-                        if(len(Monitoring_assignments[i])>0):
-                            p=Process(target=checkJobFilesForCompletion,args=(Monitoring_assignments[i],))
-                            p.daemon = True
-                            spawns.append(p)
-                        
-                        
-                        #p.join()
-                        
-                    for i in range(0,len(spawns)):
+    numprocesses_running=subprocess.check_output(["echo `ps all -u "+runner_name+" | grep MCObserver.py | grep -v grep | wc -l`"], shell=True)
+
+    print(int(numprocesses_running))
+    if(int(numprocesses_running) <2 or numOverRide):
+        while(runnum<runmax or runmax==-1):
+            runnum=runnum+1
+
+            try:
+                queryosgjobs="SELECT * from Attempts WHERE BatchSystem='OSG' && SubmitHost=\""+MCWRAPPER_BOT_HOST_NAME+"\" && Status !='4' && Status !='3' && Status!= '6' && Status != '5' && Status != '44';"# || (Status='4' && ExitCode != 0 && ProgramFailed is NULL) ORDER BY ID desc;"
+                #print queryosgjobs
+                dbcursor.execute(queryosgjobs)
+                Alljobs = list(dbcursor.fetchall())
+                #print(Alljobs[:5])
+                random.shuffle(Alljobs)
+                #print(Alljobs[:5])
+                Monitoring_assignments=array_split(Alljobs,spawnNum)
+                spawns=[]
+                for i in range(0,spawnNum):
+                    time.sleep(random.randint(1,spawnNum))
+                    print("block "+str(i))
+                    print(len(Monitoring_assignments[i]))
+                    if(len(Monitoring_assignments[i])>0):
+                        p=Process(target=checkJobFilesForCompletion,args=(Monitoring_assignments[i],))
+                        p.daemon = True
+                        spawns.append(p)
+
+                    #p.join()
+
+                for i in range(0,len(spawns)):
+                    #print("join "+str(i))
+                    time.sleep(random.randint(1,spawnNum))
+                    spawns[i].start()
+
+                #time.sleep(2)
+                for i in range(0,len(spawns)):
+                    if spawns[i].is_alive():
                         #print("join "+str(i))
-                        time.sleep(random.randint(1,spawnNum))
-                        spawns[i].start()
-                        
-                    #time.sleep(2)
-                    for i in range(0,len(spawns)):
-                        if spawns[i].is_alive():
-                            #print("join "+str(i))
-                            spawns[i].join()
+                        spawns[i].join()
+
+            except Exception as e:
+                print(e)
+                break
+
+    dbcnx.close()
 
 
-                except Exception as e:
-                    print(e)
-                    break
-
-
-        dbcnx.close()
-              
 if __name__ == "__main__":
    main(sys.argv[1:])

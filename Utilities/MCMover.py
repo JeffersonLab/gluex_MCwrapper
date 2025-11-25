@@ -46,51 +46,53 @@ dbpass = ''
 dbname = 'gluex_mc'
 
 try:
-        dbcnx=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
-        dbcursor=dbcnx.cursor(MySQLdb.cursors.DictCursor)
+    dbcnx=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
+    dbcursor=dbcnx.cursor(MySQLdb.cursors.DictCursor)
 except:
-        print("WARNING: CANNOT CONNECT TO DATABASE.  JOBS WILL NOT BE CONTROLLED OR MONITORED")
-        pass
+    print("WARNING: CANNOT CONNECT TO DATABASE.  JOBS WILL NOT BE CONTROLLED OR MONITORED")
+    pass
+
 
 def DroneDo():
-        MCWRAPPER_BOT_HOME="/scigroup/mcwrapper/gluex_MCwrapper/"
-        print(MCWRAPPER_BOT_HOME+"/Utilities/MCMover.csh")
-        retcode=subprocess.check_output([MCWRAPPER_BOT_HOME+"/Utilities/MCMover.csh"],shell=True)
-        print(retcode)
+    MCWRAPPER_BOT_HOME="/scigroup/mcwrapper/gluex_MCwrapper/"
+    print(MCWRAPPER_BOT_HOME+"/Utilities/MCMover.csh")
+    retcode=subprocess.check_output([MCWRAPPER_BOT_HOME+"/Utilities/MCMover.csh"],shell=True)
+    print(retcode)
+
 
 def main(argv):
 
-        numOverRide=False
+    numOverRide=False
 
-        if(len(argv) !=0):
-                numOverRide=True
-        
-        numprocesses_running=subprocess.check_output(["echo `ps all -u tbritton | grep MCMover.py | grep -v grep | wc -l`"], shell=True)
+    if(len(argv) !=0):
+        numOverRide=True
 
-        print(int(numprocesses_running))
-        ALLSTOP=False
-        if(os.path.isfile('/osgpool/halld/tbritton/.ALLSTOP')):
-            print("ALL STOP DETECTED")
-            ALLSTOP=True
+    numprocesses_running=subprocess.check_output(["echo `ps all -u tbritton | grep MCMover.py | grep -v grep | wc -l`"], shell=True)
 
-        if( (int(numprocesses_running) <2 or numOverRide) and not ALLSTOP):
-            dbcursor.execute("INSERT INTO MCMover (Host,StartTime,Status) VALUES ('"+str(socket.gethostname())+"', NOW(), 'Running' )")
+    print(int(numprocesses_running))
+    ALLSTOP=False
+    if(os.path.isfile('/osgpool/halld/tbritton/.ALLSTOP')):
+        print("ALL STOP DETECTED")
+        ALLSTOP=True
+
+    if( (int(numprocesses_running) <2 or numOverRide) and not ALLSTOP):
+        dbcursor.execute("INSERT INTO MCMover (Host,StartTime,Status) VALUES ('"+str(socket.gethostname())+"', NOW(), 'Running' )")
+        dbcnx.commit()
+        queryoverlords="SELECT MAX(ID) FROM MCMover;"
+        dbcursor.execute(queryoverlords)
+        lastid = dbcursor.fetchall()
+
+        try:
+            DroneDo()
+            dbcursor.execute("UPDATE MCMover SET EndTime=NOW(), Status='Success' where ID="+str(lastid[0]["MAX(ID)"]))
             dbcnx.commit()
-            queryoverlords="SELECT MAX(ID) FROM MCMover;"
-            dbcursor.execute(queryoverlords)
-            lastid = dbcursor.fetchall()
-            
-            try:
-                DroneDo()
-                dbcursor.execute("UPDATE MCMover SET EndTime=NOW(), Status='Success' where ID="+str(lastid[0]["MAX(ID)"]))
-                dbcnx.commit()
-            except:
-                dbcursor.execute("UPDATE MCMover SET Status='Fail' where ID="+str(lastid[0]["MAX(ID)"]))
-                dbcnx.commit()
-                pass
+        except:
+            dbcursor.execute("UPDATE MCMover SET Status='Fail' where ID="+str(lastid[0]["MAX(ID)"]))
+            dbcnx.commit()
+            pass
+
+    dbcnx.close()
 
 
-        dbcnx.close()
-              
 if __name__ == "__main__":
    main(sys.argv[1:])

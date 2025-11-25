@@ -15,8 +15,6 @@ import numpy as np
 import pandas as pd
 import re
 
-
-
 dbhost = "hallddb.jlab.org"
 dbuser = 'mcuser'
 dbpass = ''
@@ -34,6 +32,7 @@ class bcolors:
     ENDC = '\033[0m'
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
+
 
 def getTotalSizeOut():
     query= "SELECT TotalSizeOut From Project;"
@@ -67,15 +66,16 @@ def getTotalSizeOut():
         #print total
         sum+=total
         #print "==========================="
-    
+
     print(sum/1000000000000)
     print("T")
+
 
 def getUserProjectPercent(graph=True):
     query= "SELECT UName, NumEvents From Project WHERE Submit_Time>DATE('2024-01-01') AND Notified=1 ORDER BY Submit_Time;"
     curs.execute(query) 
     rows=curs.fetchall()
-    
+
     # store all info in a dictionary with usernames as keys
     userdict={}
     totalevents=0
@@ -86,7 +86,7 @@ def getUserProjectPercent(graph=True):
         numUserProj = userdict[proj['UName']][0] + 1
         numUserEvents = userdict[proj['UName']][1] + proj['NumEvents']
         userdict[proj['UName']] = (numUserProj, numUserEvents)
-    
+
     print(userdict)
 
     # convert to df for some easy manipulations
@@ -101,7 +101,6 @@ def getUserProjectPercent(graph=True):
         proj_sum+=float(userdict[user][0])
 
     print(len(userdict),proj_sum,totalevents)
-
 
     if graph:
         userdf.plot.pie(subplots=True, figsize=(10,5))
@@ -130,6 +129,7 @@ def getUserProjectPercent(graph=True):
 
         plt.show()
 
+
 def getAttemptsTimes():
     query= "SELECT UNIX_TIMESTAMP(Start_Time),UNIX_TIMESTAMP(Completed_Time) From Attempts;"
     curs.execute(query) 
@@ -142,9 +142,10 @@ def getAttemptsTimes():
         wallTimes.append(att['UNIX_TIMESTAMP(Completed_Time)']-att['UNIX_TIMESTAMP(Start_Time)'])
 
     fig, ax = plt.subplots(1,1)
-    
+
     ax.hist(wallTimes, bins=50, color='lightblue')
     plt.show()
+
 
 def getStartAndLength():
     query= "SELECT UNIX_TIMESTAMP(Start_Time),CPUTime From Attempts where CPUTime != 0;"
@@ -157,12 +158,12 @@ def getStartAndLength():
         totaltime=totaltime+time["CPUTime"]
         # print(str(time["UNIX_TIMESTAMP(Start_Time)"])+" , "+str(time["CPUTime"]))
 
-
     print(totaltime)
     fig, ax = plt.subplots(1,1)
-    
+
     ax.hist(Starttimes, bins=6, color='lightblue')
     plt.show()
+
 
 def getUsageTimeline():
     query= "SELECT UName, Submit_Time, NumEvents FROM Project WHERE Submit_Time>DATE('2024-01-01') AND Notified=1 ORDER BY Submit_Time;"
@@ -208,7 +209,8 @@ def getUsageTimeline():
     plt.legend()
 
     plt.show()
-    
+
+
 def getRunningLocations():
     isostartdate = '2024-01-01'
     startdate = datetime.date.fromisoformat(isostartdate)
@@ -222,7 +224,7 @@ def getRunningLocations():
     for data in rows:
         alldata.append((data['RunningLocation'], data['Start_Time'], data['WallTime'], data['CPUTime'], data['RAMUsed'], data['ExitCode']))
     # print(alldata)
-    
+
     #sort into running locations by looking at those relevant for GlueX
     runningLocs = {}
     runningLocs['JLab'] = []
@@ -270,7 +272,7 @@ def getRunningLocations():
     for loc in runningLocs:
         if len(runningLocs[loc]) == 0:
             continue
-    
+
         # re-sum all events into weeks, while making sure empty weeks get a 0 and year changes are properly accounted for
         resummed_data = []
         prevweek = (startdate-datetime.timedelta(weeks=1)).isocalendar()[1] #find previous week (make sure year is correct)
@@ -313,15 +315,12 @@ def getRunningLocations():
         plt.plot(x, y, label=loc)
         print(loc, x, y)
 
-
     # Add labels and legend to the plot
     plt.xlabel("Time")
     plt.ylabel("NumJobs")
     plt.title("Percentage of jobs run per week per OSG location")
     plt.legend()
     plt.show()
-
-
 
 
 def main(argv):
@@ -331,9 +330,9 @@ def main(argv):
     # getStartAndLength()
     # getUsageTimeline()
     getRunningLocations()
-        
+
     conn.close()
-        
+
 
 if __name__ == "__main__":
    main(sys.argv[1:])

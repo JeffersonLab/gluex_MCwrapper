@@ -12,8 +12,6 @@ import socket
 import pprint
 import pwd
 
-
-
 dbhost = "hallddb.jlab.org"
 dbuser = 'mcuser'
 dbpass = ''
@@ -38,8 +36,9 @@ if( not (runner_name=="tbritton" or runner_name=="mcwrap")):
     print("ERROR: You must be tbritton or mcwrap to run this script")
     sys.exit(1)
 
+
 def WritePayloadConfig(order,foundConfig,batch_system):
-    
+
     MCconfig_file= open("MCSubDispatched.config","a")
     MCconfig_file.write("PROJECT="+str(order["Exp"])+"\n")
 
@@ -106,13 +105,13 @@ def WritePayloadConfig(order,foundConfig,batch_system):
 
     if(order["RCDBQuery"] != ""):
         MCconfig_file.write("RCDB_QUERY="+order["RCDBQuery"]+"\n")
-    
+
     if(order["eBeamEnergy"] != None):
         MCconfig_file.write("eBEAM_ENERGY="+str(order["eBeamEnergy"])+"\n")
-    
+
     if(order["eBeamCurrent"] != None):
         MCconfig_file.write("eBEAM_CURRENT="+str(order["eBeamCurrent"])+"\n")
-    
+
     if(order["ReactionLines"] != ""):
         if(order["ReactionLines"][0:5] != "file:"):
             jana_config_file=open("/osgpool/halld/"+runner_name+"/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config","w")
@@ -124,7 +123,6 @@ def WritePayloadConfig(order,foundConfig,batch_system):
             jana_config_file.write(janaplugins)
             jana_config_file.close()
 
-
         if batch_system == "OSG":
             MCconfig_file.write("CUSTOM_PLUGINS=file:/osgpool/halld/"+runner_name+"/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config\n")
         elif batch_system == "SWIF":
@@ -132,7 +130,6 @@ def WritePayloadConfig(order,foundConfig,batch_system):
             print(scp_jana)
             subprocess.call(scp_jana,shell=True)
             MCconfig_file.write("CUSTOM_PLUGINS=file:/work/halld/home/"+runner_name+"/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config\n")
-
 
     MCconfig_file.write("ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"+str(order["VersionSet"])+"\n")
     if(order["ANAVersionSet"] != None and order["ANAVersionSet"] != "None" ):
@@ -146,6 +143,7 @@ def WritePayloadConfig(order,foundConfig,batch_system):
     MCconfig_file.write("ANA_OS=db"+"\n")
 
     MCconfig_file.close()
+
 
 def SubmitList(SubList,job_IDs_submitted):
     print("Submitting SubList")
@@ -177,7 +175,7 @@ def SubmitList(SubList,job_IDs_submitted):
         if percent_full > 75.0:
             print("Node is too full to submit new jobs")
             return
-        
+
         print("about to bundle")
         bundled=False
         bundle_query="select ID,FileNumber from Jobs where Project_ID in (SELECT Project_ID from Jobs where ID="+str(row['ID'])+") and RunNumber in (SELECT RunNumber from Jobs where ID="+str(row['ID'])+") and NumEvts in (SELECT NumEvts from Jobs where ID="+str(row['ID'])+") and IsActive=1;"
@@ -187,7 +185,7 @@ def SubmitList(SubList,job_IDs_submitted):
         print("bundled:",len(alljobs))
         if(len(alljobs)>1):
             bundled=True
-            
+
         projinfo_q="SELECT * FROM Project where ID="+str(row['Project_ID'])
         curs.execute(projinfo_q) 
         proj=curs.fetchall()
@@ -201,11 +199,11 @@ def SubmitList(SubList,job_IDs_submitted):
         cleangeant=1
         if proj[0]["SaveGeant"]==1:
             cleangeant=0
-    
+
         cleansmear=1
         if proj[0]["SaveSmear"]==1:
             cleansmear=0
-    
+
         cleanrecon=1
         if proj[0]["SaveReconstruction"]==1:
             cleanrecon=0
@@ -230,7 +228,6 @@ def SubmitList(SubList,job_IDs_submitted):
             print(e)
             pass
 
-        
         #add bearer token to env
         os.environ["BEARER_TOKEN_FILE"]="/var/run/user/10967/bt_u10967"
         os.environ["XDG_RUNTIME_DIR"]="/run/user/10967"
@@ -244,9 +241,9 @@ def SubmitList(SubList,job_IDs_submitted):
         print("ERR",status_err)
         for job in alljobs:
             job_IDs_submitted.append(job['ID'])
-        
+
         print("Submitted",job_IDs_submitted)
-        
+
         #remove all jobs from list in bundle
         copy_of_list_to_Submit=list_to_Submit.copy()
         print("length of list to submit",len(copy_of_list_to_Submit))
@@ -265,13 +262,14 @@ def SubmitList(SubList,job_IDs_submitted):
             #    print(iter_index,"not in list")
             #print("modifying indexes")
             iter_index+=1
-            
+
             #print("done modifying indexes")
 
         #exit(1)
         row_index+=1
         #if(bundled):
         #    break
+
 
 def decideSystem(row):
 
@@ -300,7 +298,7 @@ def decideSystem(row):
         if(str(condor_q_vals[11]) != "_"): #old: 6
             running=running+int(condor_q_vals[11]) #old: 6
             print("running: "+str(running))
-       
+
         if(condor_q_vals[9] != "_"): #old: 7
             idle=idle+int(condor_q_vals[9]) #old: 7
             print("idle: "+str(idle))
@@ -317,7 +315,7 @@ def decideSystem(row):
     osg_ratio=float(idle)/float(running)
     print(osg_sum)
     print(osg_ratio)
-    
+
     if osg_sum > 3000 and osg_ratio > 2.0:
         print("SWIF")
         return "OSG"
@@ -357,7 +355,7 @@ def main(argv):
             while more_sub:# and int_i<1:
                 #sleep 1 second
                 #time.sleep(1)
-                
+
                 rows=[]
                 int_i+=1
                 print("=============================================================")
@@ -367,7 +365,6 @@ def main(argv):
                 if(Block_size==1):
                     query ="SELECT UName, RunNumber, FileNumber, Tested, NumEvts, BKG, Notified, Jobs.ID, Project_ID, Priority, IsActive FROM Jobs INNER JOIN Project ON Jobs.Project_ID = Project.ID INNER JOIN Users ON Project.user_id = Users.id LEFT JOIN Attempts ON Jobs.ID = Attempts.Job_ID WHERE Tested = 1 AND Notified IS NULL AND IsActive = 1 AND Attempts.Job_ID IS NULL ORDER BY Priority DESC;"
 
-                
                 print("Query:", query)
                 curs.execute(query) 
                 rows=curs.fetchall()
@@ -390,7 +387,6 @@ def main(argv):
                     more_sub=False
                     break
 
-
                 SubmitList(rows,job_IDs_submitted)
                 #Must do the following commit even through gluex_MC.py does one.  Else the above query is cached and does not update properly
                 conn.commit()
@@ -407,7 +403,7 @@ def main(argv):
             conn.commit()
             pass
     conn.close()
-        
+
 
 if __name__ == "__main__":
    main(sys.argv[1:])

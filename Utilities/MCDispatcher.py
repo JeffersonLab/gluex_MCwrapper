@@ -19,13 +19,12 @@ try:
     from subprocess import Popen, PIPE
     import socket
     import pprint
-    import smtplib                                                                                                                                                                          
+    import smtplib
     from email.message import EmailMessage
     from multiprocessing import Process, Queue
 except Exception as e:
     print("ERROR:",e)
     pass
-
 
 MCWRAPPER_BOT_HOME="/scigroup/mcwrapper/gluex_MCwrapper/"
 MCWRAPPER_BOT_HOST_NAME=str(socket.gethostname())
@@ -54,7 +53,6 @@ class bcolors:
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
 
-#DELETE FROM Attempts WHERE Job_ID IN (SELECT ID FROM Jobs WHERE Project_ID=65);
 
 def RecallAll():
     #query="SELECT BatchJobID, BatchSystem from Attempts where (Status=\"2\" || Status=\"1\" || Status=\"5\") && SubmitHost=\""+MCWRAPPER_BOT_HOST_NAME+"\" && Job_ID in (SELECT ID from Jobs where Project_ID in (SELECT ID FROM Project where Tested=2 || Tested=4 || Tested=3 ));"
@@ -84,20 +82,6 @@ def RecallAll():
                 break
             #subprocess.call(command,shell=True)
 
-def BundleFiles(input,output):
-    MCWRAPPER_BOT_HOME="/scigroup/mcwrapper/gluex_MCwrapper/"
-    projectName = input.split("/")[-2] if input[-1]=="/" else input.split("/")[-1]
-    mkdircommand="ssh dtn1902 mkdir -p /osgpool/halld/mcwrap/mergetemp/" + projectName
-    print(mkdircommand)
-    subprocess.call(mkdircommand.split(" "))
-    bundlecommand = "ssh dtn1902 \'" + "echo hostname; source /group/halld/Software/build_scripts/gluex_env_jlab.sh; /usr/bin/python3.6 " + MCWRAPPER_BOT_HOME + "/Utilities/MCMerger.py -f -tempdir /osgpool/halld/mcwrap/mergetemp/" + projectName + "/ " + input + " " + output + "\'"
-    print(bundlecommand)
-    try:
-        out = subprocess.check_output(shlex.split(bundlecommand), stderr=subprocess.STDOUT)
-        return "SUCCESS"
-    except subprocess.CalledProcessError as e:
-        print(e.output)
-        return "ERROR"
 
 def DeclareAllComplete():
     conn=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
@@ -107,7 +91,7 @@ def DeclareAllComplete():
     curs.execute(query)
     rows=curs.fetchall()
     print("DECLARING",rows,"COMPLETE")
-    
+
     for proj in rows:
         print(proj)
         print("=====================")
@@ -123,7 +107,7 @@ def DeclareAllComplete():
             continue
         if datetime.datetime.now() < proj["Completed_Time"] + datetime.timedelta(hours=hours_to_wait):
             continue
-        
+
         conn=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
         curs=conn.cursor(MySQLdb.cursors.DictCursor)
         if (proj["Tested"]!=100 and proj["Tested"]!=41 and proj["ID"]>=3440):
@@ -132,17 +116,6 @@ def DeclareAllComplete():
             curs.execute(update_status_tobundle_q)
             conn.commit()
 
-        #print("BundleFiles("+inputdir+","+outputlocation+")")
-        #mkdircommand="ssh dtn1902 mkdir -p "+outputlocation
-        #print(mkdircommand)
-        #subprocess.call(mkdircommand.split(" "))
-        ##close the connection to the database while we run the bundle files
-        #conn.close()
-        #out=BundleFiles(inputdir,outputlocation)
-        #print("final output",out)
-#
-        #if out == "ERROR":
-        #    continue
         print(proj.keys())
         if proj["Tested"]==400:
             #write a file via pelican with the name of proj["ID"] to /work/osgpool/halld/to_be_scrubbed
@@ -159,13 +132,13 @@ def DeclareAllComplete():
             msg = EmailMessage()
             msg.set_content('Your Project ID '+str(proj['ID'])+' has been declared completed.  Outstanding jobs have been recalled. Output may be found here:\n'+proj['OutputLocation'])
 
-            # me == the sender's email address                                                                                                                                                                                 
-            # you == the recipient's email address                                                                                                                                                                             
+            # me == the sender's email address
+            # you == the recipient's email address
             msg['Subject'] = 'GlueX MC Request #'+str(proj['ID'])+' Declared Completed'
             msg['From'] = 'MCwrapper-bot'
             msg['To'] = str(proj['Email'])
 
-            # Send the message via our own SMTP server.                                                                                                                                                                        
+            # Send the message via our own SMTP server.
             s = smtplib.SMTP('localhost')
             s.send_message(msg)
             s.quit()
@@ -176,7 +149,6 @@ def DeclareAllComplete():
             conn.commit()
 
 
-
 def CancelAll():
     query="SELECT ID,OutputLocation,Email from Project where Tested=3;"
     curs.execute(query)
@@ -185,13 +157,13 @@ def CancelAll():
         msg = EmailMessage()
         msg.set_content('Your Project ID '+str(proj['ID'])+' has been canceled.  Outstanding jobs have been recalled.')
 
-        # me == the sender's email address                                                                                                                                                                                 
-        # you == the recipient's email address                                                                                                                                                                             
+        # me == the sender's email address
+        # you == the recipient's email address
         msg['Subject'] = 'GlueX MC Request #'+str(proj['ID'])+' Cancelled'
         msg['From'] = 'MCwrapper-bot'
         msg['To'] = str(proj['Email'])
 
-        # Send the message via our own SMTP server.                                                                                                                                                                        
+        # Send the message via our own SMTP server.
         s = smtplib.SMTP('localhost')
         s.send_message(msg)
         s.quit()
@@ -205,7 +177,7 @@ def CancelAll():
         curs.execute(sql)
         curs.execute(sql2)
         curs.execute(sql3)
-        
+
         delq= "DELETE FROM Project where ID="+str(proj['ID'])+";"
         curs.execute(delq)
         conn.commit()
@@ -229,8 +201,6 @@ def AutoLaunch(RUNNING_LIMIT_OVERRIDE):
     if percent > 75:
         print("disk is too full, not launching")
         return
-    
-
 
     print("RETRYING...")
     RetryAllJobs(RUNNING_LIMIT_OVERRIDE)
@@ -266,10 +236,8 @@ def AutoLaunch(RUNNING_LIMIT_OVERRIDE):
     
     for i in range(0,len(spawns)):
         if spawns[i].is_alive():
-            #print("join "+str(i))            
+            #print("join "+str(i))
             spawns[i].join(15*60)
-
-
 
 
 def ListUnDispatched():
@@ -277,6 +245,7 @@ def ListUnDispatched():
     curs.execute(query) 
     rows=curs.fetchall()
     print(rows)
+
 
 def DispatchProject(ID,SYSTEM,PERCENT):
     query = "SELECT * FROM Project WHERE ID="+str(ID)
@@ -292,7 +261,8 @@ def DispatchProject(ID,SYSTEM,PERCENT):
             DispatchToOSG(ID,rows[0],PERCENT)
     else:
         print("Error: Cannot find Project with ID="+ID)
-    
+
+
 def RetryAllJobs(rlim=False):
     print("retrying all jobs. rlim="+str(rlim))
     query= "SELECT ID,Notified FROM Project where Completed_Time is NULL && Is_Dispatched=1.0 && Tested!=2 && Tested!=4 && Tested!=-4 && Tested!=3;"
@@ -320,6 +290,7 @@ def RetryAllJobs(rlim=False):
             curs.execute(updateProjectstatus)
             conn.commit()
 
+
 def RemoveAllJobs():
     query= "SELECT * FROM Attempts WHERE ID IN (SELECT Max(ID) FROM Attempts GROUP BY Job_ID) && SubmitHost=\""+MCWRAPPER_BOT_HOST_NAME+"\" && Job_ID IN (SELECT ID FROM Jobs WHERE IsActive=1 && Project_ID="+str(ID)+");"
     curs.execute(query) 
@@ -337,7 +308,7 @@ def RetryJobsFromProject(ID, countLim):
     query="select Attempts.* from Jobs inner join Attempts on Attempts.Job_ID = Jobs.id and Attempts.id = (select max(id) from Attempts latest_attempts where latest_attempts.job_id = Jobs.id) where Project_ID = " +str(ID)
     curs.execute(query) 
     rows=curs.fetchall()
-   
+
     projq="SELECT Tested from Project where ID="+str(ID)
     curs.execute(projq)
     proj=curs.fetchall()[0]
@@ -362,7 +333,7 @@ def RetryJobsFromProject(ID, countLim):
                     i=i+1
                 if(AllOSG):
                     RetryJob(row["Job_ID"],AllOSG)
-                
+
         elif (row["BatchSystem"]=="OSG"):
             #print "=========================="
             #print row
@@ -379,17 +350,17 @@ def RetryJobsFromProject(ID, countLim):
                         j=j+1
                         print("Job above count limit")
                         continue
-                    
+
                     if row["Status"] == "-1":
                         #update Status and retry
                         statusUpdate="Update Attempts Set Status=\"4\" WHERE ID ="+str(row["ID"])
                         curs.execute(statusUpdate)
                         conn.commit()
-                            
+
                 RetryJob(row["Job_ID"],AllOSG)
                 i=i+1
         k=k+1
-    
+
     print(SWIF_retry_IDs)
     if(len(SWIF_retry_IDs)!=0 and AllOSG == False):
         queryproj = "SELECT * FROM Project WHERE ID="+str(ID)
@@ -399,10 +370,10 @@ def RetryJobsFromProject(ID, countLim):
         retry_swif_command="swif retry-jobs -workflow "+"proj"+str(ID)+"_"+proj[0]["OutputLocation"].split("/")[splitL-2]+" "+" ".join(SWIF_retry_IDs)
         print(retry_swif_command)
         status = subprocess.call(retry_swif_command, shell=True)
-    
-    
+
     print("retried "+str(i)+" Jobs")
     print(str(j)+" jobs over restart limit of 15")
+
 
 #def DoMissingJobs(ID,SYS):
 #    query="SELECT ID FROM Jobs where ID NOT IN (SELECT Job_ID FROM Attempts) && IsActive=1 && Project_ID="+str(ID)+";"
@@ -414,8 +385,9 @@ def RetryJobsFromProject(ID, countLim):
 #        if(SYS == "OSG"):
         #TREAT LIKE NEW PROJECT WITH JUST THE JOB
 
+
 def RetryJob(ID,AllOSG=False):
-    
+
     #query= "SELECT Attempts.*,Max(Attempts.Creation_Time) FROM Attempts,Jobs WHERE Attempts.Job_ID = "+str(ID)
     query= "SELECT Attempts.*,Max(Attempts.Creation_Time) FROM Attempts WHERE Attempts.Job_ID = "+str(ID)
     #print(query)
@@ -437,11 +409,11 @@ def RetryJob(ID,AllOSG=False):
     cleangeant=1
     if proj[0]["SaveGeant"]==1:
         cleangeant=0
-    
+
     cleansmear=1
     if proj[0]["SaveSmear"]==1:
         cleansmear=0
-    
+
     cleanrecon=1
     if proj[0]["SaveReconstruction"]==1:
         cleanrecon=0
@@ -465,7 +437,6 @@ def RetryJob(ID,AllOSG=False):
         curs.execute(get_perfile_q) 
         genrow=curs.fetchall()
         try:
-            
             per_file_num=genrow[0]["PerFile"]
         except Exception as e:
             print("exception in per file num")
@@ -487,8 +458,9 @@ def RetryJob(ID,AllOSG=False):
         status_out, status_err = subprocess.Popen(command,shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,env=os.environ,executable='/bin/bash').communicate()
         print(command,"STATUS:")
         print(str(status_out,"utf-8"))
-        
+
         #status = subprocess.call(command, shell=True)
+
 
 def CancelJob(ID):
     #deactivate
@@ -525,6 +497,7 @@ def CancelJob(ID):
     curs.execute(updatequery)
     conn.commit()
 
+
 def CheckGenConfig(order):
     ID=order["ID"]
     print("checking/getting the generator config for project:",str(ID))
@@ -559,7 +532,7 @@ def CheckGenConfig(order):
         #subprocess.call("scp tbritton@ifarm1801-ib:"+fileSTR+" "+copyTo+str(ID)+"_"+name,shell=True)
         print("scp "+fileSTR+" "+copyTo+str(ID)+"_"+name)
         subprocess.call("scp "+fileSTR+" "+copyTo+str(ID)+"_"+name,shell=True)
-        
+
         order["Generator_Config"]=copyTo+str(ID)+"_"+name #copyTo+name
         return copyTo+str(ID)+"_"+name
     elif os.path.isfile(fileSTR)==False and (running_hostname != "scosg16.jlab.org" or running_hostname != "scosg20.jlab.org" or running_hostname!="scosg2201.jlab.org"):
@@ -567,6 +540,7 @@ def CheckGenConfig(order):
         return copyTo+str(ID)+"_"+name
 
     return "True"
+
 
 def source(script, update=True):
     """                                                                                                                                                                                                            
@@ -605,12 +579,10 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
     new_dirname="_".join(orig_dirname.split("_")[:-1])+"_"+str(ID)
     new_full_dirname=origOutLoc.replace(orig_dirname,new_dirname)
 
-
     if new_full_dirname[-1]=="/":
         xrd_stub_name=new_full_dirname[:-1].split("/")[-1]
     else:
         xrd_stub_name=new_full_dirname.split("/")[-1]
-
 
     print("order", order)
     print("========================")
@@ -658,7 +630,6 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
         output="oh no!!!"
         errors="Somehow a versionSet was not selected.  Please edit the submission via the link to select a version set."
 
-
     if(not skip_Test):
         writeout=WritePayloadConfig(order,newLoc)
         RunNumber=str(order["RunNumLow"])
@@ -680,10 +651,10 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
 
             if("recon-2019" in order["VersionSet"]):
                 query_to_do="@is_dirc_production and @status_approved"
-    
+
             if(order["RCDBQuery"] != ""):
                 query_to_do=order["RCDBQuery"]
-    
+
             print("RCDB_QUERY IS: "+str(query_to_do))
             rcdb_db = rcdb.RCDBProvider("mysql://rcdb@hallddb.jlab.org/rcdb")
 
@@ -698,15 +669,14 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
                     RunNumber=-1
                 else:
                     RunNumber=str(runList[0][0])
-               
+
             except Exception as e:
                 print(e)
                 output=e
                 errors=e
                 RunNumber=-1
                 pass
-        
-    
+
     #if(order["ReactionLines"][0:5]=="file:")
     #if order["RunNumLow"] != order["RunNumHigh"] :
     #    RunNumber = RunNumber + "-" + str(order["RunNumHigh"])
@@ -719,11 +689,11 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
             cleangeant=1
             if order["SaveGeant"]==1:
                 cleangeant=0
-    
+
             cleansmear=1
             if order["SaveSmear"]==1:
                 cleansmear=0
-    
+
             cleanrecon=1
             if order["SaveReconstruction"]==1:
                 cleanrecon=0
@@ -734,7 +704,7 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
                 test_number=50
             command=MCWRAPPER_BOT_HOME+"/gluex_MC.py "+pwd+"/"+"MCDispatched_"+str(ID)+".config "+str(RunNumber)+" "+str(test_number)+" per_file=250000 base_file_number=0"+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=0 tobundle=0"
             print(command)
-        
+
     # print (command+command2).split(" ")
         my_env=None
         print(versionSet)
@@ -765,7 +735,6 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
         except Exception as e:
             print(e)
             pass
-    
 
         output="Error in rcdb query"
         errors="Error in rcdb query:"+str(query_to_do)
@@ -774,14 +743,12 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
         if RunNumber != -1:
             p = Popen("singularity exec --cleanenv --bind /cvmfs/singularity.opensciencegrid.org/ --bind /var/run/user/  --bind "+pwd+":"+pwd+" --bind /osgpool/halld/"+runner_name+":/osgpool/halld/"+runner_name+" --bind /group/halld/:/group/halld/ --bind /scigroup/mcwrapper/gluex_MCwrapper:/scigroup/mcwrapper/gluex_MCwrapper "+ sing_img +" /bin/sh "+pwd+"/TestProject_runscript_"+str(ID)+".sh", env=my_env ,stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True)
             output, errors = p.communicate()
-    
 
     #print [p.returncode,errors,output]
         output=str(output).replace('\\n', '\n')
         errors=str(errors).replace('\\n', '\n')
 
         STATUS=output.find("Successfully completed")
-    
 
     if(STATUS!=-1):
         try:
@@ -798,16 +765,16 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
             pass
             #conn=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
             #curs=conn.cursor(MySQLdb.cursors.DictCursor)
-        
+
         print(bcolors.OKGREEN+"TEST SUCCEEDED"+bcolors.ENDC)
         print("rm -rf "+order["OutputLocation"])
 
         #mkdir for xrootd out
-        
+
         try:
             os.environ["BEARER_TOKEN_FILE"]="/var/run/user/10967/bt_u10967"
             os.environ["XDG_RUNTIME_DIR"]="/run/user/10967"
-                
+
             token_str='eval `ssh-agent`; /usr/bin/ssh-add;'
             agent_kill_str="; ssh-agent -k"
 
@@ -829,11 +796,11 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
                 print(errors)
                 print("============================")
                 print(output)
-            
+
         except Exception as e:
             print(e)
             pass
-        
+
         #status = subprocess.call("rm -rf "+order["OutputLocation"],shell=True)
     else:
         try:
@@ -843,14 +810,13 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
         except Exception as e:
             print(e)
             pass
-        
+
         print(bcolors.FAIL+"TEST FAILED"+bcolors.ENDC)
         print("rm -rf "+order["OutputLocation"])
     #results_array=results_q.get()
     #results_array[index]=[output,STATUS,errors,row]
     #results_q.put(results_array)
-    
-    
+
     status=[output,STATUS,errors]
     #status=["RCDB QUERY: "+query_to_do+" is invalid",STATUS,"RCDB QUERY: "+query_to_do+" is invalid"]
 
@@ -891,20 +857,20 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
 
             msg['To'] = str(row['Email'])#str("tbritton@jlab.org")#
             print("SET SUB TO FROM")
-            # Send the message via our own SMTP server.                                                                                                                                                                        
+            # Send the message via our own SMTP server.
             s = smtplib.SMTP('localhost')
             #print(msg)
             print("SENDING")
             s.send_message(msg)
             print("SENT")
-            s.quit() 
-            try:    
+            s.quit()
+            try:
                 copy=open("/osgpool/halld/"+runner_name+"/REQUESTED_FAIL_MAILS/email_"+str(row['ID'])+".log", "w+")
                 copy.write('The log information is reproduced below:\n\n\n'+str(status[0])+'\n\n\nErrors:\n\n\n'+str(status[2]))
                 copy.close()
             except Exception as e:
                 print(e)
-                pass     
+                pass
             #subprocess.call("echo 'Your Project ID "+str(row['ID'])+" failed the test.  Please correct this issue by following the link: "+"https://halldweb.jlab.org/gluex_sim/SubmitSim.html?prefill="+str(row['ID'])+"&mod=1" +" .  Do NOT resubmit this request.  Write tbritton@jlab.org for additional assistance\n\n The log information is reproduced below:\n\n\n"+status[0]+"\n\n\n"+status[2]+"' | mail -s 'Project ID #"+str(row['ID'])+" Failed test' "+str(row['Email']),shell=True)
         except:
             print("UH OH MAILING")
@@ -914,6 +880,7 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
             log.close()
 
     return status#[output,STATUS,errors]
+
 
 def TestProject(ID,versionSet,commands_to_call=""):
 
@@ -931,7 +898,7 @@ def TestProject(ID,versionSet,commands_to_call=""):
     orig_dirname=origOutLoc.split("/")[-2]
     new_dirname="_".join(orig_dirname.split("_")[:-1])+"_"+str(ID)
     new_full_dirname=origOutLoc.replace(orig_dirname,new_dirname)
-    
+
     print("========================")
     print(order["Generator_Config"])
     newLoc=CheckGenConfig(order)
@@ -955,7 +922,6 @@ def TestProject(ID,versionSet,commands_to_call=""):
 
     WritePayloadConfig(order,newLoc)
     RunNumber=str(order["RunNumLow"])
-    
 
     if(order["RunNumLow"] != order["RunNumHigh"]):
         query_to_do="@is_production and @status_approved"
@@ -965,11 +931,10 @@ def TestProject(ID,versionSet,commands_to_call=""):
 
         if("recon-2019" in order["VersionSet"]):
             query_to_do="@is_dirc_production and @status_approved"
-    
+
         if(order["RCDBQuery"] != ""):
             query_to_do=order["RCDBQuery"]
-    
-    
+
         print("RCDB_QUERY IS: "+str(query_to_do))
         #print("run selecting currently broken.  RCDB: 'basestring' not defined.  Testing first runnumber only")
         rcdb_db = rcdb.RCDBProvider("mysql://rcdb@hallddb.jlab.org/rcdb")
@@ -979,15 +944,13 @@ def TestProject(ID,versionSet,commands_to_call=""):
             print("RunList:",runList)
             RunNumber=str(runList[0][0])
             #runtable = rcdbdb.select_runs(str(query_to_do),int(order["RunNumLow"]),int(order["RunNumHigh"])).get_values(['event_count'],True)
-        
-        
+
         except Exception as e:
-            
             updatequery="UPDATE Project SET Tested=-1"+" WHERE ID="+str(ID)+";"
             print(updatequery)
             curs.execute(updatequery)
             conn.commit()
-        
+
             print(bcolors.FAIL+"TEST FAILED"+bcolors.ENDC)
             print("rm -rf "+order["OutputLocation"])
             try:
@@ -1019,11 +982,9 @@ def TestProject(ID,versionSet,commands_to_call=""):
             return ["Problem with rcdb query",-1,e]
 
         #print(runtable)
-        
+
         #RunNumber=str(runList[0][0])
 
-        
-        
         #try:
         #    runList=rcdb_db.select_runs(str(query_to_do),order["RunNumLow"],order["RunNumHigh"]).get_values(['event_count'],True)
         #    print("RunList:",runList)
@@ -1045,11 +1006,11 @@ def TestProject(ID,versionSet,commands_to_call=""):
     cleangeant=1
     if order["SaveGeant"]==1:
         cleangeant=0
-    
+
     cleansmear=1
     if order["SaveSmear"]==1:
         cleansmear=0
-    
+
     cleanrecon=1
     if order["SaveReconstruction"]==1:
         cleanrecon=0
@@ -1084,20 +1045,18 @@ def TestProject(ID,versionSet,commands_to_call=""):
     f.write(command)
     f.close()
 
-  
     print("singularity exec --cleanenv --bind /cvmfs/singularity.opensciencegrid.org/ --bind /var/run/user/ --bind "+pwd+":"+pwd+" --bind /osgpool/halld/"+runner_name+":/osgpool/halld/"+runner_name+" --bind /group/halld/:/group/halld/ --bind /scigroup/mcwrapper/gluex_MCwrapper:/scigroup/mcwrapper/gluex_MCwrapper  /cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_almalinux_9:latest /bin/sh "+pwd+"/TestProject_runscript_"+str(ID)+".sh")
     if RunNumber != -1:
         p = Popen("singularity exec --cleanenv --bind /cvmfs/singularity.opensciencegrid.org/ --bind /var/run/user/  --bind "+pwd+":"+pwd+" --bind /osgpool/halld/"+runner_name+":/osgpool/halld/"+runner_name+" --bind /group/halld/:/group/halld/ --bind /scigroup/mcwrapper/gluex_MCwrapper:/scigroup/mcwrapper/gluex_MCwrapper  /cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_almalinux_9:latest /bin/sh "+pwd+"/TestProject_runscript_"+str(ID)+".sh", env=my_env ,stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True)
-    
+
     #print p
     #print "p defined"
     output, errors = p.communicate()
-    
+
     #print [p.returncode,errors,output]
     output=str(output).replace('\\n', '\n')
     errors=str(errors).replace('\\n', '\n')
     STATUS=output.find("Successfully completed")
-    
 
     if(STATUS!=-1):
         updatequery="UPDATE Project SET Tested=1, OutputLocation=\""+new_full_dirname+"\" WHERE ID="+str(ID)+";"
@@ -1109,7 +1068,7 @@ def TestProject(ID,versionSet,commands_to_call=""):
             print(updateOrderquery)
             curs.execute(updateOrderquery)
             conn.commit()
-        
+
         print(bcolors.OKGREEN+"TEST SUCCEEDED"+bcolors.ENDC)
         print("rm -rf "+order["OutputLocation"])
         #status = subprocess.call("rm -rf "+order["OutputLocation"],shell=True)
@@ -1117,10 +1076,11 @@ def TestProject(ID,versionSet,commands_to_call=""):
         updatequery="UPDATE Project SET Tested=-1"+" WHERE ID="+str(ID)+";"
         curs.execute(updatequery)
         conn.commit()
-        
+
         print(bcolors.FAIL+"TEST FAILED"+bcolors.ENDC)
         print("rm -rf "+order["OutputLocation"])
     return [output,STATUS,errors]
+
 
 def DispatchToInteractive(ID,order,PERCENT):
     subprocess.call("rm -f MCDispatched_"+str(ID)+".config", shell=True)
@@ -1129,7 +1089,6 @@ def DispatchToInteractive(ID,order,PERCENT):
     if order["RunNumLow"] != order["RunNumHigh"] :
         RunNumber = RunNumber + "-" + str(order["RunNumHigh"])
 
-
     cleangen=1
     if order["SaveGeneration"]==1:
         cleangen=0
@@ -1137,11 +1096,11 @@ def DispatchToInteractive(ID,order,PERCENT):
     cleangeant=1
     if order["SaveGeant"]==1:
         cleangeant=0
-    
+
     cleansmear=1
     if order["SaveSmear"]==1:
         cleansmear=0
-    
+
     cleanrecon=1
     if order["SaveReconstruction"]==1:
         cleanrecon=0
@@ -1159,7 +1118,7 @@ def DispatchToInteractive(ID,order,PERCENT):
     OutstandingEvents=0
     if(TOTALOUTSTANDINGEVENTS[0]["SUM(NumEvts)"]):
         OutstandingEvents=TOTALOUTSTANDINGEVENTS[0]["SUM(NumEvts)"]
-    
+
     FileNumber_NewJob=int(-1)
     if(TOTALOUTSTANDINGEVENTS[0]["MAX(FileNumber)"]):
         FileNumber_NewJob=TOTALOUTSTANDINGEVENTS[0]["MAX(FileNumber)"]
@@ -1167,7 +1126,7 @@ def DispatchToInteractive(ID,order,PERCENT):
     FileNumber_NewJob+=1
 
     NumEventsToProduce=min(int(float(TotalRequestedEvents)*float(PERCENT)),TotalRequestedEvents-OutstandingEvents)
-    
+
     percentDisp=float(NumEventsToProduce+OutstandingEvents)/float(TotalRequestedEvents)
 
     if NumEventsToProduce > 0:
@@ -1181,13 +1140,13 @@ def DispatchToInteractive(ID,order,PERCENT):
     else:
         print("All jobs submitted for this order")
 
+
 def DispatchToSWIF(ID,order,PERCENT):
     status = subprocess.call("cp "+MCWRAPPER_BOT_HOME+"/examples/SWIFShell.config ./MCDispatched_"+str(ID)+".config", shell=True)
     WritePayloadConfig(order,"True")
     RunNumber=str(order["RunNumLow"])
     if order["RunNumLow"] != order["RunNumHigh"] :
         RunNumber = RunNumber + "-" + str(order["RunNumHigh"])
-
 
     cleangen=1
     if order["SaveGeneration"]==1:
@@ -1196,11 +1155,11 @@ def DispatchToSWIF(ID,order,PERCENT):
     cleangeant=1
     if order["SaveGeant"]==1:
         cleangeant=0
-    
+
     cleansmear=1
     if order["SaveSmear"]==1:
         cleansmear=0
-    
+
     cleanrecon=1
     if order["SaveReconstruction"]==1:
         cleanrecon=0
@@ -1218,7 +1177,7 @@ def DispatchToSWIF(ID,order,PERCENT):
     OutstandingEvents=0
     if(TOTALOUTSTANDINGEVENTS[0]["SUM(NumEvts)"]):
         OutstandingEvents=TOTALOUTSTANDINGEVENTS[0]["SUM(NumEvts)"]
-    
+
     FileNumber_NewJob=int(-1)
     if(TOTALOUTSTANDINGEVENTS[0]["MAX(FileNumber)"]):
         FileNumber_NewJob=TOTALOUTSTANDINGEVENTS[0]["MAX(FileNumber)"]
@@ -1226,7 +1185,7 @@ def DispatchToSWIF(ID,order,PERCENT):
     FileNumber_NewJob+=1
 
     NumEventsToProduce=min(int(float(TotalRequestedEvents)*float(PERCENT)),TotalRequestedEvents-OutstandingEvents)
-    
+
     percentDisp=float(NumEventsToProduce+OutstandingEvents)/float(TotalRequestedEvents)
 
     if NumEventsToProduce > 0:
@@ -1249,6 +1208,7 @@ def DispatchToSWIF(ID,order,PERCENT):
     else:
         print("All jobs submitted for this order")
 
+
 def WriteConfig(ID):
     query = "SELECT * FROM Project WHERE ID="+str(ID)
     curs.execute(query) 
@@ -1258,6 +1218,7 @@ def WriteConfig(ID):
     WritePayloadConfigString(rows[0],newLoc)
     #status = subprocess.call("cp "+MCWRAPPER_BOT_HOME+"/examples/SWIFShell.config ./MCDispatched_"+str(ID)+".config", shell=True)
     #WritePayloadConfig(rows[0],"True")
+
 
 def WritePayloadConfig(order,foundConfig,jobID=-1):
     #print("writing config file based on\n",order)
@@ -1315,7 +1276,7 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
             MCconfig_file.write("GENERATOR_CONFIG="+foundConfig+"\n")
 
     print("post genconfig!",order["GenPostProcessing"])
-    
+
     if(order["GenPostProcessing"] != None and order["GenPostProcessing"] != ""):
         fileError=False
         parseGenPostProcessing=order["GenPostProcessing"].split(":")
@@ -1338,14 +1299,13 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
                 print("checking for config file:","/osgpool/halld/"+runner_name+"/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_genpost_"+str(i)+".config")
                 if( os.path.exists("/osgpool/halld/"+runner_name+"/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_genpost_"+str(i)+".config")):
                     newGenPost_str+=":/osgpool/halld/"+runner_name+"/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_genpost_"+str(i)+".config"
-                    
                     #fileError=False
                 else:
                     print("Error finding a gen post processing file:",parseGenPostProcessing[i] ,"not found")
                     fileError=True
             else:
                 newGenPost_str+=":Default"
-       
+
         print("file Error:",fileError)
         #exit(1)
         if fileError==False:
@@ -1359,21 +1319,21 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
             msg = EmailMessage()
             msg.set_content("Could not test the project because MCwrapper-bot could not copy the following file: "+parseGenPostProcessing[i]+"\n This may be due to a lack of permissions for "+runner_name+" to read from the containing directory or the file itself may not exist.\n Shortly you will receive a second email that the actual test has failed, please use the link contained in the second email to correct this problem.")
 
-            # me == the sender's email address                                                                                                                                                                                 
-            # you == the recipient's email address                                                                                                                                                                             
+            # me == the sender's email address
+            # you == the recipient's email address
             msg['Subject'] = 'GlueX MC Request #'+str(order['ID'])+' Could not be tested properly'
             msg['From'] = 'MCwrapper-bot'
             msg['To'] = str(order['Email'])
 
-            # Send the message via our own SMTP server.                                                                                                                                                                        
+            # Send the message via our own SMTP server.
             s = smtplib.SMTP('localhost')
             s.send_message(msg)
             s.quit()
 
-            #write message to email_[ProjectID].log file in copy=open("/osgpool/halld/"+runner_name+"/REQUESTED_FAIL_MAILS/email_"+str(row['ID'])+".log", "w+")
-            try:    
-                copy=open("/osgpool/halld/"+runner_name+"/REQUESTED_FAIL_MAILS/email_"+str(row['ID'])+".log", "w+")
-                copy.write("Could not test the project because MCwrapper-bot could not copy the following file: "+parseGenPostProcessing[i]+"\n This may be due to a lack of permissions for "+runner_name+" to read from the containing directory or the file itself may not exist.\n Please correct this issue by following the link: "+'https://halldweb.jlab.org/gluex_sim/SubmitSim.html?prefill='+str(row['ID'])+'&mod=1'+".  Do NOT resubmit this request.")
+            #write message to email_[ProjectID].log file in copy=open("/osgpool/halld/"+runner_name+"/REQUESTED_FAIL_MAILS/email_"+str(order['ID'])+".log", "w+")
+            try:
+                copy=open("/osgpool/halld/"+runner_name+"/REQUESTED_FAIL_MAILS/email_"+str(order['ID'])+".log", "w+")
+                copy.write("Could not test the project because MCwrapper-bot could not copy the following file: "+parseGenPostProcessing[i]+"\n This may be due to a lack of permissions for "+runner_name+" to read from the containing directory or the file itself may not exist.\n Please correct this issue by following the link: "+'https://halldweb.jlab.org/gluex_sim/SubmitSim.html?prefill='+str(order['ID'])+'&mod=1'+".  Do NOT resubmit this request.")
                 copy.close()
             except Exception as e:
                 print(e)
@@ -1384,7 +1344,6 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
             conn.commit()
             return -3
         MCconfig_file.write("GENERATOR_POSTPROCESS="+str(newGenPost_str)+"\n")
-
 
     MCconfig_file.write("GEANT_VERSION="+str(order["GeantVersion"])+"\n")
     MCconfig_file.write("NOSECONDARIES="+str(abs(order["GeantSecondaries"]-1))+"\n")
@@ -1397,7 +1356,6 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
     MCconfig_file.write("DATA_OUTPUT_BASE_DIR=/osgpool/halld/"+runner_name+"/REQUESTEDMC_OUTPUT/"+str(outputstring)+"\n")
     #print "FOUND CONFIG="+foundConfig
 
-
     print("PREIF", order["VersionSet"])
     query_to_do=""
     if(order["RunNumLow"] != order["RunNumHigh"]):
@@ -1408,19 +1366,19 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
 
         if("recon-2019" in order["VersionSet"]):
             query_to_do="@is_dirc_production and @status_approved"
-    
+
         if(order["RCDBQuery"] != ""):
             query_to_do=order["RCDBQuery"]
-    
+
     if(query_to_do != ""):
         MCconfig_file.write("RCDB_QUERY="+query_to_do+"\n")
-    
+
     if(order["eBeamEnergy"] != None):
         MCconfig_file.write("eBEAM_ENERGY="+str(order["eBeamEnergy"])+"\n")
-    
+
     if(order["eBeamCurrent"] != None):
         MCconfig_file.write("eBEAM_CURRENT="+str(order["eBeamCurrent"])+"\n")
-    
+
     if(order["ReactionLines"] != ""):
         if(order["ReactionLines"][0:5] == "file:"):
             jana_config_file=order["ReactionLines"][5:]
@@ -1430,7 +1388,6 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
 
             print("scp "+runner_name+"@"+copy_loc+":"+jana_config_file+" "+"/osgpool/halld/"+runner_name+"/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config")
             subprocess.call("scp "+runner_name+"@"+copy_loc+":"+jana_config_file+" "+"/osgpool/halld/"+runner_name+"/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config",shell=True)
-            
 
             if(os.path.exists("/osgpool/halld/"+runner_name+"/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config")):
                 update_str="Update Project Set ReactionLines='file:/osgpool/halld/"+runner_name+"/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config' where ID="+str(order["ID"])
@@ -1443,13 +1400,13 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
                 msg = EmailMessage()
                 msg.set_content("Could not test the project because MCwrapper-bot could not copy the following file: "+jana_config_file+"\n This may be due to a lack of permissions for "+runner_name+" to read from the containing directory or the file itself may not exist.\n Shortly you will receive a second email that the actual test has failed, please use the link contained in the second email to correct this problem.")
 
-                # me == the sender's email address                                                                                                                                                                                 
-                # you == the recipient's email address                                                                                                                                                                             
+                # me == the sender's email address
+                # you == the recipient's email address
                 msg['Subject'] = 'GlueX MC Request #'+str(order['ID'])+' Could not be tested properly'
                 msg['From'] = 'MCwrapper-bot'
                 msg['To'] = str(order['Email'])
 
-                # Send the message via our own SMTP server.                                                                                                                                                                        
+                # Send the message via our own SMTP server.
                 s = smtplib.SMTP('localhost')
                 s.send_message(msg)
                 s.quit()
@@ -1465,10 +1422,8 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
             jana_config_file.write(janaplugins)
             jana_config_file.close()
 
-
         MCconfig_file.write("CUSTOM_PLUGINS=file:/osgpool/halld/"+runner_name+"/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config\n")
 
-    
     MCconfig_file.write("ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"+str(order["VersionSet"])+"\n")
     print("ADD ANAVER TO PAYLOAD?")
     print(str(order["ANAVersionSet"]))
@@ -1487,6 +1442,7 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
 
     MCconfig_file.close()
 
+
 def DispatchToOSG(ID,order,PERCENT):
     print("Dispatching to OSG")
     status = subprocess.call("cp "+MCWRAPPER_BOT_HOME+"/examples/OSGShell.config ./MCDispatched_"+str(ID)+".config", shell=True)
@@ -1503,15 +1459,14 @@ def DispatchToOSG(ID,order,PERCENT):
     cleangeant=1
     if order["SaveGeant"]==1:
         cleangeant=0
-    
+
     cleansmear=1
     if order["SaveSmear"]==1:
         cleansmear=0
-    
+
     cleanrecon=1
     if order["SaveReconstruction"]==1:
         cleanrecon=0
-
 
     updatequery="UPDATE Project SET Is_Dispatched='"+str(1.0) +"', Dispatched_Time="+"NOW() "+"WHERE ID="+str(ID)+";"
     #print updatequery
@@ -1530,7 +1485,8 @@ def DispatchToOSG(ID,order,PERCENT):
     print(command)
     status_out,status_error= subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=os.environ).communicate()
     #status = subprocess.call(command, shell=True)
-    
+
+
 def WritePayloadConfigString(order,foundConfig):
     config_str=""
 
@@ -1580,7 +1536,6 @@ def WritePayloadConfigString(order,foundConfig):
         else:
             config_str+="GENERATOR_CONFIG="+foundConfig+"\n"
 
-
     if(order["CoherentPeak"] != None):
         config_str+="COHERENT_PEAK="+str(order["CoherentPeak"])+"\n"
     else:
@@ -1588,7 +1543,6 @@ def WritePayloadConfigString(order,foundConfig):
 
     if(order["GenPostProcessing"] != None and order["GenPostProcessing"] != ""):
         config_str+="GEN_POST_PROCESSING="+str(order["GenPostProcessing"])+"\n"
-    
 
     config_str+="GEANT_VERSION="+str(order["GeantVersion"])+"\n"
     config_str+="NOSECONDARIES="+str(abs(order["GeantSecondaries"]-1))+"\n"
@@ -1600,7 +1554,7 @@ def WritePayloadConfigString(order,foundConfig):
     #order["OutputLocation"]).split("/")[7]
     config_str+="DATA_OUTPUT_BASE_DIR=/osgpool/halld/"+runner_name+"/REQUESTEDMC_OUTPUT/"+str(outputstring)+"\n"
     #print "FOUND CONFIG="+foundConfig
-    
+
     query_to_do=""
     if(order["RunNumLow"] != order["RunNumHigh"]):
         query_to_do="@is_production and @status_approved"
@@ -1610,17 +1564,17 @@ def WritePayloadConfigString(order,foundConfig):
 
         if("recon-2019" in order["VersionSet"]):
             query_to_do="@is_dirc_production and @status_approved"
-    
+
         if(order["RCDBQuery"] != ""):
             query_to_do=order["RCDBQuery"]
-    
+
     config_str+="RCDB_QUERY="+query_to_do+"\n"
-    
+
     if(order["eBeamEnergy"] != None):
         config_str+="eBEAM_ENERGY="+str(order["eBeamEnergy"])+"\n"
     #else:
         #print("\nELECTRON BEAM ENERGY SET TO 'RCDB'\n")
-    
+
     if(order["eBeamCurrent"] != None):
         config_str+="eBEAM_CURRENT="+str(order["eBeamCurrent"])+"\n"
 
@@ -1636,7 +1590,6 @@ def WritePayloadConfigString(order,foundConfig):
             #jana_config_file.close()
         config_str+="CUSTOM_PLUGINS=file:/osgpool/halld/"+runner_name+"/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config\n"
 
-    
     config_str+="ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"+str(order["VersionSet"])+"\n"
     #print("ADD ANAVER TO PAYLOAD?")
     #print(str(order["ANAVersionSet"]))
@@ -1654,6 +1607,7 @@ def WritePayloadConfigString(order,foundConfig):
     print(config_str)
     return config_str
 
+
 def main(argv):
     #print(argv)
 
@@ -1670,7 +1624,6 @@ def main(argv):
     PERCENT=1.0
     RUNNING_LIMIT_OVERRIDE=False
     argindex=-1
-
 
     for argu in argv:
         #print "ARGS"
@@ -1696,7 +1649,6 @@ def main(argv):
 
     print("num running", int(numprocesses_running))
     if(int(numprocesses_running) <2 or RUNNING_LIMIT_OVERRIDE ):
-       
 
         #print MODE
         #print SYSTEM
@@ -1729,7 +1681,6 @@ def main(argv):
                 f=open(str(ID)+".err","w+")
                 f.write(str(status[2]))
                 f.close()
-                
         elif MODE == "RETRYJOB":
             RetryJob(ID)
         elif MODE == "RETRYJOBS":
@@ -1748,9 +1699,8 @@ def main(argv):
         else:
             print("MODE NOT FOUND")
 
-        
     conn.close()
-        
+
 
 if __name__ == "__main__":
    main(sys.argv[1:])
