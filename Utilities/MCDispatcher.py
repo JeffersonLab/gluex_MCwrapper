@@ -83,22 +83,6 @@ def RecallAll():
             #subprocess.call(command,shell=True)
 
 
-def BundleFiles(input,output):
-    MCWRAPPER_BOT_HOME="/scigroup/mcwrapper/gluex_MCwrapper/"
-    projectName = input.split("/")[-2] if input[-1]=="/" else input.split("/")[-1]
-    mkdircommand="ssh dtn1902 mkdir -p /osgpool/halld/mcwrap/mergetemp/" + projectName
-    print(mkdircommand)
-    subprocess.call(mkdircommand.split(" "))
-    bundlecommand = "ssh dtn1902 \'" + "echo hostname; source /group/halld/Software/build_scripts/gluex_env_jlab.sh; /usr/bin/python3.6 " + MCWRAPPER_BOT_HOME + "/Utilities/MCMerger.py -f -tempdir /osgpool/halld/mcwrap/mergetemp/" + projectName + "/ " + input + " " + output + "\'"
-    print(bundlecommand)
-    try:
-        out = subprocess.check_output(shlex.split(bundlecommand), stderr=subprocess.STDOUT)
-        return "SUCCESS"
-    except subprocess.CalledProcessError as e:
-        print(e.output)
-        return "ERROR"
-
-
 def DeclareAllComplete():
     conn=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
     curs=conn.cursor(MySQLdb.cursors.DictCursor)
@@ -132,17 +116,6 @@ def DeclareAllComplete():
             curs.execute(update_status_tobundle_q)
             conn.commit()
 
-        #print("BundleFiles("+inputdir+","+outputlocation+")")
-        #mkdircommand="ssh dtn1902 mkdir -p "+outputlocation
-        #print(mkdircommand)
-        #subprocess.call(mkdircommand.split(" "))
-        ##close the connection to the database while we run the bundle files
-        #conn.close()
-        #out=BundleFiles(inputdir,outputlocation)
-        #print("final output",out)
-
-        #if out == "ERROR":
-        #    continue
         print(proj.keys())
         if proj["Tested"]==400:
             #write a file via pelican with the name of proj["ID"] to /work/osgpool/halld/to_be_scrubbed
