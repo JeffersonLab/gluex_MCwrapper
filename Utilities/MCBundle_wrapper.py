@@ -34,34 +34,36 @@ dbpass = ''
 dbname = 'gluex_mc'
 
 try:
-        dbcnx=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
-        dbcursor=dbcnx.cursor(MySQLdb.cursors.DictCursor)
+    dbcnx=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
+    dbcursor=dbcnx.cursor(MySQLdb.cursors.DictCursor)
 except:
-        print("WARNING: CANNOT CONNECT TO DATABASE. DON'T KNOW WHAT TO DO.")
-        exit(1)
+    print("WARNING: CANNOT CONNECT TO DATABASE. DON'T KNOW WHAT TO DO.")
+    exit(1)
+
 
 # def array_split(lst,n):
 #     to_return=[]
 #     for i in range(0,n):
 #         to_return.append([])
-    
+#
 #     for count, ele in enumerate(lst):
 #         #print(ele)
 #         index=count%n
 #         #print(index)
 #         to_return[index].append(ele)
-
+#
 #     #print(count)
 #     #print(len(to_return))
-
+#
 #     return to_return
+
 
 # def BundleAll(tobundle):
 #     for proj in tobundle:
 #         print(proj)
 #         inputdir= proj["OutputLocation"].replace("/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/","/work/osgpool/halld/REQUESTEDMC_OUTPUT/")
 #         outputlocation="/".join(proj["OutputLocation"].split("/")[:-1])+"/"
-        
+#
 #         #update project status
 #         runbundle=21
 #         if proj["Tested"]==40:
@@ -89,6 +91,7 @@ except:
 #             dbcursor.execute(update_q)
 #             dbcnx.commit()
 #         dbcnx.close()
+
 
 def BundleFiles(inputdir,output,merge_dir):
     MCWRAPPER_BOT_HOME="/scigroup/mcwrapper/gluex_MCwrapper/"
@@ -127,12 +130,12 @@ def BundleFiles(inputdir,output,merge_dir):
         subprocess.run([f"rm {merge_dir}/{projectName}/.merging"], shell=True)
         return "ERROR"
 
+
 def main(argv):
     runner_name=pwd.getpwuid( os.getuid() )[0]
     numprocesses_running=subprocess.check_output(["echo `ps all -u "+runner_name+" | grep MCBundle_wrapper.py | grep -v grep | wc -l`"], shell=True)
     spawnNum=3
     print(f"numprocesses_running: {int(numprocesses_running)}")
-
 
     hostname = subprocess.check_output(["hostname"], shell=True).decode().strip()
     print("Hostname:",hostname)
@@ -141,7 +144,7 @@ def main(argv):
         merge_dir = "/export/halld/mcwrap/mergetemp/"
     else:
         merge_dir = "/osgpool/halld/mcwrap/mergetemp/"
-    
+
     if hostname == "dtn2303.jlab.org":
         staging_dir = "/work/osgpool/halld//REQUESTED_MC/"
     else:
@@ -163,11 +166,10 @@ def main(argv):
         tobundle=dbcursor.fetchall()
         print(tobundle)
 
-        
         for proj in tobundle:
             print(proj)
             inputdir= proj["OutputLocation"].replace("/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/","/work/osgpool/halld/REQUESTEDMC_OUTPUT/")
-            
+
             #dirty hack to treat special case of ppauli subdir, NEED TO RESOLVE ASAP
             inputdir = inputdir.replace("ppauli/","") if "ppauli/" in inputdir else inputdir
 
@@ -180,7 +182,7 @@ def main(argv):
             projectName = inputdir.split("/")[-2] if inputdir[-1]=="/" else inputdir.split("/")[-1]
             #check if already being bundled
             print(merge_dir+projectName+"/.merging")
-            
+
             if os.path.isfile(merge_dir+projectName+"/.merging"):
                 print("Currently being bundled")
                 continue
@@ -193,7 +195,7 @@ def main(argv):
 
             if runbundle == 50:
                 return
-            
+
             update_q="UPDATE Project SET Tested="+str(runbundle)+" WHERE ID="+str(proj["ID"])
             print(update_q)
             dbcursor.execute(update_q)
@@ -211,7 +213,7 @@ def main(argv):
 
             print("BEGINNING BUNDLE")
             out=BundleFiles(inputdir,outputlocation,merge_dir)
-            
+
             dbcnx=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
             dbcursor=dbcnx.cursor(MySQLdb.cursors.DictCursor)
 
@@ -236,14 +238,11 @@ def main(argv):
                     rebundle=40
                 elif rebundle==21:
                     rebundle=20
-                
+
                 update_q="UPDATE Project SET Tested="+str(rebundle)+" WHERE ID="+str(proj["ID"])
                 dbcursor.execute(update_q)
                 dbcnx.commit()
             dbcnx.close()
-
-
-
 
         # spawns = []
         # #split tobundle into spawnNum lists
@@ -257,7 +256,6 @@ def main(argv):
         #         p.daemon = True
         #         spawns.append(p)
 
-
         # dbcnx.close()
         # #spawn spawnNum processes
         # for p in spawns:
@@ -266,6 +264,7 @@ def main(argv):
         # for p in spawns:
         #     if p.is_alive():
         #         p.join()
+
 
 if __name__ == "__main__":
    main(sys.argv[1:])

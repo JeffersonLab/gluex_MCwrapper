@@ -6,27 +6,30 @@ import argparse
 import os
 import sys
 
-#Merge HDDM files. Select the REST or simulation HDDM interface based on file name. 
+
 def merge(files, out):
-	if "rest" in files[0]:
-		fout=hddm_r.ostream(out)
-		fout.compression = hddm_r.k_z_compression
-		for f in files: 
-			for entry in hddm_r.istream(f):
-				fout.write(entry)
-	else:
-		fout=hddm_s.ostream(out)
-		fout.compression = hddm_s.k_z_compression
-		for f in files: 
-			for entry in hddm_s.istream(f):
-				fout.write(entry)
+    """Merge HDDM files. Select the REST or simulation HDDM interface based on file name."""
+    if "rest" in files[0]:
+        fout=hddm_r.ostream(out)
+        fout.compression = hddm_r.k_z_compression
+        for f in files: 
+            for entry in hddm_r.istream(f):
+                fout.write(entry)
+    else:
+        fout=hddm_s.ostream(out)
+        fout.compression = hddm_s.k_z_compression
+        for f in files: 
+            for entry in hddm_s.istream(f):
+                fout.write(entry)
+
 
 def main(args):
-	merge(args.files, args.output)
-	
+    merge(args.files, args.output)
+
+
 if __name__ == "__main__":
-	parser = argparse.ArgumentParser(description="Bundle and move MCwrapper outputs to another directory.")
-	parser.add_argument("output")
-	parser.add_argument("files", nargs="+")
-	args = parser.parse_args()
-	sys.exit(main(args))		
+    parser = argparse.ArgumentParser(description="Bundle and move MCwrapper outputs to another directory.")
+    parser.add_argument("output")
+    parser.add_argument("files", nargs="+")
+    args = parser.parse_args()
+    sys.exit(main(args))

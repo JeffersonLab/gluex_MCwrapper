@@ -17,7 +17,7 @@ try:
     from subprocess import Popen, PIPE
     import socket
     import pprint
-    import smtplib                                                                                                                                                                          
+    import smtplib
     from email.message import EmailMessage
     from multiprocessing import Process, Queue
 except:
@@ -29,7 +29,6 @@ import plotly
 from plotly.subplots import make_subplots
 import pandas as pd
 
-
 MCWRAPPER_BOT_HOME="/u/group/halld/gluex_MCwrapper/"
 dbhost = "hallddb.jlab.org"
 dbuser = 'mcuser'
@@ -39,6 +38,7 @@ dbname = 'gluex_mc'
 conn=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
 curs=conn.cursor(MySQLdb.cursors.DictCursor)
 
+
 def getAverage(numlist):
     summ=0
     denom=0
@@ -46,7 +46,7 @@ def getAverage(numlist):
     for i in range(0,listlen):
         denom+=numlist[i]
         summ+=i*numlist[i]
-    
+
     if denom != 0:
         print("Avg number of attempts: ", float(summ)/float(denom))
         return float(summ)/float(denom)
@@ -54,13 +54,14 @@ def getAverage(numlist):
         print("Can't compute Average as it is nan")
         return 0.
 
+
 def getNumStartDistribution(ID, makePlot,extraConstraint="",outputLoc="./MCAnalyze_out/"):
     print("Getting the distributions of attempts for project",ID)
     count_q="SELECT NumStarts as Starts from Attempts where NumStarts is NOT NULL && Job_ID in (SELECT ID from Jobs where Project_ID IN (SELECT ID FROM Project where ID="+str(ID)
     if(extraConstraint != ""):
         count_q+=" && "+extraConstraint
     count_q+=")) GROUP BY Job_ID;"
-    
+
     print(count_q)
     curs.execute(count_q) 
     rows=curs.fetchall()
@@ -81,15 +82,15 @@ def getNumStartDistribution(ID, makePlot,extraConstraint="",outputLoc="./MCAnaly
         rawarr.append(entry["Starts"])
         count_arr[entry["Starts"]]+=1
 
-
     if(makePlot):
         df=pd.DataFrame(rawarr,columns=["Starts"])
         fig = px.histogram(df,x="Starts",nbins=len(count_arr))
         plotly.offline.plot(fig,filename=outputLoc+"StartsDistribution_"+str(ID)+".html",image = 'png', image_filename=outputLoc+"StartsDistribution_"+str(ID))
-    
+
     print(count_arr)
 
     #return getAverage(count_arr)
+
 
 def getAttemptDistribution(ID, makePlot,extraConstraint="",outputLoc="./MCAnalyze_out/"):
     print("Getting the distributions of attempts for project",ID)
@@ -97,7 +98,7 @@ def getAttemptDistribution(ID, makePlot,extraConstraint="",outputLoc="./MCAnalyz
     if(extraConstraint != ""):
         count_q+=" && "+extraConstraint
     count_q+=")) GROUP BY Job_ID;"
-    
+
     print(count_q)
     curs.execute(count_q) 
     rows=curs.fetchall()
@@ -118,28 +119,24 @@ def getAttemptDistribution(ID, makePlot,extraConstraint="",outputLoc="./MCAnalyz
         rawarr.append(entry["AttemptsCount"])
         count_arr[entry["AttemptsCount"]]+=1
 
-
     if(makePlot):
         df=pd.DataFrame(rawarr,columns=["Attempts_Count"])
         fig = px.histogram(df,x="Attempts_Count",nbins=len(count_arr))
         plotly.offline.plot(fig,filename=outputLoc+"CountDistribution_"+str(ID)+".html",image = 'png', image_filename=outputLoc+"CountDistribution_"+str(ID))
-    
 
     print(count_arr)
 
-    
-
     return getAverage(count_arr)
+
 
 def getAttemptFailurePie(ID,extraConstraint="",fileName="failurePie_Total",outputLoc="./MCAnalyze_out/"):
     print("Getting the Failure Pie for project ",ID)
     count_q="SELECT ProgramFailed as pf,COUNT(*) as AttemptsCount from Attempts where ProgramFailed is not NULL && Job_ID in (SELECT ID from Jobs where Project_ID IN (SELECT ID FROM Project where ID>"+str(ID)
-    
-    
+
     if(extraConstraint != ""):
         count_q+=" && "+extraConstraint
     count_q+=")) GROUP BY ProgramFailed;"
-    
+
     print(count_q)
     curs.execute(count_q) 
     rows=curs.fetchall()
@@ -155,7 +152,7 @@ def getAttemptFailurePie(ID,extraConstraint="",fileName="failurePie_Total",outpu
 
     curs.execute(Null_count_q) 
     nullrows=curs.fetchall()
-    
+
     for row in nullrows:
         if row["pf"]==232:
             row["pf"]="Random trigger not found"
@@ -174,10 +171,8 @@ def getAttemptFailurePie(ID,extraConstraint="",fileName="failurePie_Total",outpu
     DF=pd.concat([df,df2])
     print("concat completed")
 
-        
-
     titleString="Failure Blame For "
-    
+
     if(int(ID)==0):
         titleString+="All Projects"
 
@@ -189,6 +184,7 @@ def getAttemptFailurePie(ID,extraConstraint="",fileName="failurePie_Total",outpu
     fig = px.pie(DF, values='AttemptsCount', names='pf', title=titleString)
     fig.update_traces(textposition='inside', textinfo='percent+label')
     plotly.offline.plot(fig,filename=outputLoc+fileName+".html",image = 'png', image_filename=outputLoc+fileName)
+
 
 def main(argv):
     ap = argparse.ArgumentParser()
@@ -217,7 +213,6 @@ def main(argv):
     if(not args["outputloc"] is None):
         outputLoc=args["outputloc"]
 
-
     outputLoc+="MCAnalyze_out/"
 
     subprocess.call("mkdir -p "+outputLoc,shell=True)
@@ -230,7 +225,6 @@ def main(argv):
         getAttemptDistribution(ProjectID,True,outputLoc=outputLoc)
         getNumStartDistribution(ProjectID,True,outputLoc=outputLoc)
         getAttemptFailurePie(0,"ID="+str(ProjectID),"failurePie_Proj"+str(ProjectID),outputLoc)
-        
 
     else:
         print("Total analysis")
@@ -245,7 +239,7 @@ def main(argv):
         rows=curs.fetchall()
         Totaldf = pd.DataFrame(rows)
         x_arr=[]
-        
+
         for row in rows:
             if(not row[Xaxis_key]):
                 x_arr.append("NA")
@@ -261,10 +255,9 @@ def main(argv):
         if(str(x_arr[0]).isnumeric() or isinstance(x_arr[0],datetime.datetime)):
             fig = px.scatter(x=x_arr, y=weightedAvg_arr)
             fig.update_layout(yaxis_type="log",xaxis_title=Xaxis_key,yaxis_title="avg_attempts_per_jobs",title=titleString)
-            
         else:
             fig = px.histogram(Totaldf,x=Xaxis_key,y="avg_attempts_per_jobs", histfunc='avg')
-        
+
         plotly.offline.plot(fig,filename=outputLoc+"/CountDistribution_Total"+".html",image = 'png', image_filename=outputLoc+"/AvgCountDistribution_Total")
 
         print("XAxis:",Xaxis_key)
