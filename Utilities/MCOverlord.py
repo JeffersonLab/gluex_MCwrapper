@@ -636,22 +636,25 @@ def UpdateOutputSize():
         #print querygetLoc
         dbcursor.execute(querygetLoc)
         Project = dbcursor.fetchall()
-        location=Project[0]["OutputLocation"]
+        location=Project[0]["OutputLocation"].replace("/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/","/work/osgpool/halld/REQUESTEDMC_OUTPUT/")
 
         if Project[0]["FinalDestination"]:
             location=Project[0]["FinalDestination"]
 
         try:
-            statuscommand="ssh "+runner_name+"@dtn1902 du -sh --exclude \".*\" --total "+location
-            print(statuscommand)
-            totalSizeStr=subprocess.check_output([statuscommand], shell=True)
-            #print "==============="
-            #print totalSizeStr.split("\n")[1].split("total")[0]
+            statuscommand="ssh "+runner_name+"@ifarm2401 du -sh --exclude \"..*\" --total "+location
+            #print(statuscommand)
+            rawOutputStr=subprocess.check_output([statuscommand], shell=True)
+            totalOutLine=rawOutputStr.decode().splitlines()[-1].strip()
+            size_str = totalOutLine.split()[0]
+            #print(size_str)
 
-            updateProjectSizeOut="UPDATE Project SET TotalSizeOut=\""+totalSizeStr.split("\n")[1].split("total")[0]+"\" WHERE ID="+str(id)
+            updateProjectSizeOut="UPDATE Project SET TotalSizeOut=\""+size_str+"\" WHERE ID="+str(id)
+            print(updateProjectSizeOut)
             dbcursor.execute(updateProjectSizeOut)
             dbcnx.commit()
         except:
+            print("passing")
             pass
 
 
@@ -1068,7 +1071,7 @@ def main(argv):
                     #SWIF CHECK MUST BE SINGLE THREADED FOR NOW DUE TO THE VODOO NOT BEING THREAD SAFE
 
                 print("CHECKING GLOBALS ON MAIN")
-                #UpdateOutputSize() broken without lustre mounted
+                UpdateOutputSize()
                 #MULTI PROCESS THIS? MAYBE 5-10 processes
 
                 OutstandingProjectsQuery="SELECT * FROM Project WHERE (Is_Dispatched != '0' && Tested != '-1' && Tested != '2' ) && Notified is NULL"
