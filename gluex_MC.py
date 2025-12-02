@@ -2036,8 +2036,19 @@ def GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,RUNNUM):
                         running_hostname=socket.gethostname()
                         if running_hostname == "scosg16.jlab.org" or running_hostname == "scosg20.jlab.org" or running_hostname == "scosg2201.jlab.org":
                                 os.system("mkdir -p /tmp/"+RANDBGTAG)
-                                print("scp dtn2303:/work/osgpool/halld/random_triggers/"+RANDBGTAG+"/run"+formattedRUNNUM+"_random.hddm /tmp/"+RANDBGTAG)
-                                os.system("scp dtn2303:/work/osgpool/halld/random_triggers/"+RANDBGTAG+"/run"+formattedRUNNUM+"_random.hddm /tmp/"+RANDBGTAG)
+
+                                # Try copying the file with pelican:
+                                pelican_get_string="pelican object get osdf://jlab-osdf/gluex/osgpool/random_triggers/"+RANDBGTAG+"/run"+formattedRUNNUM+"_random.hddm /tmp/"+RANDBGTAG
+                                token_str='eval `ssh-agent`; /usr/bin/ssh-add; '
+                                agent_kill_str="; ssh-agent -k"
+                                print(token_str+pelican_get_string+agent_kill_str)
+                                
+                                os.environ["BEARER_TOKEN_FILE"]="/var/run/user/10967/bt_u10967"
+                                os.environ["XDG_RUNTIME_DIR"]="/run/user/10967"
+                                my_env=os.environ.copy()
+
+                                p = subprocess.Popen(token_str+pelican_get_string+agent_kill_str, env=my_env ,stdin=subprocess.PIPE,stdout=subprocess.PIPE, stderr=subprocess.PIPE,bufsize=-1,shell=True,close_fds=True)
+                                output, errors = p.communicate()
 
                         if not os.path.isfile(realpath):
                                 print("can't find file to scan.")
