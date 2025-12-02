@@ -1589,7 +1589,7 @@ if [[ "$GENR" != "0" ]]; then # run generation
 		$runGen gen_tcs_bh $STANDARD_NAME.conf 
 		
 		generator_return_code=$?
-		#mv $outFile $STANDARD_NAME.hddm
+		mv $outFile $STANDARD_NAME.hddm
 				
 	elif [[ "$GENERATOR" == "gen_ee_hb" ]]; then
 		echo $runGen gen_ee_hb -N$RUN_NUMBER -n$EVT_TO_GEN

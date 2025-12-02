@@ -1549,7 +1549,7 @@ if ( "$GENR" != "0" ) then #run generation
 		echo $runGen gen_tcs_bh $STANDARD_NAME.conf
 		$runGen gen_tcs_bh $STANDARD_NAME.conf 
 		set generator_return_code=$status
-		#mv $outFile $STANDARD_NAME.hddm
+		mv $outFile $STANDARD_NAME.hddm
 	else if ( "$GENERATOR" == "gen_ee_hb" ) then
 		echo gen_ee_hb -N$RUN_NUMBER -n$EVT_TO_GEN
 		echo $runGen gen_ee_hb -N$RUN_NUMBER -n$EVT_TO_GEN
