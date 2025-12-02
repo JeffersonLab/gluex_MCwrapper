@@ -210,7 +210,7 @@ def bash_configurations(name_map, path, mc_dir):
 
 def get_entry(file_name):
     """Return the prefix, run number, and suffix of file_name as a tuple by matching on the run number."""
-    match = re.search("([0-9]{6})_[0-9]{3}", file_name)
+    match = re.search("([0-9]{6})_([0-9]{3,4})(?![0-9])", file_name)
     if match:
         prefix = file_name[:match.start()]
         run_num = match.group(1)

@@ -172,6 +172,8 @@ export USER_PYTHON=`which python`
 export USER_STAT=`which stat`
 export BEARER_TOKEN_FILE=${_CONDOR_CREDS}/jlab_gluex.use
 
+export RANDOMS_OSDF=osdf://jlab-osdf/gluex/osgpool/random_triggers/
+
 length_count=$((`echo $RUN_NUMBER | wc -c` - 1))
 
 formatted_runNumber=""
@@ -186,7 +188,7 @@ flength_count=$((`echo $FILE_NUMBER | wc -c` - 1))
 export XRD_RANDOMS_URL=root://dtn2303.jlab.org
 export RANDOMS_PREPEND=/work/osgpool/halld/
 if [[ "$BATCHSYS" == "OSG" && "$BATCHRUN"=="1" || `hostname` == 'scosg2201.jlab.org' ]]; then
-	export XRD_RANDOMS_URL=osdf://jlab-osdf/gluex/work/halld/mcwrap/random_triggers/
+	export XRD_RANDOMS_URL=${RANDOMS_OSDF}
 	export RANDOMS_PREPEND=""
 fi
 
@@ -211,7 +213,7 @@ if [[ "$BATCHSYS" == "OSG" && "$BATCHRUN"=="1" || `hostname` == 'scosg2201.jlab.
 		which pelican
 		echo "RANDBGTAG: $RANDBGTAG"
 		echo "formatted_runNumber: $formatted_runNumber"
-		export contest=`/usr/bin/pelican object ls osdf://jlab-osdf/gluex/work/halld/mcwrap/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1`
+		export contest=`/usr/bin/pelican object ls ${RANDOMS_OSDF}/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1`
 		echo "random trigger pelican connection test: $contest"
 		if [[ $contest != "r" ]]; then
 			echo "Pelican Connection test failed. Falling back to XROOTD...."
@@ -1824,10 +1826,29 @@ else
 				$runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:$RANDBGRATE\+$fold_skip_num
 				mcsmear_return_code=$?
 			elif [[ $MAKE_MC_USING_PELICAN == 1 ]]; then
-				echo /usr/bin/pelican object get osdf://jlab-osdf/gluex/work/halld/mcwrap/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm ./run$formatted_runNumber\_random.hddm
-				/usr/bin/pelican object get osdf://jlab-osdf/gluex/work/halld/mcwrap/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm ./run$formatted_runNumber\_random.hddm
+				echo /usr/bin/pelican object get ${RANDOMS_OSDF}/$RANDBGTAG/run$formatted_runNumber\_random.hddm ./run$formatted_runNumber\_random.hddm
+				/usr/bin/pelican object get ${RANDOMS_OSDF}/$RANDBGTAG/run$formatted_runNumber\_random.hddm ./run$formatted_runNumber\_random.hddm
 				echo ls -lh run$formatted_runNumber\_random.hddm
 				ls -lh run$formatted_runNumber\_random.hddm
+				
+				if [[ $RANDOM_TRIG_NUM_EVT == -1 ]]; then
+					echo "RANDOM TRIGGER TOTAL EVENTS: " $RANDOM_TRIG_NUM_EVT
+					rm -f count.py
+					echo "import hddm_s" > count.py
+					echo "print(sum(1 for r in hddm_s.istream('run${formatted_runNumber}_random.hddm')))" >> count.py
+					totalnum=$( $USER_PYTHON count.py )
+					rm -f count.py
+				else
+					totalnum=$RANDOM_TRIG_NUM_EVT
+				fi
+				echo "TOTAL NUM SET:" $totalnum
+				if [[ $totalnum == -1 ]]; then
+					echo "could not count file. exiting"
+					exit 230
+				fi
+				fold_skip_num=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
+				echo "skipping: "$fold_skip_num
+				
 				echo $runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm ./run$formatted_runNumber\_random.hddm\:$RANDBGRATE\+$fold_skip_num
 				$runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm ./run$formatted_runNumber\_random.hddm\:$RANDBGRATE\+$fold_skip_num
 				mcsmear_return_code=$?
