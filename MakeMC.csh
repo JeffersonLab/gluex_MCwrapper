@@ -791,9 +791,9 @@ if ( "$GENR" != "0" ) then #run generation
 
 	set gen_pre=`echo $GENERATOR | cut -c1-4`
 
-	if ( "$gen_pre" != "file" && "$GENERATOR" != "genr8" && "$GENERATOR" != "bggen" && "$GENERATOR" != "genEtaRegge" && "$GENERATOR" != "genScalarRegge" && "$GENERATOR" != "gen_2pi_amp" && "$GENERATOR" != "gen_pi0" && "$GENERATOR" != "gen_2pi_primakoff" && "$GENERATOR" != "gen_2pi0_primakoff" && "$GENERATOR" != "gen_omega_3pi" && "$GENERATOR" != "gen_omegapi" && "$GENERATOR" != "gen_2k" && "$GENERATOR" != "bggen_jpsi" && "$GENERATOR" != "gen_ee" && "$GENERATOR" != "gen_ee_hb" && "$GENERATOR" != "particle_gun" && "$GENERATOR" != "geantBEAM" && "$GENERATOR" != "bggen_phi_ee" && "$GENERATOR" != "genBH" && "$GENERATOR" != "gen_omega_radiative" && "$GENERATOR" != "gen_amp" && "$GENERATOR" != "gen_amp_V2" && "$GENERATOR" != "genr8_new" && "$GENERATOR" != "gen_compton" && "$GENERATOR" != "gen_npi" && "$GENERATOR" != "gen_compton_simple" && "$GENERATOR" != "gen_primex_eta_he4" && "$GENERATOR" != "gen_generic_root" && "$GENERATOR" != "gen_whizard" && "$GENERATOR" != "mc_gen" && "$GENERATOR" != "gen_vec_ps" && "$GENERATOR" != "bggen_upd" && "$GENERATOR" != "python") then
+	if ( "$gen_pre" != "file" && "$GENERATOR" != "genr8" && "$GENERATOR" != "bggen" && "$GENERATOR" != "genEtaRegge" && "$GENERATOR" != "genScalarRegge" && "$GENERATOR" != "gen_2pi_amp" && "$GENERATOR" != "gen_pi0" && "$GENERATOR" != "gen_2pi_primakoff" && "$GENERATOR" != "gen_2pi0_primakoff" && "$GENERATOR" != "gen_omega_3pi" && "$GENERATOR" != "gen_omegapi" && "$GENERATOR" != "gen_2k" && "$GENERATOR" != "bggen_jpsi" && "$GENERATOR" != "gen_ee" && "$GENERATOR" != "gen_tcs_bh" &&  "$GENERATOR" != "gen_ee_hb" && "$GENERATOR" != "particle_gun" && "$GENERATOR" != "geantBEAM" && "$GENERATOR" != "bggen_phi_ee" && "$GENERATOR" != "genBH" && "$GENERATOR" != "gen_omega_radiative" && "$GENERATOR" != "gen_amp" && "$GENERATOR" != "gen_amp_V2" && "$GENERATOR" != "genr8_new" && "$GENERATOR" != "gen_compton" && "$GENERATOR" != "gen_npi" && "$GENERATOR" != "gen_compton_simple" && "$GENERATOR" != "gen_primex_eta_he4" && "$GENERATOR" != "gen_generic_root" && "$GENERATOR" != "gen_whizard" && "$GENERATOR" != "mc_gen" && "$GENERATOR" != "gen_vec_ps" && "$GENERATOR" != "cbggen_upd" && "$GENERATOR" != "python") then
 		echo "NO VALID GENERATOR GIVEN"
-		echo "only [genr8, bggen, genEtaRegge, genScalarRegge, gen_2pi_amp, gen_pi0, gen_omega_3pi, gen_2k, bggen_jpsi, gen_ee , gen_ee_hb, bggen_phi_ee, particle_gun, geantBEAM, genBH, gen_omega_radiative, gen_amp, gen_amp_V2, gen_compton, gen_npi, gen_compton_simple, gen_primex_eta_he4, gen_generic_root, gen_whizard, gen_omegapi, mc_gen, gen_vec_ps, bggen_upd, python] are supported"
+		echo "only [genr8, bggen, genEtaRegge, genScalarRegge, gen_2pi_amp, gen_pi0, gen_omega_3pi, gen_2k, bggen_jpsi, gen_ee, gen_tcs_bh, gen_ee_hb, bggen_phi_ee, particle_gun, geantBEAM, genBH, gen_omega_radiative, gen_amp, gen_amp_V2, gen_compton, gen_npi, gen_compton_simple, gen_primex_eta_he4, gen_generic_root, gen_whizard, gen_omegapi, mc_gen, gen_vec_ps, bggen_upd, python] are supported"
 		echo "something went wrong with initialization"
 		exit 1
 	endif
@@ -1047,6 +1047,15 @@ if ( "$GENR" != "0" ) then #run generation
 		echo "configuring gen_ee"
 		STANDARD_NAME="gen_ee_"$STANDARD_NAME
 		cp $CONFIG_FILE ./$STANDARD_NAME.conf
+	else if ( "$GENERATOR" == "gen_tcs_bh" ) then
+		echo "configuring gen_tcs_bh"
+		set STANDARD_NAME="gen_tcs_bh_"$STANDARD_NAME
+
+		#set MCWRAPPER_CENTRAL_CNTR=`$runGen printenv MCWRAPPER_CENTRAL | tail -n1`
+		set MCWRAPPER_CENTRAL_CNTR="/w/halld-scshelf2101/home/gchung/tcs_sim2/gluex_MCwrapper" # for testing purpose
+		$runGen cp $MCWRAPPER_CENTRAL_CNTR/Generators/gen_tcs_bh/run/tcs_bh_TEMPLATE.conf ./
+		cp tcs_bh_TEMPLATE.conf ./$STANDARD_NAME.conf
+		
 	else if ( "$GENERATOR" == "gen_ee_hb" ) then
 		echo "configuring gen_ee_hb"
 		set STANDARD_NAME="gen_ee_hb_"$STANDARD_NAME
@@ -1471,6 +1480,76 @@ if ( "$GENR" != "0" ) then #run generation
 		echo $runGen gen_ee -d$STANDARD_NAME.conf -c$STANDARD_NAME'_beam.conf' -o$STANDARD_NAME.hddm -n$EVT_TO_GEN -z$RUN_NUMBER -l$GEN_MIN_ENERGY -u$GEN_MAX_ENERGY -r$RANDOMnum $optionals_line
 		$runGen gen_ee -d$STANDARD_NAME.conf -c$STANDARD_NAME'_beam.conf' -o$STANDARD_NAME.hddm -n$EVT_TO_GEN -z$RUN_NUMBER -l$GEN_MIN_ENERGY -u$GEN_MAX_ENERGY -r$RANDOMnum $optionals_line
 		set generator_return_code=$status
+	else if ( "$GENERATOR" == "gen_tcs_bh" ) then
+		echo "RUNNING GEN_TCS_BH"
+		set RANDOMnum=`bash -c 'echo $RANDOM'`
+		echo "Random number used: "$RANDOMnum
+		echo "Using MakeMC.csh"
+		# Read config file
+		foreach line ("`grep ':' $CONFIG_FILE | grep -v '^[[:space:]]*#'`")
+		    set key=`echo $line | cut -d':' -f1 | tr -d ' '`
+		    set val=`echo $line | cut -d':' -f2- | sed 's/^[ \t]*//; s/[ \t]*$//'`
+
+		    if ("$val" == "") then
+			echo "WARNING: $key has no assigned value — skipped"
+		    else
+			echo "Setting $key = $val"
+			set $key="$val"
+		    endif
+		end
+
+		sed -i "s|TEMPREACTION|$reaction|"       $STANDARD_NAME.conf
+
+		sed -i "s|TEMPRANDSEED|$seedentry|"      $STANDARD_NAME.conf
+
+		sed -i "s|TEMPBEAMTYPE|$beamtype|"      $STANDARD_NAME.conf
+		sed -i "s|TEMPEMIN|$EphotonMin|"              $STANDARD_NAME.conf
+		sed -i "s|TEMPEMAX|$EphotonMax|"              $STANDARD_NAME.conf
+		#sed -i "s|TEMPEMIN|$GEN_MIN_ENERGY|"              $STANDARD_NAME.conf
+		#sed -i "s|TEMPEMAX|$GEN_MAX_ENERGY|"              $STANDARD_NAME.conf
+		sed -i "s|TEMPEELECTRON|$Eelectron|"    $STANDARD_NAME.conf
+		sed -i "s|TEMPTHEMAX|$thetaphotoMax|"          $STANDARD_NAME.conf
+
+		sed -i "s|TEMPNEVENTS|$EVT_TO_GEN|"        $STANDARD_NAME.conf
+		sed -i "s|TEMPRUNNUM|$RUN_NUMBER|"          $STANDARD_NAME.conf
+		sed -i "s|TEMPARTICLE|$outLepton|"        $STANDARD_NAME.conf
+
+		sed -i "s|TEMPTGT_LEN|$targetLength|"        $STANDARD_NAME.conf
+		sed -i "s|TEMPTGT_A|$A_target|"            $STANDARD_NAME.conf
+		sed -i "s|TEMPTGT_Z|$Z_target|"            $STANDARD_NAME.conf
+		sed -i "s|TEMPPROT_NEUT|$protonOrNeutron|"    $STANDARD_NAME.conf
+
+		sed -i "s|TEMPPOLBEAM|$polBeamDeg|"        $STANDARD_NAME.conf
+		sed -i "s|TEMPPOLTYPE|$beamPolarType|"        $STANDARD_NAME.conf
+		sed -i "s|TEMPTGTPOLDIR|$targetPolDir|"    $STANDARD_NAME.conf
+		sed -i "s|TEMPTGTPOLDEG|$polTargetDeg|"    $STANDARD_NAME.conf
+
+		sed -i "s|TEMP_MTMIN|$mt_Min|"          $STANDARD_NAME.conf
+		sed -i "s|TEMP_MTMAX|$mt_Max|"          $STANDARD_NAME.conf
+		sed -i "s|TEMP_QPMIN|$Qp2Min|"          $STANDARD_NAME.conf
+		sed -i "s|TEMP_QPMAX|$Qp2Max|"          $STANDARD_NAME.conf
+		sed -i "s|TEMP_TCMMIN|$thetaCMMin|"        $STANDARD_NAME.conf
+		sed -i "s|TEMP_TCMMAX|$thetaCMMax|"        $STANDARD_NAME.conf
+		sed -i "s|TEMP_Q2MAX|$Q2Max|"          $STANDARD_NAME.conf
+
+		sed -i "s|TEMPRADTYPE|$radCorrType|"        $STANDARD_NAME.conf
+		sed -i "s|TEMPECUT|$eCut|"              $STANDARD_NAME.conf
+
+		sed -i "s|TEMPOUTFORMAT|$outFormat|"    $STANDARD_NAME.conf
+
+		sed -i "s|TEMP_THMS|$thetaHMS|"            $STANDARD_NAME.conf
+		sed -i "s|TEMP_SHMS|$thetaSHMS|"            $STANDARD_NAME.conf
+		sed -i "s|TEMP_PHMS|$pHMS|"            $STANDARD_NAME.conf
+		sed -i "s|TEMP_PSHMS|$pSHMS|"          $STANDARD_NAME.conf
+
+		sed -i "s|TEMPXSECPATH|$xsecpath|"      $STANDARD_NAME.conf
+		sed -i "s|TEMPOUTFILE|$outFile|"        $STANDARD_NAME.conf
+		sed -i "s|TEMPINDEX|$indexrun|"            $STANDARD_NAME.conf
+	
+		echo $runGen gen_tcs_bh $STANDARD_NAME.conf
+		$runGen gen_tcs_bh $STANDARD_NAME.conf 
+		set generator_return_code=$status
+		#mv $outFile $STANDARD_NAME.hddm
 	else if ( "$GENERATOR" == "gen_ee_hb" ) then
 		echo gen_ee_hb -N$RUN_NUMBER -n$EVT_TO_GEN
 		echo $runGen gen_ee_hb -N$RUN_NUMBER -n$EVT_TO_GEN
