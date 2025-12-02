@@ -940,6 +940,17 @@ if [[ "$GENR" != "0" ]]; then # run generation
 			echo "ROOTPolFile $POL_TO_GEN" >> beam.config
 			echo "ROOTPolName $POL_HIST" >> beam.config
 		fi
+	elif [[ "$FLUX_TO_GEN" == "tagged-ccdb" ]]; then
+		echo "CCDBRunNumber $RUN_NUMBER" >> beam.config
+		echo "ROOTFluxFile $FLUX_TO_GEN" >> beam.config
+		if [[ "$POL_TO_GEN" == "tagged-ccdb" ]]; then
+			echo "ROOTPolFile $POL_TO_GEN" >> beam.config
+		elif [[ "$POL_HIST" == "unset" ]]; then
+			echo "PolarizationMagnitude $POL_TO_GEN" >> beam.config
+		else
+			echo "ROOTPolFile $POL_TO_GEN" >> beam.config
+			echo "ROOTPolName $POL_HIST" >> beam.config
+		fi	
 	elif [[ "$FLUX_TO_GEN" == "cobrems" ]]; then
 		echo "ElectronBeamEnergy $eBEAM_ENERGY" >> beam.config
 		echo "CoherentPeakEnergy $COHERENT_PEAK" >> beam.config
@@ -949,7 +960,9 @@ if [[ "$GENR" != "0" ]]; then # run generation
 		echo "CollimatorDistance 76.0" >> beam.config
 
 		if [[ "$POL_TO_GEN" == "ccdb" ]]; then
-			echo "Ignoring TPOL from ccdb in favor of cobrems generated values"
+		    echo "Ignoring TPOL from untagged ccdb in favor of cobrems generated values"
+		elif [[ "$POL_TO_GEN" == "tagged-ccdb" ]]; then
+			echo "Ignoring TPOL from tagged ccdb in favor of cobrems generated values"    
 		elif [[ "$POL_HIST" == "cobrems" ]]; then
 			echo "PolarizationMagnitude $POL_TO_GEN" >> beam.config
 		elif [[ "$POL_HIST" != "unset" ]]; then
@@ -963,6 +976,10 @@ if [[ "$GENR" != "0" ]]; then # run generation
 			echo "Can't use a flux file and Polarization from ccdb"
 			echo "something went wrong with initialization"
 			exit 1
+		elif [[ "$POL_TO_GEN" == "tagged-ccdb" ]]; then
+			echo "Can't use a flux file and Polarization from ccdb"
+			echo "something went wrong with initialization"
+			exit 1	
 		elif [[ "$POL_HIST" == "unset" ]]; then
 			echo "PolarizationMagnitude $POL_TO_GEN" >> beam.config
 		else

@@ -1051,6 +1051,93 @@ def calcFluxCCDB(ccdb_conn, run, emin, emax):
 
         return flux
 
+def calcTaggedFluxCCDB(ccdb_conn, run, emin, emax):
+
+        flux = 0.
+        VARIATION = "default"
+        CALIBTIME = datetime.now()
+        CALIBTIME_USER = CALIBTIME
+        CALIBTIME_ENERGY = CALIBTIME
+
+        # Set livetime scale factor
+        livetime_ratio = 0.0
+        try:
+                livetime_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/pair_spectrometer/lumi/trig_live", run[0], VARIATION, CALIBTIME)
+                livetime = livetime_assignment.constant_set.data_table
+                if float(livetime[3][1]) > 0.0: # check that livetimes are non-zero
+                       livetime_ratio = float(livetime[0][1])/float(livetime[3][1])
+                else: # if bad livetime assume ratio is 1
+                       livetime_ratio = 1.0
+        except:
+                livetime_ratio = 1.0 # default to unity if table doesn't exist
+
+        # Conversion factors for total flux
+        converterThickness = run[2]
+        converterLength = 75e-6 # default is 75 um
+        if converterThickness == "Be 750um":
+                converterLength = 750e-6
+        elif converterThickness != "Be 75um":
+                print("Unknown converter thickness for run %s: %s, assuming Be 75um" % (run[0],run[2]))
+
+        berilliumRL = 35.28e-2 # 35.28 cm
+        radiationLength = converterLength/berilliumRL
+        scale = livetime_ratio * 1./((7/9.) * radiationLength)
+
+        photon_endpoint = array('d')
+        tagh_tagged_flux = array('d')
+        tagh_scaled_energy = array('d')
+        tagm_tagged_flux = array('d')
+        tagm_scaled_energy = array('d')
+
+        try:
+                photon_endpoint_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/endpoint_energy", run[0], VARIATION, CALIBTIME_ENERGY)
+                photon_endpoint = photon_endpoint_assignment.constant_set.data_table
+
+                tagh_tagged_flux_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/pair_spectrometer/lumi/tagh/tagged", run[0], VARIATION, CALIBTIME)
+                tagh_tagged_flux = tagh_tagged_flux_assignment.constant_set.data_table
+                tagh_scaled_energy_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/hodoscope/scaled_energy_range", run[0], VARIATION, CALIBTIME_ENERGY)
+                tagh_scaled_energy_table = tagh_scaled_energy_assignment.constant_set.data_table
+
+                tagm_tagged_flux_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/pair_spectrometer/lumi/tagm/tagged", run[0], VARIATION, CALIBTIME)
+                tagm_tagged_flux = tagm_tagged_flux_assignment.constant_set.data_table
+                tagm_scaled_energy_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/hodoscope/scaled_energy_range", run[0], VARIATION, CALIBTIME_ENERGY)
+                tagm_scaled_energy_table = tagm_scaled_energy_assignment.constant_set.data_table
+                
+                PS_accept_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/pair_spectrometer/lumi/PS_accept", run[0], VARIATION, CALIBTIME)
+                PS_accept = PS_accept_assignment.constant_set.data_table
+        except Exception as e:
+                print(e)
+                print("Missing flux for run number = %d, skipping generation" % run[0])
+                return -1.0
+
+        # sum tagged flux
+        for tagh_flux, tagh_scaled_energy in zip(tagh_tagged_flux, tagh_scaled_energy_table):
+                tagh_energy = float(photon_endpoint[0][0])*(float(tagh_scaled_energy[1])+float(tagh_scaled_energy[2]))/2.
+
+                if tagh_energy < emin or tagh_energy > emax:
+                        continue
+
+                psAccept = PSAcceptance(tagh_energy, float(PS_accept[0][0]), float(PS_accept[0][1]), float(PS_accept[0][2]))
+                if psAccept <= 0.0:
+                        continue
+
+                flux = flux + float(tagh_flux[1]) * scale / psAccept
+
+        for tagm_flux, tagm_scaled_energy in zip(tagm_tagged_flux, tagm_scaled_energy_table):
+                tagm_energy = float(photon_endpoint[0][0])*(float(tagm_scaled_energy[1])+float(tagm_scaled_energy[2]))/2.
+
+                if tagm_energy < emin or tagm_energy > emax:
+                        continue
+
+                psAccept = PSAcceptance(tagm_energy, float(PS_accept[0][0]), float(PS_accept[0][1]), float(PS_accept[0][2]))
+                if psAccept <= 0.0:
+                        continue
+
+                flux = flux + float(tagm_flux[1]) * scale / psAccept        
+
+        return flux
+
+
 def showhelp():
         helpstring= "variation=%s where %s is a valid jana_calib_context variation string (default is \"mc\")\n"
         helpstring+= " per_file=%i where %i is the number of events you want per file/job (default is 10000)\n"
@@ -1066,6 +1153,7 @@ def showhelp():
         helpstring+= " cleanrecon=[0/1]where 0 means that the reconstruction step will not be cleaned up after running (default is 0)\n"
         helpstring+= " batch=[0/1/2] where 1 means that jobs will be submitted, 2 will do the same as 1 but also run the workflow in the case of swif(2) (default is 0 [interactive])\n"
         helpstring+= " logdir=[path] will direct the .out and .err files to the specified path for qsub\n"
+        helpstring+= " flux=[untagged/tagged] will calculate the flux with the untagged or tagged ccdb (default is untagged)\n"
         return helpstring
 
 ########################################################## MAIN ##########################################################
@@ -1504,6 +1592,9 @@ def main(argv):
                         if flag[0]=="logdir":
                                 argfound=1
                                 LOG_DIR=str(flag[1])
+                        if flag[0]=="flux":
+                                argfound=1
+                                FLUX=str(flag[1])        
                         if flag[0]=="projid":
                                 argfound=1
                                 PROJECT_ID=str(flag[1])
@@ -1827,7 +1918,10 @@ def main(argv):
                                 event_sum = event_sum + runs[1]
 
                                 # compute flux in generated beam energy range
-                                flux = calcFluxCCDB(ccdb_conn, runs, float(MIN_GEN_ENERGY), float(MAX_GEN_ENERGY)) / 1.e9
+                                if flux == "untagged":
+                                        flux = calcFluxCCDB(ccdb_conn, runs, float(MIN_GEN_ENERGY), float(MAX_GEN_ENERGY)) / 1.e9
+                                if flux == "tagged":
+                                        flux = calcTaggedFluxCCDB(ccdb_conn, runs, float(MIN_GEN_ENERGY), float(MAX_GEN_ENERGY)) / 1.e9
                                 print(flux)
                                 fluxes.append(flux)
                                 flux_sum = flux_sum + flux
