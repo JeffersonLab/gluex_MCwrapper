@@ -962,9 +962,9 @@ def recordAttempt(JOB_ID,RUNNO,FILENO,BatchSYS,BatchJobID, NUMEVTS,NCORES, RAM):
 #====================================================
 def getCommandString(COMMAND,USER,numbundled=1):
         if(USER=="OSG" and numbundled!=1):
-                return COMMAND['batchrun']+" "+COMMAND['environment_file']+" "+COMMAND['ana_environment_file']+" "+COMMAND['generator_os']+" "+COMMAND['postgen_os']+" "+COMMAND['simulation_os']+" "+COMMAND['mcsmear_os']+" "+COMMAND['recon_os']+" "+COMMAND['ana_os']+" "+COMMAND['generator_config']+" "+COMMAND['output_directory']+" "+COMMAND['run_number']+" "+"$(Process)"+" "+COMMAND['num_events']+" "+COMMAND['jana_calib_context']+" "+COMMAND['jana_calibtime']+" "+COMMAND['do_gen']+" "+COMMAND['do_geant']+" "+COMMAND['do_mcsmear']+" "+COMMAND['do_recon']+" "+COMMAND['clean_gen']+" "+COMMAND['clean_geant']+" "+COMMAND['clean_mcsmear']+" "+COMMAND['clean_recon']+" "+COMMAND['batch_system']+" "+COMMAND['num_cores']+" "+COMMAND['generator']+" "+COMMAND['geant_version']+" "+COMMAND['background_to_include']+" "+COMMAND['custom_Gcontrol']+" "+COMMAND['eBeam_energy']+" "+COMMAND['coherent_peak']+" "+COMMAND['min_generator_energy']+" "+COMMAND['max_generator_energy']+" "+COMMAND['custom_tag_string']+" "+COMMAND['custom_plugins']+" "+COMMAND['custom_ana_plugins']+" "+COMMAND['events_per_file']+" "+COMMAND['running_directory']+" "+COMMAND['ccdb_sqlite_path']+" "+COMMAND['rcdb_sqlite_path']+" "+COMMAND['background_tagger_only']+" "+COMMAND['radiator_thickness']+" "+COMMAND['background_rate']+" "+COMMAND['random_background_tag']+" "+COMMAND['recon_version']+" "+COMMAND['recon_calibtime']+" "+COMMAND['ana_version']+" "+COMMAND['ana_calibtime']+" "+COMMAND['no_geant_secondaries']+" "+COMMAND['mcwrapper_version']+" "+COMMAND['no_bcal_sipm_saturation']+" "+COMMAND['flux_to_generate']+" "+COMMAND['flux_histogram']+" "+COMMAND['polarization_to_generate']+" "+COMMAND['polarization_histogram']+" "+COMMAND['eBeam_current']+" "+COMMAND['experiment']+" "+COMMAND['num_rand_trigs']+" "+COMMAND['location']+" "+COMMAND['generator_post']+" "+COMMAND['generator_post_config']+" "+COMMAND['generator_post_configevt']+" "+COMMAND['generator_post_configdec']+" "+COMMAND['geant_vertex_area']+" "+COMMAND['geant_vertex_length']+" "+COMMAND['mcsmear_notag']+" "+COMMAND['project_directory_name']+" "+COMMAND['random_background_rate']
+                return COMMAND['batchrun']+" "+COMMAND['environment_file']+" "+COMMAND['ana_environment_file']+" "+COMMAND['generator_os']+" "+COMMAND['postgen_os']+" "+COMMAND['simulation_os']+" "+COMMAND['mcsmear_os']+" "+COMMAND['recon_os']+" "+COMMAND['ana_os']+" "+COMMAND['generator_config']+" "+COMMAND['output_directory']+" "+COMMAND['run_number']+" "+"$(Process)"+" "+COMMAND['num_events']+" "+COMMAND['jana_calib_context']+" "+COMMAND['jana_calibtime']+" "+COMMAND['do_gen']+" "+COMMAND['do_geant']+" "+COMMAND['do_mcsmear']+" "+COMMAND['do_recon']+" "+COMMAND['clean_gen']+" "+COMMAND['clean_geant']+" "+COMMAND['clean_mcsmear']+" "+COMMAND['clean_recon']+" "+COMMAND['batch_system']+" "+COMMAND['num_cores']+" "+COMMAND['generator']+" "+COMMAND['geant_version']+" "+COMMAND['background_to_include']+" "+COMMAND['custom_Gcontrol']+" "+COMMAND['eBeam_energy']+" "+COMMAND['coherent_peak']+" "+COMMAND['min_generator_energy']+" "+COMMAND['max_generator_energy']+" "+COMMAND['custom_tag_string']+" "+COMMAND['custom_plugins']+" "+COMMAND['custom_ana_plugins']+" "+COMMAND['events_per_file']+" "+COMMAND['running_directory']+" "+COMMAND['ccdb_sqlite_path']+" "+COMMAND['rcdb_sqlite_path']+" "+COMMAND['background_tagger_only']+" "+COMMAND['radiator_thickness']+" "+COMMAND['background_rate']+" "+COMMAND['random_background_tag']+" "+COMMAND['recon_version']+" "+COMMAND['recon_calibtime']+" "+COMMAND['ana_version']+" "+COMMAND['ana_calibtime']+" "+COMMAND['no_geant_secondaries']+" "+COMMAND['mcwrapper_version']+" "+COMMAND['no_bcal_sipm_saturation']+" "+COMMAND['flux_to_generate']+" "+COMMAND['flux_histogram']+" "+COMMAND['polarization_to_generate']+" "+COMMAND['polarization_histogram']+" "+COMMAND["ccdb_flux_version"]+" "+COMMAND['eBeam_current']+" "+COMMAND['experiment']+" "+COMMAND['num_rand_trigs']+" "+COMMAND['location']+" "+COMMAND['generator_post']+" "+COMMAND['generator_post_config']+" "+COMMAND['generator_post_configevt']+" "+COMMAND['generator_post_configdec']+" "+COMMAND['geant_vertex_area']+" "+COMMAND['geant_vertex_length']+" "+COMMAND['mcsmear_notag']+" "+COMMAND['project_directory_name']+" "+COMMAND['random_background_rate']
         else:
-                return COMMAND['batchrun']+" "+COMMAND['environment_file']+" "+COMMAND['ana_environment_file']+" "+COMMAND['generator_os']+" "+COMMAND['postgen_os']+" "+COMMAND['simulation_os']+" "+COMMAND['mcsmear_os']+" "+COMMAND['recon_os']+" "+COMMAND['ana_os']+" "+COMMAND['generator_config']+" "+COMMAND['output_directory']+" "+COMMAND['run_number']+" "+COMMAND['file_number']+" "+COMMAND['num_events']+" "+COMMAND['jana_calib_context']+" "+COMMAND['jana_calibtime']+" "+COMMAND['do_gen']+" "+COMMAND['do_geant']+" "+COMMAND['do_mcsmear']+" "+COMMAND['do_recon']+" "+COMMAND['clean_gen']+" "+COMMAND['clean_geant']+" "+COMMAND['clean_mcsmear']+" "+COMMAND['clean_recon']+" "+COMMAND['batch_system']+" "+COMMAND['num_cores']+" "+COMMAND['generator']+" "+COMMAND['geant_version']+" "+COMMAND['background_to_include']+" "+COMMAND['custom_Gcontrol']+" "+COMMAND['eBeam_energy']+" "+COMMAND['coherent_peak']+" "+COMMAND['min_generator_energy']+" "+COMMAND['max_generator_energy']+" "+COMMAND['custom_tag_string']+" "+COMMAND['custom_plugins']+" "+COMMAND['custom_ana_plugins']+" "+COMMAND['events_per_file']+" "+COMMAND['running_directory']+" "+COMMAND['ccdb_sqlite_path']+" "+COMMAND['rcdb_sqlite_path']+" "+COMMAND['background_tagger_only']+" "+COMMAND['radiator_thickness']+" "+COMMAND['background_rate']+" "+COMMAND['random_background_tag']+" "+COMMAND['recon_version']+" "+COMMAND['recon_calibtime']+" "+COMMAND['ana_version']+" "+COMMAND['ana_calibtime']+" "+COMMAND['no_geant_secondaries']+" "+COMMAND['mcwrapper_version']+" "+COMMAND['no_bcal_sipm_saturation']+" "+COMMAND['flux_to_generate']+" "+COMMAND['flux_histogram']+" "+COMMAND['polarization_to_generate']+" "+COMMAND['polarization_histogram']+" "+COMMAND['eBeam_current']+" "+COMMAND['experiment']+" "+COMMAND['num_rand_trigs']+" "+COMMAND['location']+" "+COMMAND['generator_post']+" "+COMMAND['generator_post_config']+" "+COMMAND['generator_post_configevt']+" "+COMMAND['generator_post_configdec']+" "+COMMAND['geant_vertex_area']+" "+COMMAND['geant_vertex_length']+" "+COMMAND['mcsmear_notag']+" "+COMMAND['project_directory_name']+" "+COMMAND['random_background_rate']
+                return COMMAND['batchrun']+" "+COMMAND['environment_file']+" "+COMMAND['ana_environment_file']+" "+COMMAND['generator_os']+" "+COMMAND['postgen_os']+" "+COMMAND['simulation_os']+" "+COMMAND['mcsmear_os']+" "+COMMAND['recon_os']+" "+COMMAND['ana_os']+" "+COMMAND['generator_config']+" "+COMMAND['output_directory']+" "+COMMAND['run_number']+" "+COMMAND['file_number']+" "+COMMAND['num_events']+" "+COMMAND['jana_calib_context']+" "+COMMAND['jana_calibtime']+" "+COMMAND['do_gen']+" "+COMMAND['do_geant']+" "+COMMAND['do_mcsmear']+" "+COMMAND['do_recon']+" "+COMMAND['clean_gen']+" "+COMMAND['clean_geant']+" "+COMMAND['clean_mcsmear']+" "+COMMAND['clean_recon']+" "+COMMAND['batch_system']+" "+COMMAND['num_cores']+" "+COMMAND['generator']+" "+COMMAND['geant_version']+" "+COMMAND['background_to_include']+" "+COMMAND['custom_Gcontrol']+" "+COMMAND['eBeam_energy']+" "+COMMAND['coherent_peak']+" "+COMMAND['min_generator_energy']+" "+COMMAND['max_generator_energy']+" "+COMMAND['custom_tag_string']+" "+COMMAND['custom_plugins']+" "+COMMAND['custom_ana_plugins']+" "+COMMAND['events_per_file']+" "+COMMAND['running_directory']+" "+COMMAND['ccdb_sqlite_path']+" "+COMMAND['rcdb_sqlite_path']+" "+COMMAND['background_tagger_only']+" "+COMMAND['radiator_thickness']+" "+COMMAND['background_rate']+" "+COMMAND['random_background_tag']+" "+COMMAND['recon_version']+" "+COMMAND['recon_calibtime']+" "+COMMAND['ana_version']+" "+COMMAND['ana_calibtime']+" "+COMMAND['no_geant_secondaries']+" "+COMMAND['mcwrapper_version']+" "+COMMAND['no_bcal_sipm_saturation']+" "+COMMAND['flux_to_generate']+" "+COMMAND['flux_histogram']+" "+COMMAND['polarization_to_generate']+" "+COMMAND['polarization_histogram']+" "+COMMAND["ccdb_flux_version"]+" "+COMMAND['eBeam_current']+" "+COMMAND['experiment']+" "+COMMAND['num_rand_trigs']+" "+COMMAND['location']+" "+COMMAND['generator_post']+" "+COMMAND['generator_post_config']+" "+COMMAND['generator_post_configevt']+" "+COMMAND['generator_post_configdec']+" "+COMMAND['geant_vertex_area']+" "+COMMAND['geant_vertex_length']+" "+COMMAND['mcsmear_notag']+" "+COMMAND['project_directory_name']+" "+COMMAND['random_background_rate']
 def LoadCCDB():
         sqlite_connect_str = "mysql://ccdb_user@hallddb.jlab.org/ccdb"
         provider = ccdb.AlchemyProvider()                           # this class has all CCDB manipulation functions
@@ -1051,6 +1051,105 @@ def calcFluxCCDB(ccdb_conn, run, emin, emax):
 
         return flux
 
+
+def calcTaggedFluxCCDB(ccdb_conn, run, emin, emax):
+
+        flux = 0.
+        VARIATION = "default"
+        CALIBTIME = datetime.now()
+        CALIBTIME_USER = CALIBTIME
+        CALIBTIME_ENERGY = CALIBTIME
+
+        # Set livetime scale factor
+        livetime_ratio = 0.0
+        try:
+                livetime_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/pair_spectrometer/lumi/trig_live", run[0], VARIATION, CALIBTIME)
+                livetime = livetime_assignment.constant_set.data_table
+                if float(livetime[3][1]) > 0.0: # check that livetimes are non-zero
+                       livetime_ratio = float(livetime[0][1])/float(livetime[3][1])
+                else: # if bad livetime assume ratio is 1
+                       livetime_ratio = 1.0
+        except:
+                livetime_ratio = 1.0 # default to unity if table doesn't exist
+
+        # Conversion factors for total flux
+        converterThickness = run[2]
+        converterLength = 75e-6 # default is 75 um
+        if converterThickness == "Be 750um":
+                converterLength = 750e-6
+        elif converterThickness != "Be 75um":
+                print("Unknown converter thickness for run %s: %s, assuming Be 75um" % (run[0],run[2]))
+
+        berilliumRL = 35.28e-2 # 35.28 cm
+        radiationLength = converterLength/berilliumRL
+        scale = livetime_ratio * 1./((7/9.) * radiationLength)
+
+        photon_endpoint = array('d')
+        photon_endpoint_calib = array('d')
+        tagh_tagged_flux = array('d')
+        tagh_scaled_energy = array('d')
+        tagm_tagged_flux = array('d')
+        tagm_scaled_energy = array('d')
+
+        try:
+                photon_endpoint_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/endpoint_energy", run[0], VARIATION, CALIBTIME_ENERGY)
+                photon_endpoint = photon_endpoint_assignment.constant_set.data_table
+
+                photon_endpoint_calib_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/hodoscope/endpoint_calib", run[0], VARIATION, CALIBTIME_ENERGY)
+                photon_endpoint_calib = photon_endpoint_calib_assignment.constant_set.data_table
+
+                tagh_tagged_flux_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/pair_spectrometer/lumi/tagh/tagged", run[0], VARIATION, CALIBTIME)
+                tagh_tagged_flux = tagh_tagged_flux_assignment.constant_set.data_table
+                tagh_scaled_energy_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/hodoscope/scaled_energy_range", run[0], VARIATION, CALIBTIME_ENERGY)
+                tagh_scaled_energy_table = tagh_scaled_energy_assignment.constant_set.data_table
+
+                tagm_tagged_flux_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/pair_spectrometer/lumi/tagm/tagged", run[0], VARIATION, CALIBTIME)
+                tagm_tagged_flux = tagm_tagged_flux_assignment.constant_set.data_table
+                tagm_scaled_energy_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/microscope/scaled_energy_range", run[0], VARIATION, CALIBTIME_ENERGY)
+                tagm_scaled_energy_table = tagm_scaled_energy_assignment.constant_set.data_table
+
+                PS_accept_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/pair_spectrometer/lumi/PS_accept", run[0], VARIATION, CALIBTIME)
+                PS_accept = PS_accept_assignment.constant_set.data_table
+        except Exception as e:
+                print(e)
+                print("Missing flux for run number = %d, skipping generation" % run[0])
+                return -1.0
+
+        # sum tagged flux
+        for tagh_flux, tagh_scaled_energy in zip(tagh_tagged_flux, tagh_scaled_energy_table):
+                tagh_energy = (
+                    float(photon_endpoint_calib[0][0])*(float(tagh_scaled_energy[1])+float(tagh_scaled_energy[2]))/2.
+                    + float(photon_endpoint[0][0]) - float(photon_endpoint_calib[0][0])
+                )
+                    
+
+                if tagh_energy < emin or tagh_energy > emax:
+                        continue
+
+                psAccept = PSAcceptance(tagh_energy, float(PS_accept[0][0]), float(PS_accept[0][1]), float(PS_accept[0][2]))
+                if psAccept <= 0.0:
+                        continue
+
+                flux = flux + float(tagh_flux[1]) * scale / psAccept
+
+        for tagm_flux, tagm_scaled_energy in zip(tagm_tagged_flux, tagm_scaled_energy_table):
+                tagm_energy = (
+                    float(photon_endpoint_calib[0][0])*(float(tagm_scaled_energy[1])+float(tagm_scaled_energy[2]))/2.
+                    + float(photon_endpoint[0][0]) - float(photon_endpoint_calib[0][0])
+                )
+
+                if tagm_energy < emin or tagm_energy > emax:
+                        continue
+
+                psAccept = PSAcceptance(tagm_energy, float(PS_accept[0][0]), float(PS_accept[0][1]), float(PS_accept[0][2]))
+                if psAccept <= 0.0:
+                        continue
+
+                flux = flux + float(tagm_flux[1]) * scale / psAccept
+
+        return flux
+
+
 def showhelp():
         helpstring= "variation=%s where %s is a valid jana_calib_context variation string (default is \"mc\")\n"
         helpstring+= " per_file=%i where %i is the number of events you want per file/job (default is 10000)\n"
@@ -1126,6 +1225,23 @@ def main(argv):
         POL_HIST="unset"
         MIN_GEN_ENERGY="3"
         MAX_GEN_ENERGY="12"
+
+        CCDB_FLUX_MCWRAPPER="untagged"
+        CCDB_FLUX_GENERATOR="untagged"
+
+        # Change the default setting for PrimEx runs only:
+        try:
+            StartingRunNumber=int(str(RUNNUM).split("-")[0])
+            if (
+                (60000<=StartingRunNumber and StartingRunNumber<=69999) or 
+                (80000<=StartingRunNumber and StartingRunNumber<=89999) or 
+                (110000<=StartingRunNumber and StartingRunNumber<=119999)
+            ):
+                print("PrimEx run detected. Will use tagged flux by default.")
+                CCDB_FLUX_MCWRAPPER="tagged"
+                CCDB_FLUX_GENERATOR="tagged"
+        except Exception as e:
+            print(f"Something went wrong getting starting run number: {e}")
 
         RADIATOR_THICKNESS="rcdb"
         BGRATE="rcdb" #GHz
@@ -1437,7 +1553,10 @@ def main(argv):
                                 POL_TO_GEN=polbits[0]
                                 if (FLUX_TO_GEN == "cobrems"):
                                         POL_HIST="cobrems"
-
+                elif str(parts[0]).upper()=="CCDB_FLUX_MCWRAPPER":
+                        CCDB_FLUX_MCWRAPPER=rm_comments[0].strip()
+                elif str(parts[0]).upper()=="CCDB_FLUX_GENERATOR":
+                        CCDB_FLUX_GENERATOR=rm_comments[0].strip()
                 else:
                         print( "unknown config parameter!! "+str(parts[0]))
 
@@ -1710,6 +1829,7 @@ def main(argv):
         COMMAND_dict['polarization_histogram']=str(POL_HIST)
         COMMAND_dict['eBeam_current']=str(eBEAM_CURRENT)
         COMMAND_dict['experiment']=str(EXPERIMENT)
+        COMMAND_dict['ccdb_flux_version']=str(CCDB_FLUX_GENERATOR)
 
         COMMAND_dict['num_rand_trigs']=str(RANDOM_NUM_EVT)
         COMMAND_dict['location']=str(LOCATION)
@@ -1827,7 +1947,11 @@ def main(argv):
                                 event_sum = event_sum + runs[1]
 
                                 # compute flux in generated beam energy range
-                                flux = calcFluxCCDB(ccdb_conn, runs, float(MIN_GEN_ENERGY), float(MAX_GEN_ENERGY)) / 1.e9
+                                flux = 0
+                                if CCDB_FLUX_MCWRAPPER=="tagged":
+                                    flux = calcTaggedFluxCCDB(ccdb_conn, runs, float(MIN_GEN_ENERGY), float(MAX_GEN_ENERGY)) / 1.e9
+                                else:
+                                    flux = calcFluxCCDB(ccdb_conn, runs, float(MIN_GEN_ENERGY), float(MAX_GEN_ENERGY)) / 1.e9
                                 print(flux)
                                 fluxes.append(flux)
                                 flux_sum = flux_sum + flux

@@ -834,7 +834,7 @@ def checkOSG(Jobs_List):
                                     random_file_dir=attempt_BKG_parts[1].split("+")[0]
                                     random_file_name="run"+str(thisJOB_RunNumber).zfill(6)+"_random.hddm"
 
-                                    PELICAN_SERVER="osdf://jlab-osdf/gluex/osgpool/halld/random_triggers/"
+                                    PELICAN_SERVER="osdf://jlab-osdf/gluex/osgpool/random_triggers/"
                                     pelican_check="pelican object ls "+PELICAN_SERVER+random_file_dir+"/"+random_file_name
 
                                     os.environ["BEARER_TOKEN_FILE"]="/var/run/user/10967/bt_u10967"
