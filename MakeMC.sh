@@ -141,6 +141,8 @@ export POL_TO_GEN=$1
 shift
 export POL_HIST=$1
 shift
+export CCDB_FLUX_VER=$1
+shift
 export eBEAM_CURRENT=$1
 shift
 export EXPERIMENT=$1
@@ -636,6 +638,9 @@ echo "Coherent Peak position: "$COHERENT_PEAK
 echo "----------------------------------------------"
 echo "Run generation step? "$GENR" Will be cleaned?" $CLEANGENR
 echo "Flux Hist to use: " "$FLUX_TO_GEN" " : " "$FLUX_HIST"
+if [[ "$FLUX_TO_GEN" == "ccdb" ]]; then
+	echo "  Using $CCDB_FLUX_VER flux table"
+fi
 echo "Polarization to use: " "$POL_TO_GEN" " : " "$POL_HIST"
 echo "Using "$GENERATOR" with config: "$CONFIG_FILE
 echo "Will run "$GENERATOR_POST" postprocessing after generator with configuration: "$GENERATOR_POST_CONFIG", event definitions: "$GENERATOR_POST_CONFIGEVT" and decay definitions: "$GENERATOR_POST_CONFIGDEC
@@ -936,7 +941,20 @@ if [[ "$GENR" != "0" ]]; then # run generation
 
 	if [[ "$FLUX_TO_GEN" == "ccdb" ]]; then
 		echo "CCDBRunNumber $RUN_NUMBER" >> beam.config
-		echo "ROOTFluxFile $FLUX_TO_GEN" >> beam.config
+
+		if [[ "$CCDB_FLUX_VER" == "tagged" ]]; then
+			# The implementation of the tagged photon flux in the BeamProperties class was only added with
+			# halld_sim version 5.5.1. We should have some check in place to make sure the user-requested version
+			# is compatible with the tagged-flux option if it's requested.
+			echo "ROOTFluxFile tagged-ccdb" >> beam.config
+		elif [[ "$CCDB_FLUX_VER" == "untagged" ]]; then
+			echo "ROOTFluxFile ccdb" >> beam.config
+		else
+			echo "Invalid CCDB_FLUX_VER provided ($CCDB_FLUX_VER). Should be either tagged or untagged."
+			echo "something went wrong with initialization"
+			exit 1
+		fi
+
 		if [[ "$POL_TO_GEN" == "ccdb" ]]; then
 			echo "ROOTPolFile $POL_TO_GEN" >> beam.config
 		elif [[ "$POL_HIST" == "unset" ]]; then
