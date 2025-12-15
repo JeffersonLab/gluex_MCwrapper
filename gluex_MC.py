@@ -1241,7 +1241,8 @@ def main(argv):
                 CCDB_FLUX_MCWRAPPER="tagged"
                 CCDB_FLUX_GENERATOR="tagged"
         except Exception as e:
-            print(f"Something went wrong getting starting run number: {e}")
+            print("Something went wrong getting starting run number")
+            #print(f"Something went wrong getting starting run number: {e}")
 
         RADIATOR_THICKNESS="rcdb"
         BGRATE="rcdb" #GHz
