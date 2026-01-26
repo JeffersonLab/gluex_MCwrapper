@@ -523,7 +523,7 @@ if [[ $gen_pre_rcdb != "file" || "$BGTAGONLY_OPTION" == "1" || "$BKGFOLDSTR" == 
 	export COHERENT_PEAK=$copeak
 	echo "Coherent peak set..."
 
-	if [[ "$VERSION" != "mc" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" && "$VERSION" != "mc_workfest2018" && "$COHERENT_PEAK" == "rcdb" ]]; then
+	if [[ "$VERSION" != "mc" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "klong" && "$COHERENT_PEAK" == "rcdb" ]]; then
 		echo "error in requesting rcdb for the coherent peak while not using variation=mc"
 		echo "something went wrong with initialization"
 		exit 1
@@ -532,7 +532,7 @@ if [[ $gen_pre_rcdb != "file" || "$BGTAGONLY_OPTION" == "1" || "$BKGFOLDSTR" == 
 	export eBEAM_ENERGY=$elecE
 	echo "eBEAM energy set..."
 
-	if [[ "$VERSION" != "mc" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" && "$VERSION" != "mc_workfest2018" && "$eBEAM_ENERGY" == "rcdb" ]]; then
+	if [[ "$VERSION" != "mc" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "klong" && "$eBEAM_ENERGY" == "rcdb" ]]; then
 		echo "error in requesting rcdb for the electron beam energy and not using variation=mc"
 		echo "something went wrong with initialization"
 		exit 1
@@ -859,9 +859,9 @@ if [[ "$GENR" != "0" ]]; then # run generation
 
 	gen_pre=`echo $GENERATOR | cut -c1-4`
 
-	if [[ "$gen_pre" != "file" && "$GENERATOR" != "genr8" && "$GENERATOR" != "bggen" && "$GENERATOR" != "genEtaRegge" && "$GENERATOR" != "genScalarRegge" && "$GENERATOR" != "gen_2pi_amp" && "$GENERATOR" != "gen_pi0" && "$GENERATOR" != "gen_2pi_primakoff" && "$GENERATOR" != "gen_2pi0_primakoff" && "$GENERATOR" != "gen_omega_3pi" && "$GENERATOR" != "gen_omegapi" && "$GENERATOR" != "gen_2k" && "$GENERATOR" != "bggen_jpsi" && "$GENERATOR" != "gen_ee" && "$GENERATOR" != "gen_ee_hb" && "$GENERATOR" != "particle_gun" && "$GENERATOR" != "geantBEAM" && "$GENERATOR" != "bggen_phi_ee" && "$GENERATOR" != "genBH" && "$GENERATOR" != "gen_omega_radiative" && "$GENERATOR" != "gen_amp" && "$GENERATOR" != "gen_amp_V2" && "$GENERATOR" != "genr8_new" && "$GENERATOR" != "gen_compton" && "$GENERATOR" != "gen_npi" && "$GENERATOR" != "gen_compton_simple" && "$GENERATOR" != "gen_primex_eta_he4" && "$GENERATOR" != "gen_generic_root" && "$GENERATOR" != "gen_whizard" && "$GENERATOR" != "mc_gen" && "$GENERATOR" != "gen_vec_ps" && "$GENERATOR" != "bggen_upd" && "$GENERATOR" != "python" ]]; then
+	if [[ "$gen_pre" != "file" && "$GENERATOR" != "genr8" && "$GENERATOR" != "bggen" && "$GENERATOR" != "genEtaRegge" && "$GENERATOR" != "genScalarRegge" && "$GENERATOR" != "gen_2pi_amp" && "$GENERATOR" != "gen_pi0" && "$GENERATOR" != "gen_2pi_primakoff" && "$GENERATOR" != "gen_2pi0_primakoff" && "$GENERATOR" != "gen_omega_3pi" && "$GENERATOR" != "gen_omegapi" && "$GENERATOR" != "gen_2k" && "$GENERATOR" != "bggen_jpsi" && "$GENERATOR" != "gen_ee" && "$GENERATOR" != "gen_ee_hb" && "$GENERATOR" != "particle_gun" && "$GENERATOR" != "geantBEAM" && "$GENERATOR" != "bggen_phi_ee" && "$GENERATOR" != "genBH" && "$GENERATOR" != "gen_omega_radiative" && "$GENERATOR" != "gen_amp" && "$GENERATOR" != "gen_amp_V2" && "$GENERATOR" != "genr8_new" && "$GENERATOR" != "gen_compton" && "$GENERATOR" != "gen_npi" && "$GENERATOR" != "gen_compton_simple" && "$GENERATOR" != "gen_primex_eta_he4" && "$GENERATOR" != "gen_generic_root" && "$GENERATOR" != "gen_whizard" && "$GENERATOR" != "mc_gen" && "$GENERATOR" != "gen_vec_ps" && "$GENERATOR" != "bggen_upd" && "$GENERATOR" != "python" && "$GENERATOR" != "KLongboiGenerator"]]; then
 		echo "NO VALID GENERATOR GIVEN"
-		echo "only [genr8, bggen, genEtaRegge, genScalarRegge, gen_2pi_amp, gen_pi0, gen_omega_3pi, gen_2k, bggen_jpsi, gen_ee, gen_ee_hb, bggen_phi_ee, particle_gun, geantBEAM, genBH, gen_omega_radiative, gen_amp, gen_amp_V2, gen_compton, gen_npi, gen_compton_simple, gen_primex_eta_he4, gen_generic_root, gen_whizard, gen_omegapi, mc_gen, gen_vec_ps, bggen_upd, python] are supported"
+		echo "only [genr8, bggen, genEtaRegge, genScalarRegge, gen_2pi_amp, gen_pi0, gen_omega_3pi, gen_2k, bggen_jpsi, gen_ee, gen_ee_hb, bggen_phi_ee, particle_gun, geantBEAM, genBH, gen_omega_radiative, gen_amp, gen_amp_V2, gen_compton, gen_npi, gen_compton_simple, gen_primex_eta_he4, gen_generic_root, gen_whizard, gen_omegapi, mc_gen, gen_vec_ps, bggen_upd, python, KLGenerator_hddm_V3] are supported"
 		exit 1
 	fi
 
@@ -1151,6 +1151,12 @@ if [[ "$GENR" != "0" ]]; then # run generation
 		echo "configuring python script"
 		STANDARD_NAME="python_"$STANDARD_NAME
 		cp $CONFIG_FILE ./$STANDARD_NAME.py
+	elif [[ "$GENERATOR" == "KLongboiGenerator" ]]; then
+	    	echo "configuring KLGenerator_hddm_V3"
+		 STANDARD_NAME="KLongboiGenerator_"$STANDARD_NAME
+		cp $CONFIG_FILE ./$STANDARD_NAME.conf
+		echo $STANDARD_NAME
+		echo "note: this generator (mostly) runs from the command line. A config file containing the flag corresponding to the KL reaction to be generated must be provided for test purposes"
 	fi
 
 	if [[ "$gen_pre" != "file" ]]; then
@@ -1549,6 +1555,14 @@ if [[ "$GENR" != "0" ]]; then # run generation
 		echo $runGen $GENERATOR $STANDARD_NAME.py --run $formatted_runNumber --nevents $EVT_TO_GEN --out $STANDARD_NAME.hddm --seed $RANDOMnum $optionals_line
 		$runGen $GENERATOR $STANDARD_NAME.py --run $formatted_runNumber --nevents $EVT_TO_GEN --out $STANDARD_NAME.hddm --seed $RANDOMnum $optionals_line
 		generator_return_code=$?
+	elif [[ "$GENERATOR" == "KLongboiGenerator" ]]; then
+		echo "RUNNING KLongboiGenerator"
+		optionals_line=`head -n1 $STANDARD_NAME.conf`
+		echo $PWD
+	        echo $optionals_line
+		echo KLongboiGenerator -M${EVT_TO_GEN} -F${STANDARD_NAME}.root -Ekaon:histo:${GEN_MIN_ENERGY}:${GEN_MAX_ENERGY} -R${optionals_line}
+		KLongboiGenerator -M${EVT_TO_GEN} -F${STANDARD_NAME}.root -Ekaon:histo:${GEN_MIN_ENERGY}:${GEN_MAX_ENERGY} -R${optionals_line}
+		generator_return_code=$status
 	fi
 
 
