@@ -1551,6 +1551,9 @@ if ( "$GENERATOR_POST" != "No" && "$GENR" != "0" ) then #run postprocessing
 				exit 1
 			endif
 			setenv EVTGEN_PARTICLE_DEFINITIONS $PWD/postevt'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf
+			if ( "$runPostgen" != "" ) then
+				set runPostgen="$runPostgen EVTGEN_PARTICLE_DEFINITIONS=$EVTGEN_PARTICLE_DEFINITIONS"
+			endif
 		endif
 		if ( "$GENERATOR_POST_CONFIGDEC" != "Default" ) then
 			cp $GENERATOR_POST_CONFIGDEC ./postdec'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf
@@ -1559,6 +1562,9 @@ if ( "$GENERATOR_POST" != "No" && "$GENR" != "0" ) then #run postprocessing
 				exit 1
 			endif
 			setenv EVTGEN_DECAY_FILE $PWD/postdec'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf
+			if ( "$runPostgen" != "" ) then
+				set runPostgen="$runPostgen EVTGEN_DECAY_FILE=$EVTGEN_DECAY_FILE"
+			endif
 		endif
 		echo $runPostgen decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm -upost'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf $STANDARD_NAME.hddm
 		$runPostgen decay_evtgen -o$STANDARD_NAME'_decay_evtgen'.hddm -upost'_'$GENERATOR_POST'_'$formatted_runNumber'_'$formatted_fileNumber.conf $STANDARD_NAME.hddm
