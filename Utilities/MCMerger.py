@@ -166,7 +166,23 @@ def bash_hddm(name_map, path, mc_dir):
         for run in name_map[tup]["run_nums"]:
             if os.path.isfile(checkpointpath + tup[0] + run + tup[1] + '.tar.done'):
                 continue
-            success = subprocess.run([f"tar cvf {path + tup[0] + run + tup[1]}.tar {mc_dir + '/'  +  'hddm' + '/' +   tup[0] + run}_*{tup[1]}"], shell=True)
+            #success = subprocess.run([f"tar cvf {path + tup[0] + run + tup[1]}.tar {mc_dir + '/'  +  'hddm' + '/' +   tup[0] + run}_*{tup[1]}"], shell=True)
+            
+            file_list=[]
+            pattern = re.compile(rf"^{re.escape(tup[0])}{re.escape(run)}_(\d{{3,4}}){re.escape(tup[1])}$")
+            for fname in os.listdir(mc_dir + '/hddm/'):
+                match = pattern.match(fname)
+                if match:
+                    file_list.append(fname)
+            if len(file_list) < 1:
+                continue
+            
+            bundle_command=f"tar cvf {path + tup[0] + run + tup[1]}.tar"
+            for fname in file_list:
+                bundle_command = bundle_command + f" {mc_dir}/hddm/{fname}"
+            #print(bundle_command)
+            
+            success = subprocess.run(bundle_command, shell=True)
             return_code += success.returncode
             if success.returncode == 0:
                 open(checkpointpath + tup[0] + run + tup[1] + '.tar.done', 'a').close()
