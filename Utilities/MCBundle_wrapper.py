@@ -158,7 +158,6 @@ def main(argv):
         #get projects with Tested>=20
         # tobundle_q="SELECT * FROM Project WHERE Tested=20 OR Tested=40 LIMIT 1"
         tobundle_q="SELECT * FROM Project WHERE (Tested=20 OR Tested=40) AND Notified is NULL order by ID asc LIMIT 1"
-        # tobundle_q="SELECT * FROM Project WHERE (Tested=20 OR Tested=40) AND Notified is NULL AND ID > 4137 order by NumEvents asc LIMIT 1"
         print(tobundle_q)
         dbcnx=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
         dbcursor=dbcnx.cursor(MySQLdb.cursors.DictCursor)
