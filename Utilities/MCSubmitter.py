@@ -134,6 +134,8 @@ def WritePayloadConfig(order,foundConfig,batch_system):
     MCconfig_file.write("ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"+str(order["VersionSet"])+"\n")
     if(order["ANAVersionSet"] != None and order["ANAVersionSet"] != "None" ):
         MCconfig_file.write("ANA_ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"+str(order["ANAVersionSet"])+"\n")
+    if(order["SimVersionSet"] != None and order["SimVersionSet"] != "None" ):
+        MCconfig_file.write("SIM_ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"+str(order["SimVersionSet"])+"\n")
 
     MCconfig_file.write("GENERATOR_OS=db"+"\n")
     MCconfig_file.write("POSTGEN_OS=db"+"\n")

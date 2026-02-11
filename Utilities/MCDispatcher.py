@@ -1432,6 +1432,11 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
         print("ADDING ANNAVER")
         MCconfig_file.write("ANA_ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"+str(order["ANAVersionSet"])+"\n")
         print("ADDED ANNAVER")
+    print("adding simver if needed...")
+    if(order["SimVersionSet"] != None and order["SimVersionSet"] != "None" ):
+        print("ADDING SIMVER")
+        MCconfig_file.write("SIM_ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"+str(order["SimVersionSet"])+"\n")
+        print("ADDED SIMVER")
 
     MCconfig_file.write("GENERATOR_OS=db"+"\n")
     MCconfig_file.write("POSTGEN_OS=db"+"\n")
@@ -1596,6 +1601,8 @@ def WritePayloadConfigString(order,foundConfig):
     if(order["ANAVersionSet"] != None and order["ANAVersionSet"] != "None" ):
         #print("ADDING ANNAVER")
         config_str+="ANA_ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"+str(order["ANAVersionSet"])+"\n"
+    if(order["SimVersionSet"] != None and order["SimVersionSet"] != "None" ):
+        config_str+="SIM_ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"+str(order["SimVersionSet"])+"\n"
     #print("---------------------------------")
 
     config_str+="GENERATOR_OS=db"+"\n"
