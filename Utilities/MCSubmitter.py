@@ -46,6 +46,10 @@ def WritePayloadConfig(order,foundConfig,batch_system):
         MCconfig_file.write("VARIATION=mc_cpp"+"\n")
         MCconfig_file.write("FLUX_TO_GEN=cobrems"+"\n")
 
+    if 30000 <= int(order["RunNumLow"]) and int(order["RunNumLow"]) <= 39999:
+        if str(order["VersionSet"]) == "recon-2017_01-ver05.xml" or str(order["VersionSet"]) == "version_7.2.0.xml":
+            MCconfig_file.write("VARIATION=mc_2017_01_ver05")
+
     splitlist=order["OutputLocation"].split("/")
     MCconfig_file.write("WORKFLOW_NAME=proj"+str(order["ID"])+"_"+splitlist[len(splitlist)-2]+"\n")
     MCconfig_file.write(order["Config_Stub"]+"\n")

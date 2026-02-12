@@ -1240,6 +1240,10 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
         MCconfig_file.write("RADIATOR_THICKNESS=50.e-06"+"\n")
         MCconfig_file.write("COHERENT_PEAK=8.6"+"\n")
 
+    if 30000 <= int(order["RunNumLow"]) and int(order["RunNumLow"]) <= 39999:
+        if str(order["VersionSet"]) == "recon-2017_01-ver05.xml" or str(order["VersionSet"]) == "version_7.2.0.xml":
+            MCconfig_file.write("VARIATION=mc_2017_01_ver05")
+
     splitlist=order["OutputLocation"].split("/")
     MCconfig_file.write("WORKFLOW_NAME="+splitlist[len(splitlist)-2]+"\n")
     MCconfig_file.write(order["Config_Stub"]+"\n")
@@ -1507,6 +1511,10 @@ def WritePayloadConfigString(order,foundConfig):
         config_str+="eBEAM_CURRENT=0.35"+"\n"
         config_str+="RADIATOR_THICKNESS=50.e-06"+"\n"
         config_str+="COHERENT_PEAK=8.6"+"\n"    
+
+    if 30000 <= int(order["RunNumLow"]) and int(order["RunNumLow"]) <= 39999:
+        if str(order["VersionSet"]) == "recon-2017_01-ver05.xml" or str(order["VersionSet"]) == "version_7.2.0.xml":
+            config_str+="VARIATION=mc_2017_01_ver05"+"\n"
 
     splitlist=order["OutputLocation"].split("/")
     config_str+="WORKFLOW_NAME="+splitlist[len(splitlist)-2]+"\n"
