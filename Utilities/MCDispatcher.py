@@ -1242,7 +1242,7 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
 
     if 30000 <= int(order["RunNumLow"]) and int(order["RunNumLow"]) <= 39999:
         if str(order["VersionSet"]) == "recon-2017_01-ver05.xml" or str(order["VersionSet"]) == "version_7.2.0.xml":
-            MCconfig_file.write("VARIATION=mc_2017_01_ver05")
+            MCconfig_file.write("VARIATION=mc_2017_01_ver05"+"\n")
 
     splitlist=order["OutputLocation"].split("/")
     MCconfig_file.write("WORKFLOW_NAME="+splitlist[len(splitlist)-2]+"\n")
