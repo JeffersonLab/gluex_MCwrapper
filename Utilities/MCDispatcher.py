@@ -1243,6 +1243,8 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
     if 30000 <= int(order["RunNumLow"]) and int(order["RunNumLow"]) <= 39999:
         if str(order["VersionSet"]) == "recon-2017_01-ver05.xml" or str(order["VersionSet"]) == "version_7.2.0.xml":
             MCconfig_file.write("VARIATION=mc_2017_01_ver05"+"\n")
+            MCconfig_file.write("RECON_VERSION=mc_2017_01_ver05"+"\n")
+            MCconfig_file.write("ANA_VERSION=mc_2017_01_ver05"+"\n")
 
     splitlist=order["OutputLocation"].split("/")
     MCconfig_file.write("WORKFLOW_NAME="+splitlist[len(splitlist)-2]+"\n")
@@ -1515,6 +1517,8 @@ def WritePayloadConfigString(order,foundConfig):
     if 30000 <= int(order["RunNumLow"]) and int(order["RunNumLow"]) <= 39999:
         if str(order["VersionSet"]) == "recon-2017_01-ver05.xml" or str(order["VersionSet"]) == "version_7.2.0.xml":
             config_str+="VARIATION=mc_2017_01_ver05"+"\n"
+            config_str+="RECON_VERSION=mc_2017_01_ver05"+"\n"
+            config_str+="ANA_VERSION=mc_2017_01_ver05"+"\n"
 
     splitlist=order["OutputLocation"].split("/")
     config_str+="WORKFLOW_NAME="+splitlist[len(splitlist)-2]+"\n"
