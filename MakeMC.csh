@@ -158,7 +158,7 @@ shift
 setenv SIMENVIRONMENT $1
 
 setenv RUNNING_ENVIRONMENT $ENVIRONMENT
-if ( "$SIMENVIRONMENT" != "no_Sim_env" ) then
+if ( "$SIMENVIRONMENT" != "no_Sim_env" && "$SIMENVIRONMENT" != "" ) then
 	setenv RUNNING_ENVIRONMENT $SIMENVIRONMENT
 endif
 

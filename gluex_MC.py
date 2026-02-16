@@ -466,7 +466,8 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
 
         SIMENVFILE_parts=SIMENVFILE.split("/")
         if(len(SIMENVFILE_parts) != 1):
-                simenvfile_to_source="../"+SIMENVFILE_parts[len(SIMENVFILE_parts)-1]
+                simenvfile_to_source="./"+SIMENVFILE_parts[len(SIMENVFILE_parts)-1]
+                envfile_to_source="."+envfile_to_source
 
         ANAENVFILE_parts=ANAENVFILE.split("/")
         if(len(ANAENVFILE_parts) != 1):

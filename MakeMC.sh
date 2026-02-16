@@ -156,7 +156,7 @@ shift
 export SIMENVIRONMENT=$1
 
 export RUNNING_ENVIRONMENT=$ENVIRONMENT
-if [[ "$SIMENVIRONMENT" != "no_Sim_env" ]]; then
+if [[ "$SIMENVIRONMENT" != "no_Sim_env" && "$SIMENVIRONMENT" != "" ]]; then
 	export RUNNING_ENVIRONMENT=$SIMENVIRONMENT
 fi
 
