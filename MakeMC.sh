@@ -1293,7 +1293,7 @@ if [[ "$GENR" != "0" ]]; then # run generation
 		optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
 		echo $optionals_line
 		echo "Beam Config:"
-		more $STANDARD_NAME'_beam.config'
+		more $STANDARD_NAME'_beam.conf'
 		echo "pre run seds"
 		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
 		if [[ "$polarization_angle" == "-1.0" ]]; then
