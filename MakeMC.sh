@@ -344,7 +344,7 @@ GEOMETRY_CCDB_PATH="GEOMETRY/main_HDDS.xml"
 if [[ "$EXPERIMENT" == "CPP" ]]; then
 	GEOMETRY_CCDB_PATH="GEOMETRY/cpp_HDDS.xml"
 fi
-export JANA_GEOMETRY_URL="ccdb:///$GEOMETRY_CCDB_PATH context=\"$VERSION\""
+export JANA_GEOMETRY_URL="ccdb:///$GEOMETRY_CCDB_PATH"
 
 RCDBVERSION=`echo $RCDB_VERSION | cut -c3-4`
 RCDBVERSION=$((10#$RCDBVERSION)) #make sure leading zero doesn't cause issue in string

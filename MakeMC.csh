@@ -297,7 +297,7 @@ set GEOMETRY_CCDB_PATH="GEOMETRY/main_HDDS.xml"
 if ( "$EXPERIMENT" == "CPP" ) then
 	set GEOMETRY_CCDB_PATH="GEOMETRY/cpp_HDDS.xml"
 endif
-setenv JANA_GEOMETRY_URL "ccdb:///$GEOMETRY_CCDB_PATH context='$VERSION'"
+setenv JANA_GEOMETRY_URL "ccdb:///$GEOMETRY_CCDB_PATH"
 #xrdcopy $XRD_RANDOMS_URL/ccdb.sqlite ./
 #setenv CCDB_CONNECTION sqlite:///$PWD/ccdb.sqlite
 #setenv JANA_CALIB_URL ${CCDB_CONNECTION}
