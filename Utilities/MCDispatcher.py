@@ -1230,7 +1230,6 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
     MCconfig_file.write("PROJECT="+str(order["Exp"])+"\n")
 
     if str(order["Exp"]) == "CPP":
-        MCconfig_file.write("VARIATION=mc_cpp"+"\n")
         MCconfig_file.write("FLUX_TO_GEN=cobrems"+"\n")
     elif str(order["Exp"]) == "JEF":
         MCconfig_file.write("VARIATION=mc_JEF"+"\n")
@@ -1493,7 +1492,6 @@ def WritePayloadConfigString(order,foundConfig):
     config_str+="PROJECT="+str(order["Exp"])+"\n"
 
     if str(order["Exp"]) == "CPP":
-        config_str+="VARIATION=mc_cpp"+"\n"
         config_str+="FLUX_TO_GEN=cobrems"+"\n"
     elif str(order["Exp"]) == "JEF":
         config_str+="VARIATION=mc_JEF"+"\n"

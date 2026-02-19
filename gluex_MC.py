@@ -1564,6 +1564,13 @@ def main(argv):
         if EXPERIMENT == "GlueX" and PROJECT != "gluex": #set EXPERIMENT if not set and not GlueX
                 EXPERIMENT = PROJECT
 
+        if VERSION == "mc_cpp":
+                print("ERROR: variation=mc_cpp is deprecated and not supported. Please use a variation=mc and set EXPERIMENT=CPP.")
+                exit(1)
+
+        if str(EXPERIMENT).upper() == "CPP" and VERTEX_LENGTH == "29.5": # guard against accidentally using the GlueX vertex length for CPP when user fails to set it in the config
+                VERTEX_LENGTH="0.02806"
+
         LOG_DIR = DATA_OUTPUT_BASE_DIR  #set LOG_DIR=DATA_OUTPUT_BASE_DIR
         if(GENCONFIG==""):
                 GENCONFIG = "NA"
@@ -1640,6 +1647,10 @@ def main(argv):
                                         TO_BUNDLE=True
                         if argfound==0:
                                 print( "WARNING OPTION: "+argu+" NOT FOUND!")
+
+        if VERSION == "mc_cpp":
+                print("ERROR: variation=mc_cpp is deprecated and not supported. Please use variation=mc, and in your MC.config set EXPERIMENT=CPP.")
+                exit(1)
 
         if DATA_OUTPUT_BASE_DIR == "UNKNOWN_LOCATION":
                 print( "I doubt that the system will find the output directory: "+DATA_OUTPUT_BASE_DIR+" so I am saving you the embarrassment of trying and stopping this now")
