@@ -1940,8 +1940,10 @@ def main(argv):
                                 print( str(runlow)+"-->"+str(runhigh))
 
                         query_to_do="@is_production and @status_approved"
+                        if str(EXPERIMENT).upper()=="CPP":
+                                query_to_do="@is_cpp_production and @status_approved"
                         print("RCDB_QUERY IS: "+str(RCDB_QUERY))
-                        if(RCDB_QUERY!=""):
+                        if(RCDB_QUERY!="" and str(RCDB_QUERY).strip().lower()!="none"):
                                 query_to_do=RCDB_QUERY
 
                         print(str(runlow)+"------->"+str(runhigh))
