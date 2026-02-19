@@ -175,6 +175,12 @@ shift
 setenv PROJECT_DIR_NAME $1
 shift
 setenv RANDBGRATE $1
+shift
+setenv GENERATOR_FILE_SKIP $1
+
+if ( "$GENERATOR_FILE_SKIP" == "" ) then
+	setenv GENERATOR_FILE_SKIP "-1"
+endif
 
 setenv USER_BC `which bc`
 setenv USER_PYTHON `which python`
@@ -291,7 +297,7 @@ set GEOMETRY_CCDB_PATH="GEOMETRY/main_HDDS.xml"
 if ( "$EXPERIMENT" == "CPP" ) then
 	set GEOMETRY_CCDB_PATH="GEOMETRY/cpp_HDDS.xml"
 endif
-setenv JANA_GEOMETRY_URL "ccdb:///$GEOMETRY_CCDB_PATH context=\"$VERSION\""
+setenv JANA_GEOMETRY_URL "ccdb:///$GEOMETRY_CCDB_PATH context='$VERSION'"
 #xrdcopy $XRD_RANDOMS_URL/ccdb.sqlite ./
 #setenv CCDB_CONNECTION sqlite:///$PWD/ccdb.sqlite
 #setenv JANA_CALIB_URL ${CCDB_CONNECTION}
@@ -1644,7 +1650,11 @@ if ( "$GEANT" != "0" && "$GENR" != "0" ) then #run geant
 	sed -i 's/TEMPNOSECONDARIES/'$GEANT_NOSECONDARIES'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 
 	if ( "$gen_pre" == "file" ) then
-		@ skip_num = $FILE_NUMBER * $PER_FILE
+		if ( "$GENERATOR_FILE_SKIP" != "-1" ) then
+			set skip_num=$GENERATOR_FILE_SKIP
+		else
+			@ skip_num = $FILE_NUMBER * $PER_FILE
+		endif
 		sed -i 's/TEMPSKIP/'$skip_num'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 
 	else if ( $GENERATOR == "particle_gun" ) then

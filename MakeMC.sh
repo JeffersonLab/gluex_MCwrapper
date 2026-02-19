@@ -173,6 +173,12 @@ shift
 export PROJECT_DIR_NAME=$1
 shift
 export RANDBGRATE=$1
+shift
+export GENERATOR_FILE_SKIP=$1
+
+if [[ "$GENERATOR_FILE_SKIP" == "" ]]; then
+	export GENERATOR_FILE_SKIP="-1"
+fi
 
 export USER_BC=`which bc`
 export USER_PYTHON=`which python`
@@ -1681,7 +1687,11 @@ if [[ "$GEANT" != "0" && "$GENR" != "0" ]]; then #run geant
 	sed -i 's/TEMPNOSECONDARIES/'$GEANT_NOSCONDARIES'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 
 	if [[ "$gen_pre" == "file" ]]; then
-		skip_num=$((FILE_NUMBER * PER_FILE))
+		if [[ "$GENERATOR_FILE_SKIP" != "-1" ]]; then
+			skip_num=$GENERATOR_FILE_SKIP
+		else
+			skip_num=$((FILE_NUMBER * PER_FILE))
+		fi
 		sed -i 's/TEMPSKIP/'$skip_num'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 	elif [[ $GENERATOR == "particle_gun" ]]; then
 		sed -i 's/INFILE/cINFILE/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
