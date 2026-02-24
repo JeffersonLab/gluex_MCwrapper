@@ -1570,6 +1570,7 @@ def main(argv):
 
         if str(EXPERIMENT).upper() == "CPP" and VERTEX_LENGTH == "29.5": # guard against accidentally using the GlueX vertex length for CPP when user fails to set it in the config
                 VERTEX_LENGTH="0.02806"
+                print("CPP experiment detected. Setting target length to 0.02806 cm.")
 
         LOG_DIR = DATA_OUTPUT_BASE_DIR  #set LOG_DIR=DATA_OUTPUT_BASE_DIR
         if(GENCONFIG==""):
