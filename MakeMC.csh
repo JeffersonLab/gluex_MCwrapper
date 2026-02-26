@@ -12,22 +12,6 @@ setenv BATCHRUN $1
 shift
 setenv ENVIRONMENT $1
 shift
-
-if ( "$BATCHRUN" != "0" || $?SINGULARITY_NAME ) then
-	echo "Clean up current environment..."
-	source /group/halld/Software/build_scripts/gluex_env_clean.csh
-	echo "Setting up new environment..."
-	set xmltest=`echo $ENVIRONMENT | rev | cut -c -4 | rev`
-	if ( "$xmltest" == ".xml" ) then
-		echo source /group/halld/Software/build_scripts/gluex_env_jlab.csh $ENVIRONMENT
-		source /group/halld/Software/build_scripts/gluex_env_jlab.csh $ENVIRONMENT
-	else
-		echo source $ENVIRONMENT
-		source $ENVIRONMENT
-	endif
-endif
-set runningOS=`$BUILD_SCRIPTS/osrelease.pl`
-
 setenv ANAENVIRONMENT $1
 shift
 setenv GENERATOR_OS $1
@@ -170,6 +154,28 @@ shift
 setenv PROJECT_DIR_NAME $1
 shift
 setenv RANDBGRATE $1
+shift
+setenv SIMENVIRONMENT $1
+
+setenv RUNNING_ENVIRONMENT $ENVIRONMENT
+if ( "$SIMENVIRONMENT" != "no_Sim_env" && "$SIMENVIRONMENT" != "" ) then
+	setenv RUNNING_ENVIRONMENT $SIMENVIRONMENT
+endif
+
+if ( "$BATCHRUN" != "0" || $?SINGULARITY_NAME ) then
+	echo "Clean up current environment..."
+	source /group/halld/Software/build_scripts/gluex_env_clean.csh
+	echo "Setting up new environment..."
+	set xmltest=`echo $RUNNING_ENVIRONMENT | rev | cut -c -4 | rev`
+	if ( "$xmltest" == ".xml" ) then
+		echo source /group/halld/Software/build_scripts/gluex_env_jlab.csh $RUNNING_ENVIRONMENT
+		source /group/halld/Software/build_scripts/gluex_env_jlab.csh $RUNNING_ENVIRONMENT
+	else
+		echo source $RUNNING_ENVIRONMENT
+		source $RUNNING_ENVIRONMENT
+	endif
+endif
+set runningOS=`$BUILD_SCRIPTS/osrelease.pl`
 
 setenv USER_BC `which bc`
 setenv USER_PYTHON `which python`
@@ -226,7 +232,7 @@ endif
 #necessary to run swif, uses local directory if swif=0 is used
 if ( "$BATCHRUN" != "0" ) then
 	# ENVIRONMENT
-	echo $ENVIRONMENT
+	echo $RUNNING_ENVIRONMENT
 	echo pwd=$PWD
 	mkdir -p $OUTDIR
 	mkdir -p $OUTDIR/log
@@ -321,9 +327,9 @@ endif
 # Define running command for generation, needed to run inside a container
 set runGen=''
 if ( "$GENERATOR_OS" == "CENTOS7" ) then
-	set runGen="/gluex_install/gxrun/gxrun -os 7 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v $ENVIRONMENT"
+	set runGen="/gluex_install/gxrun/gxrun -os 7 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v $RUNNING_ENVIRONMENT"
 else if ( "$GENERATOR_OS" == "ALMA9" && "$runningOS" != "Linux_Alma9-x86_64-gcc11.5.0-cntr" ) then
-	set runGen="/gluex_install/gxrun/gxrun -os 9 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v $ENVIRONMENT"
+	set runGen="/gluex_install/gxrun/gxrun -os 9 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v $RUNNING_ENVIRONMENT"
 endif
 echo "============================"
 echo "running command:"
@@ -333,9 +339,9 @@ echo "============================"
 # defining running command for postprocessing, needed to run inside a container
 set runPostgen=''
 if ( "$POSTGEN_OS" == "CENTOS7" ) then
-	set runPostgen="/gluex_install/gxrun/gxrun -os 7 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v $ENVIRONMENT"
+	set runPostgen="/gluex_install/gxrun/gxrun -os 7 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v $RUNNING_ENVIRONMENT"
 else if ( "$POSTGEN_OS" == "ALMA9" && "$runningOS" != "Linux_Alma9-x86_64-gcc11.5.0-cntr" ) then
-	set runPostgen="/gluex_install/gxrun/gxrun -os 9 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v $ENVIRONMENT"
+	set runPostgen="/gluex_install/gxrun/gxrun -os 9 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v $RUNNING_ENVIRONMENT"
 endif
 echo "============================"
 echo "running command:"
@@ -345,9 +351,9 @@ echo "============================"
 # defining running command for simulation, needed to run inside a container
 set runSim=''
 if ( "$SIMULATION_OS" == "CENTOS7" ) then
-	set runSim="/gluex_install/gxrun/gxrun -os 7 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v $ENVIRONMENT"
+	set runSim="/gluex_install/gxrun/gxrun -os 7 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v $RUNNING_ENVIRONMENT"
 else if ( "$SIMULATION_OS" == "ALMA9" && "$runningOS" != "Linux_Alma9-x86_64-gcc11.5.0-cntr" ) then
-	set runSim="/gluex_install/gxrun/gxrun -os 9 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v $ENVIRONMENT"
+	set runSim="/gluex_install/gxrun/gxrun -os 9 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v $RUNNING_ENVIRONMENT"
 endif
 echo "============================"
 echo "running command:"
@@ -357,9 +363,9 @@ echo "============================"
 # defining running command, needed to run inside a container
 set runSmear=''
 if ( "$MCSMEAR_OS" == "CENTOS7" ) then
-	set runSmear="/gluex_install/gxrun/gxrun -os 7 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v $ENVIRONMENT"
+	set runSmear="/gluex_install/gxrun/gxrun -os 7 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v $RUNNING_ENVIRONMENT"
 else if ( "$MCSMEAR_OS" == "ALMA9" && "$runningOS" != "Linux_Alma9-x86_64-gcc11.5.0-cntr" ) then
-	set runSmear="/gluex_install/gxrun/gxrun -os 9 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v $ENVIRONMENT"
+	set runSmear="/gluex_install/gxrun/gxrun -os 9 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v $RUNNING_ENVIRONMENT"
 endif
 echo "============================"
 echo "running command:"
@@ -381,7 +387,7 @@ set gen_pre_rcdb=`echo $GENERATOR | cut -c1-4`
 if ( $gen_pre_rcdb != "file" || ( "$BGTAGONLY_OPTION" == "1" || "$BKGFOLDSTR" == "BeamPhotons" ) ) then
 	set radthick="50.e-6"
 
-	if ( "$RADIATOR_THICKNESS" != "rcdb" || ( "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" ) ) then
+	if ( "$RADIATOR_THICKNESS" != "rcdb" || ( "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" && "$VERSION" != "mc_2017_01_ver05" ) ) then
 		set radthick=$RADIATOR_THICKNESS
 	else
 		set words = `$runGen rcnd $RUN_NUMBER radiator_type | tail -n1 | sed 's/ / /g' `
@@ -437,7 +443,7 @@ if ( $gen_pre_rcdb != "file" || ( "$BGTAGONLY_OPTION" == "1" || "$BKGFOLDSTR" ==
 
 	#echo "text: " $elecE_text
 
-	if ( "$eBEAM_ENERGY" != "rcdb" || ( "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" ) ) then
+	if ( "$eBEAM_ENERGY" != "rcdb" || ( "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" && "$VERSION" != "mc_2017_01_ver05" ) ) then
 		set elecE=$eBEAM_ENERGY
 	else if ( $elecE_text == "Run" ) then
 		set elecE=12
@@ -455,7 +461,7 @@ if ( $gen_pre_rcdb != "file" || ( "$BGTAGONLY_OPTION" == "1" || "$BKGFOLDSTR" ==
 	if ( "$COHERENT_PEAK" != "rcdb" && "$polarization_angle" == "-1.0" ) then
 		set copeak=$COHERENT_PEAK
 	else
-		if ( "$COHERENT_PEAK" != "rcdb" || ( "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" ) ) then
+		if ( "$COHERENT_PEAK" != "rcdb" || ( "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" && "$VERSION" != "mc_2017_01_ver05" ) ) then
 			set copeak=$COHERENT_PEAK
 		else if ( $copeak_text == "Run" ) then
 			set copeak=9
@@ -475,7 +481,7 @@ if ( $gen_pre_rcdb != "file" || ( "$BGTAGONLY_OPTION" == "1" || "$BKGFOLDSTR" ==
 	#echo $copeak
 	#set copeak=`$runGen rcnd $RUN_NUMBER coherent_peak | tail -n1 | awk '{print $1}' | sed 's/\.//g' #| awk -vFS="" -vOFS="" '{$1=$1"."}1' `
 
-	if ( ( "$VERSION" != "mc" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" && "$VERSION" != "mc_workfest2018" ) && "$COHERENT_PEAK" == "rcdb" ) then
+	if ( ( "$VERSION" != "mc" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_2017_01_ver05" ) && "$COHERENT_PEAK" == "rcdb" ) then
 		echo "error in requesting rcdb for the coherent peak and not using variation=mc"
 		echo "something went wrong with initialization"
 		exit 1
@@ -483,7 +489,7 @@ if ( $gen_pre_rcdb != "file" || ( "$BGTAGONLY_OPTION" == "1" || "$BKGFOLDSTR" ==
 
 	setenv eBEAM_ENERGY $elecE
 	echo "eBEAM energy set..."
-	if ( ( "$VERSION" != "mc" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" && "$VERSION" != "mc_workfest2018" ) && "$eBEAM_ENERGY" == "rcdb" ) then
+	if ( ( "$VERSION" != "mc" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_2017_01_ver05" ) && "$eBEAM_ENERGY" == "rcdb" ) then
 		echo "error in requesting rcdb for the electron beam energy and not using variation=mc"
 		exit 1
 	endif
@@ -519,7 +525,7 @@ if ( $gen_pre_rcdb != "file" || ( "$BGTAGONLY_OPTION" == "1" || "$BKGFOLDSTR" ==
 
 	set BGRATE_toUse=$BGRATE
 
-	if ( "$BGRATE" != "rcdb" || ( "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" ) ) then
+	if ( "$BGRATE" != "rcdb" || ( "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" && "$VERSION" != "mc_2017_01_ver05" ) ) then
 		set BGRATE_toUse=$BGRATE
 	else
 		if ( $BGTAGONLY_OPTION == "1" || $BKGFOLDSTR == "BeamPhotons" ) then
@@ -562,7 +568,8 @@ echo "Containing: " $EVT_TO_GEN"/""$PER_FILE"" events"
 echo "Running location:" $RUNNING_DIR
 echo "Output location: "$OUTDIR
 echo "Project directory name: "$PROJECT_DIR_NAME
-echo "Environment file: " $ENVIRONMENT
+echo "Recon Environment file: " $ENVIRONMENT
+echo "Sim Environment file: " $RUNNING_ENVIRONMENT
 echo "Analysis Environment file: " $ANAENVIRONMENT
 echo "Context: "$JANA_CALIB_CONTEXT
 echo "Geometry URL: "$JANA_GEOMETRY_URL
@@ -1884,6 +1891,17 @@ else
 	if ( "$GENR" != "0" && "$GEANT" != "0" && "$SMEAR" != "0" && "$RECON" != "0" ) then #run reconstruction
 		echo "RUNNING RECONSTRUCTION"
 		set file_to_recon=$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm'
+
+		if ( "$RUNNING_ENVIRONMENT" != "$ENVIRONMENT" ) then
+			echo "new env setup"
+			source /group/halld/Software/build_scripts/gluex_env_clean.csh
+			set xmltest1=`echo $ENVIRONMENT | rev | cut -c -4 | rev`
+			if ( "$xmltest1" == ".xml" ) then
+				source /group/halld/Software/build_scripts/gluex_env_jlab.csh $ENVIRONMENT
+			else
+				source $ENVIRONMENT
+			endif
+		endif
 
 		if ("$GENR" == "0" && "$GEANT" == "0" && "$SMEAR" == "0" ) then #obsolete, needs fixing
 			set file_to_recon="$CONFIG_FILE"
