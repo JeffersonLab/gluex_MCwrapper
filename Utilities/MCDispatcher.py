@@ -561,6 +561,13 @@ def source(script, update=True):
 
 
 def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
+    try:
+        conn=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
+        curs=conn.cursor(MySQLdb.cursors.DictCursor)
+    except:
+        print("WARNING: CANNOT CONNECT TO DATABASE.  JOBS WILL NOT BE CONTROLLED OR MONITORED")
+        pass
+
     skip_Test=False
 
     mktestdir="mkdir -p TestProj_"+str(ID)
@@ -751,10 +758,22 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
         STATUS=output.find("Successfully completed")
 
     if(STATUS!=-1):
+        updatequery="UPDATE Project SET Tested=1, OutputLocation=\""+new_full_dirname+"\" WHERE ID="+str(ID)+";"
         try:
-            updatequery="UPDATE Project SET Tested=1, OutputLocation=\""+new_full_dirname+"\" WHERE ID="+str(ID)+";"
             curs.execute(updatequery)
             conn.commit()
+        except:
+            print("DB connection died. Re-establish and try again.")
+            try:
+                conn=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
+                curs=conn.cursor(MySQLdb.cursors.DictCursor)
+                curs.execute(updatequery)
+                conn.commit()
+            except:
+                print("WARNING: CANNOT CONNECT TO DATABASE AFTER ParallelTestProject. Terminating.")
+                sys.exit(1)
+
+        try:
             if(newLoc != "True"):
                 updateOrderquery="UPDATE Project SET Generator_Config=\""+newLoc+"\" WHERE ID="+str(ID)+";"
                 print(updateOrderquery)
@@ -1230,6 +1249,7 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
     MCconfig_file.write("PROJECT="+str(order["Exp"])+"\n")
 
     if str(order["Exp"]) == "CPP":
+        MCconfig_file.write("VARIATION=mc_cpp"+"\n")
         MCconfig_file.write("FLUX_TO_GEN=cobrems"+"\n")
     elif str(order["Exp"]) == "JEF":
         MCconfig_file.write("VARIATION=mc_JEF"+"\n")
@@ -1503,6 +1523,7 @@ def WritePayloadConfigString(order,foundConfig):
     config_str+="PROJECT="+str(order["Exp"])+"\n"
 
     if str(order["Exp"]) == "CPP":
+        config_str+="VARIATION=mc_cpp"+"\n"
         config_str+="FLUX_TO_GEN=cobrems"+"\n"
     elif str(order["Exp"]) == "JEF":
         config_str+="VARIATION=mc_JEF"+"\n"
