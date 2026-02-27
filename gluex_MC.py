@@ -46,8 +46,8 @@ try:
 except:
         pass
 
-MCWRAPPER_VERSION="2.12.0"
-MCWRAPPER_DATE="11/25/25"
+MCWRAPPER_VERSION="2.13.0"
+MCWRAPPER_DATE="2/27/26"
 
 def getOSName(versionset):
         #only keep what comes after last "/" in versionset, in case it is full path
