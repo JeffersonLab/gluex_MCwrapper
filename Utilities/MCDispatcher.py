@@ -1239,6 +1239,12 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
         MCconfig_file.write("RADIATOR_THICKNESS=50.e-06"+"\n")
         MCconfig_file.write("COHERENT_PEAK=8.6"+"\n")
 
+    if 30000 <= int(order["RunNumLow"]) and int(order["RunNumLow"]) <= 39999:
+        if str(order["VersionSet"]) == "recon-2017_01-ver05.xml" or str(order["VersionSet"]) == "version_7.2.0.xml":
+            MCconfig_file.write("VARIATION=mc_2017_01_ver05"+"\n")
+            MCconfig_file.write("RECON_VERSION=mc_2017_01_ver05"+"\n")
+            MCconfig_file.write("ANA_VERSION=mc_2017_01_ver05"+"\n")
+
     splitlist=order["OutputLocation"].split("/")
     MCconfig_file.write("WORKFLOW_NAME="+splitlist[len(splitlist)-2]+"\n")
     MCconfig_file.write(order["Config_Stub"]+"\n")
@@ -1431,6 +1437,11 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
         print("ADDING ANNAVER")
         MCconfig_file.write("ANA_ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"+str(order["ANAVersionSet"])+"\n")
         print("ADDED ANNAVER")
+    print("adding simver if needed...")
+    if(order["SimVersionSet"] != None and order["SimVersionSet"] != "None" ):
+        print("ADDING SIMVER")
+        MCconfig_file.write("SIM_ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"+str(order["SimVersionSet"])+"\n")
+        print("ADDED SIMVER")
 
     MCconfig_file.write("GENERATOR_OS=db"+"\n")
     MCconfig_file.write("POSTGEN_OS=db"+"\n")
@@ -1500,6 +1511,12 @@ def WritePayloadConfigString(order,foundConfig):
         config_str+="eBEAM_CURRENT=0.35"+"\n"
         config_str+="RADIATOR_THICKNESS=50.e-06"+"\n"
         config_str+="COHERENT_PEAK=8.6"+"\n"    
+
+    if 30000 <= int(order["RunNumLow"]) and int(order["RunNumLow"]) <= 39999:
+        if str(order["VersionSet"]) == "recon-2017_01-ver05.xml" or str(order["VersionSet"]) == "version_7.2.0.xml":
+            config_str+="VARIATION=mc_2017_01_ver05"+"\n"
+            config_str+="RECON_VERSION=mc_2017_01_ver05"+"\n"
+            config_str+="ANA_VERSION=mc_2017_01_ver05"+"\n"
 
     splitlist=order["OutputLocation"].split("/")
     config_str+="WORKFLOW_NAME="+splitlist[len(splitlist)-2]+"\n"
@@ -1594,6 +1611,8 @@ def WritePayloadConfigString(order,foundConfig):
     if(order["ANAVersionSet"] != None and order["ANAVersionSet"] != "None" ):
         #print("ADDING ANNAVER")
         config_str+="ANA_ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"+str(order["ANAVersionSet"])+"\n"
+    if(order["SimVersionSet"] != None and order["SimVersionSet"] != "None" ):
+        config_str+="SIM_ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"+str(order["SimVersionSet"])+"\n"
     #print("---------------------------------")
 
     config_str+="GENERATOR_OS=db"+"\n"

@@ -45,6 +45,12 @@ def WritePayloadConfig(order,foundConfig,batch_system):
     if str(order["Exp"]) == "CPP":
         MCconfig_file.write("FLUX_TO_GEN=cobrems"+"\n")
 
+    if 30000 <= int(order["RunNumLow"]) and int(order["RunNumLow"]) <= 39999:
+        if str(order["VersionSet"]) == "recon-2017_01-ver05.xml" or str(order["VersionSet"]) == "version_7.2.0.xml":
+            MCconfig_file.write("VARIATION=mc_2017_01_ver05"+"\n")
+            MCconfig_file.write("RECON_VERSION=mc_2017_01_ver05"+"\n")
+            MCconfig_file.write("ANA_VERSION=mc_2017_01_ver05"+"\n")
+
     splitlist=order["OutputLocation"].split("/")
     MCconfig_file.write("WORKFLOW_NAME=proj"+str(order["ID"])+"_"+splitlist[len(splitlist)-2]+"\n")
     MCconfig_file.write(order["Config_Stub"]+"\n")
@@ -133,6 +139,8 @@ def WritePayloadConfig(order,foundConfig,batch_system):
     MCconfig_file.write("ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"+str(order["VersionSet"])+"\n")
     if(order["ANAVersionSet"] != None and order["ANAVersionSet"] != "None" ):
         MCconfig_file.write("ANA_ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"+str(order["ANAVersionSet"])+"\n")
+    if(order["SimVersionSet"] != None and order["SimVersionSet"] != "None" ):
+        MCconfig_file.write("SIM_ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"+str(order["SimVersionSet"])+"\n")
 
     MCconfig_file.write("GENERATOR_OS=db"+"\n")
     MCconfig_file.write("POSTGEN_OS=db"+"\n")
