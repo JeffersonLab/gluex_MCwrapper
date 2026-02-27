@@ -43,7 +43,6 @@ def WritePayloadConfig(order,foundConfig,batch_system):
     MCconfig_file.write("PROJECT="+str(order["Exp"])+"\n")
 
     if str(order["Exp"]) == "CPP":
-        MCconfig_file.write("VARIATION=mc_cpp"+"\n")
         MCconfig_file.write("FLUX_TO_GEN=cobrems"+"\n")
 
     if 30000 <= int(order["RunNumLow"]) and int(order["RunNumLow"]) <= 39999:

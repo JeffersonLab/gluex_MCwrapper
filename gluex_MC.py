@@ -970,9 +970,10 @@ def recordAttempt(JOB_ID,RUNNO,FILENO,BatchSYS,BatchJobID, NUMEVTS,NCORES, RAM):
 #====================================================
 def getCommandString(COMMAND,USER,numbundled=1):
         if(USER=="OSG" and numbundled!=1):
-                return COMMAND['batchrun']+" "+COMMAND['environment_file']+" "+COMMAND['ana_environment_file']+" "+COMMAND['generator_os']+" "+COMMAND['postgen_os']+" "+COMMAND['simulation_os']+" "+COMMAND['mcsmear_os']+" "+COMMAND['recon_os']+" "+COMMAND['ana_os']+" "+COMMAND['generator_config']+" "+COMMAND['output_directory']+" "+COMMAND['run_number']+" "+"$(Process)"+" "+COMMAND['num_events']+" "+COMMAND['jana_calib_context']+" "+COMMAND['jana_calibtime']+" "+COMMAND['do_gen']+" "+COMMAND['do_geant']+" "+COMMAND['do_mcsmear']+" "+COMMAND['do_recon']+" "+COMMAND['clean_gen']+" "+COMMAND['clean_geant']+" "+COMMAND['clean_mcsmear']+" "+COMMAND['clean_recon']+" "+COMMAND['batch_system']+" "+COMMAND['num_cores']+" "+COMMAND['generator']+" "+COMMAND['geant_version']+" "+COMMAND['background_to_include']+" "+COMMAND['custom_Gcontrol']+" "+COMMAND['eBeam_energy']+" "+COMMAND['coherent_peak']+" "+COMMAND['min_generator_energy']+" "+COMMAND['max_generator_energy']+" "+COMMAND['custom_tag_string']+" "+COMMAND['custom_plugins']+" "+COMMAND['custom_ana_plugins']+" "+COMMAND['events_per_file']+" "+COMMAND['running_directory']+" "+COMMAND['ccdb_sqlite_path']+" "+COMMAND['rcdb_sqlite_path']+" "+COMMAND['background_tagger_only']+" "+COMMAND['radiator_thickness']+" "+COMMAND['background_rate']+" "+COMMAND['random_background_tag']+" "+COMMAND['recon_version']+" "+COMMAND['recon_calibtime']+" "+COMMAND['ana_version']+" "+COMMAND['ana_calibtime']+" "+COMMAND['no_geant_secondaries']+" "+COMMAND['mcwrapper_version']+" "+COMMAND['no_bcal_sipm_saturation']+" "+COMMAND['flux_to_generate']+" "+COMMAND['flux_histogram']+" "+COMMAND['polarization_to_generate']+" "+COMMAND['polarization_histogram']+" "+COMMAND["ccdb_flux_version"]+" "+COMMAND['eBeam_current']+" "+COMMAND['experiment']+" "+COMMAND['num_rand_trigs']+" "+COMMAND['location']+" "+COMMAND['generator_post']+" "+COMMAND['generator_post_config']+" "+COMMAND['generator_post_configevt']+" "+COMMAND['generator_post_configdec']+" "+COMMAND['geant_vertex_area']+" "+COMMAND['geant_vertex_length']+" "+COMMAND['mcsmear_notag']+" "+COMMAND['project_directory_name']+" "+COMMAND['random_background_rate']+" "+COMMAND['sim_environment_file']
+                return COMMAND['batchrun']+" "+COMMAND['environment_file']+" "+COMMAND['ana_environment_file']+" "+COMMAND['generator_os']+" "+COMMAND['postgen_os']+" "+COMMAND['simulation_os']+" "+COMMAND['mcsmear_os']+" "+COMMAND['recon_os']+" "+COMMAND['ana_os']+" "+COMMAND['generator_config']+" "+COMMAND['output_directory']+" "+COMMAND['run_number']+" "+"$(Process)"+" "+COMMAND['num_events']+" "+COMMAND['jana_calib_context']+" "+COMMAND['jana_calibtime']+" "+COMMAND['do_gen']+" "+COMMAND['do_geant']+" "+COMMAND['do_mcsmear']+" "+COMMAND['do_recon']+" "+COMMAND['clean_gen']+" "+COMMAND['clean_geant']+" "+COMMAND['clean_mcsmear']+" "+COMMAND['clean_recon']+" "+COMMAND['batch_system']+" "+COMMAND['num_cores']+" "+COMMAND['generator']+" "+COMMAND['geant_version']+" "+COMMAND['background_to_include']+" "+COMMAND['custom_Gcontrol']+" "+COMMAND['eBeam_energy']+" "+COMMAND['coherent_peak']+" "+COMMAND['min_generator_energy']+" "+COMMAND['max_generator_energy']+" "+COMMAND['custom_tag_string']+" "+COMMAND['custom_plugins']+" "+COMMAND['custom_ana_plugins']+" "+COMMAND['events_per_file']+" "+COMMAND['running_directory']+" "+COMMAND['ccdb_sqlite_path']+" "+COMMAND['rcdb_sqlite_path']+" "+COMMAND['background_tagger_only']+" "+COMMAND['radiator_thickness']+" "+COMMAND['background_rate']+" "+COMMAND['random_background_tag']+" "+COMMAND['recon_version']+" "+COMMAND['recon_calibtime']+" "+COMMAND['ana_version']+" "+COMMAND['ana_calibtime']+" "+COMMAND['no_geant_secondaries']+" "+COMMAND['mcwrapper_version']+" "+COMMAND['no_bcal_sipm_saturation']+" "+COMMAND['flux_to_generate']+" "+COMMAND['flux_histogram']+" "+COMMAND['polarization_to_generate']+" "+COMMAND['polarization_histogram']+" "+COMMAND["ccdb_flux_version"]+" "+COMMAND['eBeam_current']+" "+COMMAND['experiment']+" "+COMMAND['num_rand_trigs']+" "+COMMAND['location']+" "+COMMAND['generator_post']+" "+COMMAND['generator_post_config']+" "+COMMAND['generator_post_configevt']+" "+COMMAND['generator_post_configdec']+" "+COMMAND['geant_vertex_area']+" "+COMMAND['geant_vertex_length']+" "+COMMAND['mcsmear_notag']+" "+COMMAND['project_directory_name']+" "+COMMAND['random_background_rate']+" "+COMMAND['sim_environment_file']+" "+COMMAND['generator_file_skip']
         else:
-                return COMMAND['batchrun']+" "+COMMAND['environment_file']+" "+COMMAND['ana_environment_file']+" "+COMMAND['generator_os']+" "+COMMAND['postgen_os']+" "+COMMAND['simulation_os']+" "+COMMAND['mcsmear_os']+" "+COMMAND['recon_os']+" "+COMMAND['ana_os']+" "+COMMAND['generator_config']+" "+COMMAND['output_directory']+" "+COMMAND['run_number']+" "+COMMAND['file_number']+" "+COMMAND['num_events']+" "+COMMAND['jana_calib_context']+" "+COMMAND['jana_calibtime']+" "+COMMAND['do_gen']+" "+COMMAND['do_geant']+" "+COMMAND['do_mcsmear']+" "+COMMAND['do_recon']+" "+COMMAND['clean_gen']+" "+COMMAND['clean_geant']+" "+COMMAND['clean_mcsmear']+" "+COMMAND['clean_recon']+" "+COMMAND['batch_system']+" "+COMMAND['num_cores']+" "+COMMAND['generator']+" "+COMMAND['geant_version']+" "+COMMAND['background_to_include']+" "+COMMAND['custom_Gcontrol']+" "+COMMAND['eBeam_energy']+" "+COMMAND['coherent_peak']+" "+COMMAND['min_generator_energy']+" "+COMMAND['max_generator_energy']+" "+COMMAND['custom_tag_string']+" "+COMMAND['custom_plugins']+" "+COMMAND['custom_ana_plugins']+" "+COMMAND['events_per_file']+" "+COMMAND['running_directory']+" "+COMMAND['ccdb_sqlite_path']+" "+COMMAND['rcdb_sqlite_path']+" "+COMMAND['background_tagger_only']+" "+COMMAND['radiator_thickness']+" "+COMMAND['background_rate']+" "+COMMAND['random_background_tag']+" "+COMMAND['recon_version']+" "+COMMAND['recon_calibtime']+" "+COMMAND['ana_version']+" "+COMMAND['ana_calibtime']+" "+COMMAND['no_geant_secondaries']+" "+COMMAND['mcwrapper_version']+" "+COMMAND['no_bcal_sipm_saturation']+" "+COMMAND['flux_to_generate']+" "+COMMAND['flux_histogram']+" "+COMMAND['polarization_to_generate']+" "+COMMAND['polarization_histogram']+" "+COMMAND["ccdb_flux_version"]+" "+COMMAND['eBeam_current']+" "+COMMAND['experiment']+" "+COMMAND['num_rand_trigs']+" "+COMMAND['location']+" "+COMMAND['generator_post']+" "+COMMAND['generator_post_config']+" "+COMMAND['generator_post_configevt']+" "+COMMAND['generator_post_configdec']+" "+COMMAND['geant_vertex_area']+" "+COMMAND['geant_vertex_length']+" "+COMMAND['mcsmear_notag']+" "+COMMAND['project_directory_name']+" "+COMMAND['random_background_rate']+" "+COMMAND['sim_environment_file']
+                return COMMAND['batchrun']+" "+COMMAND['environment_file']+" "+COMMAND['ana_environment_file']+" "+COMMAND['generator_os']+" "+COMMAND['postgen_os']+" "+COMMAND['simulation_os']+" "+COMMAND['mcsmear_os']+" "+COMMAND['recon_os']+" "+COMMAND['ana_os']+" "+COMMAND['generator_config']+" "+COMMAND['output_directory']+" "+COMMAND['run_number']+" "+COMMAND['file_number']+" "+COMMAND['num_events']+" "+COMMAND['jana_calib_context']+" "+COMMAND['jana_calibtime']+" "+COMMAND['do_gen']+" "+COMMAND['do_geant']+" "+COMMAND['do_mcsmear']+" "+COMMAND['do_recon']+" "+COMMAND['clean_gen']+" "+COMMAND['clean_geant']+" "+COMMAND['clean_mcsmear']+" "+COMMAND['clean_recon']+" "+COMMAND['batch_system']+" "+COMMAND['num_cores']+" "+COMMAND['generator']+" "+COMMAND['geant_version']+" "+COMMAND['background_to_include']+" "+COMMAND['custom_Gcontrol']+" "+COMMAND['eBeam_energy']+" "+COMMAND['coherent_peak']+" "+COMMAND['min_generator_energy']+" "+COMMAND['max_generator_energy']+" "+COMMAND['custom_tag_string']+" "+COMMAND['custom_plugins']+" "+COMMAND['custom_ana_plugins']+" "+COMMAND['events_per_file']+" "+COMMAND['running_directory']+" "+COMMAND['ccdb_sqlite_path']+" "+COMMAND['rcdb_sqlite_path']+" "+COMMAND['background_tagger_only']+" "+COMMAND['radiator_thickness']+" "+COMMAND['background_rate']+" "+COMMAND['random_background_tag']+" "+COMMAND['recon_version']+" "+COMMAND['recon_calibtime']+" "+COMMAND['ana_version']+" "+COMMAND['ana_calibtime']+" "+COMMAND['no_geant_secondaries']+" "+COMMAND['mcwrapper_version']+" "+COMMAND['no_bcal_sipm_saturation']+" "+COMMAND['flux_to_generate']+" "+COMMAND['flux_histogram']+" "+COMMAND['polarization_to_generate']+" "+COMMAND['polarization_histogram']+" "+COMMAND["ccdb_flux_version"]+" "+COMMAND['eBeam_current']+" "+COMMAND['experiment']+" "+COMMAND['num_rand_trigs']+" "+COMMAND['location']+" "+COMMAND['generator_post']+" "+COMMAND['generator_post_config']+" "+COMMAND['generator_post_configevt']+" "+COMMAND['generator_post_configdec']+" "+COMMAND['geant_vertex_area']+" "+COMMAND['geant_vertex_length']+" "+COMMAND['mcsmear_notag']+" "+COMMAND['project_directory_name']+" "+COMMAND['random_background_rate']+" "+COMMAND['sim_environment_file']+" "+COMMAND['generator_file_skip']
+
 def LoadCCDB():
         sqlite_connect_str = "mysql://ccdb_user@hallddb.jlab.org/ccdb"
         provider = ccdb.AlchemyProvider()                           # this class has all CCDB manipulation functions
@@ -1575,6 +1576,14 @@ def main(argv):
         if EXPERIMENT == "GlueX" and PROJECT != "gluex": #set EXPERIMENT if not set and not GlueX
                 EXPERIMENT = PROJECT
 
+        if VERSION == "mc_cpp":
+                print("ERROR: variation=mc_cpp is deprecated and not supported. Please use a variation=mc and set EXPERIMENT=CPP.")
+                exit(1)
+
+        if str(EXPERIMENT).upper() == "CPP" and VERTEX_LENGTH == "29.5": # guard against accidentally using the GlueX vertex length for CPP when user fails to set it in the config
+                VERTEX_LENGTH="0.02806"
+                print("CPP experiment detected. Setting target length to 0.02806 cm.")
+
         LOG_DIR = DATA_OUTPUT_BASE_DIR  #set LOG_DIR=DATA_OUTPUT_BASE_DIR
         if(GENCONFIG==""):
                 GENCONFIG = "NA"
@@ -1651,6 +1660,10 @@ def main(argv):
                                         TO_BUNDLE=True
                         if argfound==0:
                                 print( "WARNING OPTION: "+argu+" NOT FOUND!")
+
+        if VERSION == "mc_cpp":
+                print("ERROR: variation=mc_cpp is deprecated and not supported. Please use variation=mc, and in your MC.config set EXPERIMENT=CPP.")
+                exit(1)
 
         if DATA_OUTPUT_BASE_DIR == "UNKNOWN_LOCATION":
                 print( "I doubt that the system will find the output directory: "+DATA_OUTPUT_BASE_DIR+" so I am saving you the embarrassment of trying and stopping this now")
@@ -1864,6 +1877,7 @@ def main(argv):
         COMMAND_dict['mcsmear_notag']=str(SMEAR_NOTAG)
         COMMAND_dict['project_directory_name']=str(DATA_OUTPUT_BASE_DIR)
         COMMAND_dict['random_background_rate']=str(RANDBGRATE)
+        COMMAND_dict['generator_file_skip']="-1"
 
 
         if(COMMAND_dict['generator'][:4]=="file:" and len(RunType) != 1):
@@ -1949,8 +1963,10 @@ def main(argv):
                                 print( str(runlow)+"-->"+str(runhigh))
 
                         query_to_do="@is_production and @status_approved"
+                        if str(EXPERIMENT).upper()=="CPP":
+                                query_to_do="@is_cpp_production and @status_approved"
                         print("RCDB_QUERY IS: "+str(RCDB_QUERY))
-                        if(RCDB_QUERY!=""):
+                        if(RCDB_QUERY!="" and str(RCDB_QUERY).strip().lower()!="none"):
                                 query_to_do=RCDB_QUERY
 
                         print(str(runlow)+"------->"+str(runhigh))
@@ -1987,6 +2003,7 @@ def main(argv):
                         print("Flux from ccdb: "+str(flux_sum))
                         sum2=0.
                         sum2_trig=0.
+                        generator_file_skip_counter=BASEFILENUM*PERFILE
                         for runs,flux in zip(table,fluxes): #do for each job
                                 #print(runs[0])
                                 if len(table) <= 1:
@@ -2017,6 +2034,11 @@ def main(argv):
                                         COMMAND_dict['run_number']=str(runs[0])
                                         COMMAND_dict['file_number']=str(BASEFILENUM+FILENUM_this_run+-1)
                                         COMMAND_dict['num_events']=str(num_this_file)
+                                        if str(GENERATOR)[:5] == "file:":
+                                                COMMAND_dict['generator_file_skip']=str(generator_file_skip_counter)
+                                                generator_file_skip_counter=generator_file_skip_counter+num_this_file
+                                        else:
+                                                COMMAND_dict['generator_file_skip']="-1"
                                         if BGFOLD == "Random" or BGFOLD=="DEFAULT" or BGFOLD[0:3] == "loc":
                                                 RANDOM_NUM_EVT=GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,runs[0])
                                                 COMMAND_dict['num_rand_trigs']=str(RANDOM_NUM_EVT)
@@ -2059,6 +2081,7 @@ def main(argv):
                         #        print( "This job has >500 subjobs and risks ddosing the servers.  Please use sqlite or request again with a larger per file. ")
                         #        return
 
+                        generator_file_skip_counter=BASEFILENUM*PERFILE
                         for FILENUM in range(1, int(FILES_TO_GEN) + 2):
                                 num=PERFILE
                                 #last file gets the remainder
@@ -2071,6 +2094,11 @@ def main(argv):
                                 COMMAND_dict['run_number']=str(RUNNUM)
                                 COMMAND_dict['file_number']=str(BASEFILENUM+FILENUM+-1)
                                 COMMAND_dict['num_events']=str(num)
+                                if str(GENERATOR)[:5] == "file:":
+                                        COMMAND_dict['generator_file_skip']=str(generator_file_skip_counter)
+                                        generator_file_skip_counter=generator_file_skip_counter+num
+                                else:
+                                        COMMAND_dict['generator_file_skip']="-1"
 
                                 if BGFOLD == "Random" or BGFOLD=="DEFAULT" or BGFOLD[0:3] == "loc":
                                         RANDOM_NUM_EVT=GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,RUNNUM)

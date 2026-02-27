@@ -44,6 +44,11 @@ else
 fi
 export JANA_CALIB_CONTEXT="$wholecontext"
 
+if [[ "$VERSION" == "mc_cpp" ]]; then
+	echo "ERROR: variation=mc_cpp is deprecated and unsupported. Use variation=mc and set EXPERIMENT=CPP in MC.config."
+	exit 1
+fi
+
 shift
 export GENR=$1
 shift
@@ -154,6 +159,12 @@ shift
 export RANDBGRATE=$1
 shift
 export SIMENVIRONMENT=$1
+shift
+export GENERATOR_FILE_SKIP=$1
+
+if [[ "$GENERATOR_FILE_SKIP" == "" ]]; then
+	export GENERATOR_FILE_SKIP="-1"
+fi
 
 export RUNNING_ENVIRONMENT=$ENVIRONMENT
 if [[ "$SIMENVIRONMENT" != "no_Sim_env" && "$SIMENVIRONMENT" != "" ]]; then
@@ -336,7 +347,11 @@ elif [[ "$ccdbSQLITEPATH" == "jlab_batch_default" ]]; then
 	export JANA_CALIB_URL=${CCDB_CONNECTION}
 fi
 
-#export JANA_GEOMETRY_URL="ccdb:///GEOMETRY/main_HDDS.xml context=\"$VERSION\""
+GEOMETRY_CCDB_PATH="GEOMETRY/main_HDDS.xml"
+if [[ "$EXPERIMENT" == "CPP" ]]; then
+	GEOMETRY_CCDB_PATH="GEOMETRY/cpp_HDDS.xml"
+fi
+export JANA_GEOMETRY_URL="ccdb:///$GEOMETRY_CCDB_PATH"
 
 RCDBVERSION=`echo $RCDB_VERSION | cut -c3-4`
 RCDBVERSION=$((10#$RCDBVERSION)) #make sure leading zero doesn't cause issue in string
@@ -438,7 +453,7 @@ if [[ $gen_pre_rcdb != "file" || "$BGTAGONLY_OPTION" == "1" || "$BKGFOLDSTR" == 
 
 	radthick="50.e-6"
 
-	if [[ "$RADIATOR_THICKNESS" != "rcdb" || "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" && "$VERSION" != "mc_2017_01_ver05" ]]; then
+	if [[ "$RADIATOR_THICKNESS" != "rcdb" || "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_JEF" && "$VERSION" != "mc_2017_01_ver05" ]]; then
 		radthick=$RADIATOR_THICKNESS
 	else
 		words=`$runGen rcnd $RUN_NUMBER radiator_type | tail -n1 | sed 's/ / /g' `
@@ -490,7 +505,7 @@ if [[ $gen_pre_rcdb != "file" || "$BGTAGONLY_OPTION" == "1" || "$BKGFOLDSTR" == 
 	elecE_text="$ccdbelece" #`echo ${ccdblist[$(($ccdblist_length-1))]}`
 	#elecE_text=`$runGen rcnd $RUN_NUMBER beam_energy | tail -n1 | awk '{print $1}'`
 
-	if [[ "$eBEAM_ENERGY" != "rcdb" || "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" && "$VERSION" != "mc_2017_01_ver05" ]]; then
+	if [[ "$eBEAM_ENERGY" != "rcdb" || "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_JEF" && "$VERSION" != "mc_2017_01_ver05" ]]; then
 		elecE=$eBEAM_ENERGY
 	elif [[ $elecE_text == "Run" ]]; then
 		elecE=12
@@ -509,7 +524,7 @@ if [[ $gen_pre_rcdb != "file" || "$BGTAGONLY_OPTION" == "1" || "$BKGFOLDSTR" == 
 	if [[ "$COHERENT_PEAK" != "rcdb" && "$polarization_angle" == "-1.0" ]]; then
 		copeak=$COHERENT_PEAK
 	else
-		if [[ "$COHERENT_PEAK" != "rcdb" || "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" && "$VERSION" != "mc_2017_01_ver05" ]]; then
+		if [[ "$COHERENT_PEAK" != "rcdb" || "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_JEF" && "$VERSION" != "mc_2017_01_ver05" ]]; then
 			copeak=$COHERENT_PEAK
 		elif [[ $copeak_text == "Run" ]]; then
 			copeak=9
@@ -530,7 +545,7 @@ if [[ $gen_pre_rcdb != "file" || "$BGTAGONLY_OPTION" == "1" || "$BKGFOLDSTR" == 
 	export COHERENT_PEAK=$copeak
 	echo "Coherent peak set..."
 
-	if [[ "$VERSION" != "mc" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_2017_01_ver05" && "$COHERENT_PEAK" == "rcdb" ]]; then
+	if [[ "$VERSION" != "mc" && "$VERSION" != "mc_JEF" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_2017_01_ver05" && "$COHERENT_PEAK" == "rcdb" ]]; then
 		echo "error in requesting rcdb for the coherent peak while not using variation=mc"
 		echo "something went wrong with initialization"
 		exit 1
@@ -539,7 +554,7 @@ if [[ $gen_pre_rcdb != "file" || "$BGTAGONLY_OPTION" == "1" || "$BKGFOLDSTR" == 
 	export eBEAM_ENERGY=$elecE
 	echo "eBEAM energy set..."
 
-	if [[ "$VERSION" != "mc" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_2017_01_ver05" && "$eBEAM_ENERGY" == "rcdb" ]]; then
+	if [[ "$VERSION" != "mc" && "$VERSION" != "mc_JEF" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_2017_01_ver05" && "$eBEAM_ENERGY" == "rcdb" ]]; then
 		echo "error in requesting rcdb for the electron beam energy and not using variation=mc"
 		echo "something went wrong with initialization"
 		exit 1
@@ -579,7 +594,7 @@ if [[ $gen_pre_rcdb != "file" || "$BGTAGONLY_OPTION" == "1" || "$BKGFOLDSTR" == 
 
 	BGRATE_toUse=$BGRATE
 
-	if [[ "$BGRATE" != "rcdb" || "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_cpp" && "$VERSION" != "mc_JEF" && "$VERSION" != "mc_2017_01_ver05" ]]; then
+	if [[ "$BGRATE" != "rcdb" || "$VERSION" != "mc" && "$VERSION" != "mc_workfest2018" && "$VERSION" != "mc_JEF" && "$VERSION" != "mc_2017_01_ver05" ]]; then
 		BGRATE_toUse=$BGRATE
 	else
 		if [[ $BGTAGONLY_OPTION == "1" || $BKGFOLDSTR == "BeamPhotons" ]]; then
@@ -1680,7 +1695,11 @@ if [[ "$GEANT" != "0" && "$GENR" != "0" ]]; then #run geant
 	sed -i 's/TEMPNOSECONDARIES/'$GEANT_NOSCONDARIES'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 
 	if [[ "$gen_pre" == "file" ]]; then
-		skip_num=$((FILE_NUMBER * PER_FILE))
+		if [[ "$GENERATOR_FILE_SKIP" != "-1" ]]; then
+			skip_num=$GENERATOR_FILE_SKIP
+		else
+			skip_num=$((FILE_NUMBER * PER_FILE))
+		fi
 		sed -i 's/TEMPSKIP/'$skip_num'/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
 	elif [[ $GENERATOR == "particle_gun" ]]; then
 		sed -i 's/INFILE/cINFILE/' control'_'$formatted_runNumber'_'$formatted_fileNumber.in
@@ -1719,8 +1738,8 @@ if [[ "$GEANT" != "0" && "$GENR" != "0" ]]; then #run geant
 
 	if [[ "$GEANTVER" == "3" ]]; then
 
-		echo $runSim hdgeant -xml=ccdb://GEOMETRY/main_HDDS.xml,run=$RUN_NUMBER
-		$runSim hdgeant -xml=ccdb://GEOMETRY/main_HDDS.xml,run=$RUN_NUMBER
+		echo $runSim hdgeant -xml=ccdb://$GEOMETRY_CCDB_PATH,run=$RUN_NUMBER
+		$runSim hdgeant -xml=ccdb://$GEOMETRY_CCDB_PATH,run=$RUN_NUMBER
 		geant_return_code=$?
 
 	elif [[ "$GEANTVER" == "4" ]]; then
@@ -1989,9 +2008,6 @@ else
 		fi
 
 		additional_hdroot=""
-		if [[ "$EXPERIMENT" == "CPP" ]]; then
-			additional_hdroot="-PKALMAN:ADD_VERTEX_POINT=1"
-		fi
 		if [[ "$RECON_CALIBTIME" != "notime" ]]; then
 			reconwholecontext="variation=$RECON_VERSION calibtime=$RECON_CALIBTIME"
 			export JANA_CALIB_CONTEXT="$reconwholecontext"
