@@ -663,7 +663,7 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
                 query_to_do=order["RCDBQuery"]
 
             print("RCDB_QUERY IS: "+str(query_to_do))
-            rcdb_db = rcdb.RCDBProvider("mysql://rcdb@hallddb.jlab.org/rcdb")
+            rcdb_db = rcdb.RCDBProvider(os.environ.get('RCDB_CONNECTION'))
 
             try:
                 runList=rcdb_db.select_runs(str(query_to_do),order["RunNumLow"],order["RunNumHigh"]).get_values(['event_count'],True)
@@ -956,7 +956,7 @@ def TestProject(ID,versionSet,commands_to_call=""):
 
         print("RCDB_QUERY IS: "+str(query_to_do))
         #print("run selecting currently broken.  RCDB: 'basestring' not defined.  Testing first runnumber only")
-        rcdb_db = rcdb.RCDBProvider("mysql://rcdb@hallddb.jlab.org/rcdb")
+        rcdb_db = rcdb.RCDBProvider(os.environ.get('RCDB_CONNECTION'))
         try:
             print(str(query_to_do)+" | "+str(int(order["RunNumLow"]))+" | "+str(int(order["RunNumHigh"])))
             runList=rcdb_db.select_runs(str(query_to_do),order["RunNumLow"],order["RunNumHigh"]).get_values(['event_count'],True)
