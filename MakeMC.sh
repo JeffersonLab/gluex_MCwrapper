@@ -1,5 +1,9 @@
 #!/bin/bash
 
+echo "HOSTNAME: $(hostname)"
+echo "Singularity version:"
+singularity --version 2>/dev/null || apptainer --version
+
 if [[ $SINGULARITY_NAME != "" ]]; then
 	echo "RUNNING IN A SINGULARITY CONTAINER: "$SINGULARITY_NAME
 fi
@@ -186,6 +190,7 @@ if [[ "$BATCHRUN" != "0" || $SINGULARITY_NAME != "" ]]; then
 	fi
 fi
 runningOS=$(echo `$BUILD_SCRIPTS/osrelease.pl`)
+echo "runningOS: $runningOS"
 
 export USER_BC=`which bc`
 export USER_PYTHON=`which python`
@@ -207,12 +212,12 @@ flength_count=$((`echo $FILE_NUMBER | wc -c` - 1))
 
 export XRD_RANDOMS_URL=root://dtn2303.jlab.org
 export RANDOMS_PREPEND=/work/osgpool/halld/
-if [[ "$BATCHSYS" == "OSG" && "$BATCHRUN"=="1" || `hostname` == 'scosg2201.jlab.org' ]]; then
+if [[ "$BATCHSYS" == "OSG" && "$BATCHRUN"=="1" || `hostname` == 'scosg2201' ]]; then
 	export XRD_RANDOMS_URL=${RANDOMS_OSDF}
 	export RANDOMS_PREPEND=""
 fi
 
-if [[ ("$MCWRAPPER_RUN_LOCATION" == "JLAB" || `hostname` == *'.jlab.org'*) && "$BATCHSYS" != "slurmcont" ]]; then
+if [[ ("$MCWRAPPER_RUN_LOCATION" == "JLAB" || `hostname` == *'.jlab.org'* || `hostname` == 'scosg2201') && "$BATCHSYS" != "slurmcont" ]]; then
 	echo "JLAB DETECTED RESETTING RUNNING DIR"
 	echo "changing "$RUNNING_DIR" to ./"
 	export RUNNING_DIR="./"
@@ -221,7 +226,7 @@ fi
 export MAKE_MC_USING_XROOTD=0
 export MAKE_MC_USING_PELICAN=0
 #ls /usr/lib64/libXrdPosixPreload.so
-if [[ "$BATCHSYS" == "OSG" && "$BATCHRUN"=="1" || `hostname` == 'scosg2201.jlab.org' ]]; then
+if [[ "$BATCHSYS" == "OSG" && "$BATCHRUN"=="1" || `hostname` == 'scosg2201' ]]; then
 	echo ""
 	echo "random trigger pelican test"
 	httokendecode -H
@@ -284,7 +289,7 @@ fi
 #override xrootd
 #export MAKE_MC_USING_XROOTD=0
 
-if [[ "$BATCHSYS" == "OSG" && "$BATCHRUN"=="1" || `hostname` == 'scosg2201.jlab.org' ]]; then
+if [[ "$BATCHSYS" == "OSG" && "$BATCHRUN"=="1" || `hostname` == 'scosg2201' ]]; then
 	export USER_BC='/usr/bin/bc'
 	export USER_STAT='/usr/bin/stat'
 fi
@@ -815,7 +820,7 @@ if [[ ("$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" ==
 
 	if [[ "$bkgloc_pre" == "loc:" ]]; then
 		rand_bkg_loc=`echo $BKGFOLDSTR | cut -c 5-`
-		if [[ "$BATCHSYS" == "OSG" && $BATCHRUN != 0 || `hostname` == 'scosg2201.jlab.org' ]]; then
+		if [[ "$BATCHSYS" == "OSG" && $BATCHRUN != 0 || `hostname` == 'scosg2201' ]]; then
 			if [[ "$MAKE_MC_USING_XROOTD" == "0" ]]; then
 				bkglocstring="/srv""/run$formatted_runNumber""_random.hddm"
 			else
@@ -826,7 +831,7 @@ if [[ ("$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" ==
 		fi
 	else
 		#bkglocstring="/cache/halld/""$runperiod""/sim/random_triggers/""run$formatted_runNumber""_random.hddm"
-		if [[ "$BATCHSYS" == "OSG" && $BATCHRUN != 0 || `hostname` == 'scosg2201.jlab.org' ]]; then
+		if [[ "$BATCHSYS" == "OSG" && $BATCHRUN != 0 || `hostname` == 'scosg2201' ]]; then
 			if [[ "$MAKE_MC_USING_XROOTD" == "0" ]]; then
 				bkglocstring="/srv""/run$formatted_runNumber""_random.hddm"
 			else
@@ -834,7 +839,7 @@ if [[ ("$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" ==
 			fi
 		else
 			bkglocstring="/work/osgpool/halld/random_triggers/"$RANDBGTAG"/run"$formatted_runNumber"_random.hddm"
-			if [[ `hostname` == 'scosg16.jlab.org' || `hostname` == 'scosg20.jlab.org' || `hostname` == 'scosg2201.jlab.org' ]]; then
+			if [[ `hostname` == 'scosg16.jlab.org' || `hostname` == 'scosg20.jlab.org' || `hostname` == 'scosg2201' ]]; then
 				bkglocstring="/work/osgpool/halld/random_triggers/"$RANDBGTAG"/run"$formatted_runNumber"_random.hddm"
 			fi
 		fi
@@ -1440,8 +1445,8 @@ if [[ "$GENR" != "0" ]]; then # run generation
 		optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
 		echo $optionals_line
 		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
-		echo $runGen gen_primex_eta_he4 -e $STANDARD_NAME.conf -c $STANDARD_NAME'_beam.conf' -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.txt -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -s $formatted_fileNumber -m $eBEAM_ENERGY $optionals_line
-		$runGen gen_primex_eta_he4 -e $STANDARD_NAME.conf -c $STANDARD_NAME'_beam.conf' -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.txt -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -s $formatted_fileNumber -m $eBEAM_ENERGY $optionals_line
+		echo $runGen gen_primex_eta_he4 -e $STANDARD_NAME.conf -c $STANDARD_NAME'_beam.conf' -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.txt -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -m $eBEAM_ENERGY $optionals_line
+		$runGen gen_primex_eta_he4 -e $STANDARD_NAME.conf -c $STANDARD_NAME'_beam.conf' -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.txt -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -m $eBEAM_ENERGY $optionals_line
 		generator_return_code=$?
 	elif [[ "$GENERATOR" == "gen_generic_root" ]]; then
 		echo "RUNNING GEN_GENERIC_ROOT"
@@ -2354,11 +2359,57 @@ if [[ "$BATCHSYS" == "OSG" ]]; then
 	pelican object put -r $OUTDIR $PELICAN_COPY_DIR
 	transfer_return_code=$?
 	if [[ $transfer_return_code != 0 ]]; then
-		echo
-		echo
-		echo "Something went wrong with pelican"
-		echo "status code: "$transfer_return_code
-		exit $transfer_return_code
+		# Check if all files were transferred over and file sizes are the same.
+		# If so, ignore this warning message from pelican.
+		
+		sleep 60
+		
+		# first check if the files were transferred. If so, ignore this message.
+		LOCAL_OUTPUT_FILES=$(find "$OUTDIR" -type f ! -name ".*" | sed "s|$OUTDIR/||")
+		
+		# Loop over each local file and see if it exists on remote end:
+		MISSING_OUTPUT_FILES=0
+		while IFS= read -r FILE; do
+			FILE_CLEAN=${FILE#./}
+			echo "Checking: $FILE_CLEAN"
+			
+			# Get size of file on local machine:
+			local_file_size=$(stat -c%s "$OUTDIR/$FILE_CLEAN")
+			
+			STAT_OUTPUT=$(pelican object stat "$PELICAN_COPY_DIR/$FILE_CLEAN" 2> /dev/null)
+			if [[ $? -eq 0 ]]; then
+				echo "$FILE_CLEAN exists on osdf endpoint"
+				
+				# Only compare file size if it's within a sub-directory (e.g. root/ hddm/ configurations/):
+				if [[ "$FILE_CLEAN" == */* ]]; then
+					
+					# Make sure transferred file size matches local version (a checksum would be ideal)
+					remote_file_size=$(awk '/Size:/ {print $2}' <<< "$STAT_OUTPUT")
+					if [[ "$local_file_size" -eq "$remote_file_size" ]]; then
+						echo "  file size matches on endpoint"
+					else
+						echo "  file size mismatch (local: ${local_file_size}, remote: ${remote_file_size})"
+						MISSING_OUTPUT_FILES=1
+					fi
+				else
+					echo "  top-level file - skipping size check"
+				fi
+			else
+				echo "$FILE_CLEAN does NOT exist on osdf endpoint"
+				MISSING_OUTPUT_FILES=1
+			fi
+		done <<< "$LOCAL_OUTPUT_FILES"
+		
+		if [[ $MISSING_OUTPUT_FILES -eq 0 ]]; then
+			echo "All output files were found remotely. Ignoring pelican error message."
+		else
+			echo "Some output files are missing. Pelican error will not be ignored."
+			echo
+			echo
+			echo "Something went wrong with pelican"
+			echo "status code: "$transfer_return_code
+			exit $transfer_return_code
+		fi
 	fi
 
 fi

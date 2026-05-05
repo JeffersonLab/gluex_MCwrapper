@@ -171,6 +171,8 @@ def main(argv):
 
             #dirty hack to treat special case of ppauli subdir, NEED TO RESOLVE ASAP
             inputdir = inputdir.replace("ppauli/","") if "ppauli/" in inputdir else inputdir
+            inputdir = inputdir.replace("aschertz/","") if "aschertz/" in inputdir else inputdir
+            inputdir = inputdir.replace("//","/") if "//" in inputdir else inputdir
 
             outputlocation="/".join(proj["OutputLocation"].split("/")[:-1])+"/"
             # outputlocation=outputlocation.replace("/lustre19/","/lustre24/")

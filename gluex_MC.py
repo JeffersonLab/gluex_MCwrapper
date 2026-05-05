@@ -29,7 +29,7 @@ import ccdb.path_utils
 from ccdb import Directory, TypeTable, Assignment, ConstantSet
 from array import array
 from datetime import datetime
-import mysql.connector
+import MySQLdb
 import time
 import os
 import getpass
@@ -40,8 +40,10 @@ from subprocess import call
 import glob
 import hddm_s
 import socket
+import json
+import re
 try:
-        dbcnx = mysql.connector.connect(user='mcuser', database='gluex_mc', host='hallddb.jlab.org')
+        dbcnx = MySQLdb.connect(user='mcuser', database='gluex_mc', host='hallddb.jlab.org')
         dbcursor = dbcnx.cursor()
 except:
         pass
@@ -53,7 +55,7 @@ def getOSName(versionset):
         #only keep what comes after last "/" in versionset, in case it is full path
         versionset=versionset[versionset.rfind("/")+1:]
 
-        vsdbcnx=mysql.connector.connect(user='vsuser', database='vsdb', host='hallddb.jlab.org')
+        vsdbcnx=MySQLdb.connect(user='vsuser', database='vsdb', host='hallddb.jlab.org')
         vscursor = vsdbcnx.cursor()
         query="select OSName from versionSet inner join OSVersions on versionSet.OS_ID=OSVersions.ID where versionSet.filename='"+versionset+"'"
         # print(query)
@@ -581,7 +583,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
         f.write('+ProjectName = "gluex"'+"\n")
         #f.write("Arguments  = "+SCRIPT_TO_RUN+" "+COMMAND+"\n")
         f.write("Arguments  = "+"./"+script_to_use+" "+getCommandString(COMMAND_parts,"OSG",numJobsInBundle)+"\n")
-        f.write("Requirements = (HAS_SINGULARITY == TRUE) && (HAS_CVMFS_oasis_opensciencegrid_org == True) && (TARGET.GLIDEIN_Entry_Name =!= \"OSG_US_ODU-Ubuntu\") && (TARGET.GLIDEIN_Entry_Name =!= \"OSG_US_AMNH-Mendel_osg\") && (TARGET.GLIDEIN_Entry_Name =!= \"OSG_US_AMNH-Mendel_osg-preempt\") && (TARGET.HasUserNamespaces == True)"+"\n")
+        f.write("Requirements = (HAS_SINGULARITY == TRUE) && (HAS_CVMFS_oasis_opensciencegrid_org == True) && (TARGET.GLIDEIN_Entry_Name =!= \"OSG_US_ODU-Ubuntu\") && (TARGET.HasUserNamespaces == True)"+"\n")
         #f.write("Requirements = (HAS_SINGULARITY == TRUE) && (HAS_CVMFS_oasis_opensciencegrid_org == True) && (TARGET.GLIDEIN_Entry_Name =!= \"OSG_US_ODU-Ubuntu\") &&  GLIDEIN_ResourceName==\"ComputeCanada-Cedar\""+"\n")
         #f.write("Requirements = (HAS_SINGULARITY == TRUE) && (HAS_CVMFS_oasis_opensciencegrid_org == True) && (TARGET.GLIDEIN_Entry_Name =!= \"OSG_US_ODU-Ubuntu\") &&  GLIDEIN_ResourceName==\"JLab-FARM-CE\""+"\n")
         #f.write("Requirements = (HAS_SINGULARITY == TRUE) && (HAS_CVMFS_oasis_opensciencegrid_org == True) && (GLIDEIN_SITE=!=\"UConn\") && (GLIDEIN_SITE=!=\"Cedar\")"+"\n")
@@ -599,6 +601,9 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
                 f.write("use_oauth_services = jlab_gluex"+"\n")
 
         f.write('+SingularityBindCVMFS = True'+"\n")
+
+        #f.write('+UNDESIRED_Sites = "OSG_US_FSU_HNPGRID,OSG_US_AMNH-Mendel_osg"'+"\n")
+
         #f.write('+UNDESIRED_Sites = "OSG_US_ODU-Ubuntu"'+"\n")
         f.write('+SingularityAutoLoad = True'+"\n")
         
@@ -628,7 +633,14 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
         
         f.write("request_memory = "+str(RAM)+"\n")
 
-        f.write("request_disk = 5.0GB"+"\n")
+        #f.write("request_disk = 5.0GB"+"\n")
+        if int(RUNNUM)==40881:
+            f.write("request_disk = 7.0GB"+"\n")
+        elif int(RUNNUM)==30401:
+            f.write("request_disk = 7.0GB"+"\n")
+        else:
+            f.write("request_disk = 5.0GB"+"\n")
+
         #f.write("transfer_input_files = "+ENVFILE+"\n")
         f.write("transfer_input_files = "+SCRIPT_TO_RUN+", "+ENVFILE+additional_passins+"\n")
 
@@ -675,10 +687,14 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
                 print("JOBSUB OUTPUT",jobSubout)
                 print("JOBSUB ERROR",jobSuberr)
                 #'Agent pid 2322136\nSubmitting job(s).\n1 job(s) submitted to cluster 925999.\n'
-                idnumline=jobSubout.split("\n")[2].split(".")[0].split(" ")
                 
-
-                #1 job(s) submitted to cluster 425013.
+                #idnumline=jobSubout.split("\n")[2].split(".")[0].split(" ")
+                idnumline=""
+                for line in jobSubout.splitlines():
+                    if "job(s) submitted" in line:
+                        idnumline = line
+                        break
+                idnumline = idnumline.split(".")[0].split(" ")
 
 
                 status = subprocess.call('rm -f MCOSG_'+str(PROJECT_ID)+'.submit', shell=True)
@@ -692,6 +708,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
                 recordJob(PROJECT_ID,RUNNUM,FILENUM,SWIF_ID_NUM,COMMAND['num_events'])
                 #recordFirstAttempt(PROJECT_ID,RUNNUM,FILENUM,"OSG",SWIF_ID_NUM,COMMAND['num_events'],NCORES,"Unset")
         elif int(PROJECT_ID) < 0:
+                print("IDNUMLINE:",idnumline)
                 if(int(idnumline[0])==numJobsInBundle):
                         #print "A NEW SET OF ATTEMPTS"
                         #print("JOBS BUNDLE:",bundledJobs)
@@ -996,6 +1013,25 @@ def PSAcceptance(x, par0, par1, par2):
 
 def calcFluxCCDB(ccdb_conn, run, emin, emax):
 
+        # Temporary workaround for 2025-01 Run Period.
+        # There are only 209 runs with random trigger files, but 824 runs that satisfy the default RCDB query.
+        # If I let the runs without random trigger files get created, then the majority of jobs that get dispatched will fail
+        # due to not having the requested background file.
+        # So I added this workaround in the calcFluxCCDB. This is a bad thing to do, and should be removed as soon as possible.
+        # Here I am just checking if random trigger files exist for the run in question, but I am just assuming the user requested
+        # random background in the first place, and moreover that they requested to use recon-2025_01-ver03.
+        if 130000<run[0] and run[0]<139999:
+            pelican_ls_string="pelican object ls osdf://jlab-osdf/gluex/osgpool/random_triggers/recon-2025_01-ver03/run"+str(run[0])+"_random.hddm"
+            token_str='eval `ssh-agent`; /usr/bin/ssh-add; '
+            agent_kill_str="; ssh-agent -k"
+            #print(token_str+pelican_ls_string+agent_kill_str)
+            my_env=os.environ.copy()
+            p = subprocess.Popen(token_str+pelican_ls_string+agent_kill_str, env=my_env ,stdin=subprocess.PIPE,stdout=subprocess.PIPE, stderr=subprocess.PIPE,bufsize=-1,shell=True,close_fds=True)
+            output, errors = p.communicate()
+            if "object not found" in str(errors):
+                print("Missing random hddm files for run number = %d, skipping generation" % run[0])
+                return -1.0
+
         flux = 0.
         VARIATION = "default"
         CALIBTIME = datetime.now()
@@ -1083,11 +1119,11 @@ def calcTaggedFluxCCDB(ccdb_conn, run, emin, emax):
 
         # Conversion factors for total flux
         converterThickness = run[2]
-        converterLength = 75e-6 # default is 75 um
+        converterLength = 750e-6 # default is 75 um
         if converterThickness == "Be 750um":
                 converterLength = 750e-6
         elif converterThickness != "Be 75um":
-                print("Unknown converter thickness for run %s: %s, assuming Be 75um" % (run[0],run[2]))
+                print("Unknown converter thickness for run %s: %s, assuming Be 750um" % (run[0],run[2]))
 
         berilliumRL = 35.28e-2 # 35.28 cm
         radiationLength = converterLength/berilliumRL
@@ -1943,7 +1979,7 @@ def main(argv):
                                 runlow=RunType[0].lstrip("0")
                                 runhigh=RunType[1].lstrip("0")
                         else:
-                                cnx = mysql.connector.connect(user='ccdb_user', database='ccdb', host='hallddb.jlab.org')
+                                cnx = MySQLdb.connect(user='ccdb_user', database='ccdb', host='hallddb.jlab.org')
                                 cursor = cnx.cursor()
 
                                 runrange_name=""
@@ -1970,8 +2006,25 @@ def main(argv):
                                 query_to_do=RCDB_QUERY
 
                         print(str(runlow)+"------->"+str(runhigh))
-                        table = db.select_runs(str(query_to_do),runlow,runhigh).get_values(['event_count','polarimeter_converter'],True)
+                        
+                        # Workaround to use gluex alma 9 container to use rcdb2 when running with python2:
+                        
+                        running_hostname=socket.gethostname()
+                        if "scosg2201" in running_hostname:
+                            conn_command = "singularity exec --cleanenv --bind /scigroup/mcwrapper/ --bind /group/halld/:/group/halld/ --bind /cvmfs /cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_almalinux_9:latest"
+                            conn_command = conn_command + ' /scigroup/mcwrapper/gluex_MCwrapper/Utilities/rcdb_wrapper.sh "'+query_to_do.split("\n")[0]+'" '+str(runlow)+' '+str(runhigh)
+                            print("RCDB Container command:")
+                            print(conn_command)
+                            my_env=os.environ.copy()
+                            p = subprocess.Popen(conn_command, env=my_env, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=-1, shell=True)
+                            output, errors = p.communicate()
+                            print(output)
+                            table = json.loads(output)
+                        else:
+                            table = db.select_runs(str(query_to_do),runlow,runhigh).get_values(['event_count','polarimeter_converter'],True)
                         print(table)
+                        
+                        #table = db.select_runs(str(query_to_do),runlow,runhigh).get_values(['event_count','polarimeter_converter'],True)
                         #print len(table)
 
                         print("\nComputing flux from CCDB for all runs in the requested range, this may take a minute...\n")
@@ -2191,7 +2244,7 @@ def GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,RUNNUM):
                 #print(path_base)
 
                 running_hostname=socket.gethostname()
-                if running_hostname == "scosg16.jlab.org" or running_hostname == "scosg20.jlab.org" or running_hostname == "scosg2201.jlab.org":
+                if running_hostname == "scosg16.jlab.org" or running_hostname == "scosg20.jlab.org" or "scosg2201" in running_hostname:
                         #os.system("scp sci-xrootd.jlab.org:/osgpool/halld/"+"/random_triggers/"+RANDBGTAG+"/run"+formattedRUNNUM+"_random.hddm /tmp/")
                         path_base="/tmp/"+RANDBGTAG+"/run"+formattedRUNNUM+"_random.hddm"
 
@@ -2208,7 +2261,7 @@ def GetRandTrigNums(BGFOLD,RANDBGTAG,BATCHSYS,RUNNUM):
                 if len(matches) == 0:
                         print("Attempting to scan and tag this random trigger file")
                         running_hostname=socket.gethostname()
-                        if running_hostname == "scosg16.jlab.org" or running_hostname == "scosg20.jlab.org" or running_hostname == "scosg2201.jlab.org":
+                        if running_hostname == "scosg16.jlab.org" or running_hostname == "scosg20.jlab.org" or "scosg2201" in running_hostname:
                                 os.system("mkdir -p /tmp/"+RANDBGTAG)
 
                                 # Try copying the file with pelican:
