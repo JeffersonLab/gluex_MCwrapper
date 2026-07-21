@@ -701,6 +701,8 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
                 print("JOBSUB ERROR",jobSuberr)
                 
                 # Expected output: 'Agent pid 2322136\nSubmitting job(s).\n1 job(s) submitted to cluster 925999.\n'
+                #'Agent pid 2322136\nSubmitting job(s).\n1 job(s) submitted to cluster 925999.\n'
+                
                 #idnumline=jobSubout.split("\n")[2].split(".")[0].split(" ")
                 idnumline=""
                 for line in jobSubout.splitlines():
