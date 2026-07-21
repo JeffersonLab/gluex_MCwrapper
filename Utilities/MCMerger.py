@@ -74,14 +74,14 @@ def bash_root(name_map, path, mc_dir):
             for tup in name_map["trees"].keys():
                 fold_name, suffix = tup[0], tup[1]
                 fold_name = fold_name.rstrip("_")
-                return_code += subprocess.run([f"mkdir {path + '/' + dir_type + '/' +  fold_name}"], shell=True).returncode
-                return_code += subprocess.run([f"mkdir {checkpointpath + '/' + dir_type + '/' +  fold_name}"], shell=True).returncode
+                return_code += subprocess.run([f"mkdir -p {path + '/' + dir_type + '/' +  fold_name}"], shell=True).returncode
+                return_code += subprocess.run([f"mkdir -p {checkpointpath + '/' + dir_type + '/' +  fold_name}"], shell=True).returncode
                 for run in name_map["trees"][tup]["run_nums"]:
                     if os.path.isfile(checkpointpath + '/' + dir_type + '/' +  fold_name + '/' + tup[0] + run + tup[1] + '.done'):
                         continue
                     # success = subprocess.run([f"/home/mcwrap/tools/hadd -v 1 -f {path + '/' + dir_type + '/' +  fold_name + '/' + tup[0] + run + tup[1]} {mc_dir + '/' + 'root' + '/' +  dir_type + '/' + tup[0]+run}*{tup[1]}"], shell=True)
                     # success = subprocess.run([f"hadd -v 1 -f {path + '/' + dir_type + '/' +  fold_name + '/' + tup[0] + run + tup[1]} {mc_dir + '/' + 'root' + '/' +  dir_type + '/' + tup[0]+run}*{tup[1]}"], shell=True)
-                    success = subprocess.run([f"/home/mcwrap/sw/root-6.24.04/install/bin/hadd -v 1 -f {path + '/' + dir_type + '/' +  fold_name + '/' + tup[0] + run + tup[1]} {mc_dir + '/' + 'root' + '/' +  dir_type + '/' + tup[0]+run}*{tup[1]}"], shell=True)
+                    success = subprocess.run([f"/home/mcwrap/sw/root-6.32.20-gcc11.5.0/bin/hadd -v 1 -f {path + '/' + dir_type + '/' +  fold_name + '/' + tup[0] + run + tup[1]} {mc_dir + '/' + 'root' + '/' +  dir_type + '/' + tup[0]+run}*{tup[1]}"], shell=True)
                     return_code += success.returncode
                     if success.returncode == 0:
                         open(checkpointpath + '/' + dir_type + '/' +  fold_name + '/' + tup[0] + run + tup[1] + '.done', 'a').close()
@@ -106,7 +106,7 @@ def bash_root(name_map, path, mc_dir):
                         continue
                     # success = subprocess.run([f"/home/mcwrap/tools/hadd -v 1 -f {path + '/' + dir_type + '/' +  tup[0] + run + tup[1]} {mc_dir + '/' + 'root' + '/' +  dir_type + '/' + tup[0]+run}*{tup[1]}"], shell=True)
                     # success = subprocess.run([f"hadd -v 1 -f {path + '/' + dir_type + '/' +  tup[0] + run + tup[1]} {mc_dir + '/' + 'root' + '/' +  dir_type + '/' + tup[0]+run}*{tup[1]}"], shell=True)
-                    success = subprocess.run([f"/home/mcwrap/sw/root-6.24.04/install/bin/hadd -v 1 -f {path + '/' + dir_type + '/' +  tup[0] + run + tup[1]} {mc_dir + '/' + 'root' + '/' +  dir_type + '/' + tup[0]+run}*{tup[1]}"], shell=True)
+                    success = subprocess.run([f"/home/mcwrap/sw/root-6.32.20-gcc11.5.0/bin/hadd -v 1 -f {path + '/' + dir_type + '/' +  tup[0] + run + tup[1]} {mc_dir + '/' + 'root' + '/' +  dir_type + '/' + tup[0]+run}*{tup[1]}"], shell=True)
                     return_code += success.returncode
                     if success.returncode == 0:
                         open(checkpointpath + '/' + dir_type + '/' +  tup[0] + run + tup[1] + '.done', 'a').close()
@@ -277,7 +277,7 @@ def recurse_name_map(name_map, path, mc_dir, hddm=False):
             k = "hddm_merge"
         if ("bash_" + k) in bash.keys():
             dir_type = re.split("/", path)[-1]
-            return_code = bash["bash_" + k](name_map[k], path+k+"/", mc_dir)
+            return_code += bash["bash_" + k](name_map[k], path+k+"/", mc_dir)
     return return_code
 
 
