@@ -1457,21 +1457,21 @@ if ( "$GENR" != "0" ) then #run generation
 		sed -i 's/TEMPCOLD/'0.00$colsize'/' run_mcwrapper.ffr
 		sed -i 's/TEMPRAND/'$RANDOMnum'/' run_mcwrapper.ffr
 		set Fortran_eBEAM_ENRGY=`echo $eBEAM_ENERGY | cut -c -7`
-		sed -i 's/TEMPELECE/'$Fortran_eBEAM_ENRGY'/' run_mcwrapper.ffr
+        sed -i 's/TEMPELECE/'$Fortran_eBEAM_ENRGY'/' run_mcwrapper.ffr
 		set Fortran_COHERENT_PEAK=`echo $COHERENT_PEAK | cut -c -7`
-		sed -i 's/TEMPCOHERENT/'$Fortran_COHERENT_PEAK'/' 
+		sed -i 's/TEMPCOHERENT/'$Fortran_COHERENT_PEAK'/' run_mcwrapper.ffr
 		sed -i 's/TEMPMINGENE/'$GEN_MIN_ENERGY'/' run_mcwrapper.ffr
 		sed -i 's/TEMPMAXGENE/'$GEN_MAX_ENERGY'/' run_mcwrapper.ffr
 
-		if ( grep -q "C EELEC" $STANDARD_NAME.conf ) then
+		if ( `grep -q "C EELEC" $STANDARD_NAME.conf` == 0 ) then
 			sed -i 's/EELEC/C EELEC/g' run_mcwrapper.ffr
 		endif
-
-		if ( grep -q "C EPEAK" $STANDARD_NAME.conf ) then
+        
+		if ( `grep -q "C EPEAK" $STANDARD_NAME.conf` == 0 ) then
 			sed -i 's/EPEAK/C EPEAK/g' run_mcwrapper.ffr
 		endif
 
-		if ( grep -q "C DCOLLIM" $STANDARD_NAME.conf ) then
+		if ( `grep -q "C DCOLLIM" $STANDARD_NAME.conf` == 0 ) then
 			sed -i 's/DCOLLIM/C DCOLLIM/g' run_mcwrapper.ffr
 		endif
 
