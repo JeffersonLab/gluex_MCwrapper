@@ -36,6 +36,8 @@ dbname = 'gluex_mc'
 #get user name of current user
 runner_name=pwd.getpwuid( os.getuid() )[0]
 
+DEFAULT_RCDB_CONNECTION="mysql://rcdb@hallddb.jlab.org/rcdb2"
+
 if( not (runner_name=="tbritton" or runner_name=="mcwrap")):
     print("ERROR: You must be tbritton or mcwrap to run this script")
     sys.exit(1)
@@ -663,7 +665,10 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
                 query_to_do=order["RCDBQuery"]
 
             print("RCDB_QUERY IS: "+str(query_to_do))
-            rcdb_db = rcdb.RCDBProvider("mysql://rcdb@hallddb.jlab.org/rcdb")
+            connection_string = os.environ.get("RCDB_CONNECTION")
+            if not connection_string:
+                connection_string = DEFAULT_RCDB_CONNECTION
+            rcdb_db = rcdb.RCDBProvider(connection_string)
 
             try:
                 runList=rcdb_db.select_runs(str(query_to_do),order["RunNumLow"],order["RunNumHigh"]).get_values(['event_count'],True)
@@ -956,7 +961,10 @@ def TestProject(ID,versionSet,commands_to_call=""):
 
         print("RCDB_QUERY IS: "+str(query_to_do))
         #print("run selecting currently broken.  RCDB: 'basestring' not defined.  Testing first runnumber only")
-        rcdb_db = rcdb.RCDBProvider("mysql://rcdb@hallddb.jlab.org/rcdb")
+        connection_string = os.environ.get("RCDB_CONNECTION")
+        if not connection_string:
+            connection_string = DEFAULT_RCDB_CONNECTION
+        rcdb_db = rcdb.RCDBProvider(connection_string)
         try:
             print(str(query_to_do)+" | "+str(int(order["RunNumLow"]))+" | "+str(int(order["RunNumHigh"])))
             runList=rcdb_db.select_runs(str(query_to_do),order["RunNumLow"],order["RunNumHigh"]).get_values(['event_count'],True)
