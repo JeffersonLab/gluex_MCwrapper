@@ -101,7 +101,7 @@ def DeclareAllComplete():
         outputlocation="/".join(proj["OutputLocation"].split("/")[:-1])+"/"
         # outputlocation="/work/halld/gluex_simulations/MERGED_MC/"
 
-        hours_to_wait=2
+        hours_to_wait=4
 
         #check if now is at least 4 hours later than the completion time
         if proj["Completed_Time"] is None:
@@ -207,7 +207,7 @@ def AutoLaunch(RUNNING_LIMIT_OVERRIDE):
     RetryAllJobs(RUNNING_LIMIT_OVERRIDE)
     #return
     print("TESTING...")
-    query = "SELECT ID,Email,VersionSet,Tested,UName FROM Project WHERE (Tested = 0) && Dispatched_Time is NULL && ID=4702 ORDER BY (SELECT Priority from Users where name=UName) DESC LIMIT 10;"
+    query = "SELECT ID,Email,VersionSet,Tested,UName FROM Project WHERE (Tested = 0) && Dispatched_Time is NULL ORDER BY (SELECT Priority from Users where name=UName) DESC LIMIT 10;"
     print(query)
     curs.execute(query) 
     rows=curs.fetchall()

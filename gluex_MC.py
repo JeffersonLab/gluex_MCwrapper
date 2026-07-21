@@ -638,6 +638,8 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
             f.write("request_disk = 7.0GB"+"\n")
         elif int(RUNNUM)==30401:
             f.write("request_disk = 7.0GB"+"\n")
+        elif 40000<int(RUNNUM) and int(RUNNUM)<49999:
+            f.write("request_disk = 8.0GB"+"\n")
         else:
             f.write("request_disk = 5.0GB"+"\n")
 
@@ -676,18 +678,29 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
                 os.environ["BEARER_TOKEN_FILE"]="/var/run/user/10967/bt_u10967"
                 os.environ["XDG_RUNTIME_DIR"]="/run/user/10967"
                 
-                token_str='eval `ssh-agent`; /usr/bin/ssh-add;'
-                agent_kill_str="; ssh-agent -k"
+                # (5/6/26) TEMPORARILY DISABLE SSH KEY AUTH:
+                #token_str='eval `ssh-agent`; /usr/bin/ssh-add;'
+                #agent_kill_str="; ssh-agent -k"
+                token_str=''
+                agent_kill_str=''
                 print("Submitting: ",token_str+add_command+agent_kill_str)
 
-                
+                jobSubout,jobSuberr=subprocess.Popen(
+                    token_str+add_command+agent_kill_str,
+                    shell=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    env=os.environ,
+                    executable='/bin/bash',
+                    close_fds=True,
+                    text=True
+                ).communicate()
 
-                jobSubout,jobSuberr=subprocess.Popen(token_str+add_command+agent_kill_str,shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,env=os.environ,executable='/bin/bash',close_fds=True).communicate()
                 #jobSubout=subprocess.check_output(add_command.split(" "))
                 print("JOBSUB OUTPUT",jobSubout)
                 print("JOBSUB ERROR",jobSuberr)
-                #'Agent pid 2322136\nSubmitting job(s).\n1 job(s) submitted to cluster 925999.\n'
                 
+                # Expected output: 'Agent pid 2322136\nSubmitting job(s).\n1 job(s) submitted to cluster 925999.\n'
                 #idnumline=jobSubout.split("\n")[2].split(".")[0].split(" ")
                 idnumline=""
                 for line in jobSubout.splitlines():
@@ -695,7 +708,6 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
                         idnumline = line
                         break
                 idnumline = idnumline.split(".")[0].split(" ")
-
 
                 status = subprocess.call('rm -f MCOSG_'+str(PROJECT_ID)+'.submit', shell=True)
                 status = subprocess.call('rm -f /tmp/MCOSG_'+str(PROJECT_ID)+'.submit', shell=True)

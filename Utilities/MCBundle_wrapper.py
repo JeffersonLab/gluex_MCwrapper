@@ -103,7 +103,7 @@ def BundleFiles(inputdir,output,merge_dir):
     print(mkdircommand)
     subprocess.call(mkdircommand.split(" "))
     hostname = subprocess.check_output(["hostname"], shell=True).decode().strip()
-    if hostname == "dtn2303.jlab.org":
+    if hostname == "dtn2303.jlab.org" or hostname == "ifarm2402.jlab.org":
         python_cmd = "/usr/bin/python3"
     else:
         python_cmd = "/usr/bin/python3.6"
@@ -142,10 +142,12 @@ def main(argv):
 
     if hostname == "dtn2303.jlab.org":
         merge_dir = "/export/halld/mcwrap/mergetemp/"
+    elif hostname == "ifarm2402.jlab.org":
+        merge_dir = "/scratch/mcwrap/mergetemp/"
     else:
         merge_dir = "/osgpool/halld/mcwrap/mergetemp/"
 
-    if hostname == "dtn2303.jlab.org":
+    if hostname == "dtn2303.jlab.org" or hostname == "ifarm2402.jlab.org":
         staging_dir = "/work/osgpool/halld//REQUESTED_MC/"
     else:
         staging_dir = "/volatile/halld/gluex_simulations/REQUESTED_MC/"
