@@ -581,7 +581,7 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
         f.write('+ProjectName = "gluex"'+"\n")
         #f.write("Arguments  = "+SCRIPT_TO_RUN+" "+COMMAND+"\n")
         f.write("Arguments  = "+"./"+script_to_use+" "+getCommandString(COMMAND_parts,"OSG",numJobsInBundle)+"\n")
-        f.write("Requirements = (HAS_SINGULARITY == TRUE) && (HAS_CVMFS_oasis_opensciencegrid_org == True) && (TARGET.GLIDEIN_Entry_Name =!= \"OSG_US_ODU-Ubuntu\") && (TARGET.GLIDEIN_Entry_Name =!= \"OSG_US_AMNH-Mendel_osg\") && (TARGET.GLIDEIN_Entry_Name =!= \"OSG_US_AMNH-Mendel_osg-preempt\") && (TARGET.HasUserNamespaces == True)"+"\n")
+        f.write("Requirements = (HAS_SINGULARITY == TRUE) && (HAS_CVMFS_oasis_opensciencegrid_org == True) && (TARGET.GLIDEIN_Entry_Name =!= \"OSG_US_ODU-Ubuntu\") && (TARGET.HasUserNamespaces == True)"+"\n")
         #f.write("Requirements = (HAS_SINGULARITY == TRUE) && (HAS_CVMFS_oasis_opensciencegrid_org == True) && (TARGET.GLIDEIN_Entry_Name =!= \"OSG_US_ODU-Ubuntu\") &&  GLIDEIN_ResourceName==\"ComputeCanada-Cedar\""+"\n")
         #f.write("Requirements = (HAS_SINGULARITY == TRUE) && (HAS_CVMFS_oasis_opensciencegrid_org == True) && (TARGET.GLIDEIN_Entry_Name =!= \"OSG_US_ODU-Ubuntu\") &&  GLIDEIN_ResourceName==\"JLab-FARM-CE\""+"\n")
         #f.write("Requirements = (HAS_SINGULARITY == TRUE) && (HAS_CVMFS_oasis_opensciencegrid_org == True) && (GLIDEIN_SITE=!=\"UConn\") && (GLIDEIN_SITE=!=\"Cedar\")"+"\n")
@@ -675,10 +675,14 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
                 print("JOBSUB OUTPUT",jobSubout)
                 print("JOBSUB ERROR",jobSuberr)
                 #'Agent pid 2322136\nSubmitting job(s).\n1 job(s) submitted to cluster 925999.\n'
-                idnumline=jobSubout.split("\n")[2].split(".")[0].split(" ")
                 
-
-                #1 job(s) submitted to cluster 425013.
+                #idnumline=jobSubout.split("\n")[2].split(".")[0].split(" ")
+                idnumline=""
+                for line in jobSubout.splitlines():
+                    if "job(s) submitted" in line:
+                        idnumline = line
+                        break
+                idnumline = idnumline.split(".")[0].split(" ")
 
 
                 status = subprocess.call('rm -f MCOSG_'+str(PROJECT_ID)+'.submit', shell=True)
