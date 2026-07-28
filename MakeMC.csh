@@ -307,9 +307,12 @@ setenv JANA_GEOMETRY_URL "ccdb:///$GEOMETRY_CCDB_PATH"
 #xrdcopy $XRD_RANDOMS_URL/ccdb.sqlite ./
 #setenv CCDB_CONNECTION sqlite:///$PWD/ccdb.sqlite
 #setenv JANA_CALIB_URL ${CCDB_CONNECTION}
-@ RCDBVERSION=`echo $RCDB_VERSION | cut -c3-4`
+set RCDBVERSIONPARTS=(`echo $RCDB_VERSION | tr '.' ' '`)
+set RCDBMAJOR=$RCDBVERSIONPARTS[1]
+set RCDBMINOR=$RCDBVERSIONPARTS[2]
 set RCDBFILE="rcdb.sqlite"
-if ( $RCDBVERSION < 8 ) then
+echo "RCDB_VERSION is $RCDB_VERSION (major $RCDBMAJOR, minor $RCDBMINOR)"
+if ( $RCDBMAJOR == 0 && $RCDBMINOR < 8 ) then
 	echo "RCDB needs a version 1 sqlite file"
 	set RCDBFILE="rcdb_v1.sqlite"
 	setenv RCDB_CONNECTION mysql://rcdb@hallddb.jlab.org/rcdb
@@ -2056,9 +2059,11 @@ else
 				setenv JANA_CALIB_CONTEXT "$anawholecontext"
 			endif
 
-			@ RCDBVERSION=`echo $RCDB_VERSION | cut -c3-4`
+			set RCDBVERSIONPARTS=(`echo $RCDB_VERSION | tr '.' ' '`)
+			set RCDBMAJOR=$RCDBVERSIONPARTS[1]
+			set RCDBMINOR=$RCDBVERSIONPARTS[2]
 			set RCDBFILE="rcdb.sqlite"
-			if ( $RCDBVERSION < 8 ) then
+			if ( $RCDBMAJOR == 0 && $RCDBMINOR < 8 ) then
 				echo "RCDB needs a version 1 sqlite file"
 				set RCDBFILE="rcdb_v1.sqlite"
 			endif

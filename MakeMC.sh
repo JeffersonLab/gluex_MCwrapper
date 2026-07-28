@@ -353,11 +353,12 @@ if [[ "$EXPERIMENT" == "CPP" ]]; then
 fi
 export JANA_GEOMETRY_URL="ccdb:///$GEOMETRY_CCDB_PATH"
 
-RCDBVERSION=`echo $RCDB_VERSION | cut -c3-4`
-RCDBVERSION=$((10#$RCDBVERSION)) #make sure leading zero doesn't cause issue in string
+RCDBVERSIONPARTS=($(echo "$RCDB_VERSION" | tr '.' ' '))
+RCDBMAJOR="${RCDBVERSIONPARTS[0]}"
+RCDBMINOR="${RCDBVERSIONPARTS[1]}"
 RCDBFILE="rcdb.sqlite"
-echo "RCDB_VERSION is $RCDB_VERSION (minor version $RCDBVERSION)"
-if [[ $RCDBVERSION -lt 8 ]]; then
+echo "RCDB_VERSION is $RCDB_VERSION (major $RCDBMAJOR, minor $RCDBMINOR)"
+if [[ "$RCDBMAJOR" -eq 0 && "$RCDBMINOR" -lt 8 ]]; then
 	echo "RCDB needs a version 1 sqlite file"
 	RCDBFILE="rcdb_v1.sqlite"
 	RCDB_CONNECTION="mysql://rcdb@hallddb.jlab.org/rcdb"
@@ -2143,10 +2144,11 @@ else
 				export JANA_CALIB_CONTEXT="$anawholecontext"
 			fi
 
-			RCDBVERSION=`echo $RCDB_VERSION | cut -c3-4`
-			RCDBVERSION=$((10#$RCDBVERSION)) #make sure leading zero doesn't cause issue in string
+			RCDBVERSIONPARTS=($(echo "$RCDB_VERSION" | tr '.' ' '))
+			RCDBMAJOR="${RCDBVERSIONPARTS[0]}"
+			RCDBMINOR="${RCDBVERSIONPARTS[1]}"
 			RCDBFILE="rcdb.sqlite"
-			if [[ $RCDBVERSION -lt 8 ]]; then
+			if [[ "$RCDBMAJOR" -eq 0 && "$RCDBMINOR" -lt 8 ]]; then
 				echo "RCDB needs a version 1 sqlite file"
 				RCDBFILE="rcdb_v1.sqlite"
 			fi
