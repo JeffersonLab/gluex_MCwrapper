@@ -353,11 +353,12 @@ if [[ "$EXPERIMENT" == "CPP" ]]; then
 fi
 export JANA_GEOMETRY_URL="ccdb:///$GEOMETRY_CCDB_PATH"
 
-RCDBVERSION=`echo $RCDB_VERSION | cut -c3-4`
-RCDBVERSION=$((10#$RCDBVERSION)) #make sure leading zero doesn't cause issue in string
+RCDBVERSIONPARTS=($(echo "$RCDB_VERSION" | tr '.' ' '))
+RCDBMAJOR="${RCDBVERSIONPARTS[0]}"
+RCDBMINOR="${RCDBVERSIONPARTS[1]}"
 RCDBFILE="rcdb.sqlite"
-echo "RCDB_VERSION is $RCDB_VERSION (minor version $RCDBVERSION)"
-if [[ $RCDBVERSION -lt 8 ]]; then
+echo "RCDB_VERSION is $RCDB_VERSION (major $RCDBMAJOR, minor $RCDBMINOR)"
+if [[ "$RCDBMAJOR" -eq 0 && "$RCDBMINOR" -lt 8 ]]; then
 	echo "RCDB needs a version 1 sqlite file"
 	RCDBFILE="rcdb_v1.sqlite"
 	RCDB_CONNECTION="mysql://rcdb@hallddb.jlab.org/rcdb"
@@ -2040,12 +2041,13 @@ else
 			if [ $JANA_MAJOR_VERSION -ge 2 ]; then
 				echo $runRecon hd_root $file_to_recon --loadconfigs jana_config.cfg -PNTHREADS=$NUMTHREADS -Pjana:warmup_timeout=500 -Pjana:timeout=500 $additional_hdroot
 				$runRecon hd_root $file_to_recon --loadconfigs jana_config.cfg -PNTHREADS=$NUMTHREADS -Pjana:warmup_timeout=500 -Pjana:timeout=500 $additional_hdroot
+				hd_root_return_code=$?
 			else
 				echo $runRecon hd_root $file_to_recon --config=jana_config.cfg -PNTHREADS=$NUMTHREADS $additional_hdroot
 				$runRecon hd_root $file_to_recon --config=jana_config.cfg -PNTHREADS=$NUMTHREADS $additional_hdroot
+				hd_root_return_code=$?
 			fi
 			
-			hd_root_return_code=$?
 			reaction_filter=`grep ReactionFilter jana_config.cfg`
 			#file_options = `tail jana_config.cfg -n+2` # get everything from line 2 on. Lines counting starts with 1
 			#echo "Reaction Filter: "$reaction_filter
@@ -2077,12 +2079,13 @@ else
 			if [ $JANA_MAJOR_VERSION -ge 2 ]; then
 				echo "$runRecon hd_root ""$STANDARD_NAME"'_geant'"$GEANTVER"'_smeared.hddm'" -PPLUGINS=""$PluginStr ""-PNTHREADS=""$NUMTHREADS"
 				$runRecon hd_root $file_to_recon -PPLUGINS=$PluginStr -PNTHREADS=$NUMTHREADS -Pjana:warmup_timeout=500 -Pjana:timeout=500 $additional_hdroot
+				hd_root_return_code=$?
 			else
 				echo "$runRecon hd_root ""$STANDARD_NAME"'_geant'"$GEANTVER"'_smeared.hddm'" -PPLUGINS=""$PluginStr ""-PNTHREADS=""$NUMTHREADS"
 				$runRecon hd_root $file_to_recon -PPLUGINS=$PluginStr -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 $additional_hdroot
+				hd_root_return_code=$?
 			fi
 			
-			hd_root_return_code=$?
 		fi
 
 		if [[ $hd_root_return_code != 0 ]]; then
@@ -2143,10 +2146,11 @@ else
 				export JANA_CALIB_CONTEXT="$anawholecontext"
 			fi
 
-			RCDBVERSION=`echo $RCDB_VERSION | cut -c3-4`
-			RCDBVERSION=$((10#$RCDBVERSION)) #make sure leading zero doesn't cause issue in string
+			RCDBVERSIONPARTS=($(echo "$RCDB_VERSION" | tr '.' ' '))
+			RCDBMAJOR="${RCDBVERSIONPARTS[0]}"
+			RCDBMINOR="${RCDBVERSIONPARTS[1]}"
 			RCDBFILE="rcdb.sqlite"
-			if [[ $RCDBVERSION -lt 8 ]]; then
+			if [[ "$RCDBMAJOR" -eq 0 && "$RCDBMINOR" -lt 8 ]]; then
 				echo "RCDB needs a version 1 sqlite file"
 				RCDBFILE="rcdb_v1.sqlite"
 			fi
@@ -2221,12 +2225,12 @@ else
 			if [ $JANA_MAJOR_VERSION -ge 2 ]; then
 				echo $runAna hd_root dana_rest_$STANDARD_NAME.hddm --loadconfigs ana_jana.cfg -PNTHREADS=$NUMTHREADS -Pjana:warmup_timeout=500 -Pjana:timeout=500  -o hd_root_ana.root
 				$runAna hd_root dana_rest_$STANDARD_NAME.hddm --loadconfigs ana_jana.cfg -PNTHREADS=$NUMTHREADS -Pjana:warmup_timeout=500 -Pjana:timeout=500  -o hd_root_ana.root
+				anahd_root_return_code=$?
 			else
 				echo $runAna hd_root dana_rest_$STANDARD_NAME.hddm --config=ana_jana.cfg -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 -o hd_root_ana.root
 				$runAna hd_root dana_rest_$STANDARD_NAME.hddm --config=ana_jana.cfg -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 -o hd_root_ana.root
+				anahd_root_return_code=$?
 			fi
-			
-			anahd_root_return_code=$?
 
 			if [[ $anahd_root_return_code != 0 ]]; then
 				echo
