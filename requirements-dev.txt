@@ -1,3 +1,9 @@
 # pytest 9 requires Python 3.10; keep the test tooling compatible with Python 3.9.
 pytest==8.4.2
 
+numpy==2.0.2
+pandas==2.3.2
+Pillow==11.3.0
+plotly==6.3.0
+matplotlib==3.9.4
+polars==1.36.1

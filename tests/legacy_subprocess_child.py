@@ -15,6 +15,7 @@ from typing import Any, Dict, Iterable, Mapping, Optional, Sequence, Tuple
 from tests.fakes.effects import EffectRecorder
 from tests.fakes.effects import UnexpectedEffectError
 from tests.fakes.legacy_modules import install_legacy_module_stubs
+from tests.fakes.plotting import install_reporting_boundaries
 
 
 def _sql_results(
@@ -196,6 +197,7 @@ def main() -> None:
             for row in config.get("hddm_inputs", [])
         },
     )
+    install_reporting_boundaries(recorder, config["entry_point"])
     _install_safety_guards(
         recorder,
         config.get("allowed_commands", []),
