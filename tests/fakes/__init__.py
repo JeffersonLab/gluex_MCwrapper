@@ -1,0 +1,2 @@
+"""Reusable external-effect fakes."""
+
