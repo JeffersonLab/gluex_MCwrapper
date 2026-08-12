@@ -6,6 +6,7 @@ can connect to an external service.
 """
 
 import sys
+import shlex
 from types import ModuleType, SimpleNamespace
 from typing import Any, Dict, Iterable, Mapping, Optional, Sequence, Tuple
 
@@ -282,12 +283,19 @@ def install_legacy_module_stubs(
     for class_name in ("Directory", "TypeTable", "Assignment", "ConstantSet"):
         setattr(ccdb, class_name, type(class_name, (), {}))
 
+    telnetlib = ModuleType("telnetlib")
+    telnetlib.STATUS = "STATUS"
+    pipes = ModuleType("pipes")
+    pipes.quote = shlex.quote
+
     modules = {
         "MySQLdb": mysql,
         "MySQLdb.cursors": mysql_cursors,
         "rcdb": rcdb,
         "ccdb": ccdb,
         "ccdb.path_utils": ccdb_path_utils,
+        "telnetlib": telnetlib,
+        "pipes": pipes,
     }
 
     for flavor in ("s", "r"):

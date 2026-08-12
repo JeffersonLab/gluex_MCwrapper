@@ -7,7 +7,7 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
-from typing import Any, Dict, List, Mapping, Sequence
+from typing import Any, Dict, List, Mapping, Optional, Sequence
 
 
 _isolated_popen = subprocess.Popen
@@ -45,6 +45,8 @@ class LegacyRun:
     mysql_results: Sequence[Mapping[str, Any]] = ()
     rcdb_results: Sequence[Mapping[str, Any]] = ()
     hddm_inputs: Sequence[Mapping[str, Any]] = ()
+    username: Optional[str] = None
+    hostname: Optional[str] = None
 
 
 def _write_command_shim(path: Path, result: FakeCommandResult) -> None:
@@ -139,6 +141,8 @@ def run_legacy(run: LegacyRun) -> LegacyRunResult:
             "mysql_results": list(run.mysql_results),
             "rcdb_results": list(run.rcdb_results),
             "hddm_inputs": list(run.hddm_inputs),
+            "username": run.username,
+            "hostname": run.hostname,
             "allowed_commands": sorted(run.commands),
             "intercepted_commands": {
                 name: {

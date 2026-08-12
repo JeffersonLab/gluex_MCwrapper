@@ -3,6 +3,7 @@
 import json
 import os
 from pathlib import Path
+import pwd
 import runpy
 import shlex
 import smtplib
@@ -200,6 +201,13 @@ def main() -> None:
         config.get("allowed_commands", []),
         config.get("intercepted_commands", {}),
     )
+
+    username = config.get("username")
+    if username is not None:
+        pwd.getpwuid = lambda uid: (username, "x", uid, uid, "", "", "")
+    hostname = config.get("hostname")
+    if hostname is not None:
+        socket.gethostname = lambda: hostname
 
     sys.argv = [config["entry_point"]] + list(config.get("argv", []))
     try:
