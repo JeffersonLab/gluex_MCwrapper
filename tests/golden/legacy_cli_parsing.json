@@ -1,0 +1,41 @@
+{
+  "config_precedence": {
+    "command_line": "COMMAND PRINTOUT: /central/MakeMC.csh 0 recon.xml ana.xml LOCAL LOCAL LOCAL LOCAL LOCAL LOCAL gen.cfg /output/ 1234 7 1 config_version config_time 1 1 1 1 1 1 1 0 NULL 8 genr8 4 BEAMPHOTONS 0 rcdb rcdb 3 12 I_dont_have_one None None 1 ./ no_sqlite no_sqlite 0 rcdb 0 none mc notime mc notime 0 2.14.0 0 ccdb unset 0.4 unset untagged rcdb GlueX -1 auto No Default Default Default ccdb 29.5 0 /output 1.0 sim.xml -1",
+    "exit_status": 1,
+    "stderr_last_line": "tests.fakes.effects.UnexpectedEffectError: os.system denied by legacy harness: '/central/MakeMC.csh 0 recon.xml ana.xml LOCAL LOCAL LOCAL LOCAL LOCAL LOCAL gen.cfg /output/ 1234 7 1 config_version config_time 1 1 1 1 1 1 1 0 NULL 8 genr8 4 BEAMPHOTONS 0 rcdb rcdb 3 12 I_dont_have_one None None 1 ./ no_sqlite no_sqlite 0 rcdb 0 none mc notime mc notime 0 2.14.0 0 ccdb unset 0.4 unset untagged rcdb GlueX -1 auto No Default Default Default ccdb 29.5 0 /output 1.0 sim.xml -1'"
+  },
+  "help": {
+    "exit_status": 0,
+    "first_line": "Usage: gluex_MC.py config_file Run_Number/Range num_events [all other options]",
+    "last_line": "  -h, --help  show this help message and exit",
+    "line_count": 22
+  },
+  "import_effects": [
+    "mysql.connect",
+    "mysql.cursor"
+  ],
+  "key_value_overrides": {
+    "command_line": "COMMAND PRINTOUT: /central/MakeMC.csh 0 recon.xml ana.xml LOCAL LOCAL LOCAL LOCAL LOCAL LOCAL gen.cfg /output/ 1234 7 1 cli_version cli_time 1 1 1 1 1 1 1 0 NULL 8 genr8 4 BEAMPHOTONS 0 rcdb rcdb 3 12 I_dont_have_one None None 1 ./ no_sqlite no_sqlite 0 rcdb 0 none mc notime mc notime 0 2.14.0 0 ccdb unset 0.4 unset untagged rcdb GlueX -1 auto No Default Default Default ccdb 29.5 0 /output 1.0 sim.xml -1",
+    "exit_status": 1,
+    "unknown_option": "WARNING OPTION: unknown=value NOT FOUND!"
+  },
+  "malformed_event_count": {
+    "exit_status": 1,
+    "stderr_last_line": "ValueError: invalid literal for int() with base 10: 'abc'",
+    "stdout": ""
+  },
+  "malformed_override": {
+    "exit_status": 1,
+    "stderr_last_line": "ValueError: invalid literal for int() with base 10: 'nope'"
+  },
+  "run_range": {
+    "exit_status": 0,
+    "rcdb_range_line": "1234------->1235",
+    "select_runs_args": [
+      "@is_production and @status_approved",
+      "1234",
+      "1235"
+    ],
+    "terminal_line": "ending gluex_MC.py"
+  }
+}
