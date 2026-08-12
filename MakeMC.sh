@@ -1193,12 +1193,14 @@ if [[ "$GENR" != "0" ]]; then # run generation
 	if [[ "$GENERATOR" == "genr8" ]]; then
 		echo "RUNNING GENR8"
 		RUNNUM=$formatted_runNumber+$formatted_fileNumber
+		optionals_line=`head -n 1 $STANDARD_NAME.conf | grep '^% -' | sed -r 's/.//'`
 		#sed -i 's/TEMPCOHERENT/'$COHERENT_PEAK'/' $STANDARD_NAME.conf
 		#sed -i 's/TEMPMAXE/'$GEN_MAX_ENERGY'/' $STANDARD_NAME.conf
 		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
 		# RUN genr8 and convert
-		echo $runGen genr8 -r$formatted_runNumber -M$EVT_TO_GEN -A$STANDARD_NAME.ascii < $STANDARD_NAME.conf #$config_file_name
-		$runGen genr8 -r$formatted_runNumber -M$EVT_TO_GEN -A$STANDARD_NAME.ascii < $STANDARD_NAME.conf #$config_file_name
+		echo $optionals_line
+		echo $runGen genr8 -r$formatted_runNumber -M$EVT_TO_GEN $optionals_line -A$STANDARD_NAME.ascii < $STANDARD_NAME.conf #$config_file_name
+		$runGen genr8 -r$formatted_runNumber -M$EVT_TO_GEN $optionals_line -A$STANDARD_NAME.ascii < $STANDARD_NAME.conf #$config_file_name
 		generator_return_code=$?
 		$runGen genr8_2_hddm -V"0 0 0 0" $STANDARD_NAME.ascii
 	elif [[ "$GENERATOR" == "genr8_new" ]]; then
