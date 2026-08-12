@@ -97,9 +97,12 @@ def CheckForFile(rootLoc,expFile):
 
     os.environ["BEARER_TOKEN_FILE"]="/var/run/user/10967/bt_u10967"
     os.environ["XDG_RUNTIME_DIR"]="/run/user/10967"
-
-    token_str='eval `ssh-agent`; /usr/bin/ssh-add;'
-    agent_kill_str="; ssh-agent -k"
+    
+    # (5/6/26) TEMPORARILY DISABLE SSH KEY AUTH:
+    #token_str='eval `ssh-agent`; /usr/bin/ssh-add;'
+    #agent_kill_str="; ssh-agent -k"
+    token_str=""
+    agent_kill_str=""
 
     PELICAN_SERVER="osdf://jlab-osdf/gluex/osgpool/REQUESTEDMC_OUTPUT/"
     file_check="pelican object ls "+PELICAN_SERVER+rootLoc+"/"+subloc+"/"+expFile
@@ -841,8 +844,12 @@ def checkOSG(Jobs_List):
                                     os.environ["XDG_RUNTIME_DIR"]="/run/user/10967"
                                     my_env=os.environ.copy()
 
-                                    token_str='eval `ssh-agent`; /usr/bin/ssh-add;'
-                                    agent_kill_str="; ssh-agent -k"
+                                    # (5/6/26) TEMPORARILY DISABLE SSH KEY AUTH:
+                                    #token_str='eval `ssh-agent`; /usr/bin/ssh-add;'
+                                    #agent_kill_str="; ssh-agent -k"
+                                    token_str=""
+                                    agent_kill_str=""
+                                    
                                     #print(token_str+pelican_check+agent_kill_str)
 
                                     p = Popen(token_str+pelican_check+agent_kill_str, env=my_env ,stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True,close_fds=True)

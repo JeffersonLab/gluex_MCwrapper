@@ -319,7 +319,7 @@ def move(mc_dir, temp_dir, out_dir):
     from mc_dir.
     """
     subprocess.run(f"mkdir -p {out_dir}", shell=True)
-    n_strip_components = mc_dir.strip(os.sep).count(os.sep) + 2
+    n_strip_components = mc_dir.strip(os.sep).count(os.sep) + 1
     if temp_dir is None:
         success = subprocess.run([f"mv {mc_dir + '/' + 'output.tar' } {out_dir}; cd {out_dir}; tar xvf output.tar --strip-components={n_strip_components}; rm output.tar"], shell=True)
     else:

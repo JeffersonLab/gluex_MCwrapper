@@ -12,6 +12,7 @@ import os.path
 import pwd
 import time
 import shlex
+import json
 from optparse import OptionParser
 try:
     import subprocess
@@ -206,6 +207,7 @@ def AutoLaunch(RUNNING_LIMIT_OVERRIDE):
 
     print("RETRYING...")
     RetryAllJobs(RUNNING_LIMIT_OVERRIDE)
+    #return
     print("TESTING...")
     query = "SELECT ID,Email,VersionSet,Tested,UName FROM Project WHERE (Tested = 0) && Dispatched_Time is NULL ORDER BY (SELECT Priority from Users where name=UName) DESC LIMIT 10;"
     print(query)
@@ -447,7 +449,7 @@ def RetryJob(ID,AllOSG=False):
             print("Using default per_file_num")
             pass
         print("per file num",per_file_num)
-        command="python2 "+MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched_"+str(ID)+".config "+str(job[0]["RunNumber"])+" "+str(job[0]["NumEvts"])+" per_file="+str(per_file_num)+"  base_file_number="+str(job[0]["FileNumber"])+" generate="+str(proj[0]["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(proj[0]["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(proj[0]["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(proj[0]["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid=-"+str(ID)+" batch=1 tobundle=0"
+        command="python3 "+MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched_"+str(ID)+".config "+str(job[0]["RunNumber"])+" "+str(job[0]["NumEvts"])+" per_file="+str(per_file_num)+"  base_file_number="+str(job[0]["FileNumber"])+" generate="+str(proj[0]["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(proj[0]["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(proj[0]["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(proj[0]["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid=-"+str(ID)+" batch=1 tobundle=0"
         print(command)
         #command="printenv"
         #run the command in the environment of the user who submitted the job
@@ -513,11 +515,11 @@ def CheckGenConfig(order):
     #print("is file:",os.path.isfile(fileSTR))
     copyTo="/osgpool/halld/"+runner_name+"/REQUESTEDMC_CONFIGS/"
     running_hostname=socket.gethostname()
-    if(os.path.isfile(fileSTR)==False and (running_hostname == "scosg16.jlab.org" or running_hostname == "scosg20.jlab.org" or running_hostname=="scosg2201.jlab.org") ):
+    if(os.path.isfile(fileSTR)==False and (running_hostname == "scosg16.jlab.org" or running_hostname == "scosg20.jlab.org" or "scosg2201" in running_hostname) ):
         print("File not found and on submit node, attempting to copy to "+copyTo)
         #copyTo="/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"
         copy_loc="ifarm2401-ib"
-        if(running_hostname=="scosg2201.jlab.org"):
+        if("scosg2201" in running_hostname):
             copy_loc="ifarm2401"
         print("scp "+runner_name+"@"+copy_loc+":"+fileSTR.lstrip()+" "+copyTo+str(ID)+"_"+name)
         subprocess.call("scp "+runner_name+"@"+copy_loc+":"+fileSTR.lstrip()+" "+copyTo+str(ID)+"_"+name,shell=True)
@@ -527,7 +529,7 @@ def CheckGenConfig(order):
         print("new order config:",order["Generator_Config"])
         print("returning",copyTo+str(ID)+"_"+name)
         return copyTo+str(ID)+"_"+name
-    elif(os.path.isfile(fileSTR)==True and (running_hostname == "scosg16.jlab.org" or running_hostname == "scosg20.jlab.org" or running_hostname=="scosg2201.jlab.org") ):
+    elif(os.path.isfile(fileSTR)==True and (running_hostname == "scosg16.jlab.org" or running_hostname == "scosg20.jlab.org" or "scosg2201" in running_hostname) ):
         print("File found and on submit node")
         #copyTo="/osgpool/halld/tbritton/REQUESTEDMC_CONFIGS/"
         #print("scp tbritton@ifarm1801-ib:"+fileSTR+" "+copyTo+str(ID)+"_"+name)
@@ -537,7 +539,7 @@ def CheckGenConfig(order):
 
         order["Generator_Config"]=copyTo+str(ID)+"_"+name #copyTo+name
         return copyTo+str(ID)+"_"+name
-    elif os.path.isfile(fileSTR)==False and (running_hostname != "scosg16.jlab.org" or running_hostname != "scosg20.jlab.org" or running_hostname!="scosg2201.jlab.org"):
+    elif os.path.isfile(fileSTR)==False and (running_hostname != "scosg16.jlab.org" or running_hostname != "scosg20.jlab.org" or "scosg2201" not in running_hostname):
         print("File not found and not on submit node ")
         return copyTo+str(ID)+"_"+name
 
@@ -671,7 +673,23 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
             rcdb_db = rcdb.RCDBProvider(connection_string)
 
             try:
-                runList=rcdb_db.select_runs(str(query_to_do),order["RunNumLow"],order["RunNumHigh"]).get_values(['event_count'],True)
+                #rcdb_db = rcdb.RCDBProvider(os.environ.get('RCDB_CONNECTION'))
+                #runList=rcdb_db.select_runs(str(query_to_do),order["RunNumLow"],order["RunNumHigh"]).get_values(['event_count'],True)
+                running_hostname=socket.gethostname()
+                runList=[]
+                if "scosg2201" in running_hostname:
+                    conn_command = "singularity exec --cleanenv --bind /scigroup/mcwrapper/ --bind /group/halld/:/group/halld/ --bind /cvmfs /cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_almalinux_9:latest"
+                    conn_command = conn_command + ' /scigroup/mcwrapper/gluex_MCwrapper/Utilities/rcdb_wrapper.sh "'+query_to_do.split("\n")[0]+'" '+str(order["RunNumLow"])+' '+str(order["RunNumHigh"])
+                    print("RCDB Container command:")
+                    print(conn_command)
+                    my_env=os.environ.copy()
+                    p = subprocess.Popen(conn_command, env=my_env, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=-1, shell=True)
+                    output, errors = p.communicate()
+                    runList = json.loads(output)
+                else:
+                    rcdb_db = rcdb.RCDBProvider(os.environ.get('RCDB_CONNECTION'))
+                    runList=rcdb_db.select_runs(str(query_to_do),order["RunNumLow"],order["RunNumHigh"]).get_values(['event_count'],True)
+                
                 print("RunList:",runList)
                 #str(order["RunNumLow"])
                 if runList == [[]]:
@@ -1161,7 +1179,7 @@ def DispatchToInteractive(ID,order,PERCENT):
         #print updatequery
         curs.execute(updatequery)
         conn.commit()
-        command="python2 "+MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched_"+str(ID)+".config "+str(RunNumber)+" "+str(NumEventsToProduce)+" per_file=250000 base_file_number="+str(FileNumber_NewJob)+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=0 tobundle=0"
+        command="python3 "+MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched_"+str(ID)+".config "+str(RunNumber)+" "+str(NumEventsToProduce)+" per_file=250000 base_file_number="+str(FileNumber_NewJob)+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=0 tobundle=0"
         print(command)
         status = subprocess.call(command, shell=True)
     else:
@@ -1229,7 +1247,7 @@ def DispatchToSWIF(ID,order,PERCENT):
         except Exception as e:
             print(e)
             pass
-        command="python2 "+MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched_"+str(ID)+".config "+str(RunNumber)+" "+str(NumEventsToProduce)+" per_file="+str(per_file_num) +" base_file_number="+str(FileNumber_NewJob)+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=2 tobundle=0"
+        command="python3 "+MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched_"+str(ID)+".config "+str(RunNumber)+" "+str(NumEventsToProduce)+" per_file="+str(per_file_num) +" base_file_number="+str(FileNumber_NewJob)+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" batch=2 tobundle=0"
         print(command)
         status = subprocess.call(command, shell=True)
     else:
@@ -1320,7 +1338,7 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
             if parseGenPostProcessing[i].strip() != "Default":
 
                 copy_loc="ifarm2401-ib"
-                if(socket.gethostname()=="scosg2201.jlab.org"):
+                if("scosg2201" in socket.gethostname()):
                     copy_loc="ifarm2401"
                 print("scp "+runner_name+"@"+copy_loc+":"+parseGenPostProcessing[i]+" "+"/osgpool/halld/"+runner_name+"/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_genpost_"+str(i)+".config")
                 try:
@@ -1416,7 +1434,7 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
         if(order["ReactionLines"][0:5] == "file:"):
             jana_config_file=order["ReactionLines"][5:]
             copy_loc="ifarm2401-ib"
-            if(socket.gethostname()=="scosg2201.jlab.org"):
+            if("scosg2201" in socket.gethostname()):
                 copy_loc="ifarm2401"
 
             print("scp "+runner_name+"@"+copy_loc+":"+jana_config_file+" "+"/osgpool/halld/"+runner_name+"/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config")
@@ -1519,7 +1537,7 @@ def DispatchToOSG(ID,order,PERCENT):
     except Exception as e:
         print(e)
         pass
-    command="python2 "+MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched_"+str(ID)+".config "+str(RunNumber)+" "+str(order["NumEvents"])+" per_file="+str(per_file_num)+" base_file_number="+str(0)+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" logdir=/osgpool/halld/"+runner_name+"/REQUESTEDMC_LOGS/"+order["OutputLocation"].split("/")[7]+" batch=1 tobundle=0"
+    command="python3 "+MCWRAPPER_BOT_HOME+"/gluex_MC.py MCDispatched_"+str(ID)+".config "+str(RunNumber)+" "+str(order["NumEvents"])+" per_file="+str(per_file_num)+" base_file_number="+str(0)+" generate="+str(order["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(order["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(order["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(order["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid="+str(ID)+" logdir=/osgpool/halld/"+runner_name+"/REQUESTEDMC_LOGS/"+order["OutputLocation"].split("/")[7]+" batch=1 tobundle=0"
     print(command)
     status_out,status_error= subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=os.environ).communicate()
     #status = subprocess.call(command, shell=True)
