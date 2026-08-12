@@ -38,7 +38,7 @@ def _version_sql(filename):
     }
 
 
-def _run(mode, *, config=BASE_CONFIG, argv=()):
+def _run(mode, *, config=BASE_CONFIG, argv=(), bare_osg_auxiliary_paths=False):
     intercepted = {
         "MakeMC.csh": FakeCommandResult(),
         "MakeMC.sh": FakeCommandResult(),
@@ -53,7 +53,7 @@ def _run(mode, *, config=BASE_CONFIG, argv=()):
     }
     mode_config = config + "BATCH_SYSTEM={}\n".format(mode)
     version_files = ("recon.xml", "sim.xml", "ana.xml")
-    if mode == "OSG":
+    if mode == "OSG" and not bare_osg_auxiliary_paths:
         mode_config = mode_config.replace(
             "SIM_ENVIRONMENT_FILE=sim.xml",
             "SIM_ENVIRONMENT_FILE=/fixtures/sim.xml",
@@ -181,27 +181,19 @@ def test_important_validation_failures_are_characterized(
     ] == GOLDENS["validation"][name]["commands"]
 
 
-def test_osg_bare_auxiliary_environment_paths_crash_is_characterized():
-    result = run_legacy(
-        LegacyRun(
-            entry_point=REPOSITORY_ROOT / "gluex_MC.py",
-            argv=("case.config", "1234", "10", "per_file=10", "batch=1"),
-            environment={
-                "MCWRAPPER_CENTRAL": "/central",
-                "RCDB_CONNECTION": "sqlite:///fixture",
-            },
-            files={"case.config": BASE_CONFIG + "BATCH_SYSTEM=OSG\n"},
-            mysql_results=tuple(
-                _version_sql(filename)
-                for filename in ("recon.xml", "sim.xml", "ana.xml")
-            ),
-        )
+def test_osg_accepts_bare_auxiliary_environment_paths():
+    result = _run(
+        "OSG",
+        argv=("batch=1",),
+        bare_osg_auxiliary_paths=True,
     )
+    summary = _summary(result)
     golden = GOLDENS["validation"]["osg_bare_auxiliary_paths"]
-    stderr_last_line = result.stderr.rstrip().splitlines()[-1]
+    submit_file = summary["generated_files"]["MCOSG_0.submit"]
 
-    assert result.exit_status == golden["exit_status"]
-    assert all(fragment in stderr_last_line for fragment in golden["stderr_contains"])
-    assert [
-        effect for effect in result.effects if effect["boundary"] == "process"
-    ] == golden["commands"]
+    assert summary.pop("sql_intentions") == GOLDENS["sql_intentions"]
+    assert summary["exit_status"] == golden["exit_status"]
+    assert summary["stderr"] == ""
+    assert summary["terminal_line"] == "ending gluex_MC.py"
+    assert summary["commands"] == GOLDENS["normal"]["OSG"]["commands"]
+    assert all(fragment in submit_file for fragment in golden["submit_contains"])

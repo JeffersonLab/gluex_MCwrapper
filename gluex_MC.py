@@ -467,13 +467,12 @@ def  OSG_add_job(VERBOSE, WORKFLOW, RUNNUM, FILENUM, SCRIPT_TO_RUN, COMMAND, NCO
         envfile_to_source="./"+ENVFILE_parts[len(ENVFILE_parts)-1] #"/srv/"+ENVFILE_parts[len(ENVFILE_parts)-1]
 
         SIMENVFILE_parts=SIMENVFILE.split("/")
+        simenvfile_to_source="./"+SIMENVFILE_parts[len(SIMENVFILE_parts)-1]
         if(len(SIMENVFILE_parts) != 1):
-                simenvfile_to_source="./"+SIMENVFILE_parts[len(SIMENVFILE_parts)-1]
                 envfile_to_source="."+envfile_to_source
 
         ANAENVFILE_parts=ANAENVFILE.split("/")
-        if(len(ANAENVFILE_parts) != 1):
-                anaenvfile_to_source="../"+ANAENVFILE_parts[len(ANAENVFILE_parts)-1] #"/srv/"+ANAENVFILE_parts[len(ANAENVFILE_parts)-1]
+        anaenvfile_to_source="../"+ANAENVFILE_parts[len(ANAENVFILE_parts)-1] #"/srv/"+ANAENVFILE_parts[len(ANAENVFILE_parts)-1]
 
         COMMAND_parts=COMMAND#COMMAND.split(" ")
 

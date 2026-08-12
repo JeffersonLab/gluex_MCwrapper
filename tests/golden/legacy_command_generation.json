@@ -83,9 +83,12 @@
   "validation": {
     "generator_config_with_spaces": {"commands": [], "exit_status": 1},
     "osg_bare_auxiliary_paths": {
-      "commands": [],
-      "exit_status": 1,
-      "stderr_contains": ["UnboundLocalError:", "simenvfile_to_source", "assignment"]
+      "exit_status": 0,
+      "submit_contains": [
+        "Arguments  = ./MakeMC.sh 1 ./recon.xml ../ana.xml",
+        "1.0 ./sim.xml -1",
+        "transfer_input_files = /central/MakeMC.sh, recon.xml, sim.xml, ana.xml, gen.cfg"
+      ]
     },
     "swif_ram_per_thread": {
       "commands": [
