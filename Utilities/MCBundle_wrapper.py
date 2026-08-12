@@ -124,9 +124,13 @@ def BundleFiles(inputdir,output,merge_dir):
         if out==0:
             return "SUCCESS"
         else:
+            with open("/scratch/mcwrap/mergetemp/"+projectName+"_"+str(datetime.now().strftime("%Y_%m_%d-%p%I_%M_%S"))+".log", "w") as log:
+                log.write(suboutput.decode('utf-8'))
             return "ERROR"
     except subprocess.CalledProcessError as e:
         print(e.output)
+        with open("/scratch/mcwrap/mergetemp/"+projectName+"_"+str(datetime.now().strftime("%Y_%m_%d-%p%I_%M_%S"))+"_2.log", "w") as log:
+            log.write(e.output.decode('utf-8'))
         subprocess.run([f"rm {merge_dir}/{projectName}/.merging"], shell=True)
         return "ERROR"
 
