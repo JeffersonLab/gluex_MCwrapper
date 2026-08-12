@@ -49,6 +49,17 @@ class LegacyRun:
     hostname: Optional[str] = None
 
 
+@dataclass(frozen=True)
+class LegacyShellRun:
+    """A legacy shell script copied into explicitly mapped temporary roots."""
+
+    entry_point: Path
+    path_mappings: Mapping[str, str]
+    environment: Mapping[str, str] = field(default_factory=dict)
+    files: Mapping[str, str] = field(default_factory=dict)
+    commands: Mapping[str, FakeCommandResult] = field(default_factory=dict)
+
+
 def _write_command_shim(path: Path, result: FakeCommandResult) -> None:
     source = """#!{python}
 import json
@@ -217,4 +228,94 @@ def run_legacy(run: LegacyRun) -> LegacyRunResult:
                 if effect["boundary"] == "mail"
             ],
             effects=normalized_effects,
+        )
+
+
+def run_legacy_shell(run: LegacyShellRun) -> LegacyRunResult:
+    """Run an instrumented shell copy whose declared roots stay temporary."""
+    entry_point = run.entry_point.resolve()
+    if not entry_point.is_relative_to(_REPOSITORY_ROOT):
+        raise ValueError("entry point must be inside the repository")
+
+    with tempfile.TemporaryDirectory(prefix="mcwrapper-legacy-shell-") as temporary:
+        root = Path(temporary)
+        work_dir = root / "work"
+        control_dir = root / "control"
+        fake_bin = control_dir / "bin"
+        work_dir.mkdir()
+        fake_bin.mkdir(parents=True)
+
+        for relative_name, content in run.files.items():
+            relative_path = Path(relative_name)
+            if relative_path.is_absolute() or ".." in relative_path.parts:
+                raise ValueError("fixture file paths must remain inside the working directory")
+            destination = work_dir / relative_path
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_text(content, encoding="utf-8")
+
+        source = entry_point.read_text(encoding="utf-8")
+        for production_root, fixture_root in run.path_mappings.items():
+            relative_root = Path(fixture_root)
+            if not production_root.startswith("/"):
+                raise ValueError("mapped production roots must be absolute")
+            if relative_root.is_absolute() or ".." in relative_root.parts:
+                raise ValueError("mapped fixture roots must remain inside the working directory")
+            if production_root not in source:
+                raise ValueError("mapped production root not present in shell script")
+            mapped_root = work_dir / relative_root
+            mapped_root.mkdir(parents=True, exist_ok=True)
+            source = source.replace(production_root, str(mapped_root))
+
+        instrumented_script = control_dir / entry_point.name
+        instrumented_script.write_text(source, encoding="utf-8")
+
+        commands_path = control_dir / "commands.jsonl"
+        for name, result in run.commands.items():
+            if Path(name).name != name:
+                raise ValueError("fake command names must be basenames")
+            _write_command_shim(fake_bin / name, result)
+
+        environment = {
+            "HOME": str(work_dir / "home"),
+            "LANG": "C.UTF-8",
+            "LC_ALL": "C.UTF-8",
+            "PATH": str(fake_bin),
+            "TMPDIR": str(work_dir / "tmp"),
+            "MCWRAPPER_HARNESS_COMMANDS": str(commands_path),
+        }
+        reserved_environment = set(environment).intersection(run.environment)
+        if reserved_environment:
+            raise ValueError(
+                "cannot override controlled environment variables: {}".format(
+                    ", ".join(sorted(reserved_environment))
+                )
+            )
+        environment.update(run.environment)
+        (work_dir / "home").mkdir(exist_ok=True)
+        (work_dir / "tmp").mkdir(exist_ok=True)
+
+        process = _isolated_popen(
+            ["/bin/bash", "-f", str(instrumented_script)],
+            cwd=str(work_dir),
+            env=environment,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        stdout, stderr = process.communicate()
+        replacements = {
+            str(work_dir): "<WORKDIR>",
+            str(control_dir): "<CONTROL>",
+            str(_REPOSITORY_ROOT): "<REPOSITORY>",
+        }
+
+        return LegacyRunResult(
+            stdout=_normalize(stdout, replacements),
+            stderr=_normalize(stderr, replacements),
+            exit_status=process.returncode,
+            files=_normalize(_snapshot_files(work_dir), replacements),
+            sql=[],
+            commands=_normalize(_read_json_lines(commands_path), replacements),
+            messages=[],
+            effects=[],
         )
