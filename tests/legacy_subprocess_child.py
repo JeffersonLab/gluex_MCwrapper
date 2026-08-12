@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import runpy
+import shlex
 import smtplib
 import socket
 import subprocess
@@ -53,13 +54,53 @@ def _json_value(value: Any) -> Any:
 
 
 def _install_safety_guards(
-    recorder: EffectRecorder, allowed_commands: Sequence[str]
+    recorder: EffectRecorder,
+    allowed_commands: Sequence[str],
+    intercepted_commands: Mapping[str, Mapping[str, Any]],
 ) -> None:
     """Deny network/shell escape while allowing configured fake-PATH commands."""
     allowed = set(allowed_commands)
+    intercepted = dict(intercepted_commands)
     original_popen = subprocess.Popen
+    original_call = subprocess.call
+    original_check_output = subprocess.check_output
+
+    def command_argv(command: Any, shell: bool = False) -> Sequence[str]:
+        if isinstance(command, str):
+            return shlex.split(command) if shell else [command]
+        if isinstance(command, bytes):
+            return [command.decode()]
+        return [os.fspath(item) for item in command]
+
+    def intercepted_result(command: Any, shell: bool = False) -> Mapping[str, Any]:
+        argv = command_argv(command, shell)
+        if not argv:
+            raise UnexpectedEffectError("unconfigured subprocess command: {!r}".format(command))
+        name = os.path.basename(argv[0])
+        if name not in intercepted:
+            raise UnexpectedEffectError("unconfigured subprocess command: {!r}".format(command))
+        recorder.record("process", "run", tuple(argv), shell=shell)
+        return intercepted[name]
+
+    class InterceptedPopen:
+        def __init__(self, command: Any, *args: Any, **kwargs: Any) -> None:
+            del args
+            self.result = intercepted_result(command, bool(kwargs.get("shell")))
+            self.returncode = int(self.result.get("returncode", 0))
+            self.text = bool(kwargs.get("text") or kwargs.get("universal_newlines"))
+
+        def communicate(self, input: Any = None, timeout: Any = None) -> Tuple[Any, Any]:
+            del input, timeout
+            stdout = str(self.result.get("stdout", ""))
+            stderr = str(self.result.get("stderr", ""))
+            if self.text:
+                return stdout, stderr
+            return stdout.encode(), stderr.encode()
 
     def guarded_popen(argv: Any, *args: Any, **kwargs: Any) -> Any:
+        parsed = command_argv(argv, bool(kwargs.get("shell")))
+        if parsed and os.path.basename(parsed[0]) in intercepted:
+            return InterceptedPopen(argv, *args, **kwargs)
         if kwargs.get("shell"):
             raise UnexpectedEffectError(
                 "shell subprocess denied by legacy harness; use an isolated shell fixture"
@@ -73,14 +114,38 @@ def _install_safety_guards(
             raise UnexpectedEffectError("unconfigured subprocess command: {!r}".format(argv))
         return original_popen(argv, *args, **kwargs)
 
+    def guarded_call(command: Any, *args: Any, **kwargs: Any) -> int:
+        argv = command_argv(command, bool(kwargs.get("shell")))
+        if not argv or os.path.basename(argv[0]) not in intercepted:
+            return original_call(command, *args, **kwargs)
+        result = intercepted_result(command, bool(kwargs.get("shell")))
+        return int(result.get("returncode", 0))
+
+    def guarded_check_output(command: Any, *args: Any, **kwargs: Any) -> Any:
+        argv = command_argv(command, bool(kwargs.get("shell")))
+        if not argv or os.path.basename(argv[0]) not in intercepted:
+            return original_check_output(command, *args, **kwargs)
+        result = intercepted_result(command, bool(kwargs.get("shell")))
+        returncode = int(result.get("returncode", 0))
+        stdout = str(result.get("stdout", ""))
+        if returncode:
+            raise subprocess.CalledProcessError(returncode, command, output=stdout.encode())
+        if kwargs.get("text") or kwargs.get("universal_newlines"):
+            return stdout
+        return stdout.encode()
+
     def deny_network(*args: Any, **kwargs: Any) -> None:
         del args, kwargs
         raise UnexpectedEffectError("network access denied by legacy harness")
 
-    def deny_system(command: str) -> None:
-        raise UnexpectedEffectError(
-            "os.system denied by legacy harness: {!r}".format(command)
-        )
+    def guarded_system(command: str) -> int:
+        argv = command_argv(command, True)
+        if not argv or os.path.basename(argv[0]) not in intercepted:
+            raise UnexpectedEffectError(
+                "os.system denied by legacy harness: {!r}".format(command)
+            )
+        result = intercepted_result(command, True)
+        return int(result.get("returncode", 0))
 
     class RecordingSMTP:
         def __init__(
@@ -107,7 +172,9 @@ def _install_safety_guards(
             recorder.record("mail", "quit")
 
     subprocess.Popen = guarded_popen
-    os.system = deny_system
+    subprocess.call = guarded_call
+    subprocess.check_output = guarded_check_output
+    os.system = guarded_system
     socket.create_connection = deny_network
     socket.socket = deny_network
     smtplib.SMTP = RecordingSMTP
@@ -128,7 +195,11 @@ def main() -> None:
             for row in config.get("hddm_inputs", [])
         },
     )
-    _install_safety_guards(recorder, config.get("allowed_commands", []))
+    _install_safety_guards(
+        recorder,
+        config.get("allowed_commands", []),
+        config.get("intercepted_commands", {}),
+    )
 
     sys.argv = [config["entry_point"]] + list(config.get("argv", []))
     try:

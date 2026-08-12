@@ -1,0 +1,103 @@
+{
+  "sql_intentions": [
+    ["select OSName from versionSet inner join OSVersions on versionSet.OS_ID=OSVersions.ID where versionSet.filename='recon.xml'", null],
+    ["select OSName from versionSet inner join OSVersions on versionSet.OS_ID=OSVersions.ID where versionSet.filename='sim.xml'", null],
+    ["select OSName from versionSet inner join OSVersions on versionSet.OS_ID=OSVersions.ID where versionSet.filename='ana.xml'", null]
+  ],
+  "normal": {
+    "NULL": {
+      "commands": [{"argv": ["/central/MakeMC.csh", "<PAYLOAD>"], "shell": true}],
+      "exit_status": 0,
+      "generated_files": {},
+      "payload_command": "COMMAND PRINTOUT: /central/MakeMC.csh 0 recon.xml ana.xml LOCAL LOCAL LOCAL LOCAL LOCAL LOCAL gen.cfg /output/ 1234 3 10 config_version config_time 1 1 1 1 1 1 1 0 NULL 4 genr8 4 BEAMPHOTONS 0 rcdb rcdb 3 12 I_dont_have_one None None 10 ./ no_sqlite no_sqlite 0 rcdb 0 none mc notime mc notime 0 2.14.0 0 ccdb unset 0.4 unset untagged rcdb GlueX -1 auto No Default Default Default ccdb 29.5 0 /output 1.0 sim.xml -1",
+      "stderr": "",
+      "terminal_line": "ending gluex_MC.py"
+    },
+    "CONDOR": {
+      "commands": [
+        {"argv": ["mkdir", "-p", "/output/log/"], "shell": true},
+        {"argv": ["condor_submit", "-batch-name", "fixture_workflow", "MCcondor.submit"], "shell": true},
+        {"argv": ["rm", "MCcondor.submit"], "shell": true}
+      ],
+      "exit_status": 0,
+      "generated_files": {
+        "MCcondor.submit": "Executable = /central/MakeMC.csh\nArguments  = 1 recon.xml ana.xml LOCAL LOCAL LOCAL LOCAL LOCAL LOCAL gen.cfg /output/ 1234 3 10 config_version config_time 1 1 1 1 1 1 1 0 CONDOR 4 genr8 4 BEAMPHOTONS 0 rcdb rcdb 3 12 I_dont_have_one None None 10 ./ no_sqlite no_sqlite 0 rcdb 0 none mc notime mc notime 0 2.14.0 0 ccdb unset 0.4 unset untagged rcdb GlueX -1 auto No Default Default Default ccdb 29.5 0 /output 1.0 sim.xml -1\nError      = /output/log/error_fixture_workflow_1234_3.log\nOutput      = /output/log/out_fixture_workflow_1234_3.log\nLog = /output/log/CONDOR_fixture_workflow_1234_3.log\nRequestCpus = 4\n+FixtureFlag = \"yes\"\nQueue 1\n"
+      },
+      "payload_command": "COMMAND PRINTOUT: /central/MakeMC.csh 1 recon.xml ana.xml LOCAL LOCAL LOCAL LOCAL LOCAL LOCAL gen.cfg /output/ 1234 3 10 config_version config_time 1 1 1 1 1 1 1 0 CONDOR 4 genr8 4 BEAMPHOTONS 0 rcdb rcdb 3 12 I_dont_have_one None None 10 ./ no_sqlite no_sqlite 0 rcdb 0 none mc notime mc notime 0 2.14.0 0 ccdb unset 0.4 unset untagged rcdb GlueX -1 auto No Default Default Default ccdb 29.5 0 /output 1.0 sim.xml -1",
+      "stderr": "",
+      "terminal_line": "ending gluex_MC.py"
+    },
+    "OSG": {
+      "commands": [
+        {"argv": ["mkdir", "-p", "/logs/log/"], "shell": true},
+        {"argv": ["mkdir", "-p", "/output/log/"], "shell": true},
+        {"argv": ["condor_submit", "MCOSG_0.submit"], "shell": true},
+        {"argv": ["rm", "-f", "MCOSG_0.submit"], "shell": true},
+        {"argv": ["rm", "-f", "/tmp/MCOSG_0.submit"], "shell": true}
+      ],
+      "exit_status": 0,
+      "generated_files": {
+        "MCOSG_0.submit": "universe = vanilla\nExecutable = /central/osg-container.sh\n+ProjectName = \"gluex\"\nArguments  = ./MakeMC.sh 1 ../recon.xml ../ana.xml LOCAL LOCAL LOCAL LOCAL LOCAL LOCAL ../gen.cfg ./ 1234 3 10 config_version config_time 1 1 1 1 1 1 1 0 OSG 4 genr8 4 BEAMPHOTONS 0 rcdb rcdb 3 12 I_dont_have_one None None 10 ./ batch_default batch_default 0 rcdb 0 none mc notime mc notime 0 2.14.0 0 ccdb unset 0.4 unset untagged rcdb GlueX -1 OSG No Default Default Default ccdb 29.5 0 /output 1.0 ./sim.xml -1\nRequirements = (HAS_SINGULARITY == TRUE) && (HAS_CVMFS_oasis_opensciencegrid_org == True) && (TARGET.GLIDEIN_Entry_Name =!= \"OSG_US_ODU-Ubuntu\") && (TARGET.HasUserNamespaces == True)\n+SingularityImage = \"/cvmfs/singularity.opensciencegrid.org/jeffersonlab/gluex_almalinux_9:latest\"\nuse_oauth_services = jlab_gluex\n+SingularityBindCVMFS = True\n+SingularityAutoLoad = True\nshould_transfer_files = YES\nconcurrency_limits = GluexProduction\non_exit_remove = true\non_exit_hold = false\nError      = /output/log/error_fixture_workflow_1234_3.log\noutput      = /output/log/out_fixture_workflow_1234_3.log\nlog = /logs/log/OSG_fixture_workflow_1234_3.log\ninitialdir = ./\nrequest_cpus = 4\nrequest_memory = 8GB\nrequest_disk = 5.0GB\ntransfer_input_files = /central/MakeMC.sh, recon.xml, /fixtures/sim.xml, /fixtures/ana.xml, gen.cfg\nqueue 1\n"
+      },
+      "payload_command": "COMMAND PRINTOUT: /central/MakeMC.sh 1 recon.xml /fixtures/ana.xml LOCAL LOCAL LOCAL LOCAL LOCAL LOCAL gen.cfg /output/ 1234 3 10 config_version config_time 1 1 1 1 1 1 1 0 OSG 4 genr8 4 BEAMPHOTONS 0 rcdb rcdb 3 12 I_dont_have_one None None 10 ./ batch_default batch_default 0 rcdb 0 none mc notime mc notime 0 2.14.0 0 ccdb unset 0.4 unset untagged rcdb GlueX -1 OSG No Default Default Default ccdb 29.5 0 /output 1.0 /fixtures/sim.xml -1",
+      "stderr": "",
+      "terminal_line": "ending gluex_MC.py"
+    },
+    "SWIF": {
+      "commands": [
+        {"argv": ["mkdir", "-p", "/output/log/"], "shell": true},
+        {"argv": ["swif", "add-job", "-workflow", "fixture_workflow", "-project", "gluex", "-track", "simulation", "-create", "-cores", "4", "-disk", "10GB", "-ram", "8GB", "-time", "30minutes", "-os", "el9", "-stdout", "/output/log/1234_stdout.1234_3.out", "-stderr", "/output/log/1234_stderr.1234_3.err", "-tag", "run_number", "1234", "-tag", "file_number", "3", "-fail-save-dir", "/output", "/central/MakeMC.csh", "<PAYLOAD>"], "shell": false}
+      ],
+      "exit_status": 0,
+      "generated_files": {},
+      "payload_command": "COMMAND PRINTOUT: /central/MakeMC.csh 1 recon.xml ana.xml LOCAL LOCAL LOCAL LOCAL LOCAL LOCAL gen.cfg /output/ 1234 3 10 config_version config_time 1 1 1 1 1 1 1 0 SWIF 4 genr8 4 BEAMPHOTONS 0 rcdb rcdb 3 12 I_dont_have_one None None 10 ./ jlab_batch_default no_sqlite 0 rcdb 0 none mc notime mc notime 0 2.14.0 0 ccdb unset 0.4 unset untagged rcdb GlueX -1 JLAB No Default Default Default ccdb 29.5 0 /output 1.0 sim.xml -1",
+      "stderr": "",
+      "terminal_line": "ending gluex_MC.py"
+    },
+    "SWIF2": {
+      "commands": [
+        {"argv": ["mkdir", "-p", "/logs/log/"], "shell": true},
+        {"argv": ["swif2", "add-job", "-workflow", "fixture_workflow", "-account", "halld", "-partition", "production", "-create", "-cores", "4", "-disk", "10GB", "-ram", "8GB", "-time", "30minutes", "-os", "el9", "-stdout", "/logs/log/1234_stdout.1234_3.out", "-stderr", "/logs/log/1234_stderr.1234_3.err", "-tag", "run_number", "1234", "-tag", "file_number", "3", "/central/MakeMC.csh", "<PAYLOAD>"], "shell": false}
+      ],
+      "exit_status": 0,
+      "generated_files": {},
+      "payload_command": "COMMAND PRINTOUT: /central/MakeMC.csh 1 recon.xml ana.xml LOCAL LOCAL LOCAL LOCAL LOCAL LOCAL gen.cfg /output/ 1234 3 10 config_version config_time 1 1 1 1 1 1 1 0 SWIF2 4 genr8 4 BEAMPHOTONS 0 rcdb rcdb 3 12 I_dont_have_one None None 10 ./ jlab_batch_default no_sqlite 0 rcdb 0 none mc notime mc notime 0 2.14.0 0 ccdb unset 0.4 unset untagged rcdb GlueX -1 JLAB No Default Default Default ccdb 29.5 0 /output 1.0 sim.xml -1",
+      "stderr": "",
+      "terminal_line": "ending gluex_MC.py"
+    },
+    "SLURM": {
+      "commands": [
+        {"argv": ["mkdir", "-p", "/output/log/"], "shell": true},
+        {"argv": ["sbatch", "MCSLURM.submit"], "shell": true},
+        {"argv": ["rm", "MCSLURM.submit"], "shell": true}
+      ],
+      "exit_status": 0,
+      "generated_files": {
+        "MCSLURM.submit": "#!/bin/bash -l\n#SBATCH -J fixture_workflow_1234_3\n#SBATCH --nodes=1\n#SBATCH --time=30minutes\n#SBATCH --tasks-per-node=1\n#SBATCH --cpus-per-task=4\n#SBATCH -p production\n#SBATCH -o /output/log/fixture_workflow_1234_3.out\n#SBATCH -e /output/log/fixture_workflow_1234_3.err\n/central/MakeMC.csh 1 recon.xml ana.xml LOCAL LOCAL LOCAL LOCAL LOCAL LOCAL gen.cfg /output/ 1234 3 10 config_version config_time 1 1 1 1 1 1 1 0 SLURM 4 genr8 4 BEAMPHOTONS 0 rcdb rcdb 3 12 I_dont_have_one None None 10 ./ no_sqlite no_sqlite 0 rcdb 0 none mc notime mc notime 0 2.14.0 0 ccdb unset 0.4 unset untagged rcdb GlueX -1 auto No Default Default Default ccdb 29.5 0 /output 1.0 sim.xml -1\n"
+      },
+      "payload_command": "COMMAND PRINTOUT: /central/MakeMC.csh 1 recon.xml ana.xml LOCAL LOCAL LOCAL LOCAL LOCAL LOCAL gen.cfg /output/ 1234 3 10 config_version config_time 1 1 1 1 1 1 1 0 SLURM 4 genr8 4 BEAMPHOTONS 0 rcdb rcdb 3 12 I_dont_have_one None None 10 ./ no_sqlite no_sqlite 0 rcdb 0 none mc notime mc notime 0 2.14.0 0 ccdb unset 0.4 unset untagged rcdb GlueX -1 auto No Default Default Default ccdb 29.5 0 /output 1.0 sim.xml -1",
+      "stderr": "",
+      "terminal_line": "ending gluex_MC.py"
+    }
+  },
+  "validation": {
+    "generator_config_with_spaces": {"commands": [], "exit_status": 1},
+    "osg_bare_auxiliary_paths": {
+      "commands": [],
+      "exit_status": 1,
+      "stderr_contains": ["UnboundLocalError:", "simenvfile_to_source", "assignment"]
+    },
+    "swif_ram_per_thread": {
+      "commands": [
+        {
+          "args": [["mkdir", "-p", "/output/log/"]],
+          "boundary": "process",
+          "kwargs": {"shell": true},
+          "operation": "run"
+        }
+      ],
+      "exit_status": 1
+    },
+    "unsafe_workflow": {"commands": [], "exit_status": 1}
+  }
+}

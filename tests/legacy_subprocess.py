@@ -41,6 +41,7 @@ class LegacyRun:
     environment: Mapping[str, str] = field(default_factory=dict)
     files: Mapping[str, str] = field(default_factory=dict)
     commands: Mapping[str, FakeCommandResult] = field(default_factory=dict)
+    intercepted_commands: Mapping[str, FakeCommandResult] = field(default_factory=dict)
     mysql_results: Sequence[Mapping[str, Any]] = ()
     rcdb_results: Sequence[Mapping[str, Any]] = ()
     hddm_inputs: Sequence[Mapping[str, Any]] = ()
@@ -139,6 +140,14 @@ def run_legacy(run: LegacyRun) -> LegacyRunResult:
             "rcdb_results": list(run.rcdb_results),
             "hddm_inputs": list(run.hddm_inputs),
             "allowed_commands": sorted(run.commands),
+            "intercepted_commands": {
+                name: {
+                    "returncode": result.returncode,
+                    "stdout": result.stdout,
+                    "stderr": result.stderr,
+                }
+                for name, result in run.intercepted_commands.items()
+            },
         }
         config_path.write_text(json.dumps(config, sort_keys=True), encoding="utf-8")
 
