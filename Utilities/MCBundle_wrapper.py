@@ -108,13 +108,13 @@ def BundleFiles(inputdir,output,merge_dir):
     else:
         python_cmd = "/usr/bin/python3.6"
     # bundlecommand = "echo hostname; source /group/halld/Software/build_scripts/gluex_env_jlab.sh; /usr/bin/python3.6 " + MCWRAPPER_BOT_HOME + "/Utilities/MCMerger.py -f -tempdir " + merge_dir + projectName + "/ " + inputdir + " " + output
-    bundlecommand = python_cmd + " " + MCWRAPPER_BOT_HOME + "/Utilities/MCMerger.py -tempdir " + merge_dir + projectName + "/ " + inputdir + " " + output + " -noclean"# + " > "+projectName+"_"+str(datetime.now())+".log"
+    bundlecommand = python_cmd + " " + MCWRAPPER_BOT_HOME + "/Utilities/MCMerger.py -tempdir " + merge_dir + projectName + "/ " + inputdir + " " + output + " -noclean"
     print("BUNDLING WITH",bundlecommand)
     try:
         suboutput = subprocess.check_output(shlex.split(bundlecommand), stderr=subprocess.STDOUT)
         #find the number after "Returning final_success:"
         out = int(re.findall(r"Returning final_success: (\d+)", suboutput.decode('utf-8'))[0])
-
+        
         print("subprocess output", out)
         if out==-666:
             print("Bundling ongoing")
@@ -138,7 +138,7 @@ def BundleFiles(inputdir,output,merge_dir):
 def main(argv):
     runner_name=pwd.getpwuid( os.getuid() )[0]
     numprocesses_running=subprocess.check_output(["echo `ps all -u "+runner_name+" | grep MCBundle_wrapper.py | grep -v grep | wc -l`"], shell=True)
-    spawnNum=3
+    spawnNum=4
     print(f"numprocesses_running: {int(numprocesses_running)}")
 
     hostname = subprocess.check_output(["hostname"], shell=True).decode().strip()
@@ -164,6 +164,7 @@ def main(argv):
         #get projects with Tested>=20
         # tobundle_q="SELECT * FROM Project WHERE Tested=20 OR Tested=40 LIMIT 1"
         tobundle_q="SELECT * FROM Project WHERE (Tested=20 OR Tested=40) AND Notified is NULL order by ID asc LIMIT 1"
+        # tobundle_q="SELECT * FROM Project WHERE (Tested=20 OR Tested=40) AND Notified is NULL order by NumEvents asc LIMIT 1"
         print(tobundle_q)
         dbcnx=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
         dbcursor=dbcnx.cursor(MySQLdb.cursors.DictCursor)
