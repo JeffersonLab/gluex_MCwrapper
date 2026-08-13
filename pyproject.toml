@@ -1,0 +1,17 @@
+[build-system]
+requires = ["uv_build>=0.9.24,<0.10"]
+build-backend = "uv_build"
+
+[project]
+name = "gluex-mcwrapper"
+version = "0.1.0"
+description = "GlueX Monte Carlo workflow management"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = []
+
+[project.scripts]
+mcwrapper = "mcwrapper.cli:main"
+
+[tool.uv.build-backend]
+module-name = "mcwrapper"
