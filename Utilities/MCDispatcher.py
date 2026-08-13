@@ -57,6 +57,14 @@ class bcolors:
     UNDERLINE = '\033[4m'
 
 
+def extract_job_failure(output):
+    lines = str(output).splitlines()
+    for index in range(len(lines) - 1, -1, -1):
+        if "something went wrong with" in lines[index].lower():
+            return "\n".join(lines[max(0, index - 20):index + 1])
+    return ""
+
+
 def RecallAll():
     #query="SELECT BatchJobID, BatchSystem from Attempts where (Status=\"2\" || Status=\"1\" || Status=\"5\") && SubmitHost=\""+MCWRAPPER_BOT_HOST_NAME+"\" && Job_ID in (SELECT ID from Jobs where Project_ID in (SELECT ID FROM Project where Tested=2 || Tested=4 || Tested=3 ));"
     query="SELECT a.BatchJobID, a.BatchSystem FROM Attempts a JOIN Jobs j ON a.Job_ID = j.ID JOIN Project p ON j.Project_ID = p.ID WHERE a.SubmitHost = \""+MCWRAPPER_BOT_HOST_NAME+"\" AND a.Status IN (\"1\", \"2\", \"5\") AND p.Tested IN (2, 3, 4);"
@@ -890,7 +898,8 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
             msg = EmailMessage()
             print(status[0])
             print(status[2])
-            msg.set_content('Your Project ID '+str(row['ID'])+' failed the test.  Please correct this issue by following the link: '+'https://halldweb.jlab.org/gluex_sim/SubmitSim.html?prefill='+str(row['ID'])+'&mod=1'+'.  Do NOT resubmit this request.  Write tbritton@jlab.org for additional assistance\n\n The log information is reproduced below:\n\n\n'+str(status[0])+'\n\n\nErrors:\n\n\n'+str(status[2])+'\n\nIMPORTANT: Rather than cancelling and submitting a new job, you can correct this issue by following the link: '+'https://halldweb.jlab.org/gluex_sim/SubmitSim.html?prefill='+str(row['ID'])+'&mod=1'+'.  Do NOT resubmit this request.  Write tbritton@jlab.org for additional assistance')
+            failure_excerpt=extract_job_failure(status[0])
+            msg.set_content('Your Project ID '+str(row['ID'])+' failed the test.  Please correct this issue by following the link: '+'https://halldweb.jlab.org/gluex_sim/SubmitSim.html?prefill='+str(row['ID'])+'&mod=1'+'.  Do NOT resubmit this request.  Write tbritton@jlab.org for additional assistance\n\n The log information is reproduced below:\n\n\n'+str(status[0])+'\n\n\nErrors:\n\nThe full stderr is reproduced above.\n\n'+str(failure_excerpt)+'\n\n'+str(status[2])+'\n\nIMPORTANT: Rather than cancelling and submitting a new job, you can correct this issue by following the link: '+'https://halldweb.jlab.org/gluex_sim/SubmitSim.html?prefill='+str(row['ID'])+'&mod=1'+'.  Do NOT resubmit this request.  Write tbritton@jlab.org for additional assistance')
             print("SET CONTENT")
             msg['Subject'] = 'MC Project ID #'+str(row['ID'])+' Failed to test properly'
             print("SET SUB")
@@ -908,7 +917,7 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
             s.quit()
             try:
                 copy=open("/osgpool/halld/"+runner_name+"/REQUESTED_FAIL_MAILS/email_"+str(row['ID'])+".log", "w+")
-                copy.write('The log information is reproduced below:\n\n\n'+str(status[0])+'\n\n\nErrors:\n\n\n'+str(status[2]))
+                copy.write('The log information is reproduced below:\n\n\n'+str(status[0])+'\n\n\nErrors:\n\nThe full stderr is reproduced above.\n\n'+str(failure_excerpt)+'\n\n'+str(status[2]))
                 copy.close()
             except Exception as e:
                 print(e)
