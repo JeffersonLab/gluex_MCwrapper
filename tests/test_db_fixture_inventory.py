@@ -23,12 +23,15 @@ def test_inventory_uses_selects_only_and_counts_candidate_states(monkeypatch, tm
             (
                 "Attempts\tID\tint\tNO\n"
                 "Attempts\tStatus\tvarchar\tYES\n"
+                "Attempts\tCompleted_Time\tdatetime\tYES\n"
                 "Project\tID\tint\tNO\n"
                 "Project\tTested\tint\tNO\n"
+                "Project\tIs_Dispatched\tdouble\tNO\n"
                 "Project\tEmail\tvarchar\tYES\n"
             ),
             "<NULL>\t1\n4\t20\n",
             "0\t2\n1\t6\n",
+            "0\t3\n1\t5\n",
         ]
     )
     monkeypatch.setattr(db_fixture_inventory.shutil, "which", lambda name: "/usr/bin/mysql")
@@ -43,8 +46,10 @@ def test_inventory_uses_selects_only_and_counts_candidate_states(monkeypatch, tm
 
     assert payload["state_counts"] == {
         "Attempts.Status": {"<NULL>": 1, "4": 20},
+        "Project.Is_Dispatched": {"0": 3, "1": 5},
         "Project.Tested": {"0": 2, "1": 6},
     }
+    assert "Attempts.Completed_Time" not in payload["state_counts"]
     assert payload["relationships"] == [
         {
             "table": "Attempts",

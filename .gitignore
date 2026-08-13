@@ -11,3 +11,9 @@ __pycache__/
 # Local filesystem artifacts
 .DS_Store
 *.nfs*
+
+# Local production-derived discovery artifacts
+cluster_probe.json
+db_fixture_inventory.json
+fixture-export/
+*.fixture.tar.gz

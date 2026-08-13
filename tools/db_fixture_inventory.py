@@ -15,8 +15,16 @@ from tools.cluster_probe import validate_defaults_file
 
 SCHEMA_VERSION = 1
 IDENTIFIER = re.compile(r"^[A-Za-z0-9_$]+$")
-STATE_COLUMN = re.compile(
-    r"(?:^|_)(?:status|state|tested|notified|completed|result)(?:$|_)", re.IGNORECASE
+STATE_COLUMNS = frozenset(
+    {
+        "dataverified",
+        "is_dispatched",
+        "isactive",
+        "notified",
+        "state",
+        "status",
+        "tested",
+    }
 )
 
 TABLE_QUERY = """
@@ -92,7 +100,7 @@ def build_inventory(defaults_file: Path, database: str) -> Mapping[str, Any]:
 
     state_counts: Dict[str, Mapping[str, int]] = {}
     for table, column, _data_type, _nullable in columns:
-        if not STATE_COLUMN.search(column):
+        if column.lower() not in STATE_COLUMNS:
             continue
         rows = mysql_query(defaults_file, database, state_count_query(table, column))
         state_counts["{}.{}".format(table, column)] = {
