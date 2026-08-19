@@ -1768,7 +1768,7 @@ else
 		echo "RUNNING MCSMEAR"
 		
 		# Detect which version of jana is being used:
-		$runSmear jana -version
+		$runSmear jana --version
 		set jana_return_code=$status
 		if ( $jana_return_code != 0 ) then
 			set JANA_MAJOR_VERSION=2
