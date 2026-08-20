@@ -260,7 +260,7 @@ elif [[ -f /usr/lib64/libXrdPosixPreload.so && "$BKGFOLDSTR" != "None" && "$GENR
 		echo "XRD_RANDOMS_URL: $XRD_RANDOMS_URL"
 		echo "RANDBGTAG: $RANDBGTAG"
 		echo "formatted_runNumber: $formatted_runNumber"
-export RANDOMS_OSDF=osdf://jlab-osdf/gluex/osgpool/random_triggers/
+
 		echo `ls $XRD_RANDOMS_URL/$RANDOMS_PREPEND/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm`
 		export con_test=`ls $XRD_RANDOMS_URL/$RANDOMS_PREPEND/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1`
 
