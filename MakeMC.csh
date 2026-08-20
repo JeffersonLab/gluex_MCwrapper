@@ -207,7 +207,7 @@ if ( "$BATCHSYS" == "OSG" && "$BATCHRUN" == "1" ) then
 endif
 
 
-setenv XRD_RANDOMS_URL osdf://jlab-osdf/gluex/osgpool/random_triggers/
+setenv XRD_RANDOMS_URL root://dtn2304.jlab.org:8443/jlab-osdf-ro/halld/osgpool/
 setenv RANDOMS_PREPEND ""
 setenv LD_PRELOAD ""
 if ( "$MCWRAPPER_RUN_LOCATION" == "JLAB" || `hostname` =~ '*.jlab.org' ) then
@@ -222,7 +222,7 @@ if ( -f /usr/lib64/libXrdPosixPreload.so && "$BKGFOLDSTR" != "None" && "$GENR" !
 
 	if ( "$BKGFOLDSTR" == "Random" ) then
 		
-		set con_test=`/usr/bin/pelican object ls ${$XRD_RANDOMS_URL}/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1`
+		set con_test=`ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1`
 
 		if ( $con_test != "r" ) then
 			echo "JLAB Connection test failed. Falling back to UConn ...."
