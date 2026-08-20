@@ -210,8 +210,8 @@ done
 formatted_runNumber=$formatted_runNumber$RUN_NUMBER
 flength_count=$((`echo $FILE_NUMBER | wc -c` - 1))
 
-export XRD_RANDOMS_URL=root://dtn2303.jlab.org
-export RANDOMS_PREPEND=/work/osgpool/halld/
+export XRD_RANDOMS_URL=root://dtn2304.jlab.org:8443
+export RANDOMS_PREPEND=/jlab-osdf-ro/halld/osgpool/
 if [[ "$BATCHSYS" == "OSG" && "$BATCHRUN"=="1" || `hostname` == 'scosg2201' ]]; then
 	export XRD_RANDOMS_URL=${RANDOMS_OSDF}
 	export RANDOMS_PREPEND=""

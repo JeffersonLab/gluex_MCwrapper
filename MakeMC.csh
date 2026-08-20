@@ -207,8 +207,8 @@ if ( "$BATCHSYS" == "OSG" && "$BATCHRUN" == "1" ) then
 endif
 
 
-setenv XRD_RANDOMS_URL root://dtn2303.jlab.org/work/osgpool/halld/
-setenv RANDOMS_PREPEND ""
+setenv XRD_RANDOMS_URL root://dtn2304.jlab.org:8443
+setenv RANDOMS_PREPEND /jlab-osdf-ro/halld/osgpool/
 setenv LD_PRELOAD ""
 if ( "$MCWRAPPER_RUN_LOCATION" == "JLAB" || `hostname` =~ '*.jlab.org' ) then
 	setenv RUNNING_DIR "./"
@@ -222,9 +222,19 @@ if ( -f /usr/lib64/libXrdPosixPreload.so && "$BKGFOLDSTR" != "None" && "$GENR" !
 
 	if ( "$BKGFOLDSTR" == "Random" ) then
 		
-		set con_test=`ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1`
+		#set con_test=`ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1`
+		echo `ls $XRD_RANDOMS_URL/$RANDOMS_PREPEND/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm`
+		setenv con_test `ls $XRD_RANDOMS_URL/$RANDOMS_PREPEND/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1`
 
-		if ( $con_test != "r" ) then
+		setenv contest `xrdfs $XRD_RANDOMS_URL ls $RANDOMS_PREPEND/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | wc -l`
+		#echo "Executing command: xrdfs $XRD_RANDOMS_URL ls /gluex/mcwrap/random_triggers/$RANDBGTAG/run${formatted_runNumber}_random.hddm | wc -l"
+		#xrdfs $XRD_RANDOMS_URL ls /gluex/mcwrap/random_triggers/$RANDBGTAG/run${formatted_runNumber}_random.hddm | wc -l
+		#export con_test=$(xrdfs $XRD_RANDOMS_URL ls /gluex/mcwrap/random_triggers/$RANDBGTAG/run${formatted_runNumber}_random.hddm)
+		echo "random trigger connection test: $con_test"
+		echo xrdfs $XRD_RANDOMS_URL ls $RANDOMS_PREPEND/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm
+		echo "random trigger connection test2: $contest"
+
+		if ( $con_test != "r" && $contest == 0 ) then
 			echo "JLAB Connection test failed. Falling back to UConn ...."
 			#echo "attempting to copy the needed file from an alternate source..."
 			setenv XRD_RANDOMS_URL root://nod25.phys.uconn.edu/Gluex/rawdata/
