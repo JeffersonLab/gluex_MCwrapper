@@ -221,7 +221,7 @@ if ( -f /usr/lib64/libXrdPosixPreload.so && "$BKGFOLDSTR" != "None" && "$GENR" !
 	echo "XROOTD is available for use if needed..."
 
 	if ( "$BKGFOLDSTR" == "Random" ) then
-		
+
 		#set con_test=`ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1`
 		echo `ls $XRD_RANDOMS_URL/$RANDOMS_PREPEND/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm`
 		setenv con_test `ls $XRD_RANDOMS_URL/$RANDOMS_PREPEND/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1`
@@ -422,7 +422,7 @@ if ( $gen_pre_rcdb != "file" || ( "$BGTAGONLY_OPTION" == "1" || "$BKGFOLDSTR" ==
 		echo $words
 		set radlen = `echo $words | wc -c`
 		echo $radlen
-		if ( $radlen == 1 ) then 
+		if ( $radlen == 1 ) then
 			echo "radiator_type not in rcdb for run "$RUN_NUMBER". Using default value..."
 		else
 			foreach word ($words:q)
@@ -543,7 +543,7 @@ if ( $gen_pre_rcdb != "file" || ( "$BGTAGONLY_OPTION" == "1" || "$BKGFOLDSTR" ==
 			echo "something went wrong with initialization"
 			exit 1
 		endif
-		
+
 		set beam_on_current=`echo "$beam_on_current / 1000." | $USER_BC -l`
 	else
 		set beam_on_current=$eBEAM_CURRENT
@@ -1232,8 +1232,9 @@ if ( "$GENR" != "0" ) then #run generation
 		endif
 
 		echo $optionals_line
-		echo $runGen gen_amp_V2 -ac $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
-		$runGen gen_amp_V2 -ac $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
+		set event_offset=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
+		echo $runGen gen_amp_V2 -ac $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY -e $event_offset $optionals_line
+		$runGen gen_amp_V2 -ac $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY -e $event_offset  $optionals_line
 		set generator_return_code=$status
 	else if ( "$GENERATOR" == "mc_gen" ) then
 		echo "RUNNING MC_GEN"
@@ -1328,7 +1329,7 @@ if ( "$GENR" != "0" ) then #run generation
 		$runGen gen_omegapi -c $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
 		set generator_return_code=$status
 	else if ( "$GENERATOR" == "gen_vec_ps" ) then
-		echo "RUNNING GEN_VEC_PS" 
+		echo "RUNNING GEN_VEC_PS"
 		set optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
 
 		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
@@ -1400,7 +1401,7 @@ if ( "$GENR" != "0" ) then #run generation
 		echo $runGen gen_compton_simple -c $STANDARD_NAME'_beam.conf' -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -s $formatted_fileNumber -m $eBEAM_ENERGY $optionals_line
 		$runGen gen_compton_simple -c $STANDARD_NAME'_beam.conf' -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -s $formatted_fileNumber -m $eBEAM_ENERGY $optionals_line
 		set generator_return_code=$status
-		
+
 	else if ( "$GENERATOR" == "gen_primex_eta_he4" ) then
 		echo "RUNNING GEN_PRIMEX_ETA_HE4"
 		set optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
@@ -1409,7 +1410,7 @@ if ( "$GENR" != "0" ) then #run generation
 		echo $runGen gen_primex_eta_he4 -e $STANDARD_NAME.conf -c $STANDARD_NAME'_beam.conf' -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.txt -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -m $eBEAM_ENERGY $optionals_line
 		$runGen gen_primex_eta_he4 -e $STANDARD_NAME.conf -c $STANDARD_NAME'_beam.conf' -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.txt -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -m $eBEAM_ENERGY $optionals_line
 		set generator_return_code=$status
-		
+
 	else if ( "$GENERATOR" == "gen_generic_root" ) then
 		echo "RUNNING GEN_GENERIC_ROOT"
 		set optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
@@ -1418,7 +1419,7 @@ if ( "$GENR" != "0" ) then #run generation
 		echo $runGen gen_generic_root -e $STANDARD_NAME.conf -c $STANDARD_NAME'_beam.conf' -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.txt -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -s $formatted_fileNumber -m $eBEAM_ENERGY $optionals_line
 		$runGen gen_generic_root -e $STANDARD_NAME.conf -c $STANDARD_NAME'_beam.conf' -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.txt -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -s $formatted_fileNumber -m $eBEAM_ENERGY $optionals_line
 		set generator_return_code=$status
-		
+
 	 else if ( "$GENERATOR" == "gen_whizard" ) then
 		echo "RUNNING GEN_WHIZARD"
 		set optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
@@ -1427,7 +1428,7 @@ if ( "$GENR" != "0" ) then #run generation
 		echo $runGen gen_whizard -e $STANDARD_NAME.conf -c $STANDARD_NAME'_beam.conf' -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.txt -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -s $formatted_fileNumber -m $eBEAM_ENERGY $optionals_line
 		$runGen gen_whizard -e $STANDARD_NAME.conf -c $STANDARD_NAME'_beam.conf' -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.txt -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -s $formatted_fileNumber -m $eBEAM_ENERGY $optionals_line
 		set generator_return_code=$status
-		
+
 	else if ( "$GENERATOR" == "gen_npi" ) then
 		echo "RUNNING GEN_NPI"
 		set optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
@@ -1481,7 +1482,7 @@ if ( "$GENR" != "0" ) then #run generation
 		if ( `grep -q "C EELEC" $STANDARD_NAME.conf` == 0 ) then
 			sed -i 's/EELEC/C EELEC/g' run_mcwrapper.ffr
 		endif
-        
+
 		if ( `grep -q "C EPEAK" $STANDARD_NAME.conf` == 0 ) then
 			sed -i 's/EPEAK/C EPEAK/g' run_mcwrapper.ffr
 		endif
@@ -1776,7 +1777,7 @@ else
 	#check if CONFIG_FILE ends with ".evio"
 	if ( "$GENR" != "0" && "$GEANT" != "0" && "$SMEAR" != "0" && "$CONFIG_FILE" !~ ".evio" ) then #run mcsmear
 		echo "RUNNING MCSMEAR"
-		
+
 		# Detect which version of jana is being used:
 		$runSmear jana -version
 		set jana_return_code=$status
@@ -1786,7 +1787,7 @@ else
 			set JANA_MAJOR_VERSION=0
 		endif
 		echo "Using JANA_MAJOR_VERSION: $JANA_MAJOR_VERSION"
-		
+
 		if ( "$GENR" == "0" && "$GEANT" == "0" ) then #obsolete, needs fixing
 			echo $GENERATOR
 			set geant_file=`echo $GENERATOR | cut -c 6-`
@@ -1795,14 +1796,14 @@ else
 		endif
 		if ( "$BKGFOLDSTR" == "BeamPhotons" || "$BKGFOLDSTR" == "None" || "$BKGFOLDSTR" == "TagOnly" ) then
 			echo "running MCsmear without folding in random background"
-			
+
 			# Set timeout syntax according to which jana version is being used:
 			if ( $JANA_MAJOR_VERSION >= 0 ) then
 				set JANA_TIMEOUT_STR="-Pjana:warmup_timeout=3600 -Pjana:timeout=3000"
 			else
 				set JANA_TIMEOUT_STR="-PTHREAD_TIMEOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3000"
 			endif
-			
+
 			echo "$runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm"
 			$runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm
 			set mcsmear_return_code=$status
@@ -1824,14 +1825,14 @@ else
 			set fold_skip_num=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
 			echo "skipping: $fold_skip_num"
 			#set bkglocstring="/w/halld-scifs17exp/halld2/home/tbritton/MCwrapper_Development/converted.hddm"
-			
+
 			# Set timeout syntax according to which jana version is being used:
 			if ( $JANA_MAJOR_VERSION >= 0 ) then
 				set JANA_TIMEOUT_STR="-Pjana:warmup_timeout=6400 -Pjana:timeout=6400"
 			else
 				set JANA_TIMEOUT_STR="-PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400"
 			endif
-			
+
 			if ( $MAKE_MC_USING_XROOTD == 0 ) then
 				echo "$runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"$RANDBGRATE""+"$fold_skip_num
 				$runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:$RANDBGRATE\+$fold_skip_num
@@ -1853,28 +1854,28 @@ else
 				set totalnum=$RANDOM_TRIG_NUM_EVT
 			endif
 			set fold_skip_num=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
-			
+
 			# Set timeout syntax according to which jana version is being used:
 			if ( $JANA_MAJOR_VERSION >= 0 ) then
 				set JANA_TIMEOUT_STR="-Pjana:warmup_timeout=6400 -Pjana:timeout=6400"
 			else
 				set JANA_TIMEOUT_STR="-PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400"
 			endif
-			
+
 			echo "$runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1"\+"$fold_skip_num"
 			$runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
 			set mcsmear_return_code=$status
 
 		else
 			#trust the user and use their string
-			
+
 			# Set timeout syntax according to which jana version is being used:
 			if ( $JANA_MAJOR_VERSION >= 0 ) then
 				set JANA_TIMEOUT_STR="-Pjana:warmup_timeout=6400 -Pjana:timeout=6400"
 			else
 				set JANA_TIMEOUT_STR="-PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400"
 			endif
-			
+
 			echo "$runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $BKGFOLDSTR"
 			$runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $BKGFOLDSTR
 			set mcsmear_return_code=$status

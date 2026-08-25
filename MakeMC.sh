@@ -179,7 +179,7 @@ if [[ "$BATCHRUN" != "0" || $SINGULARITY_NAME != "" ]]; then
 	echo "Clean up current environment..."
 	source /group/halld/Software/build_scripts/gluex_env_clean.sh
 	echo "Setting up new environment..."
-	
+
 	xmltest=`echo $RUNNING_ENVIRONMENT | rev | cut -c -4 | rev`
 	if [[ "$xmltest" == ".xml" ]]; then
 		echo source /group/halld/Software/build_scripts/gluex_env_jlab.sh $RUNNING_ENVIRONMENT
@@ -1326,8 +1326,9 @@ if [[ "$GENR" != "0" ]]; then # run generation
 				sed -i 's/TEMPPOLFRAC/'.4'/' $STANDARD_NAME.conf
 				sed -i 's/TEMPPOLANGLE/'$polarization_angle'/' $STANDARD_NAME.conf
 		fi
-		echo $runGen gen_amp_V2 -ac $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
-		$runGen gen_amp_V2 -ac $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY $optionals_line
+		event_offset=$((FILE_NUMBER * PER_FILE))
+		echo $runGen gen_amp_V2 -ac $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY -e $event_offset $optionals_line
+		$runGen gen_amp_V2 -ac $STANDARD_NAME.conf -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.root -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -p $COHERENT_PEAK -m $eBEAM_ENERGY -e $event_offset $optionals_line
 		generator_return_code=$?
 	elif [[ "$GENERATOR" == "gen_2pi_amp" ]]; then
 		echo "RUNNING GEN_2PI_AMP"
@@ -1458,7 +1459,7 @@ if [[ "$GENR" != "0" ]]; then # run generation
 		sed -i 's/TEMPBEAMCONFIG/'$STANDARD_NAME'_beam.conf/' $STANDARD_NAME.conf
 		echo $runGen gen_generic_root -e $STANDARD_NAME.conf -c $STANDARD_NAME'_beam.conf' -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.txt -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -s $formatted_fileNumber -m $eBEAM_ENERGY $optionals_line
 		$runGen gen_generic_root -e $STANDARD_NAME.conf -c $STANDARD_NAME'_beam.conf' -hd $STANDARD_NAME.hddm -o $STANDARD_NAME.txt -n $EVT_TO_GEN -r $RUN_NUMBER -a $GEN_MIN_ENERGY -b $GEN_MAX_ENERGY -s $formatted_fileNumber -m $eBEAM_ENERGY $optionals_line
-		generator_return_code=$?	
+		generator_return_code=$?
 	elif [[ "$GENERATOR" == "gen_whizard" ]]; then
 		echo "RUNNING GEN_WHIZARD"
 		optionals_line=`head -n 1 $STANDARD_NAME.conf | sed -r 's/.//'`
@@ -1824,7 +1825,7 @@ else
 	#check if config file ends in .evio to decide whether or not smear needs to be run for conversion of simulation for reconstruction
 	if [[ "$GENR" != "0" && "$GEANT" != "0" && "$SMEAR" != "0" && "$CONFIG_FILE" != *.evio ]]; then #run mcsmear
 		echo "RUNNING MCSMEAR"
-		
+
 		# Detect which version of jana is being used:
 		$runSmear jana -version
 		jana_return_code=$?
@@ -1834,7 +1835,7 @@ else
 			export JANA_MAJOR_VERSION=0 #dirty hack because they changed command line parameters in jana 2.0
 		fi
 		echo "Using JANA_MAJOR_VERSION: $JANA_MAJOR_VERSION"
-		
+
 		if [[ "$GENR" == "0" && "$GEANT" == "0" ]]; then #obsolete, needs fixing
 			echo $GENERATOR
 			geant_file=`echo $GENERATOR | cut -c 6-`
@@ -1843,14 +1844,14 @@ else
 		fi
 		if [[ "$BKGFOLDSTR" == "BeamPhotons" || "$BKGFOLDSTR" == "None" || "$BKGFOLDSTR" == "TagOnly" ]]; then
 			echo "running MCsmear without folding in random background"
-			
+
 			# Set timeout syntax according to which jana version is being used:
 			if [ $JANA_MAJOR_VERSION -ge 2 ]; then
 				export JANA_TIMEOUT_STR="-Pjana:warmup_timeout=3600 -Pjana:timeout=3000"
 			else
 				export JANA_TIMEOUT_STR="-PTHREAD_TIMEOUT_FIRST_EVENT=3600 -PTHREAD_TIMEOUT=3000"
 			fi
-			
+
 			echo $runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' $STANDARD_NAME'_geant'$GEANTVER'.hddm'
 			$runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME'_geant'$GEANTVER'_smeared.hddm' $STANDARD_NAME'_geant'$GEANTVER'.hddm'
 			mcsmear_return_code=$?
@@ -1872,14 +1873,14 @@ else
 			fi
 			fold_skip_num=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
 			echo "skipping: "$fold_skip_num
-			
+
 			# Set timeout syntax according to which jana version is being used:
 			if [ $JANA_MAJOR_VERSION -ge 2 ]; then
 				export JANA_TIMEOUT_STR="-Pjana:warmup_timeout=6400 -Pjana:timeout=6400"
 			else
 				export JANA_TIMEOUT_STR="-PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400"
 			fi
-			
+
 			if [[ $MAKE_MC_USING_XROOTD == 0 && $MAKE_MC_USING_PELICAN == 0 ]]; then
 				echo $runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:$RANDBGRATE\+$fold_skip_num
 				$runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:$RANDBGRATE\+$fold_skip_num
@@ -1889,7 +1890,7 @@ else
 				/usr/bin/pelican object get ${RANDOMS_OSDF}/$RANDBGTAG/run$formatted_runNumber\_random.hddm ./run$formatted_runNumber\_random.hddm
 				echo ls -lh run$formatted_runNumber\_random.hddm
 				ls -lh run$formatted_runNumber\_random.hddm
-				
+
 				if [[ $RANDOM_TRIG_NUM_EVT == -1 ]]; then
 					echo "RANDOM TRIGGER TOTAL EVENTS: " $RANDOM_TRIG_NUM_EVT
 					rm -f count.py
@@ -1907,7 +1908,7 @@ else
 				fi
 				fold_skip_num=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
 				echo "skipping: "$fold_skip_num
-				
+
 				echo $runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm ./run$formatted_runNumber\_random.hddm\:$RANDBGRATE\+$fold_skip_num
 				$runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm ./run$formatted_runNumber\_random.hddm\:$RANDBGRATE\+$fold_skip_num
 				mcsmear_return_code=$?
@@ -1930,27 +1931,27 @@ else
 				totalnum=$RANDOM_TRIG_NUM_EVT
 			fi
 			fold_skip_num=`echo "($FILE_NUMBER * $PER_FILE)%$totalnum" | $USER_BC`
-			
+
 			# Set timeout syntax according to which jana version is being used:
 			if [ $JANA_MAJOR_VERSION -ge 2 ]; then
 				export JANA_TIMEOUT_STR="-Pjana:warmup_timeout=6400 -Pjana:timeout=6400"
 			else
 				export JANA_TIMEOUT_STR="-PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400"
 			fi
-			
+
 			echo $runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
 			$runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
 			mcsmear_return_code=$?
 		else
 			#trust the user and use their string
-			
+
 			# Set timeout syntax according to which jana version is being used:
 			if [ $JANA_MAJOR_VERSION -ge 2 ]; then
 				export JANA_TIMEOUT_STR="-Pjana:warmup_timeout=6400 -Pjana:timeout=6400"
 			else
 				export JANA_TIMEOUT_STR="-PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400"
 			fi
-			
+
 			echo $runSmear mcsmear $JANA_TIMEOUT_STR -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $BKGFOLDSTR
 			$runSmear mcsmear $JANA_TIMEOUT_STR -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $BKGFOLDSTR
 			mcsmear_return_code=$?
@@ -1994,7 +1995,7 @@ else
 		echo "An hddm file was not created by mcsmear. Terminating MC production. Please consult logs to diagnose"
 		exit 13
 	fi
-	
+
 
 	if [[ "$GENR" != "0" && "$GEANT" != "0" && "$SMEAR" != "0" && "$RECON" != "0" ]]; then #run reconstruction
 		echo "RUNNING RECONSTRUCTION"
@@ -2040,7 +2041,7 @@ else
 			jana_return_code=$?
 			if [[ $jana_return_code != 0 ]]; then
 				export JANA_MAJOR_VERSION=2
-				
+
 			else
 				export JANA_MAJOR_VERSION=0 #dirty hack because they changed command line parameters in jana 2.0
 			fi
@@ -2054,7 +2055,7 @@ else
 				$runRecon hd_root $file_to_recon --config=jana_config.cfg -PNTHREADS=$NUMTHREADS $additional_hdroot
 				hd_root_return_code=$?
 			fi
-			
+
 			reaction_filter=`grep ReactionFilter jana_config.cfg`
 			#file_options = `tail jana_config.cfg -n+2` # get everything from line 2 on. Lines counting starts with 1
 			#echo "Reaction Filter: "$reaction_filter
@@ -2078,7 +2079,7 @@ else
 			jana_return_code=$?
 			if [[ $jana_return_code != 0 ]]; then
 				export JANA_MAJOR_VERSION=2
-				
+
 			else
 				export JANA_MAJOR_VERSION=0 #dirty hack because they changed command line parameters in jana 2.0
 			fi
@@ -2092,7 +2093,7 @@ else
 				$runRecon hd_root $file_to_recon -PPLUGINS=$PluginStr -PNTHREADS=$NUMTHREADS -PTHREAD_TIMEOUT=500 $additional_hdroot
 				hd_root_return_code=$?
 			fi
-			
+
 		fi
 
 		if [[ $hd_root_return_code != 0 ]]; then
@@ -2219,12 +2220,12 @@ else
 
 			cat ana_jana.cfg
 
-			
+
 			$runAna jana -version
 			jana_return_code=$?
 			if [[ $jana_return_code != 0 ]]; then
 				export JANA_MAJOR_VERSION=2
-				
+
 			else
 				export JANA_MAJOR_VERSION=0 #dirty hack because they changed command line parameters in jana 2.0
 			fi
@@ -2367,28 +2368,28 @@ if [[ "$BATCHSYS" == "OSG" ]]; then
 	if [[ $transfer_return_code != 0 ]]; then
 		# Check if all files were transferred over and file sizes are the same.
 		# If so, ignore this warning message from pelican.
-		
+
 		sleep 60
-		
+
 		# first check if the files were transferred. If so, ignore this message.
 		LOCAL_OUTPUT_FILES=$(find "$OUTDIR" -type f ! -name ".*" | sed "s|$OUTDIR/||")
-		
+
 		# Loop over each local file and see if it exists on remote end:
 		MISSING_OUTPUT_FILES=0
 		while IFS= read -r FILE; do
 			FILE_CLEAN=${FILE#./}
 			echo "Checking: $FILE_CLEAN"
-			
+
 			# Get size of file on local machine:
 			local_file_size=$(stat -c%s "$OUTDIR/$FILE_CLEAN")
-			
+
 			STAT_OUTPUT=$(pelican object stat "$PELICAN_COPY_DIR/$FILE_CLEAN" 2> /dev/null)
 			if [[ $? -eq 0 ]]; then
 				echo "$FILE_CLEAN exists on osdf endpoint"
-				
+
 				# Only compare file size if it's within a sub-directory (e.g. root/ hddm/ configurations/):
 				if [[ "$FILE_CLEAN" == */* ]]; then
-					
+
 					# Make sure transferred file size matches local version (a checksum would be ideal)
 					remote_file_size=$(awk '/Size:/ {print $2}' <<< "$STAT_OUTPUT")
 					if [[ "$local_file_size" -eq "$remote_file_size" ]]; then
@@ -2405,7 +2406,7 @@ if [[ "$BATCHSYS" == "OSG" ]]; then
 				MISSING_OUTPUT_FILES=1
 			fi
 		done <<< "$LOCAL_OUTPUT_FILES"
-		
+
 		if [[ $MISSING_OUTPUT_FILES -eq 0 ]]; then
 			echo "All output files were found remotely. Ignoring pelican error message."
 		else
