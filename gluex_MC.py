@@ -1735,22 +1735,40 @@ def main(argv):
         #print(username)
         #exit
 
-        # check which OS to use if set to DB (query db)
-        rec_os_name = getOSName(ENVFILE)
-        print("recon_os_name:",rec_os_name,ENVFILE)
-        sim_os_name = getOSName(SIMENVFILE)
-        print("sim_os_name:",sim_os_name,SIMENVFILE)
-        ana_os_name = getOSName(ANAENVFILE)
-        print("ana_os_name:",ana_os_name,ANAENVFILE)
-        recOS = "CENTOS7" if "CentOS7" in rec_os_name else ("ALMA9" if "Alma9" in rec_os_name else "UNKNOWN")
-        anaOS = "CENTOS7" if "CentOS7" in ana_os_name else ("ALMA9" if "Alma9" in ana_os_name else "UNKNOWN")
-        simOS = "CENTOS7" if "CentOS7" in sim_os_name else ("ALMA9" if "Alma9" in sim_os_name else "UNKNOWN")
+        # Resolve OS from the version database only for stages explicitly
+        # configured with *_OS=DB.  This keeps LOCAL/explicit OS runs from
+        # requiring a connection to vsdb.
+        needs_running_os = any(os_setting == "DB" for os_setting in
+                               [GENERATOR_OS, POSTGEN_OS, SIMULATION_OS, MCSMEAR_OS])
+        needs_rec_os = RECON_OS == "DB" or (needs_running_os and SIMENVFILE == "no_Sim_env")
+        needs_sim_os = needs_running_os and SIMENVFILE != "no_Sim_env"
+        needs_ana_os = ANA_OS == "DB"
 
-        runningOS = ""
-        if SIMENVFILE != "no_Sim_env":
-            runningOS = simOS
-        else:
-            runningOS = recOS
+        recOS = None
+        simOS = None
+        anaOS = None
+
+        if needs_rec_os:
+                rec_os_name = getOSName(ENVFILE)
+                print("recon_os_name:",rec_os_name,ENVFILE)
+                recOS = "CENTOS7" if "CentOS7" in rec_os_name else ("ALMA9" if "Alma9" in rec_os_name else "UNKNOWN")
+
+        if needs_sim_os:
+                sim_os_name = getOSName(SIMENVFILE)
+                print("sim_os_name:",sim_os_name,SIMENVFILE)
+                simOS = "CENTOS7" if "CentOS7" in sim_os_name else ("ALMA9" if "Alma9" in sim_os_name else "UNKNOWN")
+
+        if needs_ana_os:
+                ana_os_name = getOSName(ANAENVFILE)
+                print("ana_os_name:",ana_os_name,ANAENVFILE)
+                anaOS = "CENTOS7" if "CentOS7" in ana_os_name else ("ALMA9" if "Alma9" in ana_os_name else "UNKNOWN")
+
+        runningOS = None
+        if needs_running_os:
+                if needs_sim_os:
+                        runningOS = simOS
+                else:
+                        runningOS = recOS
 
         if GENERATOR_OS == "DB":
                 GENERATOR_OS = runningOS
