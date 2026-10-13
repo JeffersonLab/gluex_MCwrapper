@@ -1,118 +1,118 @@
-#!/usr/bin/env python
-##########################################################################################################################
-#
-# 2017/03 Thomas Britton
-#
-#   Options:
-#      MC variation can be changed by supplying "variation=xxxxx" option otherwise default: mc
-#      the number of events to be generated per file (except for any remainder) can be set by "per_file=xxxx" default: 1000
-#
-#      If the user does not want genr8, geant, smearing, reconstruction to be performed the sequence will be terminated at the first instance of genr8=0,geant=0,mcsmear=0,recon=0 default: all on
-#      Similarly, if the user wishes to retain the files created by any step you can supply the cleangenr8=0, cleangeant=0, cleanmcsmear=0, or cleanrecon=0 options.  By default all but the reconstruction files #      are cleaned. 
-#
-#      The reconstruction step is multi-threaded, for this step, if enabled, the script will use 4 threads.  This threading can be changed with the "numthreads=xxx" option 
-#
-#      By default the job will run interactively in the local directory.  If the user wishes to submit the jobs to swif the option "swif=1" must be supplied.
-#
-# SWIF DOCUMENTATION:
-# https://scicomp.jlab.org/docs/swif
-# https://scicomp.jlab.org/docs/swif-cli
-# https://scicomp.jlab.org/help/swif/add-job.txt #consider phase!
-#
-##########################################################################################################################
-import MySQLdb
-#import MySQLdb.cursors
-from os import environ
-from optparse import OptionParser
-import os.path
-#import mysql.connector
-import time
+#!/usr/bin/env python3
+"""Launch the MC dispatcher with account checks and database status tracking."""
+
+# Originally written by Thomas Britton, March 2017.
+
 import os
-import getpass
-import sys
-import re
-import subprocess
-from subprocess import call
-import socket
-import glob
-import json
-import time
-from datetime import timedelta
-from datetime import datetime
 import pwd
+import socket
+import subprocess
+import sys
+from typing import Sequence
 
-dbhost = "hallddb.jlab.org"
-dbuser = 'mcuser'
-dbpass = ''
-dbname = 'gluex_mc'
+import MySQLdb
 
-#get user name of current user
-runner_name=pwd.getpwuid( os.getuid() )[0]
+DB_HOST = "hallddb.jlab.org"
+DB_USER = "mcuser"
+DB_NAME = "gluex_mc"
+ALLOWED_USERS = ("tbritton", "mcwrap")
 
-if( not (runner_name=="tbritton" or runner_name=="mcwrap")):
+runner_name = pwd.getpwuid(os.getuid())[0]
+if runner_name not in ALLOWED_USERS:
     print("ERROR: You must be tbritton or mcwrap to run this script")
     sys.exit(1)
 
 try:
-    dbcnx=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
-    dbcursor=dbcnx.cursor(MySQLdb.cursors.DictCursor)
-except:
-    print("WARNING: CANNOT CONNECT TO DATABASE.  JOBS WILL NOT BE CONTROLLED OR MONITORED")
-    pass
+    database_connection = MySQLdb.connect(host=DB_HOST, user=DB_USER, db=DB_NAME)
+    database_cursor = database_connection.cursor(MySQLdb.cursors.DictCursor)
+except BaseException:
+    print(
+        "WARNING: CANNOT CONNECT TO DATABASE.  JOBS WILL NOT BE CONTROLLED OR MONITORED"
+    )
 
 
-def DroneDo(id):
-    try:
-        drone_directive=os.environ["MCWRAPPER_CENTRAL"]+"/Utilities/MCDispatcher.py autolaunch"
-        print(drone_directive)
-        return_out, return_err=subprocess.Popen(drone_directive.split(" "), stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=os.environ).communicate()
-        print(return_out)
-        #retcode=subprocess.call(drone_directive.split(" "))
-    except subprocess.CalledProcessError as exc:
-        dbcursor.execute("UPDATE MCDrone SET Status='Fail' where ID="+str(id))
-        dbcnx.commit()
-        exit(1)
-    else:
-        pass
+class DroneRun:
+    """Record a dispatcher run and its outcome using an existing database session."""
 
+    def __init__(
+        self,
+        connection: "MySQLdb.connections.Connection",
+        cursor: "MySQLdb.cursors.DictCursor",
+    ) -> None:
+        self._connection = connection
+        self._cursor = cursor
 
-def main(argv):
-
-    numOverRide=False
-
-    if(len(argv) !=0):
-        numOverRide=True
-
-    numprocesses_running=subprocess.check_output(["echo `ps all -u "+runner_name+" | grep MCDrone.py | grep -v grep | wc -l`"], shell=True).strip()
-
-    print(int(numprocesses_running))
-    ALLSTOP=False
-    if(os.path.isfile('/osgpool/halld/'+runner_name+'/.ALLSTOP')):
-        print("ALL STOP DETECTED")
-        ALLSTOP=True
-
-    print("number of running processes",int(numprocesses_running))
-    if( (int(numprocesses_running) < 2 or numOverRide) and not ALLSTOP):
-        print("RUNNING")
-        dbcursor.execute("INSERT INTO MCDrone (Host,StartTime,Status) VALUES ('"+str(socket.gethostname())+"', NOW(), 'Running' )")
-        dbcnx.commit()
-        queryoverlords="SELECT MAX(ID) FROM MCDrone;"
-        dbcursor.execute(queryoverlords)
-        lastid = dbcursor.fetchall()
+    def run(self) -> None:
+        """Record the start, launch the dispatcher, and record its outcome."""
+        self._cursor.execute(
+            "INSERT INTO MCDrone (Host,StartTime,Status) "
+            f"VALUES ('{socket.gethostname()}', NOW(), 'Running' )"
+        )
+        self._connection.commit()
+        self._cursor.execute("SELECT MAX(ID) FROM MCDrone;")
+        run_rows = self._cursor.fetchall()
 
         try:
             print("TRYING")
-            DroneDo(lastid[0]["MAX(ID)"])
-            dbcursor.execute("UPDATE MCDrone SET EndTime=NOW(), Status='Success' where ID="+str(lastid[0]["MAX(ID)"]))
-            dbcnx.commit()
-        except Exception as e:
-            print(e)
-            dbcursor.execute("UPDATE MCDrone SET Status='Fail' where ID="+str(lastid[0]["MAX(ID)"]))
-            dbcnx.commit()
-            pass
+            self._run_dispatcher(run_rows[0]["MAX(ID)"])
+            self._record_outcome(run_rows[0]["MAX(ID)"], succeeded=True)
+        except Exception as error:
+            print(error)
+            self._record_outcome(run_rows[0]["MAX(ID)"], succeeded=False)
 
-        dbcnx.close()
+    def _run_dispatcher(self, run_id: int) -> None:
+        """Launch autolaunch mode and print its captured standard output."""
+        try:
+            command = (
+                os.environ["MCWRAPPER_CENTRAL"]
+                + "/Utilities/MCDispatcher.py autolaunch"
+            )
+            print(command)
+            output, _stderr = subprocess.Popen(
+                command.split(" "),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                env=os.environ,
+            ).communicate()
+            print(output)
+        except subprocess.CalledProcessError:
+            self._record_outcome(run_id, succeeded=False)
+            sys.exit(1)
+
+    def _record_outcome(self, run_id: int, succeeded: bool) -> None:
+        """Update the run status, setting EndTime only for successful dispatches."""
+        status = "Success" if succeeded else "Fail"
+        end_time_assignment = "EndTime=NOW(), " if succeeded else ""
+        self._cursor.execute(
+            f"UPDATE MCDrone SET {end_time_assignment}Status='{status}' "
+            f"where ID={run_id}"
+        )
+        self._connection.commit()
+
+
+def _count_running_drones(user_name: str) -> int:
+    """Count drone processes for the user using the existing shell command."""
+    command = f"echo `ps all -u {user_name} | grep MCDrone.py | grep -v grep | wc -l`"
+    output = subprocess.check_output([command], shell=True).strip()
+    return int(output)
+
+
+def main(argv: Sequence[str]) -> None:
+    """Run when allowed; any argument overrides only the process-count limit."""
+    override_process_limit = bool(argv)
+    process_count = _count_running_drones(runner_name)
+    print(process_count)
+
+    stop_requested = os.path.isfile(f"/osgpool/halld/{runner_name}/.ALLSTOP")
+    if stop_requested:
+        print("ALL STOP DETECTED")
+
+    print("number of running processes", process_count)
+    if (process_count < 2 or override_process_limit) and not stop_requested:
+        print("RUNNING")
+        DroneRun(database_connection, database_cursor).run()
+        database_connection.close()
 
 
 if __name__ == "__main__":
-   main(sys.argv[1:])
+    main(sys.argv[1:])
