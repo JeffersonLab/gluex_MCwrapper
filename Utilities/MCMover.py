@@ -1,98 +1,102 @@
 #!/usr/bin/env python3
-##########################################################################################################################
-#
-# 2017/03 Thomas Britton
-#
-#   Options:
-#      MC variation can be changed by supplying "variation=xxxxx" option otherwise default: mc
-#      the number of events to be generated per file (except for any remainder) can be set by "per_file=xxxx" default: 1000
-#
-#      If the user does not want genr8, geant, smearing, reconstruction to be performed the sequence will be terminated at the first instance of genr8=0,geant=0,mcsmear=0,recon=0 default: all on
-#      Similarly, if the user wishes to retain the files created by any step you can supply the cleangenr8=0, cleangeant=0, cleanmcsmear=0, or cleanrecon=0 options.  By default all but the reconstruction files #      are cleaned. 
-#
-#      The reconstruction step is multi-threaded, for this step, if enabled, the script will use 4 threads.  This threading can be changed with the "numthreads=xxx" option 
-#
-#      By default the job will run interactively in the local directory.  If the user wishes to submit the jobs to swif the option "swif=1" must be supplied.
-#
-# SWIF DOCUMENTATION:
-# https://scicomp.jlab.org/docs/swif
-# https://scicomp.jlab.org/docs/swif-cli
-# https://scicomp.jlab.org/help/swif/add-job.txt #consider phase!
-#
-##########################################################################################################################
-import MySQLdb
-#import MySQLdb.cursors
-from os import environ
-from optparse import OptionParser
-import os.path
-#import mysql.connector
-import time
-import os
-import getpass
-import sys
-import re
-import subprocess
-from subprocess import call
-import socket
-import glob
-import json
-import time
-from datetime import timedelta
-from datetime import datetime
+"""Run the MC transfer script with process guards and database status tracking."""
 
-dbhost = "hallddb.jlab.org"
-dbuser = 'mcuser'
-dbpass = ''
-dbname = 'gluex_mc'
+# Originally written by Thomas Britton, March 2017.
+
+import os
+import socket
+import subprocess
+import sys
+from typing import Sequence
+
+import MySQLdb
+
+DB_HOST = "hallddb.jlab.org"
+DB_USER = "mcuser"
+DB_NAME = "gluex_mc"
+MCWRAPPER_BOT_HOME = "/scigroup/mcwrapper/gluex_MCwrapper/"
+MOVER_SCRIPT = MCWRAPPER_BOT_HOME + "/Utilities/MCMover.csh"
+ALLSTOP_FILE = "/osgpool/halld/tbritton/.ALLSTOP"
+PROCESS_COUNT_COMMAND = (
+    "echo `ps all -u tbritton | grep MCMover.py | grep -v grep | wc -l`"
+)
 
 try:
-    dbcnx=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
-    dbcursor=dbcnx.cursor(MySQLdb.cursors.DictCursor)
-except:
-    print("WARNING: CANNOT CONNECT TO DATABASE.  JOBS WILL NOT BE CONTROLLED OR MONITORED")
-    pass
+    database_connection = MySQLdb.connect(host=DB_HOST, user=DB_USER, db=DB_NAME)
+    database_cursor = database_connection.cursor(MySQLdb.cursors.DictCursor)
+except BaseException:
+    print(
+        "WARNING: CANNOT CONNECT TO DATABASE.  JOBS WILL NOT BE CONTROLLED OR MONITORED"
+    )
 
 
-def DroneDo():
-    MCWRAPPER_BOT_HOME="/scigroup/mcwrapper/gluex_MCwrapper/"
-    print(MCWRAPPER_BOT_HOME+"/Utilities/MCMover.csh")
-    retcode=subprocess.check_output([MCWRAPPER_BOT_HOME+"/Utilities/MCMover.csh"],shell=True)
-    print(retcode)
+def run_transfer_script() -> None:
+    """Run the transfer script and print its captured output."""
+    print(MOVER_SCRIPT)
+    output = subprocess.check_output([MOVER_SCRIPT], shell=True)
+    print(output)
 
 
-def main(argv):
+class MoverRun:
+    """Record a transfer run and its outcome using an existing database session."""
 
-    numOverRide=False
+    def __init__(
+        self,
+        connection: "MySQLdb.connections.Connection",
+        cursor: "MySQLdb.cursors.DictCursor",
+    ) -> None:
+        self._connection = connection
+        self._cursor = cursor
 
-    if(len(argv) !=0):
-        numOverRide=True
-
-    numprocesses_running=subprocess.check_output(["echo `ps all -u tbritton | grep MCMover.py | grep -v grep | wc -l`"], shell=True)
-
-    print(int(numprocesses_running))
-    ALLSTOP=False
-    if(os.path.isfile('/osgpool/halld/tbritton/.ALLSTOP')):
-        print("ALL STOP DETECTED")
-        ALLSTOP=True
-
-    if( (int(numprocesses_running) <2 or numOverRide) and not ALLSTOP):
-        dbcursor.execute("INSERT INTO MCMover (Host,StartTime,Status) VALUES ('"+str(socket.gethostname())+"', NOW(), 'Running' )")
-        dbcnx.commit()
-        queryoverlords="SELECT MAX(ID) FROM MCMover;"
-        dbcursor.execute(queryoverlords)
-        lastid = dbcursor.fetchall()
+    def run(self) -> None:
+        """Record the start, run the transfer, and record success or failure."""
+        self._cursor.execute(
+            "INSERT INTO MCMover (Host,StartTime,Status) "
+            f"VALUES ('{socket.gethostname()}', NOW(), 'Running' )"
+        )
+        self._connection.commit()
+        self._cursor.execute("SELECT MAX(ID) FROM MCMover;")
+        run_rows = self._cursor.fetchall()
 
         try:
-            DroneDo()
-            dbcursor.execute("UPDATE MCMover SET EndTime=NOW(), Status='Success' where ID="+str(lastid[0]["MAX(ID)"]))
-            dbcnx.commit()
-        except:
-            dbcursor.execute("UPDATE MCMover SET Status='Fail' where ID="+str(lastid[0]["MAX(ID)"]))
-            dbcnx.commit()
-            pass
+            run_transfer_script()
+            self._record_outcome(run_rows[0]["MAX(ID)"], succeeded=True)
+        except BaseException:
+            # Keep the existing catch-all behavior when recording a failed run.
+            self._record_outcome(run_rows[0]["MAX(ID)"], succeeded=False)
 
-    dbcnx.close()
+    def _record_outcome(self, run_id: int, succeeded: bool) -> None:
+        """Update the run status, setting EndTime only for successful transfers."""
+        status = "Success" if succeeded else "Fail"
+        end_time_assignment = "EndTime=NOW(), " if succeeded else ""
+        self._cursor.execute(
+            f"UPDATE MCMover SET {end_time_assignment}Status='{status}' "
+            f"where ID={run_id}"
+        )
+        self._connection.commit()
+
+
+def _count_running_movers() -> int:
+    """Count mover processes using the existing shell command."""
+    output = subprocess.check_output([PROCESS_COUNT_COMMAND], shell=True)
+    return int(output)
+
+
+def main(argv: Sequence[str]) -> None:
+    """Run when allowed; any argument overrides only the process-count limit."""
+    override_process_limit = bool(argv)
+    process_count = _count_running_movers()
+    print(process_count)
+
+    stop_requested = os.path.isfile(ALLSTOP_FILE)
+    if stop_requested:
+        print("ALL STOP DETECTED")
+
+    if (process_count < 2 or override_process_limit) and not stop_requested:
+        MoverRun(database_connection, database_cursor).run()
+
+    database_connection.close()
 
 
 if __name__ == "__main__":
-   main(sys.argv[1:])
+    main(sys.argv[1:])
