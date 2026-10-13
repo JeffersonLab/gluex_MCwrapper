@@ -1,278 +1,242 @@
 #!/usr/bin/env python3
-import MySQLdb
-#import MySQLdb.cursors
-from os import environ
-from optparse import OptionParser
-import os.path
-#import mysql.connector
-import time
+"""Bundle pending MC projects and record their completion or retry status."""
+
 import os
 import pwd
-import getpass
-import sys
 import re
-import subprocess
-from subprocess import call, Popen, PIPE
-import socket
-import glob
-import json
-import time
-from datetime import timedelta
-from datetime import datetime
-import smtplib
-from email.message import EmailMessage
-from multiprocessing import Process
-import random
-import pipes
-import random
-import shutil
 import shlex
+import subprocess
+import sys
+from datetime import datetime
+from typing import Any, Mapping, NamedTuple, Sequence
 
-dbhost = "hallddb.jlab.org"
-dbuser = 'mcuser'
-dbpass = ''
-dbname = 'gluex_mc'
+import MySQLdb
+
+DB_HOST = "hallddb.jlab.org"
+DB_USER = "mcuser"
+DB_NAME = "gluex_mc"
+MCWRAPPER_BOT_HOME = "/scigroup/mcwrapper/gluex_MCwrapper/"
+LOG_DIR = "/scratch/mcwrap/mergetemp/"
+CACHE_OUTPUT_ROOT = "/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/"
+INPUT_OUTPUT_ROOT = "/work/osgpool/halld/REQUESTEDMC_OUTPUT/"
+MAX_RUNNING_WRAPPERS = 4
+BUNDLING_STATUS = {20: 21, 40: 41}
+COMPLETED_STATUS = {21: 100, 41: 400}
+RETRY_STATUS = {21: 20, 41: 40}
+PENDING_PROJECTS_QUERY = (
+    "SELECT * FROM Project WHERE (Tested=20 OR Tested=40) "
+    "AND Notified is NULL order by ID asc LIMIT 1"
+)
 
 try:
-    dbcnx=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
-    dbcursor=dbcnx.cursor(MySQLdb.cursors.DictCursor)
-except:
+    database_connection = MySQLdb.connect(host=DB_HOST, user=DB_USER, db=DB_NAME)
+    database_cursor = database_connection.cursor(MySQLdb.cursors.DictCursor)
+except BaseException:
     print("WARNING: CANNOT CONNECT TO DATABASE. DON'T KNOW WHAT TO DO.")
-    exit(1)
+    sys.exit(1)
 
 
-# def array_split(lst,n):
-#     to_return=[]
-#     for i in range(0,n):
-#         to_return.append([])
-#
-#     for count, ele in enumerate(lst):
-#         #print(ele)
-#         index=count%n
-#         #print(index)
-#         to_return[index].append(ele)
-#
-#     #print(count)
-#     #print(len(to_return))
-#
-#     return to_return
+class HostSettings(NamedTuple):
+    """Merge directory, staging directory, and interpreter for a known host."""
+
+    merge_dir: str
+    staging_dir: str
+    python_command: str
+
+    @classmethod
+    def from_hostname(cls, hostname: str) -> "HostSettings":
+        """Return the existing paths and interpreter choice for this host."""
+        merge_dirs = {
+            "dtn2303.jlab.org": "/export/halld/mcwrap/mergetemp/",
+            "ifarm2402.jlab.org": "/scratch/mcwrap/mergetemp/",
+        }
+        merge_dir = merge_dirs.get(hostname, "/osgpool/halld/mcwrap/mergetemp/")
+        if hostname in merge_dirs:
+            return cls(
+                merge_dir, "/work/osgpool/halld//REQUESTED_MC/", "/usr/bin/python3"
+            )
+        return cls(
+            merge_dir,
+            "/volatile/halld/gluex_simulations/REQUESTED_MC/",
+            "/usr/bin/python3.6",
+        )
 
 
-# def BundleAll(tobundle):
-#     for proj in tobundle:
-#         print(proj)
-#         inputdir= proj["OutputLocation"].replace("/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/","/work/osgpool/halld/REQUESTEDMC_OUTPUT/")
-#         outputlocation="/".join(proj["OutputLocation"].split("/")[:-1])+"/"
-#
-#         #update project status
-#         runbundle=21
-#         if proj["Tested"]==40:
-#             runbundle=41
-#         update_q="UPDATE Project SET Tested="+str(runbundle)+" WHERE ID="+str(proj["ID"])
-#         dbcnx=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
-#         dbcursor=dbcnx.cursor(MySQLdb.cursors.DictCursor)
-#         dbcursor.execute(update_q)
-#         dbcnx.commit()
-#         dbcnx.close()
-#         out=BundleFiles(inputdir,outputlocation)
-#         dbcnx=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
-#         dbcursor=dbcnx.cursor(MySQLdb.cursors.DictCursor)
-#         if(out=="SUCCESS"):
-#             #update project status
-#             update_q="UPDATE Project SET Tested=100 WHERE ID="+str(proj["ID"])
-#             dbcursor.execute(update_q)
-#             dbcnx.commit()
-#         else:
-#             #update project status
-#             rebundle=20
-#             if proj["Tested"]==41:
-#                 rebundle=40
-#             update_q="UPDATE Project SET Tested="+str(rebundle)+" WHERE ID="+str(proj["ID"])
-#             dbcursor.execute(update_q)
-#             dbcnx.commit()
-#         dbcnx.close()
+def _get_hostname() -> str:
+    """Read the hostname using the existing shell command."""
+    return subprocess.check_output(["hostname"], shell=True).decode().strip()
 
 
-def BundleFiles(inputdir,output,merge_dir):
-    MCWRAPPER_BOT_HOME="/scigroup/mcwrapper/gluex_MCwrapper/"
-    projectName = inputdir.split("/")[-2] if inputdir[-1]=="/" else inputdir.split("/")[-1]
-    mkdircommand="mkdir -p " + merge_dir + projectName
-    print(mkdircommand)
-    subprocess.call(mkdircommand.split(" "))
-    mkdircommand="mkdir -p " + output
-    print(mkdircommand)
-    subprocess.call(mkdircommand.split(" "))
-    hostname = subprocess.check_output(["hostname"], shell=True).decode().strip()
-    if hostname == "dtn2303.jlab.org" or hostname == "ifarm2402.jlab.org":
-        python_cmd = "/usr/bin/python3"
-    else:
-        python_cmd = "/usr/bin/python3.6"
-    # bundlecommand = "echo hostname; source /group/halld/Software/build_scripts/gluex_env_jlab.sh; /usr/bin/python3.6 " + MCWRAPPER_BOT_HOME + "/Utilities/MCMerger.py -f -tempdir " + merge_dir + projectName + "/ " + inputdir + " " + output
-    bundlecommand = python_cmd + " " + MCWRAPPER_BOT_HOME + "/Utilities/MCMerger.py -tempdir " + merge_dir + projectName + "/ " + inputdir + " " + output + " -noclean"
-    print("BUNDLING WITH",bundlecommand)
+def _project_name(input_dir: str) -> str:
+    """Read the final directory name, allowing one trailing slash."""
+    return (
+        input_dir.split("/")[-2] if input_dir[-1] == "/" else input_dir.split("/")[-1]
+    )
+
+
+def _remove_merge_marker(merge_dir: str, project_name: str) -> None:
+    """Run the existing command to remove the project's merging marker."""
+    subprocess.run([f"rm {merge_dir}/{project_name}/.merging"], shell=True)
+
+
+def _write_bundle_log(project_name: str, output: bytes, suffix: str = "") -> None:
+    """Write merger output using the existing timestamped log naming scheme."""
+    timestamp = datetime.now().strftime("%Y_%m_%d-%p%I_%M_%S")
+    with open(f"{LOG_DIR}{project_name}_{timestamp}{suffix}.log", "w") as log:
+        log.write(output.decode("utf-8"))
+
+
+def bundle_files(input_dir: str, output_dir: str, merge_dir: str) -> str:
+    """Run the merger and return its existing SUCCESS, ONGOING, or ERROR result."""
+    project_name = _project_name(input_dir)
+    for directory in (merge_dir + project_name, output_dir):
+        command = "mkdir -p " + directory
+        print(command)
+        subprocess.call(command.split(" "))
+    settings = HostSettings.from_hostname(_get_hostname())
+    command = (
+        settings.python_command
+        + " "
+        + MCWRAPPER_BOT_HOME
+        + "/Utilities/MCMerger.py -tempdir "
+        + merge_dir
+        + project_name
+        + "/ "
+        + input_dir
+        + " "
+        + output_dir
+        + " -noclean"
+    )
+    print("BUNDLING WITH", command)
     try:
-        suboutput = subprocess.check_output(shlex.split(bundlecommand), stderr=subprocess.STDOUT)
-        #find the number after "Returning final_success:"
-        out = int(re.findall(r"Returning final_success: (\d+)", suboutput.decode('utf-8'))[0])
-        
-        print("subprocess output", out)
-        if out==-666:
+        output = subprocess.check_output(shlex.split(command), stderr=subprocess.STDOUT)
+        result = int(
+            re.findall(r"Returning final_success: (\d+)", output.decode("utf-8"))[0]
+        )
+        print("subprocess output", result)
+        if result == -666:
             print("Bundling ongoing")
             return "ONGOING"
-        print("Bundler return code", out)
-        subprocess.run([f"rm {merge_dir}/{projectName}/.merging"], shell=True)
-        if out==0:
+        print("Bundler return code", result)
+        _remove_merge_marker(merge_dir, project_name)
+        if result == 0:
             return "SUCCESS"
-        else:
-            with open("/scratch/mcwrap/mergetemp/"+projectName+"_"+str(datetime.now().strftime("%Y_%m_%d-%p%I_%M_%S"))+".log", "w") as log:
-                log.write(suboutput.decode('utf-8'))
-            return "ERROR"
-    except subprocess.CalledProcessError as e:
-        print(e.output)
-        with open("/scratch/mcwrap/mergetemp/"+projectName+"_"+str(datetime.now().strftime("%Y_%m_%d-%p%I_%M_%S"))+"_2.log", "w") as log:
-            log.write(e.output.decode('utf-8'))
-        subprocess.run([f"rm {merge_dir}/{projectName}/.merging"], shell=True)
+        _write_bundle_log(project_name, output)
+        return "ERROR"
+    except subprocess.CalledProcessError as error:
+        print(error.output)
+        _write_bundle_log(project_name, error.output, suffix="_2")
+        _remove_merge_marker(merge_dir, project_name)
         return "ERROR"
 
 
-def main(argv):
-    runner_name=pwd.getpwuid( os.getuid() )[0]
-    numprocesses_running=subprocess.check_output(["echo `ps all -u "+runner_name+" | grep MCBundle_wrapper.py | grep -v grep | wc -l`"], shell=True)
-    spawnNum=4
-    print(f"numprocesses_running: {int(numprocesses_running)}")
+class ProjectBundler:
+    """Coordinate pending projects, merger execution, and database status updates."""
 
-    hostname = subprocess.check_output(["hostname"], shell=True).decode().strip()
-    print("Hostname:",hostname)
+    def __init__(self, merge_dir: str, staging_dir: str) -> None:
+        self._merge_dir = merge_dir
+        self._staging_dir = staging_dir
 
-    if hostname == "dtn2303.jlab.org":
-        merge_dir = "/export/halld/mcwrap/mergetemp/"
-    elif hostname == "ifarm2402.jlab.org":
-        merge_dir = "/scratch/mcwrap/mergetemp/"
-    else:
-        merge_dir = "/osgpool/halld/mcwrap/mergetemp/"
+    def _connect(self) -> None:
+        """Open a database session at the same points as the existing workflow."""
+        self._connection = MySQLdb.connect(host=DB_HOST, user=DB_USER, db=DB_NAME)
+        self._cursor = self._connection.cursor(MySQLdb.cursors.DictCursor)
 
-    if hostname == "dtn2303.jlab.org" or hostname == "ifarm2402.jlab.org":
-        staging_dir = "/work/osgpool/halld//REQUESTED_MC/"
-    else:
-        staging_dir = "/volatile/halld/gluex_simulations/REQUESTED_MC/"
-
-    if(int(numprocesses_running)>spawnNum):
-        print(f"{int(numprocesses_running)} process(es) of MCBundle_wrapper.py already running.  Exiting.")
-        exit(0)
-    else:
-        print(f"{int(numprocesses_running)} process(es) of MCBundle_wrapper.py running.  Continuing.")
-        #get projects with Tested>=20
-        # tobundle_q="SELECT * FROM Project WHERE Tested=20 OR Tested=40 LIMIT 1"
-        tobundle_q="SELECT * FROM Project WHERE (Tested=20 OR Tested=40) AND Notified is NULL order by ID asc LIMIT 1"
-        # tobundle_q="SELECT * FROM Project WHERE (Tested=20 OR Tested=40) AND Notified is NULL order by NumEvents asc LIMIT 1"
-        print(tobundle_q)
-        dbcnx=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
-        dbcursor=dbcnx.cursor(MySQLdb.cursors.DictCursor)
-        dbcursor.execute(tobundle_q)
-        tobundle=dbcursor.fetchall()
-        print(tobundle)
-
-        for proj in tobundle:
-            print(proj)
-            inputdir= proj["OutputLocation"].replace("/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/","/work/osgpool/halld/REQUESTEDMC_OUTPUT/")
-
-            #TODO: dirty hack to treat special case of ppauli subdir, NEED TO RESOLVE ASAP
-            # inputdir = inputdir.replace("ppauli/","") if "ppauli/" in inputdir else inputdir
-            # inputdir = inputdir.replace("aschertz/","") if "aschertz/" in inputdir else inputdir
-            inputdir = inputdir.replace("//","/") if "//" in inputdir else inputdir
-
-            outputlocation="/".join(proj["OutputLocation"].split("/")[:-1])+"/"
-            # outputlocation=outputlocation.replace("/lustre19/","/lustre24/")
-            outputlocation=outputlocation.replace("/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/",staging_dir)  # cache is now read-only, use staging directory
-            #update project status
-            print(proj["ID"])
-
-            projectName = inputdir.split("/")[-2] if inputdir[-1]=="/" else inputdir.split("/")[-1]
-            #check if already being bundled
-            print(merge_dir+projectName+"/.merging")
-
-            if os.path.isfile(merge_dir+projectName+"/.merging"):
-                print("Currently being bundled")
-                continue
-
-            runbundle=50
-            if proj['Tested']==40:
-                runbundle=41
-            elif proj['Tested']==20:
-                runbundle=21
-
-            if runbundle == 50:
+    def run(self) -> None:
+        """Select pending projects and bundle those not already marked as merging."""
+        print(PENDING_PROJECTS_QUERY)
+        self._connect()
+        self._cursor.execute(PENDING_PROJECTS_QUERY)
+        projects = self._cursor.fetchall()
+        print(projects)
+        for project in projects:
+            if not self._bundle_project(project):
                 return
 
-            update_q="UPDATE Project SET Tested="+str(runbundle)+" WHERE ID="+str(proj["ID"])
-            print(update_q)
-            dbcursor.execute(update_q)
-            dbcnx.commit()
+    def _update_status(
+        self, project_id: int, status: int, print_query: bool = False
+    ) -> None:
+        """Update and commit the project's Tested status."""
+        query = f"UPDATE Project SET Tested={status} WHERE ID={project_id}"
+        if print_query:
+            print(query)
+        self._cursor.execute(query)
+        self._connection.commit()
 
-            #verify Tested has been updated
-            verify_q="SELECT Tested FROM Project WHERE ID="+str(proj["ID"])
-            dbcursor.execute(verify_q)
-            ptest=dbcursor.fetchone()
-            if ptest["Tested"]!=runbundle:
-                print("ERROR: Tried to update project status to "+str(runbundle)+" but it is "+str(ptest["Tested"]))
-                exit(1)
+    def _bundle_project(self, project: Mapping[str, Any]) -> bool:
+        """Process a project; return False to retain the existing early-stop case."""
+        print(project)
+        input_dir = project["OutputLocation"].replace(
+            CACHE_OUTPUT_ROOT, INPUT_OUTPUT_ROOT
+        )
+        input_dir = input_dir.replace("//", "/")
+        output_dir = "/".join(project["OutputLocation"].split("/")[:-1]) + "/"
+        output_dir = output_dir.replace(CACHE_OUTPUT_ROOT, self._staging_dir)
+        print(project["ID"])
+        project_name = _project_name(input_dir)
+        marker = self._merge_dir + project_name + "/.merging"
+        print(marker)
+        if os.path.isfile(marker):
+            print("Currently being bundled")
+            return True
 
-            dbcnx.close()
+        running_status = BUNDLING_STATUS.get(project["Tested"], 50)
+        if running_status == 50:
+            return False
+        self._update_status(project["ID"], running_status, print_query=True)
+        self._cursor.execute(f"SELECT Tested FROM Project WHERE ID={project['ID']}")
+        verified = self._cursor.fetchone()
+        if verified["Tested"] != running_status:
+            print(
+                f"ERROR: Tried to update project status to {running_status} "
+                f"but it is {verified['Tested']}"
+            )
+            sys.exit(1)
+        self._connection.close()
 
-            print("BEGINNING BUNDLE")
-            out=BundleFiles(inputdir,outputlocation,merge_dir)
+        print("BEGINNING BUNDLE")
+        outcome = bundle_files(input_dir, output_dir, self._merge_dir)
+        self._connect()
+        print("OUT: ", outcome)
+        if outcome == "SUCCESS":
+            completed_status = COMPLETED_STATUS.get(running_status, 500)
+            self._update_status(project["ID"], completed_status)
+        elif outcome == "ONGOING":
+            print("Bundling ongoing. Will try again later, if needed.")
+        else:
+            original_status = int(project["Tested"])
+            retry_status = RETRY_STATUS.get(original_status, original_status)
+            self._update_status(project["ID"], retry_status)
+        self._connection.close()
+        return True
 
-            dbcnx=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
-            dbcursor=dbcnx.cursor(MySQLdb.cursors.DictCursor)
 
-            print("OUT: ",out)
-            if(out=="SUCCESS"):
-                #update project status
-                comp=500
-                if runbundle==21:
-                    comp=100
-                elif runbundle==41:
-                    comp=400
-                update_q="UPDATE Project SET Tested="+str(comp)+" WHERE ID="+str(proj["ID"])
-                dbcursor.execute(update_q)
-                dbcnx.commit()
-            elif(out=="ONGOING"):
-                print("Bundling ongoing. Will try again later, if needed.")
-            else:
-                #update project status
-                rebundle=int(proj["Tested"])
+def _count_running_wrappers(user_name: str) -> int:
+    """Count wrapper processes using the existing shell command."""
+    command = (
+        f"echo `ps all -u {user_name} | grep MCBundle_wrapper.py "
+        "| grep -v grep | wc -l`"
+    )
+    return int(subprocess.check_output([command], shell=True))
 
-                if rebundle==41:
-                    rebundle=40
-                elif rebundle==21:
-                    rebundle=20
 
-                update_q="UPDATE Project SET Tested="+str(rebundle)+" WHERE ID="+str(proj["ID"])
-                dbcursor.execute(update_q)
-                dbcnx.commit()
-            dbcnx.close()
-
-        # spawns = []
-        # #split tobundle into spawnNum lists
-        # Bundling_assignments=array_split(tobundle,spawnNum)
-        # for i in range(0,spawnNum):
-        #     time.sleep(random.randint(1,spawnNum))
-        #     print("block "+str(i))
-        #     print(len(Bundling_assignments[i]))
-        #     if(len(Bundling_assignments[i]) !=0 ):
-        #         p=Process(target=BundleAll,args=(Bundling_assignments[i],))
-        #         p.daemon = True
-        #         spawns.append(p)
-
-        # dbcnx.close()
-        # #spawn spawnNum processes
-        # for p in spawns:
-        #     p.start()
-        # #collect all processes
-        # for p in spawns:
-        #     if p.is_alive():
-        #         p.join()
+def main(argv: Sequence[str]) -> None:
+    """Bundle pending projects unless the existing process limit is exceeded."""
+    runner_name = pwd.getpwuid(os.getuid())[0]
+    process_count = _count_running_wrappers(runner_name)
+    print(f"numprocesses_running: {process_count}")
+    hostname = _get_hostname()
+    print("Hostname:", hostname)
+    settings = HostSettings.from_hostname(hostname)
+    if process_count > MAX_RUNNING_WRAPPERS:
+        print(
+            f"{process_count} process(es) of MCBundle_wrapper.py "
+            "already running.  Exiting."
+        )
+        sys.exit(0)
+    print(f"{process_count} process(es) of MCBundle_wrapper.py running.  Continuing.")
+    ProjectBundler(settings.merge_dir, settings.staging_dir).run()
 
 
 if __name__ == "__main__":
-   main(sys.argv[1:])
+    main(sys.argv[1:])
