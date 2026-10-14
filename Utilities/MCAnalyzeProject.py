@@ -1,4 +1,4 @@
-#!/usr/bin/python3.6
+#!/usr/bin/env python3
 """Analyze project attempts and export Plotly distributions and failure charts."""
 
 import argparse

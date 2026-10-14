@@ -105,7 +105,7 @@ def GetFluxCCDB(run, Emin, Emax):
         PS_accept_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/pair_spectrometer/lumi/PS_accept", run, VARIATION, CALIBTIME)
         PS_accept = PS_accept_assignment.constant_set.data_table
     except:
-        print "Missing flux for run = %d, contact jrsteven@jlab.org" % run
+        print("Missing flux for run = %d, contact jrsteven@jlab.org" % run)
         sys.exit(0)
 
     # PS acceptance correction

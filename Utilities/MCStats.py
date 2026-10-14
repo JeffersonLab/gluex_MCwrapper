@@ -1,342 +1,286 @@
 #!/usr/bin/env python3
-import MySQLdb
-import sys
+"""Query MC project statistics and display the existing Matplotlib charts."""
+
 import datetime
-import os.path
-from optparse import OptionParser
-import subprocess
-from subprocess import call
-from subprocess import Popen, PIPE
-import socket
-import pprint
-import math
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
 import re
+import sys
+from typing import Any, Dict, List, Mapping, Sequence, Tuple
 
-dbhost = "hallddb.jlab.org"
-dbuser = 'mcuser'
-dbpass = ''
-dbname = 'gluex_mc'
+import matplotlib.pyplot as plt
+import MySQLdb
+import pandas as pd
 
-conn=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
-curs=conn.cursor(MySQLdb.cursors.DictCursor)
+DB_HOST = "hallddb.jlab.org"
+DB_USER = "mcuser"
+DB_NAME = "gluex_mc"
+START_DATE = datetime.date(2024, 1, 1)
+SIZE_MULTIPLIERS = {"K": 1e3, "M": 1e6, "G": 1e9, "T": 1e12, "E": 1e15}
+LOCATION_GROUPS = ("JLab", "UConn", "FSU", "Glasgow", "IU", "ComputeCanada", "Other")
 
-class bcolors:
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
+database_connection = MySQLdb.connect(host=DB_HOST, user=DB_USER, db=DB_NAME)
+database_cursor = database_connection.cursor(MySQLdb.cursors.DictCursor)
 
 
-def getTotalSizeOut():
-    query= "SELECT TotalSizeOut From Project;"
-    curs.execute(query) 
-    rows=curs.fetchall()
-    sum=0.0
-    for proj in rows:
-        if proj['TotalSizeOut'] == None:
-            continue
-        prefix=str(proj['TotalSizeOut'])[-2:-1]
-        num=float(str(proj['TotalSizeOut'])[:-2])
-        #print num
-        #print "prefix is "+prefix
-        total=0.0
-        if(str(prefix)=="K"):
-            #print "got K"
-            total=num*1000.
-        elif(str(prefix)=="M"):
-            #print "got M"
-            total=num*1000000.
-        elif(prefix=='G'):
-            #print "got G"
-            total=num*1000000000.
-        elif(prefix=='T'):
-            #print "got G"
-            total=num*1000000000000.
-        elif(prefix=='E'):
-            #print "got G"
-            total=num*1000000000000000.
-        #print str(proj['TotalSizeOut'])
-        #print total
-        sum+=total
-        #print "==========================="
-
-    print(sum/1000000000000)
-    print("T")
+def _output_size_bytes(value: str) -> float:
+    """Convert the existing two-character size suffixes and unit multipliers."""
+    prefix = value[-2:-1]
+    amount = float(value[:-2])
+    if prefix in SIZE_MULTIPLIERS:
+        return amount * SIZE_MULTIPLIERS[prefix]
+    return 0.0
 
 
-def getUserProjectPercent(graph=True):
-    query= "SELECT UName, NumEvents From Project WHERE Submit_Time>DATE('2024-01-01') AND Notified=1 ORDER BY Submit_Time;"
-    curs.execute(query) 
-    rows=curs.fetchall()
+def _weekly_requested_events(
+    rows: Sequence[Mapping[str, Any]],
+) -> List[Tuple[datetime.date, int]]:
+    """Retain the existing week-transition aggregation for requested events."""
+    points: List[Tuple[datetime.date, int]] = []
+    previous_week = -1
+    running_total = 0
+    for row in rows:
+        submitted = row["Submit_Time"]
+        running_total += row["NumEvents"]
+        week = submitted.isocalendar()[1]
+        if week != previous_week:
+            points.append((submitted, running_total))
+            running_total = 0
+            previous_week = week
+    return points
 
-    # store all info in a dictionary with usernames as keys
-    userdict={}
-    totalevents=0
-    for proj in rows:
-        totalevents = totalevents+proj['NumEvents']
-        if proj['UName'] not in userdict:
-            userdict[proj['UName']] = [0,0]
-        numUserProj = userdict[proj['UName']][0] + 1
-        numUserEvents = userdict[proj['UName']][1] + proj['NumEvents']
-        userdict[proj['UName']] = (numUserProj, numUserEvents)
 
-    print(userdict)
+def _location_group(location: str) -> str:
+    """Classify a hostname using the existing site patterns and precedence."""
+    if "jlab.org" in location:
+        return "JLab"
+    if "uconn.edu" in location:
+        return "UConn"
+    if "fsu.edu" in location:
+        return "FSU"
+    if "beowulf.cluster" in location or re.search(r"@wn-d|h\d{2}-\d{3}", location):
+        return "Glasgow"
+    if "iu.edu" in location or "IU-Jetstream2" in location:
+        return "IU"
+    if "computecanada.ca" in location:
+        return "ComputeCanada"
+    return "Other"
 
-    # convert to df for some easy manipulations
-    userdf = pd.DataFrame.from_dict(userdict,orient='index',columns=['NumProj','NumEvents'])
-    print(userdf)
-    proj_sum=0
-    sizes=[]
-    labels=[]
-    for user in userdict:
-        sizes.append(userdict[user][1])
-        labels.append(user)
-        proj_sum+=float(userdict[user][0])
 
-    print(len(userdict),proj_sum,totalevents)
+def _weekly_location_counts(
+    start_times: Sequence[datetime.date], start_date: datetime.date
+) -> List[Tuple[datetime.date, int]]:
+    """Retain the existing job-count bins, including its empty-week handling."""
+    if not start_times:
+        return []
+    points: List[Tuple[datetime.date, int]] = []
+    previous_week = (start_date - datetime.timedelta(weeks=1)).isocalendar()[1]
+    running_count = 0
+    for started in start_times:
+        year, week, _day = started.isocalendar()
+        if week - previous_week < 0:
+            while week - previous_week < 0:
+                points.append(
+                    (
+                        datetime.date.fromisocalendar(year - 1, previous_week, 1),
+                        running_count,
+                    )
+                )
+                running_count = 0
+                if previous_week == 52:
+                    previous_week = 0
+                previous_week += 1
+            running_count = 0
 
-    if graph:
-        userdf.plot.pie(subplots=True, figsize=(10,5))
+        if week - previous_week > 1:
+            while week - previous_week > 0:
+                points.append(
+                    (
+                        datetime.date.fromisocalendar(year, previous_week, 1),
+                        running_count,
+                    )
+                )
+                running_count = 0
+                previous_week += 1
+            running_count = 0
+            previous_week = week
 
-        fig1, ax1 = plt.subplots()
-        l = ax1.pie(sizes, labels=labels, autopct='%1.1f%%',shadow=True, startangle=90, radius=10000,labeldistance=1.1) #labels=labels, plt.legend(patches, labels, loc='left center', bbox_to_anchor=(-0.1, 1.),fontsize=8)
-        ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+        if week - previous_week == 1:
+            points.append(
+                (datetime.date.fromisocalendar(year, previous_week, 1), running_count)
+            )
+            running_count = 0
+            previous_week = week
+        running_count += 1
 
-        for label, t in zip(labels, l[1]):
-            x, y = t.get_position()
-            angle = int(math.degrees(math.atan2(y, x)))
-            ha = "left"
-            va = "bottom"
+    final_year = start_times[-1].isocalendar()[0]
+    points.append(
+        (datetime.date.fromisocalendar(final_year, previous_week, 1), running_count)
+    )
+    return points
 
-            if angle > 90:
-                angle -= 180
 
-            if angle < 0:
-                va = "top"
+class MCStatistics:
+    """Query statistics and display charts using an existing database cursor."""
 
-            if -45 <= angle <= 0:
-                ha = "right"
-                va = "bottom"
+    def __init__(self, cursor: "MySQLdb.cursors.DictCursor") -> None:
+        self._cursor = cursor
 
-            # plt.annotate(label, xy=(x,y), rotation=angle, ha=ha, va=va, size=8)
+    def print_total_output_size(self) -> None:
+        """Print the total output size in the existing decimal terabyte units."""
+        self._cursor.execute("SELECT TotalSizeOut From Project;")
+        rows = self._cursor.fetchall()
+        total_bytes = 0.0
+        for project in rows:
+            if project["TotalSizeOut"] is None:
+                continue
+            total_bytes += _output_size_bytes(str(project["TotalSizeOut"]))
+        print(total_bytes / 1e12)
+        print("T")
 
+    def show_user_project_shares(self, graph: bool = True) -> None:
+        """Print per-user project and event totals, optionally displaying pie charts."""
+        query = (
+            "SELECT UName, NumEvents From Project WHERE Submit_Time>DATE('2024-01-01') "
+            "AND Notified=1 ORDER BY Submit_Time;"
+        )
+        self._cursor.execute(query)
+        rows = self._cursor.fetchall()
+        user_totals: Dict[str, Tuple[int, int]] = {}
+        total_events = 0
+        for project in rows:
+            total_events += project["NumEvents"]
+            user = project["UName"]
+            project_count, event_count = user_totals.get(user, (0, 0))
+            user_totals[user] = (project_count + 1, event_count + project["NumEvents"])
+        print(user_totals)
+        users = pd.DataFrame.from_dict(
+            user_totals, orient="index", columns=["NumProj", "NumEvents"]
+        )
+        print(users)
+        project_total: float = 0
+        sizes = []
+        labels = []
+        for user, (project_count, event_count) in user_totals.items():
+            sizes.append(event_count)
+            labels.append(user)
+            project_total += float(project_count)
+        print(len(user_totals), project_total, total_events)
+
+        if graph:
+            users.plot.pie(subplots=True, figsize=(10, 5))
+            _figure, axis = plt.subplots()
+            axis.pie(
+                sizes,
+                labels=labels,
+                autopct="%1.1f%%",
+                shadow=True,
+                startangle=90,
+                radius=10000,
+                labeldistance=1.1,
+            )
+            axis.axis("equal")
+            plt.show()
+
+    def plot_attempt_wall_times(self) -> None:
+        """Plot elapsed times for attempts with both start and completion times."""
+        query = (
+            "SELECT UNIX_TIMESTAMP(Start_Time),UNIX_TIMESTAMP(Completed_Time) "
+            "From Attempts;"
+        )
+        self._cursor.execute(query)
+        rows = self._cursor.fetchall()
+        wall_times = []
+        for attempt in rows:
+            completed = attempt["UNIX_TIMESTAMP(Completed_Time)"]
+            started = attempt["UNIX_TIMESTAMP(Start_Time)"]
+            if completed is None or started is None:
+                continue
+            wall_times.append(completed - started)
+        _figure, axis = plt.subplots(1, 1)
+        axis.hist(wall_times, bins=50, color="lightblue")
+        plt.show()
+
+    def plot_attempt_start_times(self) -> None:
+        """Print recorded CPU time and plot attempt start times."""
+        query = (
+            "SELECT UNIX_TIMESTAMP(Start_Time),CPUTime "
+            "From Attempts where CPUTime != 0;"
+        )
+        self._cursor.execute(query)
+        rows = self._cursor.fetchall()
+        total_cpu_time = datetime.timedelta(0)
+        start_times = []
+        for attempt in rows:
+            start_times.append(attempt["UNIX_TIMESTAMP(Start_Time)"])
+            total_cpu_time += attempt["CPUTime"]
+        print(total_cpu_time)
+        _figure, axis = plt.subplots(1, 1)
+        axis.hist(start_times, bins=6, color="lightblue")
+        plt.show()
+
+    def plot_usage_timeline(self) -> None:
+        """Plot requested events using the existing weekly aggregation."""
+        query = (
+            "SELECT UName, Submit_Time, NumEvents FROM Project "
+            "WHERE Submit_Time>DATE('2024-01-01') AND Notified=1 ORDER BY Submit_Time;"
+        )
+        self._cursor.execute(query)
+        points = _weekly_requested_events(self._cursor.fetchall())
+        dates = [submitted for submitted, events in points]
+        totals = [events for submitted, events in points]
+        plt.plot(dates, totals)
+        plt.xlabel("Time")
+        plt.ylabel("NumEvents")
+        plt.title("Number of events requested per week")
+        plt.legend()
+        plt.show()
+
+    def plot_running_locations(self) -> None:
+        """Display the existing site-share and weekly job-count charts."""
+        query = (
+            "SELECT RunningLocation,Start_Time,WallTime,CPUTime,RAMUsed,ExitCode "
+            f"FROM Attempts WHERE Start_Time>DATE('{START_DATE.isoformat()}') "
+            "ORDER BY Start_Time;"
+        )
+        self._cursor.execute(query)
+        rows = self._cursor.fetchall()
+        groups: Dict[str, List[Mapping[str, Any]]] = {
+            site: [] for site in LOCATION_GROUPS
+        }
+        for attempt in rows:
+            groups[_location_group(attempt["RunningLocation"])].append(attempt)
+        for site, attempts in groups.items():
+            print(site, len(attempts))
+        sizes = [len(attempts) for attempts in groups.values() if attempts]
+        labels = [site for site, attempts in groups.items() if attempts]
+        _figure, axis = plt.subplots()
+        axis.pie(sizes, labels=labels, autopct="%1.1f%%", startangle=90)
+        axis.axis("equal")
+        plt.title("Number of jobs per running location")
+        plt.show()
+
+        for site, attempts in groups.items():
+            if not attempts:
+                continue
+            start_times = [attempt["Start_Time"] for attempt in attempts]
+            points = _weekly_location_counts(start_times, START_DATE)
+            dates = [started for started, job_count in points]
+            counts = [job_count for started, job_count in points]
+            plt.plot(dates, counts, label=site)
+            print(site, dates, counts)
+        plt.xlabel("Time")
+        plt.ylabel("NumJobs")
+        plt.title("Percentage of jobs run per week per OSG location")
+        plt.legend()
         plt.show()
 
 
-def getAttemptsTimes():
-    query= "SELECT UNIX_TIMESTAMP(Start_Time),UNIX_TIMESTAMP(Completed_Time) From Attempts;"
-    curs.execute(query) 
-    rows=curs.fetchall()
-    wallTimes=[]
-    for att in rows:
-        if(att['UNIX_TIMESTAMP(Completed_Time)'] == None or att['UNIX_TIMESTAMP(Start_Time)']==None):
-            continue
-        #print att['UNIX_TIMESTAMP(Completed_Time)']-att['UNIX_TIMESTAMP(Start_Time)']
-        wallTimes.append(att['UNIX_TIMESTAMP(Completed_Time)']-att['UNIX_TIMESTAMP(Start_Time)'])
-
-    fig, ax = plt.subplots(1,1)
-
-    ax.hist(wallTimes, bins=50, color='lightblue')
-    plt.show()
-
-
-def getStartAndLength():
-    query= "SELECT UNIX_TIMESTAMP(Start_Time),CPUTime From Attempts where CPUTime != 0;"
-    curs.execute(query) 
-    rows=curs.fetchall()
-    totaltime=datetime.timedelta(0)
-    Starttimes=[]
-    for time in rows:
-        Starttimes.append(time["UNIX_TIMESTAMP(Start_Time)"])
-        totaltime=totaltime+time["CPUTime"]
-        # print(str(time["UNIX_TIMESTAMP(Start_Time)"])+" , "+str(time["CPUTime"]))
-
-    print(totaltime)
-    fig, ax = plt.subplots(1,1)
-
-    ax.hist(Starttimes, bins=6, color='lightblue')
-    plt.show()
-
-
-def getUsageTimeline():
-    query= "SELECT UName, Submit_Time, NumEvents FROM Project WHERE Submit_Time>DATE('2024-01-01') AND Notified=1 ORDER BY Submit_Time;"
-    curs.execute(query) 
-    rows=curs.fetchall()
-
-    # Store the result in a dictionary with name as the key
-    result = {}
-    alldata = []
-    for data in rows:
-        if data['UName'] not in result:
-            result[data['UName']] = []
-        result[data['UName']].append((data['Submit_Time'], data['NumEvents']))
-        alldata.append((data['Submit_Time'], data['NumEvents']))
-
-    # re-sum all events into weeks
-    resummed_data = []
-    prevweek = -1
-    runningsum = 0
-    for date, events in alldata:
-        runningsum = runningsum + events
-
-        year, week, day = date.isocalendar()
-        if week != prevweek:
-            resummed_data.append((date,runningsum))
-            runningsum = 0
-            prevweek = week
-
-    x = [Submit_Time for Submit_Time, NumEvents in resummed_data]
-    y = [NumEvents for Submit_Time, NumEvents in resummed_data]
-    plt.plot(x, y)
-
-    # Plot the data for each name
-    # for UName, data in result.items():
-    #     x = [Submit_Time for Submit_Time, NumEvents in data]
-    #     y = [NumEvents for Submit_Time, NumEvents in data]
-    #     plt.plot(x, y, label=UName)
-
-    # Add labels and legend to the plot
-    plt.xlabel("Time")
-    plt.ylabel("NumEvents")
-    plt.title("Number of events requested per week")
-    plt.legend()
-
-    plt.show()
-
-
-def getRunningLocations():
-    isostartdate = '2024-01-01'
-    startdate = datetime.date.fromisoformat(isostartdate)
-
-    query= "SELECT RunningLocation,Start_Time,WallTime,CPUTime,RAMUsed,ExitCode FROM Attempts WHERE Start_Time>DATE('"+isostartdate+"') ORDER BY Start_Time;"
-    curs.execute(query) 
-    rows=curs.fetchall()
-
-    # Store the result in a list
-    alldata = []
-    for data in rows:
-        alldata.append((data['RunningLocation'], data['Start_Time'], data['WallTime'], data['CPUTime'], data['RAMUsed'], data['ExitCode']))
-    # print(alldata)
-
-    #sort into running locations by looking at those relevant for GlueX
-    runningLocs = {}
-    runningLocs['JLab'] = []
-    runningLocs['UConn'] = []
-    runningLocs['FSU'] = []
-    runningLocs['Glasgow'] = []
-    runningLocs['IU'] = []
-    runningLocs['ComputeCanada'] = []
-    runningLocs['Other'] = []
-    for data in alldata:
-        if 'jlab.org' in data[0]:
-            runningLocs['JLab'].append(data)
-        elif 'uconn.edu' in data[0]:
-            runningLocs['UConn'].append(data)
-        elif 'fsu.edu' in data[0]:
-            runningLocs['FSU'].append(data)
-        elif 'beowulf.cluster' in data[0] or re.search(r'@wn-d|h\d{2}-\d{3}', data[0]):
-            runningLocs['Glasgow'].append(data)
-        elif 'iu.edu' in data[0] or 'IU-Jetstream2' in data[0]:
-            runningLocs['IU'].append(data)
-        elif 'computecanada.ca' in data[0]:
-            runningLocs['ComputeCanada'].append(data)
-        else:
-            runningLocs['Other'].append(data)
-
-    # print length of each location
-    for loc in runningLocs:
-        print(loc, len(runningLocs[loc]))
-
-    # plot running locations as pie chart with number of jobs as size (remove empty locations)
-    sizes = [len(runningLocs[loc]) for loc in runningLocs if len(runningLocs[loc]) > 0]
-    labels = [loc for loc in runningLocs if len(runningLocs[loc]) > 0]
-
-    fig1, ax1 = plt.subplots()
-    ax1.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=90)
-    ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
-
-    plt.title("Number of jobs per running location")
-    plt.show()
-
-    # plot running locations as pie chart with WallTime as size
-    # plot running locations as pie chart with CPUTime as size
-
-    # plot number of jobs per week using Start_Time for each location
-    for loc in runningLocs:
-        if len(runningLocs[loc]) == 0:
-            continue
-
-        # re-sum all events into weeks, while making sure empty weeks get a 0 and year changes are properly accounted for
-        resummed_data = []
-        prevweek = (startdate-datetime.timedelta(weeks=1)).isocalendar()[1] #find previous week (make sure year is correct)
-        runningsum = 0
-        for data in runningLocs[loc]:
-            date = data[1]
-            year, week, day = date.isocalendar()
-
-            # treat special case of year change
-            if week-prevweek < 0:
-                while week-prevweek < 0:
-                    resummed_data.append((datetime.date.fromisocalendar(year-1, prevweek, 1),runningsum))
-                    runningsum = 0
-                    if prevweek == 52:
-                        prevweek = 0
-                    prevweek = prevweek + 1
-                runningsum = 0
-
-            # treat special case of empty weeks
-            if week-prevweek > 1:
-                while week-prevweek > 0:
-                    resummed_data.append((datetime.date.fromisocalendar(year, prevweek, 1),runningsum))
-                    runningsum = 0
-                    prevweek = prevweek + 1
-                runningsum = 0
-                prevweek = week # should be redundant here
-
-            # treat normal case of progressing weeks
-            if week-prevweek == 1:
-                resummed_data.append((datetime.date.fromisocalendar(year, prevweek, 1),runningsum))
-                runningsum = 0
-                prevweek = week
-
-            runningsum = runningsum + 1
-            
-        resummed_data.append((datetime.date.fromisocalendar(year, prevweek, 1),runningsum)) # add the last week
-
-        x = [Submit_Time for Submit_Time, NumJobs in resummed_data]
-        y = [NumJobs for Submit_Time, NumJobs in resummed_data]
-        plt.plot(x, y, label=loc)
-        print(loc, x, y)
-
-    # Add labels and legend to the plot
-    plt.xlabel("Time")
-    plt.ylabel("NumJobs")
-    plt.title("Percentage of jobs run per week per OSG location")
-    plt.legend()
-    plt.show()
-
-
-def main(argv):
-    # getTotalSizeOut()
-    getUserProjectPercent(True)
-    # getAttemptsTimes()
-    # getStartAndLength()
-    # getUsageTimeline()
-    getRunningLocations()
-
-    conn.close()
+def main(argv: Sequence[str]) -> None:
+    """Display the same user and running-location charts as the existing CLI."""
+    statistics = MCStatistics(database_cursor)
+    statistics.show_user_project_shares(True)
+    statistics.plot_running_locations()
+    database_connection.close()
 
 
 if __name__ == "__main__":
-   main(sys.argv[1:])
-
-
-# SELECT COUNT(*),SUM(NumEvents) FROM Project WHERE Dispatched_Time>DATE('2024-01-01') AND Notified=1 ORDER BY Dispatched_Time;
-# SELECT COUNT(*) FROM Jobs WHERE Project_ID IN (SELECT ID FROM Project WHERE Dispatched_Time>DATE('2024-01-01') AND Notified=1);
+    main(sys.argv[1:])

@@ -13,6 +13,7 @@ Takes input path and output path as command line arguments.
 """
 import os
 import re
+import shlex
 from functools import reduce
 import sys
 import subprocess
@@ -137,7 +138,7 @@ def bash_hddm_merge(name_map, path, mc_dir):
             print(f"hddm add {run}",flush=True)
             if os.path.isfile(checkpointpath + tup[0] + run + tup[1] + '.done'):
                 continue
-            success =  subprocess.run([f"python2 "+MCWRAPPER_BOT_HOME+f"/Utilities/merge_hddm.py {path + tup[0] + run + tup[1]} {mc_dir + '/hddm/' + tup[0] + run}*{tup[1]}"], shell=True)
+            success =  subprocess.run([shlex.quote(sys.executable)+" "+MCWRAPPER_BOT_HOME+f"/Utilities/merge_hddm.py {path + tup[0] + run + tup[1]} {mc_dir + '/hddm/' + tup[0] + run}*{tup[1]}"], shell=True)
             return_code += success.returncode
             if success.returncode == 0:
                 open(checkpointpath + tup[0] + run + tup[1] + '.done', 'a').close()

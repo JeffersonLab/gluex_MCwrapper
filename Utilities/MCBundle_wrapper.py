@@ -37,7 +37,7 @@ except BaseException:
 
 
 class HostSettings(NamedTuple):
-    """Merge directory, staging directory, and interpreter for a known host."""
+    """Host-specific directories and the current Python interpreter."""
 
     merge_dir: str
     staging_dir: str
@@ -45,20 +45,18 @@ class HostSettings(NamedTuple):
 
     @classmethod
     def from_hostname(cls, hostname: str) -> "HostSettings":
-        """Return the existing paths and interpreter choice for this host."""
+        """Return this host's existing paths, using the wrapper's interpreter."""
         merge_dirs = {
             "dtn2303.jlab.org": "/export/halld/mcwrap/mergetemp/",
             "ifarm2402.jlab.org": "/scratch/mcwrap/mergetemp/",
         }
         merge_dir = merge_dirs.get(hostname, "/osgpool/halld/mcwrap/mergetemp/")
         if hostname in merge_dirs:
-            return cls(
-                merge_dir, "/work/osgpool/halld//REQUESTED_MC/", "/usr/bin/python3"
-            )
+            return cls(merge_dir, "/work/osgpool/halld//REQUESTED_MC/", sys.executable)
         return cls(
             merge_dir,
             "/volatile/halld/gluex_simulations/REQUESTED_MC/",
-            "/usr/bin/python3.6",
+            sys.executable,
         )
 
 
@@ -95,7 +93,7 @@ def bundle_files(input_dir: str, output_dir: str, merge_dir: str) -> str:
         subprocess.call(command.split(" "))
     settings = HostSettings.from_hostname(_get_hostname())
     command = (
-        settings.python_command
+        shlex.quote(settings.python_command)
         + " "
         + MCWRAPPER_BOT_HOME
         + "/Utilities/MCMerger.py -tempdir "
