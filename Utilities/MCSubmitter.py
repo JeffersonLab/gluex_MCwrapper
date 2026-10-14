@@ -1,419 +1,404 @@
 #!/usr/bin/env python3
-import MySQLdb
-import sys
-import datetime
-import time
-import os.path
-from optparse import OptionParser
-import subprocess
-from subprocess import call
-from subprocess import Popen, PIPE
-import socket
-import pprint
+"""Submit pending MC jobs in bundles and record the submitter run's outcome."""
+
+import os
 import pwd
+import socket
+import subprocess
+import sys
+from typing import Any, List, Mapping, Sequence, TextIO, Tuple
 
-dbhost = "hallddb.jlab.org"
-dbuser = 'mcuser'
-dbpass = ''
-dbname = 'gluex_mc'
+import MySQLdb
+from mc_status import JOB_ACTIVE, ProjectStatus, RunStatus
 
-conn=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
-curs=conn.cursor(MySQLdb.cursors.DictCursor)
+DB_HOST = "hallddb.jlab.org"
+DB_USER = "mcuser"
+DB_NAME = "gluex_mc"
+ALLOWED_USERS = ("tbritton", "mcwrap")
+MCWRAPPER_BOT_HOME = "/scigroup/mcwrapper/gluex_MCwrapper/"
+PAYLOAD_CONFIG_PATH = "MCSubDispatched.config"
+BLOCK_SIZE = 1000
+MAX_RUNNING_SUBMITTERS = 3
+DEFAULT_EVENTS_PER_FILE = 20000
 
-class bcolors:
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
-
-runner_name=pwd.getpwuid( os.getuid() )[0]
-
-if( not (runner_name=="tbritton" or runner_name=="mcwrap")):
+# Preserve the existing database setup and account-check order.
+database_connection = MySQLdb.connect(host=DB_HOST, user=DB_USER, db=DB_NAME)
+database_cursor = database_connection.cursor(MySQLdb.cursors.DictCursor)
+runner_name = pwd.getpwuid(os.getuid())[0]
+if runner_name not in ALLOWED_USERS:
     print("ERROR: You must be tbritton or mcwrap to run this script")
     sys.exit(1)
 
 
-def WritePayloadConfig(order,foundConfig,batch_system):
+class PayloadConfigWriter:
+    """Append project settings to a copied OSG or SWIF payload template."""
 
-    MCconfig_file= open("MCSubDispatched.config","a")
-    MCconfig_file.write("PROJECT="+str(order["Exp"])+"\n")
+    def __init__(self, user_name: str) -> None:
+        self._user_name = user_name
 
-    if str(order["Exp"]) == "CPP":
-        MCconfig_file.write("FLUX_TO_GEN=cobrems"+"\n")
-
-    if 30000 <= int(order["RunNumLow"]) and int(order["RunNumLow"]) <= 39999:
-        if str(order["VersionSet"]) == "recon-2017_01-ver05.xml" or str(order["VersionSet"]) == "version_7.2.0.xml":
-            MCconfig_file.write("VARIATION=mc_2017_01_ver05"+"\n")
-            MCconfig_file.write("RECON_VERSION=mc_2017_01_ver05"+"\n")
-            MCconfig_file.write("ANA_VERSION=mc_2017_01_ver05"+"\n")
-
-    splitlist=order["OutputLocation"].split("/")
-    MCconfig_file.write("WORKFLOW_NAME=proj"+str(order["ID"])+"_"+splitlist[len(splitlist)-2]+"\n")
-    MCconfig_file.write(order["Config_Stub"]+"\n")
-    MinE=str(order["GenMinE"])
-    if len(MinE) > 5:
-        cutnum=len(MinE)-5
-        MinE = MinE[:-cutnum]
-    MaxE=str(order["GenMaxE"])
-    if len(MaxE) > 5:
-        cutnum=len(MaxE)-5
-        MaxE = MaxE[:-cutnum]
-    MCconfig_file.write("GEN_MIN_ENERGY="+MinE+"\n")
-    MCconfig_file.write("GEN_MAX_ENERGY="+MaxE+"\n")
-
-    if str(order["GenFlux"]) == "cobrems":
-        MCconfig_file.write("FLUX_TO_GEN=cobrems"+"\n")
-
-    if order["CoherentPeak"] is not None :
-        MCconfig_file.write("COHERENT_PEAK="+str(order["CoherentPeak"])+"\n")
-
-    if str(order["Generator"]) == "file:":
+    def write(self, project: Mapping[str, Any], batch_system: str) -> None:
+        """Retain payload keys, value formatting, and associated SWIF copies."""
+        config = open(PAYLOAD_CONFIG_PATH, "a")
+        config.write(f"PROJECT={project['Exp']}\n")
+        if str(project["Exp"]) == "CPP":
+            config.write("FLUX_TO_GEN=cobrems\n")
+        if 30000 <= int(project["RunNumLow"]) <= 39999 and str(
+            project["VersionSet"]
+        ) in ("recon-2017_01-ver05.xml", "version_7.2.0.xml"):
+            config.write("VARIATION=mc_2017_01_ver05\n")
+            config.write("RECON_VERSION=mc_2017_01_ver05\n")
+            config.write("ANA_VERSION=mc_2017_01_ver05\n")
+        location_parts = project["OutputLocation"].split("/")
+        config.write(f"WORKFLOW_NAME=proj{project['ID']}_{location_parts[-2]}\n")
+        config.write(f"{project['Config_Stub']:s}\n")
+        # The existing format truncates the string, rather than rounding energy.
+        config.write(f"GEN_MIN_ENERGY={str(project['GenMinE'])[:5]}\n")
+        config.write(f"GEN_MAX_ENERGY={str(project['GenMaxE'])[:5]}\n")
+        if str(project["GenFlux"]) == "cobrems":
+            config.write("FLUX_TO_GEN=cobrems\n")
+        if project["CoherentPeak"] is not None:
+            config.write(f"COHERENT_PEAK={project['CoherentPeak']}\n")
+        self._write_generator(config, project, batch_system)
+        if (
+            project["GenPostProcessing"] is not None
+            and project["GenPostProcessing"] != ""
+        ):
+            config.write(f"GENERATOR_POSTPROCESS={project['GenPostProcessing']}\n")
+        config.write(f"GEANT_VERSION={project['GeantVersion']}\n")
+        config.write(f"NOSECONDARIES={abs(project['GeantSecondaries'] - 1)}\n")
+        config.write(f"BKG={project['BKG']}\n")
+        output_directory = "/".join(str(project["OutputLocation"]).split("/")[7:-1])
         if batch_system == "OSG":
-            MCconfig_file.write("GENERATOR="+str(order["Generator"])+"/"+str(order["Generator_Config"])+"\n")
+            config.write(
+                f"DATA_OUTPUT_BASE_DIR=/osgpool/halld/{self._user_name}/"
+                f"REQUESTEDMC_OUTPUT/{output_directory}\n"
+            )
         elif batch_system == "SWIF":
-            location=order["Generator_Config"].replace("/osgpool/halld/"+runner_name+"/","/work/halld/home/"+runner_name+"/")
-            scp_order="scp "+str(order["Generator_Config"])+" ifarm:"+location
-            print("COPYING GENERATOR file")
-            print(scp_order)
-            subprocess.call(scp_order,shell=True)
-            MCconfig_file.write("GENERATOR="+str(order["Generator"])+"/"+str(location)+"\n")
-    else:
-        MCconfig_file.write("GENERATOR="+str(order["Generator"])+"\n")
+            config.write(
+                "DATA_OUTPUT_BASE_DIR=/cache/halld/gluex_simulations/REQUESTED_MC/"
+                f"{output_directory}\n"
+            )
+        if project["RCDBQuery"] != "":
+            config.write(f"RCDB_QUERY={project['RCDBQuery']:s}\n")
+        if project["eBeamEnergy"] is not None:
+            config.write(f"eBEAM_ENERGY={project['eBeamEnergy']}\n")
+        if project["eBeamCurrent"] is not None:
+            config.write(f"eBEAM_CURRENT={project['eBeamCurrent']}\n")
+        self._write_reactions(config, project, batch_system)
+        config.write(
+            "ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"
+            f"{project['VersionSet']}\n"
+        )
+        if project["ANAVersionSet"] is not None and project["ANAVersionSet"] != "None":
+            config.write(
+                "ANA_ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"
+                f"{project['ANAVersionSet']}\n"
+            )
+        if project["SimVersionSet"] is not None and project["SimVersionSet"] != "None":
+            config.write(
+                "SIM_ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"
+                f"{project['SimVersionSet']}\n"
+            )
+        for stage in ("GENERATOR", "POSTGEN", "SIMULATION", "MCSMEAR", "RECON", "ANA"):
+            config.write(f"{stage}_OS=db\n")
+        config.close()
+
+    def _write_generator(
+        self, config: TextIO, project: Mapping[str, Any], batch_system: str
+    ) -> None:
+        file_generator = str(project["Generator"]) == "file:"
+        if not file_generator:
+            config.write(f"GENERATOR={project['Generator']}\n")
         if batch_system == "OSG":
-            MCconfig_file.write("GENERATOR_CONFIG="+str(order["Generator_Config"])+"\n")
+            location = str(project["Generator_Config"])
         elif batch_system == "SWIF":
-            location=order["Generator_Config"].replace("/osgpool/halld/"+runner_name+"/","/work/halld/home/"+runner_name+"/")
-            scp_order="scp "+str(order["Generator_Config"])+" ifarm:"+location
-            print("COPYING GENERATOR CONFIG")
-            print(scp_order)
-            subprocess.call(scp_order,shell=True)
-            MCconfig_file.write("GENERATOR_CONFIG="+str(location)+"\n")
-
-    if order["GenPostProcessing"] != None and order["GenPostProcessing"] != "":
-        MCconfig_file.write("GENERATOR_POSTPROCESS="+str(order["GenPostProcessing"])+"\n")
-
-    MCconfig_file.write("GEANT_VERSION="+str(order["GeantVersion"])+"\n")
-    MCconfig_file.write("NOSECONDARIES="+str(abs(order["GeantSecondaries"]-1))+"\n")
-    MCconfig_file.write("BKG="+str(order["BKG"])+"\n")
-    splitLoc=str(order["OutputLocation"]).split("/")
-    outputstring="/".join(splitLoc[7:-1])
-    #order["OutputLocation"]).split("/")[7]
-    if batch_system == "OSG":
-        MCconfig_file.write("DATA_OUTPUT_BASE_DIR=/osgpool/halld/"+runner_name+"/REQUESTEDMC_OUTPUT/"+str(outputstring)+"\n")
-    elif batch_system == "SWIF":
-        MCconfig_file.write("DATA_OUTPUT_BASE_DIR=/cache/halld/gluex_simulations/REQUESTED_MC/"+str(outputstring)+"\n")
-    #print "FOUND CONFIG="+foundConfig
-
-    if(order["RCDBQuery"] != ""):
-        MCconfig_file.write("RCDB_QUERY="+order["RCDBQuery"]+"\n")
-
-    if(order["eBeamEnergy"] != None):
-        MCconfig_file.write("eBEAM_ENERGY="+str(order["eBeamEnergy"])+"\n")
-
-    if(order["eBeamCurrent"] != None):
-        MCconfig_file.write("eBEAM_CURRENT="+str(order["eBeamCurrent"])+"\n")
-
-    if(order["ReactionLines"] != ""):
-        if(order["ReactionLines"][0:5] != "file:"):
-            jana_config_file=open("/osgpool/halld/"+runner_name+"/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config","w")
-            janaplugins="PLUGINS danarest,monitoring_hists,mcthrown_tree"
-            if(order["ReactionLines"]):
-                janaplugins+=",ReactionFilter\n"+order["ReactionLines"]
-            else:
-                janaplugins+="\n"
-            jana_config_file.write(janaplugins)
-            jana_config_file.close()
-
-        if batch_system == "OSG":
-            MCconfig_file.write("CUSTOM_PLUGINS=file:/osgpool/halld/"+runner_name+"/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config\n")
-        elif batch_system == "SWIF":
-            scp_jana = "scp "+"/osgpool/halld/"+runner_name+"/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config ifarm:"+"/work/halld/home/"+runner_name+"/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config"
-            print(scp_jana)
-            subprocess.call(scp_jana,shell=True)
-            MCconfig_file.write("CUSTOM_PLUGINS=file:/work/halld/home/"+runner_name+"/REQUESTEDMC_CONFIGS/"+str(order["ID"])+"_jana.config\n")
-
-    MCconfig_file.write("ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"+str(order["VersionSet"])+"\n")
-    if(order["ANAVersionSet"] != None and order["ANAVersionSet"] != "None" ):
-        MCconfig_file.write("ANA_ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"+str(order["ANAVersionSet"])+"\n")
-    if(order["SimVersionSet"] != None and order["SimVersionSet"] != "None" ):
-        MCconfig_file.write("SIM_ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"+str(order["SimVersionSet"])+"\n")
-
-    MCconfig_file.write("GENERATOR_OS=db"+"\n")
-    MCconfig_file.write("POSTGEN_OS=db"+"\n")
-    MCconfig_file.write("SIMULATION_OS=db"+"\n")
-    MCconfig_file.write("MCSMEAR_OS=db"+"\n")
-    MCconfig_file.write("RECON_OS=db"+"\n")
-    MCconfig_file.write("ANA_OS=db"+"\n")
-
-    MCconfig_file.close()
-
-
-def SubmitList(SubList,job_IDs_submitted):
-    print("Submitting SubList")
-    row_index=0
-    list_to_Submit=list(SubList)
-    #print("element 0 is "+str(list_to_Submit[0]))
-    print("Submitting >= "+str(len(list_to_Submit))+" jobs")
-    while row_index < len(list_to_Submit):
-        print("on row "+str(row_index),"out of",str(len(list_to_Submit)))
-    #for row in SubList:
-        #print("Row",row)
-        row=list_to_Submit[row_index]
-        #print("checking for already submitted")
-        if row['ID'] in job_IDs_submitted:
-            print("Job "+str(row['ID'])+" already submitted")
-            row_index+=1
-            continue
-        #print("job not already submitted")
-        #get freespace on node
-        space_cmd="df -H | grep /osgpool/halld"
-        #print(space_cmd)
-        cmd=subprocess.Popen(space_cmd,shell=True,stdout=PIPE,stderr=PIPE)
-        #print("communicating")
-        out, err = cmd.communicate()
-        #print("communicated")
-        #print(out.split()[4])
-        percent_full=float(str(out.split()[4],"utf-8").strip("%"))
-        print("percent full is "+str(percent_full))
-        if percent_full > 75.0:
-            print("Node is too full to submit new jobs")
+            location = project["Generator_Config"].replace(
+                f"/osgpool/halld/{self._user_name}/",
+                f"/work/halld/home/{self._user_name}/",
+            )
+            command = f"scp {project['Generator_Config']} ifarm:{location}"
+            print(
+                "COPYING GENERATOR file"
+                if file_generator
+                else "COPYING GENERATOR CONFIG"
+            )
+            print(command)
+            subprocess.call(command, shell=True)
+        else:
             return
+        if file_generator:
+            config.write(f"GENERATOR={project['Generator']}/{location}\n")
+        else:
+            config.write(f"GENERATOR_CONFIG={location}\n")
 
-        print("about to bundle")
-        bundled=False
-        bundle_query="select ID,FileNumber from Jobs where Project_ID in (SELECT Project_ID from Jobs where ID="+str(row['ID'])+") and RunNumber in (SELECT RunNumber from Jobs where ID="+str(row['ID'])+") and NumEvts in (SELECT NumEvts from Jobs where ID="+str(row['ID'])+") and IsActive=1;"
-        curs.execute(bundle_query)
-        alljobs = curs.fetchall()
-
-        print("bundled:",len(alljobs))
-        if(len(alljobs)>1):
-            bundled=True
-
-        projinfo_q="SELECT * FROM Project where ID="+str(row['Project_ID'])
-        curs.execute(projinfo_q) 
-        proj=curs.fetchall()
-        #print proj
-        RunNumber=row["RunNumber"]
-
-        cleangen=1
-        if proj[0]["SaveGeneration"]==1:
-            cleangen=0
-
-        cleangeant=1
-        if proj[0]["SaveGeant"]==1:
-            cleangeant=0
-
-        cleansmear=1
-        if proj[0]["SaveSmear"]==1:
-            cleansmear=0
-
-        cleanrecon=1
-        if proj[0]["SaveReconstruction"]==1:
-            cleanrecon=0
-
-        system_to_run_on=decideSystem(row)
-
-        MCWRAPPER_BOT_HOME="/scigroup/mcwrapper/gluex_MCwrapper/"
-        if system_to_run_on == "OSG":
-            status = subprocess.call("cp "+MCWRAPPER_BOT_HOME+"/examples/OSGShell.config ./MCSubDispatched.config", shell=True)
-        elif system_to_run_on == "SWIF":
-            status = subprocess.call("cp "+MCWRAPPER_BOT_HOME+"examples/SWIFShell.config ./MCSubDispatched.config", shell=True)
-
-        WritePayloadConfig(proj[0],"True",system_to_run_on)
-
-        per_file_num=20000
-        get_perfile_q="SELECT PerFile from Generator_perfiles where GenName=\""+str(proj[0]["Generator"])+"\";"
-        curs.execute(get_perfile_q) 
-        genrow=curs.fetchall()
-        try:
-            per_file_num=genrow[0]["PerFile"]
-        except Exception as e:
-            print("per file error")
-            print(e)
-            pass
-
-        #add bearer token to env
-        print("Setting token env")
-        os.environ["BEARER_TOKEN_FILE"]="/var/run/user/10967/bt_u10967"
-        os.environ["XDG_RUNTIME_DIR"]="/run/user/10967"
-
-        command="python3 "+MCWRAPPER_BOT_HOME+"/gluex_MC.py MCSubDispatched.config "+str(RunNumber)+" "+str(row["NumEvts"])+" per_file="+str(per_file_num)+" base_file_number="+str(row["FileNumber"])+" generate="+str(proj[0]["RunGeneration"])+" cleangenerate="+str(cleangen)+" geant="+str(proj[0]["RunGeant"])+" cleangeant="+str(cleangeant)+" mcsmear="+str(proj[0]["RunSmear"])+" cleanmcsmear="+str(cleansmear)+" recon="+str(proj[0]["RunReconstruction"])+" cleanrecon="+str(cleanrecon)+" projid=-"+str(row['ID'])+" logdir=/osgpool/halld/"+runner_name+"/REQUESTEDMC_LOGS/"+proj[0]["OutputLocation"].split("/")[7]+" batch=2 submitter=1 tobundle=1"
-        print("COMMAND",command)
-        #sys.exit()
-        #status = subprocess.call("printenv > /tmp/Submitter_env")
-        #status = subprocess.call(command, shell=True)
-        status_out, status_err = subprocess.Popen(command,shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,env=os.environ,executable='/bin/bash').communicate()
-        print("OUT",status_out)
-        print("ERR",status_err)
-        for job in alljobs:
-            job_IDs_submitted.append(job['ID'])
-
-        print("Submitted",job_IDs_submitted)
-
-        #remove all jobs from list in bundle
-        copy_of_list_to_Submit=list_to_Submit.copy()
-        print("length of list to submit",len(copy_of_list_to_Submit))
-        iter_index=0
-        for job in copy_of_list_to_Submit:
-            #print("on index",iter_index)
-            #print("job",job)
-            if job['ID'] in job_IDs_submitted:
-                #print(list_to_Submit.index(job))
-                index=list_to_Submit.index(job)
-                #print("removing",index)
-                list_to_Submit.pop(index)
-                row_index=-1
-                #SubList.remove(job)
-            #else:
-            #    print(iter_index,"not in list")
-            #print("modifying indexes")
-            iter_index+=1
-
-            #print("done modifying indexes")
-
-        #exit(1)
-        row_index+=1
-        #if(bundled):
-        #    break
+    def _write_reactions(
+        self, config: TextIO, project: Mapping[str, Any], batch_system: str
+    ) -> None:
+        if project["ReactionLines"] == "":
+            return
+        local_path = (
+            f"/osgpool/halld/{self._user_name}/REQUESTEDMC_CONFIGS/"
+            f"{project['ID']}_jana.config"
+        )
+        if project["ReactionLines"][:5] != "file:":
+            jana_config = open(local_path, "w")
+            plugins = "PLUGINS danarest,monitoring_hists,mcthrown_tree"
+            if project["ReactionLines"]:
+                plugins = f"{plugins},ReactionFilter\n{project['ReactionLines']:s}"
+            else:
+                plugins = f"{plugins}\n"
+            jana_config.write(plugins)
+            jana_config.close()
+        if batch_system == "OSG":
+            config.write(f"CUSTOM_PLUGINS=file:{local_path}\n")
+        elif batch_system == "SWIF":
+            remote_path = (
+                f"/work/halld/home/{self._user_name}/REQUESTEDMC_CONFIGS/"
+                f"{project['ID']}_jana.config"
+            )
+            command = f"scp {local_path} ifarm:{remote_path}"
+            print(command)
+            subprocess.call(command, shell=True)
+            config.write(f"CUSTOM_PLUGINS=file:{remote_path}\n")
 
 
-def decideSystem(row):
-
+def decide_system(job: Mapping[str, Any]) -> str:
+    """Retain the existing unconditional OSG choice for every job."""
     return "OSG"
-    command="condor_q | grep 'Total for mcwrap'" #"condor_q | grep tbritton"
-    print(command)
-    jobSubout=""
-    try:
-        jobSubout=subprocess.check_output(command,shell=True)
-    except:
-        return "OSG"
-
-    print("job Sub:",str(jobSubout,'utf-8'))
-
-    rows=str(jobSubout,'utf-8').split("\n")
-    rows=rows[:-1]
-    print(rows)
-    running=0.
-    idle=0.
-    print(len(rows))
-    for row in rows:
-        condor_q_vals=row.split()
-        if(len(condor_q_vals) <5):
-            continue
-        print(str(condor_q_vals[11])+"  |  "+str(condor_q_vals[9]))
-        if(str(condor_q_vals[11]) != "_"): #old: 6
-            running=running+int(condor_q_vals[11]) #old: 6
-            print("running: "+str(running))
-
-        if(condor_q_vals[9] != "_"): #old: 7
-            idle=idle+int(condor_q_vals[9]) #old: 7
-            print("idle: "+str(idle))
-
-    print("Running")
-    print(running)
-    print("Idle")
-    print(idle)
-    print("SUM")
-
-    osg_sum=int(running)+int(idle)
-    if(running==0):
-        running=1
-    osg_ratio=float(idle)/float(running)
-    print(osg_sum)
-    print(osg_ratio)
-
-    if osg_sum > 3000 and osg_ratio > 2.0:
-        print("SWIF")
-        return "OSG"
-    else:
-        print("OSG")
-        return "OSG"
 
 
-def main(argv):
-    #print(argv)
+class JobSubmitter:
+    """Build payloads, launch bundles, and track submitted job IDs in a batch."""
 
-    Block_size=1000
-    int_i=0
-    more_sub=True
-    rows=[]
-    if(os.path.isfile("/osgpool/halld/"+runner_name+"/.ALLSTOP")==True):
-        print("ALL STOP DETECTED")
-        exit(1)
+    def __init__(self, cursor: "MySQLdb.cursors.DictCursor", user_name: str) -> None:
+        self._cursor = cursor
+        self._user_name = user_name
+        self._config_writer = PayloadConfigWriter(user_name)
 
-    numprocesses_running=subprocess.check_output(["echo `ps all -u "+runner_name+" | grep MCSubmitter.py | grep -v grep | wc -l`"], shell=True)
-    #print(args)
+    def submit(
+        self, jobs: Sequence[Mapping[str, Any]], submitted_job_ids: List[int]
+    ) -> None:
+        """Retain disk checks, bundle selection, and removal from the pending list."""
+        print("Submitting SubList")
+        pending_jobs = list(jobs)
+        print(f"Submitting >= {len(pending_jobs)} jobs")
+        row_index = 0
+        while row_index < len(pending_jobs):
+            print(f"on row {row_index}", "out of", str(len(pending_jobs)))
+            job = pending_jobs[row_index]
+            if job["ID"] in submitted_job_ids:
+                print(f"Job {job['ID']} already submitted")
+                row_index += 1
+                continue
+            process = subprocess.Popen(
+                "df -H | grep /osgpool/halld",
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            output, _errors = process.communicate()
+            percent_full = float(output.split()[4].decode("utf-8").strip("%"))
+            print(f"percent full is {percent_full}")
+            if percent_full > 75.0:
+                print("Node is too full to submit new jobs")
+                return
+            print("about to bundle")
+            query = (
+                "select ID, FileNumber from Jobs where Project_ID in "
+                f"(SELECT Project_ID from Jobs where ID = {job['ID']}) "
+                "and RunNumber in "
+                f"(SELECT RunNumber from Jobs where ID = {job['ID']}) "
+                "and NumEvts in "
+                f"(SELECT NumEvts from Jobs where ID = {job['ID']}) "
+                f"and IsActive = {JOB_ACTIVE};"
+            )
+            self._cursor.execute(query)
+            bundle_jobs = self._cursor.fetchall()
+            print("bundled:", len(bundle_jobs))
+            self._cursor.execute(
+                f"SELECT * FROM Project where ID = {job['Project_ID']}"
+            )
+            project = self._cursor.fetchall()[0]
+            run_number = job["RunNumber"]
+            # Read these settings before copying or writing payload files, as before.
+            cleanup_flags = (
+                0 if project["SaveGeneration"] == 1 else 1,
+                0 if project["SaveGeant"] == 1 else 1,
+                0 if project["SaveSmear"] == 1 else 1,
+                0 if project["SaveReconstruction"] == 1 else 1,
+            )
+            batch_system = decide_system(job)
+            if batch_system == "OSG":
+                subprocess.call(
+                    f"cp {MCWRAPPER_BOT_HOME}/examples/OSGShell.config "
+                    f"./{PAYLOAD_CONFIG_PATH}",
+                    shell=True,
+                )
+            elif batch_system == "SWIF":
+                subprocess.call(
+                    f"cp {MCWRAPPER_BOT_HOME}examples/SWIFShell.config "
+                    f"./{PAYLOAD_CONFIG_PATH}",
+                    shell=True,
+                )
+            self._config_writer.write(project, batch_system)
+            events_per_file = self._events_per_file(project)
+            print("Setting token env")
+            os.environ["BEARER_TOKEN_FILE"] = "/var/run/user/10967/bt_u10967"
+            os.environ["XDG_RUNTIME_DIR"] = "/run/user/10967"
+            command = self._submission_command(
+                job, project, events_per_file, run_number, cleanup_flags
+            )
+            print("COMMAND", command)
+            output, errors = subprocess.Popen(
+                command,
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                env=os.environ,
+                executable="/bin/bash",
+            ).communicate()
+            print("OUT", output)
+            print("ERR", errors)
+            for bundle_job in bundle_jobs:
+                submitted_job_ids.append(bundle_job["ID"])
+            print("Submitted", submitted_job_ids)
+            print("length of list to submit", len(pending_jobs))
+            for pending_job in pending_jobs.copy():
+                if pending_job["ID"] in submitted_job_ids:
+                    pending_jobs.pop(pending_jobs.index(pending_job))
+                    row_index = -1
+            row_index += 1
 
-    job_IDs_submitted=[]
-    print(numprocesses_running)
-    if(int(numprocesses_running) <3):
+    def _events_per_file(self, project: Mapping[str, Any]) -> int:
+        query = (
+            "SELECT PerFile from Generator_perfiles "
+            f'where GenName = "{project["Generator"]}";'
+        )
+        self._cursor.execute(query)
+        rows = self._cursor.fetchall()
         try:
-            curs.execute("INSERT INTO MCSubmitter (Host,StartTime,Status) VALUES ('"+str(socket.gethostname())+"', NOW(), 'Running' )")
-            conn.commit()
-        except Exception as e:
-            print(e)
-            pass
+            return rows[0]["PerFile"]
+        except Exception as error:
+            print("per file error")
+            print(error)
+            return DEFAULT_EVENTS_PER_FILE
 
-        querysubmitters="SELECT MAX(ID) FROM MCSubmitter;"
-        curs.execute(querysubmitters)
-        lastid = curs.fetchall()
-        try:    
-            while more_sub:# and int_i<1:
-                #sleep 1 second
-                #time.sleep(1)
+    def _submission_command(
+        self,
+        job: Mapping[str, Any],
+        project: Mapping[str, Any],
+        events_per_file: int,
+        run_number: int,
+        cleanup_flags: Tuple[int, int, int, int],
+    ) -> str:
+        """Keep the PATH-selected python3 command and existing flags and paths."""
+        clean_generation, clean_geant, clean_smear, clean_reconstruction = cleanup_flags
+        log_directory = project["OutputLocation"].split("/")[7]
+        return (
+            f"python3 {MCWRAPPER_BOT_HOME}/gluex_MC.py {PAYLOAD_CONFIG_PATH} "
+            f"{run_number} {job['NumEvts']} per_file={events_per_file} "
+            f"base_file_number={job['FileNumber']} generate={project['RunGeneration']} "
+            f"cleangenerate={clean_generation} geant={project['RunGeant']} "
+            f"cleangeant={clean_geant} mcsmear={project['RunSmear']} "
+            f"cleanmcsmear={clean_smear} recon={project['RunReconstruction']} "
+            f"cleanrecon={clean_reconstruction} projid=-{job['ID']} "
+            f"logdir=/osgpool/halld/{self._user_name}/REQUESTEDMC_LOGS/{log_directory} "
+            "batch=2 submitter=1 tobundle=1"
+        )
 
-                rows=[]
-                int_i+=1
+
+class SubmitterRun:
+    """Select pending jobs repeatedly and record the run's existing success path."""
+
+    def __init__(
+        self,
+        connection: "MySQLdb.connections.Connection",
+        cursor: "MySQLdb.cursors.DictCursor",
+        user_name: str,
+    ) -> None:
+        self._connection = connection
+        self._cursor = cursor
+        self._submitter = JobSubmitter(cursor, user_name)
+
+    def run(self) -> None:
+        """Retain startup-error handling, refresh commits, and outcome tracking."""
+        try:
+            self._cursor.execute(
+                "INSERT INTO MCSubmitter (Host, StartTime, Status) "
+                f"VALUES ('{socket.gethostname()}', NOW(), '{RunStatus.RUNNING}')"
+            )
+            self._connection.commit()
+        except Exception as error:
+            print(error)
+        self._cursor.execute("SELECT MAX(ID) FROM MCSubmitter;")
+        run_rows = self._cursor.fetchall()
+        submitted_job_ids: List[int] = []
+        try:
+            while True:
                 print("=============================================================")
-                query="SELECT UName, RunNumber, FileNumber, Tested, NumEvts, BKG, Notified, Jobs.ID, Project_ID, Priority, IsActive FROM Jobs INNER JOIN Project ON Jobs.Project_ID = Project.ID INNER JOIN Users ON Project.user_id = Users.id LEFT JOIN Attempts ON Jobs.ID = Attempts.Job_ID WHERE Tested = 1 AND Notified IS NULL AND IsActive = 1 AND Attempts.Job_ID IS NULL ORDER BY Priority DESC LIMIT "+str(Block_size)+";"
-                #query="SELECT UName,RunNumber,FileNumber,Tested,NumEvts,BKG,Notified,Jobs.ID,Project_ID,Priority,IsActive from Jobs,Project,Users where Tested=1 && Notified is NULL && IsActive=1 && Jobs.ID not in (Select Job_ID from Attempts) and Project_ID = Project.ID and Users.id = Project.user_id order by Priority desc limit "+str(Block_size)+";"
-                #query = "SELECT UName,RunNumber,FileNumber,Tested,NumEvts,BKG,Notified,Jobs.ID,Project_ID,Priority,IsActive from Jobs,Project,Users where Tested=1 && Notified is NULL && IsActive=1 && Jobs.ID not in (Select Job_ID from Attempts) and Project_ID = Project.ID and Users.id = Project.user_id order by Priority desc limit "+str(Block_size)
-                if(Block_size==1):
-                    query ="SELECT UName, RunNumber, FileNumber, Tested, NumEvts, BKG, Notified, Jobs.ID, Project_ID, Priority, IsActive FROM Jobs INNER JOIN Project ON Jobs.Project_ID = Project.ID INNER JOIN Users ON Project.user_id = Users.id LEFT JOIN Attempts ON Jobs.ID = Attempts.Job_ID WHERE Tested = 1 AND Notified IS NULL AND IsActive = 1 AND Attempts.Job_ID IS NULL ORDER BY Priority DESC;"
-
+                query = self._pending_jobs_query()
                 print("Query:", query)
-                curs.execute(query) 
-                rows=curs.fetchall()
-                #lrows=list(rows)
-                print("length of rows: "+str(len(rows)))
-
-                #for row in lrows:
-                #    bkg_parts=row["BKG"].split(":")
-                #    if bkg_parts[0] == "Random":
-                #        formatted_runnum="%06d" % row["RunNumber"]
-                #        path_to_check="/osgpool/halld/random_triggers/"+str(bkg_parts[1])+"/run"+str(formatted_runnum)+"_random.hddm"
-                #        if not os.path.isfile(path_to_check):
-                #            jobdeactivate="UPDATE Jobs Set IsActive=0 where ID="+str(row["Jobs.ID"])
-                #            print(jobdeactivate)
-                #            curs.execute(jobdeactivate)
-                #            conn.commit()
-                #            lrows.remove(row)
-
-                if(len(rows)==0):
-                    more_sub=False
+                self._cursor.execute(query)
+                jobs = self._cursor.fetchall()
+                print(f"length of rows: {len(jobs)}")
+                if not jobs:
                     break
-
-                SubmitList(rows,job_IDs_submitted)
-                #Must do the following commit even through gluex_MC.py does one.  Else the above query is cached and does not update properly
-                conn.commit()
+                self._submitter.submit(jobs, submitted_job_ids)
+                # Refresh the selection even when gluex_MC.py commits its own session.
+                self._connection.commit()
             try:
-                curs.execute("UPDATE MCSubmitter SET EndTime=NOW(), Status=\"Success\" where ID="+str(lastid[0]["MAX(ID)"]))
-                conn.commit()
-            except Exception as e:
-                print(e)
-                pass
-        except Exception as e:
+                self._cursor.execute(
+                    "UPDATE MCSubmitter SET EndTime = NOW(), "
+                    f'Status = "{RunStatus.SUCCESS}" '
+                    f"where ID = {run_rows[0]['MAX(ID)']}"
+                )
+                self._connection.commit()
+            except Exception as error:
+                print(error)
+        except Exception as error:
             print("exception")
-            print(e)
-            curs.execute("UPDATE MCSubmitter SET Status=\"Fail\" where ID="+str(lastid[0]["MAX(ID)"]))
-            conn.commit()
-            pass
-    conn.close()
+            print(error)
+            self._cursor.execute(
+                f'UPDATE MCSubmitter SET Status = "{RunStatus.FAIL}" '
+                f"where ID = {run_rows[0]['MAX(ID)']}"
+            )
+            self._connection.commit()
+
+    def _pending_jobs_query(self) -> str:
+        query = (
+            "SELECT UName, RunNumber, FileNumber, Tested, NumEvts, BKG, Notified, "
+            "Jobs.ID, Project_ID, Priority, IsActive FROM Jobs "
+            "INNER JOIN Project ON Jobs.Project_ID = Project.ID "
+            "INNER JOIN Users ON Project.user_id = Users.id "
+            "LEFT JOIN Attempts ON Jobs.ID = Attempts.Job_ID "
+            f"WHERE Tested = {ProjectStatus.READY} AND Notified IS NULL "
+            f"AND IsActive = {JOB_ACTIVE} AND Attempts.Job_ID IS NULL "
+            "ORDER BY Priority DESC"
+        )
+        if BLOCK_SIZE != 1:
+            query = f"{query} LIMIT {BLOCK_SIZE}"
+        return f"{query};"
+
+
+def _count_running_submitters(user_name: str) -> bytes:
+    """Return the original process-count output, including its printed byte form."""
+    command = (
+        f"echo `ps all -u {user_name} | grep MCSubmitter.py | grep -v grep | wc -l`"
+    )
+    return subprocess.check_output([command], shell=True)
+
+
+def main(argv: Sequence[str]) -> None:
+    """Submit when allowed by the existing stop-file and process-count checks."""
+    if os.path.isfile(f"/osgpool/halld/{runner_name}/.ALLSTOP"):
+        print("ALL STOP DETECTED")
+        sys.exit(1)
+    process_count = _count_running_submitters(runner_name)
+    print(process_count)
+    if int(process_count) < MAX_RUNNING_SUBMITTERS:
+        SubmitterRun(database_connection, database_cursor, runner_name).run()
+    database_connection.close()
 
 
 if __name__ == "__main__":
-   main(sys.argv[1:])
+    main(sys.argv[1:])
