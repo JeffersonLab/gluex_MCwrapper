@@ -11,6 +11,7 @@ import sys
 from typing import Sequence
 
 import MySQLdb
+from mc_status import RunStatus
 
 DB_HOST = "hallddb.jlab.org"
 DB_USER = "mcuser"
@@ -45,8 +46,8 @@ class DroneRun:
     def run(self) -> None:
         """Record the start, launch the dispatcher, and record its outcome."""
         self._cursor.execute(
-            "INSERT INTO MCDrone (Host,StartTime,Status) "
-            f"VALUES ('{socket.gethostname()}', NOW(), 'Running' )"
+            "INSERT INTO MCDrone (Host, StartTime, Status) "
+            f"VALUES ('{socket.gethostname()}', NOW(), '{RunStatus.RUNNING}')"
         )
         self._connection.commit()
         self._cursor.execute("SELECT MAX(ID) FROM MCDrone;")
@@ -64,8 +65,8 @@ class DroneRun:
         """Launch autolaunch mode and print its captured standard output."""
         try:
             command = (
-                os.environ["MCWRAPPER_CENTRAL"]
-                + "/Utilities/MCDispatcher.py autolaunch"
+                f"{os.environ['MCWRAPPER_CENTRAL']}"
+                "/Utilities/MCDispatcher.py autolaunch"
             )
             print(command)
             output, _stderr = subprocess.Popen(
@@ -81,11 +82,11 @@ class DroneRun:
 
     def _record_outcome(self, run_id: int, succeeded: bool) -> None:
         """Update the run status, setting EndTime only for successful dispatches."""
-        status = "Success" if succeeded else "Fail"
-        end_time_assignment = "EndTime=NOW(), " if succeeded else ""
+        status = RunStatus.SUCCESS if succeeded else RunStatus.FAIL
+        end_time_assignment = "EndTime = NOW(), " if succeeded else ""
         self._cursor.execute(
-            f"UPDATE MCDrone SET {end_time_assignment}Status='{status}' "
-            f"where ID={run_id}"
+            f"UPDATE MCDrone SET {end_time_assignment}Status = '{status}' "
+            f"where ID = {run_id}"
         )
         self._connection.commit()
 

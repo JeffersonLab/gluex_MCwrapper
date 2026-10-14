@@ -6,6 +6,8 @@ import sys
 from contextlib import closing
 from typing import TYPE_CHECKING, Any, Dict, NamedTuple, Sequence
 
+from mc_status import JOB_ACTIVE
+
 if TYPE_CHECKING:
     import MySQLdb
 
@@ -24,7 +26,7 @@ QUERIES: Dict[str, str] = {
         "SELECT COUNT(*) AS active_jobs FROM Jobs "
         "INNER JOIN Project ON Jobs.Project_ID = Project.ID "
         "WHERE Project.Submit_Time >= %s AND Project.Submit_Time < %s "
-        "AND Jobs.IsActive = 1"
+        f"AND Jobs.IsActive = {JOB_ACTIVE}"
     ),
     "cpu_time": (
         "SELECT SUM(TIME_TO_SEC(Attempts.CPUTime)) AS cpu_seconds FROM Attempts "
@@ -37,7 +39,7 @@ QUERIES: Dict[str, str] = {
         "(SELECT COUNT(Attempts.ID) AS attempt_count FROM Jobs "
         "INNER JOIN Project ON Project.ID = Jobs.Project_ID "
         "LEFT JOIN Attempts ON Attempts.Job_ID = Jobs.ID "
-        "WHERE Jobs.IsActive = 1 AND Project.Submit_Time >= %s "
+        f"WHERE Jobs.IsActive = {JOB_ACTIVE} AND Project.Submit_Time >= %s "
         "AND Project.Submit_Time < %s GROUP BY Jobs.ID) AS attempt_counts"
     ),
 }
@@ -101,13 +103,7 @@ class YearlyStatistics(NamedTuple):
             "",
         ]
         lines.extend(
-            "{label:<{label_width}}  {value:>{value_width}}".format(
-                label=label,
-                value=value,
-                label_width=label_width,
-                value_width=value_width,
-            )
-            for label, value in rows
+            f"{label:<{label_width}}  {value:>{value_width}}" for label, value in rows
         )
         lines.extend(
             ["", "Jobs and CPU time include all recorded activity for these projects."]

@@ -11,16 +11,17 @@ import MySQLdb
 import pandas as pd
 import plotly
 import plotly.express as px
+from mc_status import ExitCode, ProjectStatus
 
 DB_HOST = "hallddb.jlab.org"
 DB_USER = "mcuser"
 DB_NAME = "gluex_mc"
 EXIT_CODE_LABELS = {
-    232: "Random trigger not found",
-    -232: "Random trigger does not exist",
-    404: "Output data not returned",
+    ExitCode.RANDOM_TRIGGER_NOT_FOUND: "Random trigger not found",
+    ExitCode.RANDOM_TRIGGER_DOES_NOT_EXIST: "Random trigger does not exist",
+    ExitCode.OUTPUT_NOT_RETURNED: "Output data not returned",
     None: "Still Running",
-    0: "Successfully completed",
+    ExitCode.SUCCESS: "Successfully completed",
 }
 
 ProjectId = Union[int, str]
@@ -80,9 +81,9 @@ class ProjectAnalyzer:
         self, project_id: ProjectId, extra_constraint: str, comparison: str = "="
     ) -> str:
         """Build the existing Project subquery and optional caller-supplied filter."""
-        query = f"SELECT ID FROM Project where ID{comparison}{project_id}"
+        query = f"SELECT ID FROM Project where ID {comparison} {project_id}"
         if extra_constraint != "":
-            query += " && " + extra_constraint
+            query = f"{query} && {extra_constraint}"
         return query
 
     def _analyze_distribution(
@@ -107,8 +108,8 @@ class ProjectAnalyzer:
         query = (
             f"SELECT {selection} from Attempts where {condition}Job_ID in "
             "(SELECT ID from Jobs where Project_ID IN ("
-            + self._project_selection(project_id, extra_constraint)
-            + ")) GROUP BY Job_ID;"
+            f"{self._project_selection(project_id, extra_constraint)}"
+            ")) GROUP BY Job_ID;"
         )
         print(query)
         self._cursor.execute(query)
@@ -119,7 +120,7 @@ class ProjectAnalyzer:
         if make_plot:
             frame = pd.DataFrame(values, columns=[plot_column])
             figure = px.histogram(frame, x=plot_column, nbins=len(counts))
-            self._write_plot(figure, file_prefix + str(project_id))
+            self._write_plot(figure, f"{file_prefix}{project_id}")
         print(counts)
         return counts
 
@@ -132,9 +133,9 @@ class ProjectAnalyzer:
         """Write the existing HTML plot and PNG export configuration."""
         plotly.offline.plot(
             figure,
-            filename=self._output_dir + file_name + ".html",
+            filename=f"{self._output_dir}{file_name}.html",
             image="png",
-            image_filename=self._output_dir + (image_name or file_name),
+            image_filename=f"{self._output_dir}{image_name or file_name}",
         )
 
     def plot_failure_breakdown(
@@ -149,11 +150,10 @@ class ProjectAnalyzer:
             project_id, extra_constraint, comparison=">"
         )
         query = (
-            "SELECT ProgramFailed as pf,COUNT(*) as AttemptsCount from Attempts "
+            "SELECT ProgramFailed as pf, COUNT(*) as AttemptsCount from Attempts "
             "where ProgramFailed is not NULL && Job_ID in "
             "(SELECT ID from Jobs where Project_ID IN ("
-            + project_selection
-            + ")) GROUP BY ProgramFailed;"
+            f"{project_selection})) GROUP BY ProgramFailed;"
         )
         print(query)
         self._cursor.execute(query)
@@ -165,11 +165,10 @@ class ProjectAnalyzer:
         print("df created")
 
         exit_code_query = (
-            "SELECT ExitCode as pf,COUNT(*) as AttemptsCount from Attempts "
+            "SELECT ExitCode as pf, COUNT(*) as AttemptsCount from Attempts "
             "where ProgramFailed is NULL && Job_ID in "
             "(SELECT ID from Jobs where Project_ID IN ("
-            + project_selection
-            + ")) GROUP BY ExitCode;"
+            f"{project_selection})) GROUP BY ExitCode;"
         )
         self._cursor.execute(exit_code_query)
         exit_code_rows = self._cursor.fetchall()
@@ -183,13 +182,13 @@ class ProjectAnalyzer:
 
         title = "Failure Blame For "
         if int(project_id) == 0:
-            title += "All Projects"
+            title = f"{title}All Projects"
         if extra_constraint != "":
-            title += " passing " + extra_constraint
+            title = f"{title} passing {extra_constraint}"
         attempt_count = (
             failures["AttemptsCount"].sum() + exit_codes["AttemptsCount"].sum()
         )
-        title += f" ({attempt_count} Attempts) "
+        title = f"{title} ({attempt_count} Attempts) "
         figure = px.pie(combined, values="AttemptsCount", names="pf", title=title)
         figure.update_traces(textposition="inside", textinfo="percent+label")
         self._write_plot(figure, file_name)
@@ -203,7 +202,7 @@ class ProjectAnalyzer:
             self.analyze_attempt_distribution(project_id, True)
             self.analyze_start_distribution(project_id, True)
             self.plot_failure_breakdown(
-                0, "ID=" + project_id, "failurePie_Proj" + project_id
+                0, f"ID = {project_id}", f"failurePie_Proj{project_id}"
             )
         else:
             self._analyze_all_projects(project_id, xaxis_key, extra_constraint)
@@ -212,10 +211,10 @@ class ProjectAnalyzer:
         self, project_id: str, xaxis_key: str, extra_constraint: str
     ) -> None:
         print("Total analysis")
-        query = "SELECT * FROM Project WHERE Tested>0 "
+        query = f"SELECT * FROM Project WHERE Tested > {ProjectStatus.UNTESTED} "
         if extra_constraint != "":
-            query += " && " + extra_constraint
-        query += " Order by ID asc"
+            query = f"{query} && {extra_constraint}"
+        query = f"{query} Order by ID asc"
         print(query)
         self._cursor.execute(query)
         rows = self._cursor.fetchall()
@@ -228,7 +227,7 @@ class ProjectAnalyzer:
         projects["avg_attempts_per_jobs"] = averages
         title = "All Projects Status>0"
         if extra_constraint != "":
-            title = "Projects passing " + extra_constraint
+            title = f"Projects passing {extra_constraint}"
         if str(x_values[0]).isnumeric() or isinstance(x_values[0], datetime.datetime):
             figure = px.scatter(x=x_values, y=averages)
             figure.update_layout(
@@ -249,17 +248,17 @@ class ProjectAnalyzer:
             self.plot_failure_breakdown(project_id, extra_constraint)
             return
 
-        self._cursor.execute("SELECT DISTINCT " + xaxis_key + " FROM Project")
+        self._cursor.execute(f"SELECT DISTINCT {xaxis_key} FROM Project")
         rows = self._cursor.fetchall()
         for row in rows:
             print(row)
             key = row[xaxis_key] if row[xaxis_key] is not None else "NULL"
             print("KEY:", key)
             if key != "NULL":
-                constraint = xaxis_key + '="' + key + '"'
+                constraint = f'{xaxis_key} = "{key}"'
             else:
-                constraint = xaxis_key + " is " + key
-            self.plot_failure_breakdown(project_id, constraint, "FailurePie_" + key)
+                constraint = f"{xaxis_key} is {key}"
+            self.plot_failure_breakdown(project_id, constraint, f"FailurePie_{key}")
 
 
 def _parse_args() -> argparse.Namespace:
@@ -307,8 +306,8 @@ def main(argv: Sequence[str]) -> None:
         args.extra_constraint if args.extra_constraint is not None else ""
     )
     output_dir = args.output_dir if args.output_dir is not None else "./"
-    output_dir += "MCAnalyze_out/"
-    subprocess.call("mkdir -p " + output_dir, shell=True)
+    output_dir = f"{output_dir}MCAnalyze_out/"
+    subprocess.call(f"mkdir -p {output_dir}", shell=True)
     analyzer = ProjectAnalyzer(database_cursor, output_dir)
     analyzer.analyze(args.project_id, args.xaxis_key, extra_constraint)
 

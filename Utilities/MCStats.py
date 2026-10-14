@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Mapping, Sequence, Tuple
 import matplotlib.pyplot as plt
 import MySQLdb
 import pandas as pd
+from mc_status import PROJECT_NOTIFIED
 
 DB_HOST = "hallddb.jlab.org"
 DB_USER = "mcuser"
@@ -139,8 +140,9 @@ class MCStatistics:
     def show_user_project_shares(self, graph: bool = True) -> None:
         """Print per-user project and event totals, optionally displaying pie charts."""
         query = (
-            "SELECT UName, NumEvents From Project WHERE Submit_Time>DATE('2024-01-01') "
-            "AND Notified=1 ORDER BY Submit_Time;"
+            "SELECT UName, NumEvents From Project "
+            "WHERE Submit_Time > DATE('2024-01-01') "
+            f"AND Notified = {PROJECT_NOTIFIED} ORDER BY Submit_Time;"
         )
         self._cursor.execute(query)
         rows = self._cursor.fetchall()
@@ -183,7 +185,7 @@ class MCStatistics:
     def plot_attempt_wall_times(self) -> None:
         """Plot elapsed times for attempts with both start and completion times."""
         query = (
-            "SELECT UNIX_TIMESTAMP(Start_Time),UNIX_TIMESTAMP(Completed_Time) "
+            "SELECT UNIX_TIMESTAMP(Start_Time), UNIX_TIMESTAMP(Completed_Time) "
             "From Attempts;"
         )
         self._cursor.execute(query)
@@ -202,7 +204,7 @@ class MCStatistics:
     def plot_attempt_start_times(self) -> None:
         """Print recorded CPU time and plot attempt start times."""
         query = (
-            "SELECT UNIX_TIMESTAMP(Start_Time),CPUTime "
+            "SELECT UNIX_TIMESTAMP(Start_Time), CPUTime "
             "From Attempts where CPUTime != 0;"
         )
         self._cursor.execute(query)
@@ -221,7 +223,8 @@ class MCStatistics:
         """Plot requested events using the existing weekly aggregation."""
         query = (
             "SELECT UName, Submit_Time, NumEvents FROM Project "
-            "WHERE Submit_Time>DATE('2024-01-01') AND Notified=1 ORDER BY Submit_Time;"
+            "WHERE Submit_Time > DATE('2024-01-01') "
+            f"AND Notified = {PROJECT_NOTIFIED} ORDER BY Submit_Time;"
         )
         self._cursor.execute(query)
         points = _weekly_requested_events(self._cursor.fetchall())
@@ -237,8 +240,8 @@ class MCStatistics:
     def plot_running_locations(self) -> None:
         """Display the existing site-share and weekly job-count charts."""
         query = (
-            "SELECT RunningLocation,Start_Time,WallTime,CPUTime,RAMUsed,ExitCode "
-            f"FROM Attempts WHERE Start_Time>DATE('{START_DATE.isoformat()}') "
+            "SELECT RunningLocation, Start_Time, WallTime, CPUTime, RAMUsed, ExitCode "
+            f"FROM Attempts WHERE Start_Time > DATE('{START_DATE.isoformat()}') "
             "ORDER BY Start_Time;"
         )
         self._cursor.execute(query)

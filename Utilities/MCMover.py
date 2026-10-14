@@ -10,12 +10,13 @@ import sys
 from typing import Sequence
 
 import MySQLdb
+from mc_status import RunStatus
 
 DB_HOST = "hallddb.jlab.org"
 DB_USER = "mcuser"
 DB_NAME = "gluex_mc"
 MCWRAPPER_BOT_HOME = "/scigroup/mcwrapper/gluex_MCwrapper/"
-MOVER_SCRIPT = MCWRAPPER_BOT_HOME + "/Utilities/MCMover.csh"
+MOVER_SCRIPT = f"{MCWRAPPER_BOT_HOME}/Utilities/MCMover.csh"
 ALLSTOP_FILE = "/osgpool/halld/tbritton/.ALLSTOP"
 PROCESS_COUNT_COMMAND = (
     "echo `ps all -u tbritton | grep MCMover.py | grep -v grep | wc -l`"
@@ -51,8 +52,8 @@ class MoverRun:
     def run(self) -> None:
         """Record the start, run the transfer, and record success or failure."""
         self._cursor.execute(
-            "INSERT INTO MCMover (Host,StartTime,Status) "
-            f"VALUES ('{socket.gethostname()}', NOW(), 'Running' )"
+            "INSERT INTO MCMover (Host, StartTime, Status) "
+            f"VALUES ('{socket.gethostname()}', NOW(), '{RunStatus.RUNNING}')"
         )
         self._connection.commit()
         self._cursor.execute("SELECT MAX(ID) FROM MCMover;")
@@ -67,11 +68,11 @@ class MoverRun:
 
     def _record_outcome(self, run_id: int, succeeded: bool) -> None:
         """Update the run status, setting EndTime only for successful transfers."""
-        status = "Success" if succeeded else "Fail"
-        end_time_assignment = "EndTime=NOW(), " if succeeded else ""
+        status = RunStatus.SUCCESS if succeeded else RunStatus.FAIL
+        end_time_assignment = "EndTime = NOW(), " if succeeded else ""
         self._cursor.execute(
-            f"UPDATE MCMover SET {end_time_assignment}Status='{status}' "
-            f"where ID={run_id}"
+            f"UPDATE MCMover SET {end_time_assignment}Status = '{status}' "
+            f"where ID = {run_id}"
         )
         self._connection.commit()
 

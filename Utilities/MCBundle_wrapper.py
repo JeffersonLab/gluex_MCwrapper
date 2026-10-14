@@ -11,6 +11,7 @@ from datetime import datetime
 from typing import Any, Mapping, NamedTuple, Sequence
 
 import MySQLdb
+from mc_status import MergerResult, ProjectStatus
 
 DB_HOST = "hallddb.jlab.org"
 DB_USER = "mcuser"
@@ -20,11 +21,18 @@ LOG_DIR = "/scratch/mcwrap/mergetemp/"
 CACHE_OUTPUT_ROOT = "/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/"
 INPUT_OUTPUT_ROOT = "/work/osgpool/halld/REQUESTEDMC_OUTPUT/"
 MAX_RUNNING_WRAPPERS = 4
-BUNDLING_STATUS = {20: 21, 40: 41}
-COMPLETED_STATUS = {21: 100, 41: 400}
-RETRY_STATUS = {21: 20, 41: 40}
+BUNDLING_STATUS = {
+    ProjectStatus.BUNDLE_PENDING: ProjectStatus.BUNDLING,
+    ProjectStatus.DECLARED_BUNDLE_PENDING: ProjectStatus.DECLARED_BUNDLING,
+}
+COMPLETED_STATUS = {
+    ProjectStatus.BUNDLING: ProjectStatus.BUNDLED,
+    ProjectStatus.DECLARED_BUNDLING: ProjectStatus.DECLARED_BUNDLED,
+}
+RETRY_STATUS = {running: pending for pending, running in BUNDLING_STATUS.items()}
 PENDING_PROJECTS_QUERY = (
-    "SELECT * FROM Project WHERE (Tested=20 OR Tested=40) "
+    f"SELECT * FROM Project WHERE (Tested = {ProjectStatus.BUNDLE_PENDING} "
+    f"OR Tested = {ProjectStatus.DECLARED_BUNDLE_PENDING}) "
     "AND Notified is NULL order by ID asc LIMIT 1"
 )
 
@@ -87,23 +95,15 @@ def _write_bundle_log(project_name: str, output: bytes, suffix: str = "") -> Non
 def bundle_files(input_dir: str, output_dir: str, merge_dir: str) -> str:
     """Run the merger and return its existing SUCCESS, ONGOING, or ERROR result."""
     project_name = _project_name(input_dir)
-    for directory in (merge_dir + project_name, output_dir):
-        command = "mkdir -p " + directory
+    for directory in (f"{merge_dir}{project_name}", output_dir):
+        command = f"mkdir -p {directory}"
         print(command)
         subprocess.call(command.split(" "))
     settings = HostSettings.from_hostname(_get_hostname())
     command = (
-        shlex.quote(settings.python_command)
-        + " "
-        + MCWRAPPER_BOT_HOME
-        + "/Utilities/MCMerger.py -tempdir "
-        + merge_dir
-        + project_name
-        + "/ "
-        + input_dir
-        + " "
-        + output_dir
-        + " -noclean"
+        f"{shlex.quote(settings.python_command)} "
+        f"{MCWRAPPER_BOT_HOME}/Utilities/MCMerger.py "
+        f"-tempdir {merge_dir}{project_name}/ {input_dir} {output_dir} -noclean"
     )
     print("BUNDLING WITH", command)
     try:
@@ -112,12 +112,12 @@ def bundle_files(input_dir: str, output_dir: str, merge_dir: str) -> str:
             re.findall(r"Returning final_success: (\d+)", output.decode("utf-8"))[0]
         )
         print("subprocess output", result)
-        if result == -666:
+        if result == MergerResult.ONGOING:
             print("Bundling ongoing")
             return "ONGOING"
         print("Bundler return code", result)
         _remove_merge_marker(merge_dir, project_name)
-        if result == 0:
+        if result == MergerResult.SUCCESS:
             return "SUCCESS"
         _write_bundle_log(project_name, output)
         return "ERROR"
@@ -155,7 +155,7 @@ class ProjectBundler:
         self, project_id: int, status: int, print_query: bool = False
     ) -> None:
         """Update and commit the project's Tested status."""
-        query = f"UPDATE Project SET Tested={status} WHERE ID={project_id}"
+        query = f"UPDATE Project SET Tested = {status} WHERE ID = {project_id}"
         if print_query:
             print(query)
         self._cursor.execute(query)
@@ -168,21 +168,23 @@ class ProjectBundler:
             CACHE_OUTPUT_ROOT, INPUT_OUTPUT_ROOT
         )
         input_dir = input_dir.replace("//", "/")
-        output_dir = "/".join(project["OutputLocation"].split("/")[:-1]) + "/"
+        output_dir = f"{'/'.join(project['OutputLocation'].split('/')[:-1])}/"
         output_dir = output_dir.replace(CACHE_OUTPUT_ROOT, self._staging_dir)
         print(project["ID"])
         project_name = _project_name(input_dir)
-        marker = self._merge_dir + project_name + "/.merging"
+        marker = f"{self._merge_dir}{project_name}/.merging"
         print(marker)
         if os.path.isfile(marker):
             print("Currently being bundled")
             return True
 
-        running_status = BUNDLING_STATUS.get(project["Tested"], 50)
-        if running_status == 50:
+        running_status = BUNDLING_STATUS.get(
+            project["Tested"], ProjectStatus.UNSUPPORTED_BUNDLE_STATE
+        )
+        if running_status == ProjectStatus.UNSUPPORTED_BUNDLE_STATE:
             return False
         self._update_status(project["ID"], running_status, print_query=True)
-        self._cursor.execute(f"SELECT Tested FROM Project WHERE ID={project['ID']}")
+        self._cursor.execute(f"SELECT Tested FROM Project WHERE ID = {project['ID']}")
         verified = self._cursor.fetchone()
         if verified["Tested"] != running_status:
             print(
@@ -197,7 +199,9 @@ class ProjectBundler:
         self._connect()
         print("OUT: ", outcome)
         if outcome == "SUCCESS":
-            completed_status = COMPLETED_STATUS.get(running_status, 500)
+            completed_status = COMPLETED_STATUS.get(
+                running_status, ProjectStatus.UNKNOWN_BUNDLE_COMPLETION
+            )
             self._update_status(project["ID"], completed_status)
         elif outcome == "ONGOING":
             print("Bundling ongoing. Will try again later, if needed.")

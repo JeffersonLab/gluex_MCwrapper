@@ -20,6 +20,7 @@ import subprocess
 import argparse
 from collections import defaultdict
 import MySQLdb
+from mc_status import MergerResult
 
 dbhost = "hallddb.jlab.org"
 dbuser = 'mcuser'
@@ -376,14 +377,14 @@ def main(args):
     if args.tempdir is None:
         if os.path.isfile(args.output_path+"/.merging"):
             print("Merging already in progress.  Exiting.")
-            return -666
+            return MergerResult.ONGOING
         print("Creating .merging file")
         open(args.output_path+"/.merging", 'a').close()
     else:
         print("Tempdir: ", args.tempdir)
         if os.path.isfile(args.tempdir+"/.merging"):
             print("Merging already in progress.  Exiting.")
-            return -666
+            return MergerResult.ONGOING
         print("Creating .merging file")
         open(args.tempdir+"/.merging", 'a').close()
 
@@ -393,7 +394,7 @@ def main(args):
     output_path = args.output_path
 
     if args.P:
-        curs.execute("SELECT * FROM Project WHERE ID=%s",args.P)
+        curs.execute("SELECT * FROM Project WHERE ID = %s",args.P)
         proj=curs.fetchone()
         input_path= proj["OutputLocation"].replace("/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/","/work/halld/gluex_simulations/REQUESTED_MC/")
         output_path="/".join(proj["OutputLocation"].split("/")[:-1])+"/"
@@ -429,7 +430,7 @@ def main(args):
 
     print(f"bundle_success: {bundle_success}, move_success: {move_success}, final_success: {final_success}, success_check: {success_check}")
 
-    if final_success == 0 and success_check:
+    if final_success == MergerResult.SUCCESS and success_check:
         print("Bundling and moving completed succesfully")
 
         if args.noclean==False:
