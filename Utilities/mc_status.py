@@ -12,6 +12,8 @@ class ProjectStatus:
 
     RETRY_EXCLUDED = -4
     """Negative project code excluded by the dispatcher's automatic retry query."""
+    NO_EVENTS = -2
+    """The wrapper found no events in the requested RCDB run range."""
     TEST_FAILED = -1
     """The dispatcher could not successfully test the project configuration."""
     UNTESTED = 0
@@ -43,7 +45,7 @@ class ProjectStatus:
 
 
 class AttemptStatus:
-    """Numeric Attempts.Status codes for OSG; SWIF continues to use text states.
+    """Attempts.Status codes; OSG uses numeric scheduler states and SWIF text states.
 
     Codes 1 through 7 follow HTCondor's JobStatus values:
     https://htcondor.readthedocs.io/en/25.0/codes-other-values/job-status-codes.html
@@ -53,6 +55,8 @@ class AttemptStatus:
 
     UNCLASSIFIED = -1
     """The dispatcher retries this sentinel and can normalize it to COMPLETED."""
+    CREATED = "Created"
+    """The wrapper recorded the attempt before scheduler monitoring updates it."""
     IDLE = 1
     """The scheduler is waiting to start the job."""
     RUNNING = 2
