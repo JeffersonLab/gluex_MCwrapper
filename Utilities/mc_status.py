@@ -1,8 +1,8 @@
-"""Shared MCwrapper codes, preserving existing integer and string values.
+"""Shared MCwrapper workflow, attempt, merger, and utility run codes.
 
 The namespaces describe separate fields: Project.Tested, Attempts.Status,
 Attempts.ExitCode, the merger's return value, and utility run tracking. Database
-NULL values retain their existing meaning and are not replaced by numeric codes.
+NULL values have field-specific meanings and are distinct from numeric codes.
 """
 
 
@@ -61,7 +61,7 @@ class AttemptStatus:
     TRANSFERRING_OUTPUT = 6
     """Scheduler transfer state; also used locally for deactivated input failures."""
     INACTIVE = TRANSFERRING_OUTPUT
-    """Legacy MCwrapper marker for a job deactivated because an input is missing."""
+    """A job was deactivated because a required input is missing."""
     SUSPENDED = 7
     """Scheduler suspension; also used locally while checking random-trigger input."""
     OUTPUTS_FOUND = 44
@@ -96,9 +96,9 @@ class RunStatus:
     RUNNING = "Running"
     """The utility recorded the start of its work."""
     SUCCESS = "Success"
-    """The utility reached its existing success path."""
+    """The utility completed its run successfully."""
     FAIL = "Fail"
-    """The utility caught an error and recorded its existing failure path."""
+    """The utility caught an error and recorded a failed run."""
 
 
 JOB_ACTIVE = 1

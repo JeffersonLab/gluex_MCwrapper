@@ -3,8 +3,8 @@
 
 import argparse
 import datetime
-import subprocess
 import sys
+from pathlib import Path
 from typing import Any, List, Sequence, Union
 
 import MySQLdb
@@ -43,7 +43,7 @@ def weighted_average(counts: Sequence[int]) -> float:
 
 
 def _count_frequencies(values: Sequence[int]) -> List[int]:
-    """Count integer values, retaining a zero bin even for empty input."""
+    """Count integer values, including a zero bin for empty input."""
     maximum = max(0, max(values, default=0))
     counts = [0] * (maximum + 1)
     for value in values:
@@ -52,7 +52,7 @@ def _count_frequencies(values: Sequence[int]) -> List[int]:
 
 
 class ProjectAnalyzer:
-    """Query project activity and export its charts using an existing cursor."""
+    """Query project activity and export charts using the supplied cursor."""
 
     def __init__(
         self,
@@ -60,7 +60,7 @@ class ProjectAnalyzer:
         output_dir: str = "./MCAnalyze_out/",
     ) -> None:
         self._cursor = cursor
-        self._output_dir = output_dir
+        self._output_prefix = output_dir
 
     def analyze_start_distribution(
         self, project_id: ProjectId, make_plot: bool, extra_constraint: str = ""
@@ -80,7 +80,7 @@ class ProjectAnalyzer:
     def _project_selection(
         self, project_id: ProjectId, extra_constraint: str, comparison: str = "="
     ) -> str:
-        """Build the existing Project subquery and optional caller-supplied filter."""
+        """Build a Project subquery with an optional caller-supplied filter."""
         query = f"SELECT ID FROM Project where ID {comparison} {project_id}"
         if extra_constraint != "":
             query = f"{query} && {extra_constraint}"
@@ -130,13 +130,17 @@ class ProjectAnalyzer:
         file_name: str,
         image_name: str = "",
     ) -> None:
-        """Write the existing HTML plot and PNG export configuration."""
+        """Write an HTML plot with PNG export settings."""
         plotly.offline.plot(
             figure,
-            filename=f"{self._output_dir}{file_name}.html",
+            filename=str(self._plot_path(f"{file_name}.html")),
             image="png",
-            image_filename=f"{self._output_dir}{image_name or file_name}",
+            image_filename=str(self._plot_path(image_name or file_name)),
         )
+
+    def _plot_path(self, name: str) -> Path:
+        """Apply the literal export prefix before pathlib normalizes the result."""
+        return Path(f"{self._output_prefix}{name}")
 
     def plot_failure_breakdown(
         self,
@@ -144,7 +148,7 @@ class ProjectAnalyzer:
         extra_constraint: str = "",
         file_name: str = "failurePie_Total",
     ) -> None:
-        """Plot failure programs and exit codes for the existing project range."""
+        """Plot failure programs and exit codes for the selected project range."""
         print("Getting the Failure Pie for project ", project_id)
         project_selection = self._project_selection(
             project_id, extra_constraint, comparison=">"
@@ -196,7 +200,7 @@ class ProjectAnalyzer:
     def analyze(
         self, project_id: str, xaxis_key: str, extra_constraint: str = ""
     ) -> None:
-        """Analyze one project or the existing filtered collection of projects."""
+        """Analyze one project or a filtered collection of projects."""
         if int(project_id) != 0:
             print("Analyzing project #", project_id)
             self.analyze_attempt_distribution(project_id, True)
@@ -241,7 +245,7 @@ class ProjectAnalyzer:
                 projects, x=xaxis_key, y="avg_attempts_per_jobs", histfunc="avg"
             )
         self._write_plot(
-            figure, "/CountDistribution_Total", "/AvgCountDistribution_Total"
+            figure, "CountDistribution_Total", "AvgCountDistribution_Total"
         )
         print("XAxis:", xaxis_key)
         if "Set" not in xaxis_key:
@@ -261,8 +265,13 @@ class ProjectAnalyzer:
             self.plot_failure_breakdown(project_id, constraint, f"FailurePie_{key}")
 
 
+def _analysis_output_directory(prefix: str) -> Path:
+    """Append MCAnalyze_out to the -o prefix to form the output directory."""
+    return Path(f"{prefix}MCAnalyze_out")
+
+
 def _parse_args() -> argparse.Namespace:
-    """Parse the existing command-line options with snake_case attribute names."""
+    """Parse project selection, plot constraints, and the output prefix."""
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-P",
@@ -286,6 +295,7 @@ def _parse_args() -> argparse.Namespace:
         dest="extra_constraint",
         metavar="EXTRACONSTRAINT",
         required=False,
+        default="",
         help="an added constraint agains the Project table",
     )
     parser.add_argument(
@@ -294,22 +304,22 @@ def _parse_args() -> argparse.Namespace:
         dest="output_dir",
         metavar="OUTPUTLOC",
         required=False,
+        type=_analysis_output_directory,
+        default="./",
         help="path to the output directory",
     )
     return parser.parse_args()
 
 
 def main(argv: Sequence[str]) -> None:
-    """Analyze projects using the process command line, as in the existing CLI."""
+    """Analyze projects selected by the process command line."""
     args = _parse_args()
-    extra_constraint = (
-        args.extra_constraint if args.extra_constraint is not None else ""
-    )
-    output_dir = args.output_dir if args.output_dir is not None else "./"
-    output_dir = f"{output_dir}MCAnalyze_out/"
-    subprocess.call(f"mkdir -p {output_dir}", shell=True)
-    analyzer = ProjectAnalyzer(database_cursor, output_dir)
-    analyzer.analyze(args.project_id, args.xaxis_key, extra_constraint)
+    try:
+        args.output_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as error:
+        print(error, file=sys.stderr)
+    analyzer = ProjectAnalyzer(database_cursor, f"{args.output_dir}/")
+    analyzer.analyze(args.project_id, args.xaxis_key, args.extra_constraint)
 
 
 if __name__ == "__main__":

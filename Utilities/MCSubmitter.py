@@ -3,9 +3,11 @@
 
 import os
 import pwd
+import shutil
 import socket
 import subprocess
 import sys
+from pathlib import Path, PurePosixPath
 from typing import Any, List, Mapping, Sequence, TextIO, Tuple
 
 import MySQLdb
@@ -16,12 +18,12 @@ DB_USER = "mcuser"
 DB_NAME = "gluex_mc"
 ALLOWED_USERS = ("tbritton", "mcwrap")
 MCWRAPPER_BOT_HOME = "/scigroup/mcwrapper/gluex_MCwrapper/"
-PAYLOAD_CONFIG_PATH = "MCSubDispatched.config"
+PAYLOAD_CONFIG_PATH = Path("MCSubDispatched.config")
 BLOCK_SIZE = 1000
 MAX_RUNNING_SUBMITTERS = 3
 DEFAULT_EVENTS_PER_FILE = 20000
 
-# Preserve the existing database setup and account-check order.
+# Open the database connection before checking the submitting account.
 database_connection = MySQLdb.connect(host=DB_HOST, user=DB_USER, db=DB_NAME)
 database_cursor = database_connection.cursor(MySQLdb.cursors.DictCursor)
 runner_name = pwd.getpwuid(os.getuid())[0]
@@ -37,8 +39,8 @@ class PayloadConfigWriter:
         self._user_name = user_name
 
     def write(self, project: Mapping[str, Any], batch_system: str) -> None:
-        """Retain payload keys, value formatting, and associated SWIF copies."""
-        config = open(PAYLOAD_CONFIG_PATH, "a")
+        """Write payload settings and copy configuration files for SWIF jobs."""
+        config = PAYLOAD_CONFIG_PATH.open("a")
         config.write(f"PROJECT={project['Exp']}\n")
         if str(project["Exp"]) == "CPP":
             config.write("FLUX_TO_GEN=cobrems\n")
@@ -48,10 +50,13 @@ class PayloadConfigWriter:
             config.write("VARIATION=mc_2017_01_ver05\n")
             config.write("RECON_VERSION=mc_2017_01_ver05\n")
             config.write("ANA_VERSION=mc_2017_01_ver05\n")
-        location_parts = project["OutputLocation"].split("/")
-        config.write(f"WORKFLOW_NAME=proj{project['ID']}_{location_parts[-2]}\n")
+        location = project["OutputLocation"]
+        output_path = (
+            Path(location) if location.endswith("/") else Path(location).parent
+        )
+        config.write(f"WORKFLOW_NAME=proj{project['ID']}_{output_path.name}\n")
         config.write(f"{project['Config_Stub']:s}\n")
-        # The existing format truncates the string, rather than rounding energy.
+        # Energy limits use the first five characters of their string values.
         config.write(f"GEN_MIN_ENERGY={str(project['GenMinE'])[:5]}\n")
         config.write(f"GEN_MAX_ENERGY={str(project['GenMaxE'])[:5]}\n")
         if str(project["GenFlux"]) == "cobrems":
@@ -67,17 +72,22 @@ class PayloadConfigWriter:
         config.write(f"GEANT_VERSION={project['GeantVersion']}\n")
         config.write(f"NOSECONDARIES={abs(project['GeantSecondaries'] - 1)}\n")
         config.write(f"BKG={project['BKG']}\n")
+        # This slice is a stored metadata convention, not a filesystem walk.
         output_directory = "/".join(str(project["OutputLocation"]).split("/")[7:-1])
+        trailing_separator = "/" if not output_directory else ""
         if batch_system == "OSG":
-            config.write(
-                f"DATA_OUTPUT_BASE_DIR=/osgpool/halld/{self._user_name}/"
-                f"REQUESTEDMC_OUTPUT/{output_directory}\n"
+            data_path = (
+                Path("/osgpool/halld")
+                / self._user_name
+                / "REQUESTEDMC_OUTPUT"
+                / output_directory.lstrip("/")
             )
+            config.write(f"DATA_OUTPUT_BASE_DIR={data_path}{trailing_separator}\n")
         elif batch_system == "SWIF":
-            config.write(
-                "DATA_OUTPUT_BASE_DIR=/cache/halld/gluex_simulations/REQUESTED_MC/"
-                f"{output_directory}\n"
-            )
+            data_path = PurePosixPath(
+                "/cache/halld/gluex_simulations/REQUESTED_MC"
+            ) / output_directory.lstrip("/")
+            config.write(f"DATA_OUTPUT_BASE_DIR={data_path}{trailing_separator}\n")
         if project["RCDBQuery"] != "":
             config.write(f"RCDB_QUERY={project['RCDBQuery']:s}\n")
         if project["eBeamEnergy"] is not None:
@@ -85,20 +95,15 @@ class PayloadConfigWriter:
         if project["eBeamCurrent"] is not None:
             config.write(f"eBEAM_CURRENT={project['eBeamCurrent']}\n")
         self._write_reactions(config, project, batch_system)
-        config.write(
-            "ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"
-            f"{project['VersionSet']}\n"
-        )
+        version_root = Path("/group/halld/www/halldweb/html/halld_versions")
+        version_file = version_root / str(project["VersionSet"]).lstrip("/")
+        config.write(f"ENVIRONMENT_FILE={version_file}\n")
         if project["ANAVersionSet"] is not None and project["ANAVersionSet"] != "None":
-            config.write(
-                "ANA_ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"
-                f"{project['ANAVersionSet']}\n"
-            )
+            version_file = version_root / str(project["ANAVersionSet"]).lstrip("/")
+            config.write(f"ANA_ENVIRONMENT_FILE={version_file}\n")
         if project["SimVersionSet"] is not None and project["SimVersionSet"] != "None":
-            config.write(
-                "SIM_ENVIRONMENT_FILE=/group/halld/www/halldweb/html/halld_versions/"
-                f"{project['SimVersionSet']}\n"
-            )
+            version_file = version_root / str(project["SimVersionSet"]).lstrip("/")
+            config.write(f"SIM_ENVIRONMENT_FILE={version_file}\n")
         for stage in ("GENERATOR", "POSTGEN", "SIMULATION", "MCSMEAR", "RECON", "ANA"):
             config.write(f"{stage}_OS=db\n")
         config.close()
@@ -137,11 +142,13 @@ class PayloadConfigWriter:
         if project["ReactionLines"] == "":
             return
         local_path = (
-            f"/osgpool/halld/{self._user_name}/REQUESTEDMC_CONFIGS/"
-            f"{project['ID']}_jana.config"
+            Path("/osgpool/halld")
+            / self._user_name
+            / "REQUESTEDMC_CONFIGS"
+            / f"{project['ID']}_jana.config"
         )
         if project["ReactionLines"][:5] != "file:":
-            jana_config = open(local_path, "w")
+            jana_config = local_path.open("w")
             plugins = "PLUGINS danarest,monitoring_hists,mcthrown_tree"
             if project["ReactionLines"]:
                 plugins = f"{plugins},ReactionFilter\n{project['ReactionLines']:s}"
@@ -153,8 +160,10 @@ class PayloadConfigWriter:
             config.write(f"CUSTOM_PLUGINS=file:{local_path}\n")
         elif batch_system == "SWIF":
             remote_path = (
-                f"/work/halld/home/{self._user_name}/REQUESTEDMC_CONFIGS/"
-                f"{project['ID']}_jana.config"
+                PurePosixPath("/work/halld/home")
+                / self._user_name
+                / "REQUESTEDMC_CONFIGS"
+                / f"{project['ID']}_jana.config"
             )
             command = f"scp {local_path} ifarm:{remote_path}"
             print(command)
@@ -163,7 +172,7 @@ class PayloadConfigWriter:
 
 
 def decide_system(job: Mapping[str, Any]) -> str:
-    """Retain the existing unconditional OSG choice for every job."""
+    """Select OSG as the batch system for every job."""
     return "OSG"
 
 
@@ -178,7 +187,7 @@ class JobSubmitter:
     def submit(
         self, jobs: Sequence[Mapping[str, Any]], submitted_job_ids: List[int]
     ) -> None:
-        """Retain disk checks, bundle selection, and removal from the pending list."""
+        """Check disk capacity, submit job bundles, and remove submitted jobs."""
         print("Submitting SubList")
         pending_jobs = list(jobs)
         print(f"Submitting >= {len(pending_jobs)} jobs")
@@ -220,7 +229,7 @@ class JobSubmitter:
             )
             project = self._cursor.fetchall()[0]
             run_number = job["RunNumber"]
-            # Read these settings before copying or writing payload files, as before.
+            # Determine cleanup flags before creating the job payload.
             cleanup_flags = (
                 0 if project["SaveGeneration"] == 1 else 1,
                 0 if project["SaveGeant"] == 1 else 1,
@@ -229,17 +238,9 @@ class JobSubmitter:
             )
             batch_system = decide_system(job)
             if batch_system == "OSG":
-                subprocess.call(
-                    f"cp {MCWRAPPER_BOT_HOME}/examples/OSGShell.config "
-                    f"./{PAYLOAD_CONFIG_PATH}",
-                    shell=True,
-                )
+                self._copy_template("OSGShell.config")
             elif batch_system == "SWIF":
-                subprocess.call(
-                    f"cp {MCWRAPPER_BOT_HOME}examples/SWIFShell.config "
-                    f"./{PAYLOAD_CONFIG_PATH}",
-                    shell=True,
-                )
+                self._copy_template("SWIFShell.config")
             self._config_writer.write(project, batch_system)
             events_per_file = self._events_per_file(project)
             print("Setting token env")
@@ -269,6 +270,14 @@ class JobSubmitter:
                     row_index = -1
             row_index += 1
 
+    def _copy_template(self, file_name: str) -> None:
+        """Copy the template and report I/O errors without aborting submission."""
+        template = Path(MCWRAPPER_BOT_HOME) / "examples" / file_name
+        try:
+            shutil.copyfile(template, PAYLOAD_CONFIG_PATH)
+        except OSError as error:
+            print(error, file=sys.stderr)
+
     def _events_per_file(self, project: Mapping[str, Any]) -> int:
         query = (
             "SELECT PerFile from Generator_perfiles "
@@ -291,24 +300,31 @@ class JobSubmitter:
         run_number: int,
         cleanup_flags: Tuple[int, int, int, int],
     ) -> str:
-        """Keep the PATH-selected python3 command and existing flags and paths."""
+        """Build a python3 launch command with job flags and payload paths."""
         clean_generation, clean_geant, clean_smear, clean_reconstruction = cleanup_flags
+        # Stored project metadata uses this raw component for log naming.
         log_directory = project["OutputLocation"].split("/")[7]
+        log_path = (
+            Path("/osgpool/halld")
+            / self._user_name
+            / "REQUESTEDMC_LOGS"
+            / log_directory
+        )
         return (
-            f"python3 {MCWRAPPER_BOT_HOME}/gluex_MC.py {PAYLOAD_CONFIG_PATH} "
+            f"python3 {Path(MCWRAPPER_BOT_HOME) / 'gluex_MC.py'} {PAYLOAD_CONFIG_PATH} "
             f"{run_number} {job['NumEvts']} per_file={events_per_file} "
             f"base_file_number={job['FileNumber']} generate={project['RunGeneration']} "
             f"cleangenerate={clean_generation} geant={project['RunGeant']} "
             f"cleangeant={clean_geant} mcsmear={project['RunSmear']} "
             f"cleanmcsmear={clean_smear} recon={project['RunReconstruction']} "
             f"cleanrecon={clean_reconstruction} projid=-{job['ID']} "
-            f"logdir=/osgpool/halld/{self._user_name}/REQUESTEDMC_LOGS/{log_directory} "
+            f"logdir={log_path} "
             "batch=2 submitter=1 tobundle=1"
         )
 
 
 class SubmitterRun:
-    """Select pending jobs repeatedly and record the run's existing success path."""
+    """Submit pending jobs repeatedly and record successful completion."""
 
     def __init__(
         self,
@@ -321,7 +337,7 @@ class SubmitterRun:
         self._submitter = JobSubmitter(cursor, user_name)
 
     def run(self) -> None:
-        """Retain startup-error handling, refresh commits, and outcome tracking."""
+        """Track submission outcomes, handle startup errors, and refresh job state."""
         try:
             self._cursor.execute(
                 "INSERT INTO MCSubmitter (Host, StartTime, Status) "
@@ -381,7 +397,7 @@ class SubmitterRun:
 
 
 def _count_running_submitters(user_name: str) -> bytes:
-    """Return the original process-count output, including its printed byte form."""
+    """Return the submitter process count as raw command output bytes."""
     command = (
         f"echo `ps all -u {user_name} | grep MCSubmitter.py | grep -v grep | wc -l`"
     )
@@ -389,8 +405,8 @@ def _count_running_submitters(user_name: str) -> bytes:
 
 
 def main(argv: Sequence[str]) -> None:
-    """Submit when allowed by the existing stop-file and process-count checks."""
-    if os.path.isfile(f"/osgpool/halld/{runner_name}/.ALLSTOP"):
+    """Submit jobs when the stop file is absent and the process count permits it."""
+    if (Path("/osgpool/halld") / runner_name / ".ALLSTOP").is_file():
         print("ALL STOP DETECTED")
         sys.exit(1)
     process_count = _count_running_submitters(runner_name)

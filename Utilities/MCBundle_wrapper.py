@@ -8,6 +8,7 @@ import shlex
 import subprocess
 import sys
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Mapping, NamedTuple, Sequence
 
 import MySQLdb
@@ -53,7 +54,7 @@ class HostSettings(NamedTuple):
 
     @classmethod
     def from_hostname(cls, hostname: str) -> "HostSettings":
-        """Return this host's existing paths, using the wrapper's interpreter."""
+        """Return this host's directories and the wrapper's Python interpreter."""
         merge_dirs = {
             "dtn2303.jlab.org": "/export/halld/mcwrap/mergetemp/",
             "ifarm2402.jlab.org": "/scratch/mcwrap/mergetemp/",
@@ -69,41 +70,49 @@ class HostSettings(NamedTuple):
 
 
 def _get_hostname() -> str:
-    """Read the hostname using the existing shell command."""
+    """Read the hostname from the hostname command."""
     return subprocess.check_output(["hostname"], shell=True).decode().strip()
 
 
 def _project_name(input_dir: str) -> str:
     """Read the final directory name, allowing one trailing slash."""
-    return (
-        input_dir.split("/")[-2] if input_dir[-1] == "/" else input_dir.split("/")[-1]
-    )
+    if not input_dir:
+        raise IndexError("string index out of range")
+    return Path(input_dir).name
 
 
 def _remove_merge_marker(merge_dir: str, project_name: str) -> None:
-    """Run the existing command to remove the project's merging marker."""
-    subprocess.run([f"rm {merge_dir}/{project_name}/.merging"], shell=True)
+    """Remove the marker without aborting bundling if removal fails."""
+    marker = Path(merge_dir) / project_name / ".merging"
+    try:
+        marker.unlink(missing_ok=True)
+    except OSError as error:
+        print(error, file=sys.stderr)
 
 
 def _write_bundle_log(project_name: str, output: bytes, suffix: str = "") -> None:
-    """Write merger output using the existing timestamped log naming scheme."""
+    """Write merger output to a timestamped project log."""
     timestamp = datetime.now().strftime("%Y_%m_%d-%p%I_%M_%S")
-    with open(f"{LOG_DIR}{project_name}_{timestamp}{suffix}.log", "w") as log:
+    log_path = Path(LOG_DIR) / f"{project_name}_{timestamp}{suffix}.log"
+    with log_path.open("w") as log:
         log.write(output.decode("utf-8"))
 
 
 def bundle_files(input_dir: str, output_dir: str, merge_dir: str) -> str:
-    """Run the merger and return its existing SUCCESS, ONGOING, or ERROR result."""
+    """Run the merger and return SUCCESS, ONGOING, or ERROR."""
     project_name = _project_name(input_dir)
-    for directory in (f"{merge_dir}{project_name}", output_dir):
-        command = f"mkdir -p {directory}"
-        print(command)
-        subprocess.call(command.split(" "))
+    merge_path = Path(merge_dir) / project_name
+    for directory in (merge_path, Path(output_dir)):
+        print(f"Creating directory: {directory}")
+        try:
+            directory.mkdir(parents=True, exist_ok=True)
+        except OSError as error:
+            print(error, file=sys.stderr)
     settings = HostSettings.from_hostname(_get_hostname())
     command = (
         f"{shlex.quote(settings.python_command)} "
-        f"{MCWRAPPER_BOT_HOME}/Utilities/MCMerger.py "
-        f"-tempdir {merge_dir}{project_name}/ {input_dir} {output_dir} -noclean"
+        f"{Path(MCWRAPPER_BOT_HOME) / 'Utilities' / 'MCMerger.py'} "
+        f"-tempdir {merge_path}/ {input_dir} {output_dir} -noclean"
     )
     print("BUNDLING WITH", command)
     try:
@@ -136,7 +145,7 @@ class ProjectBundler:
         self._staging_dir = staging_dir
 
     def _connect(self) -> None:
-        """Open a database session at the same points as the existing workflow."""
+        """Open a database connection and create a dictionary cursor."""
         self._connection = MySQLdb.connect(host=DB_HOST, user=DB_USER, db=DB_NAME)
         self._cursor = self._connection.cursor(MySQLdb.cursors.DictCursor)
 
@@ -162,19 +171,23 @@ class ProjectBundler:
         self._connection.commit()
 
     def _bundle_project(self, project: Mapping[str, Any]) -> bool:
-        """Process a project; return False to retain the existing early-stop case."""
+        """Bundle a project; return False when its status does not support bundling."""
         print(project)
         input_dir = project["OutputLocation"].replace(
             CACHE_OUTPUT_ROOT, INPUT_OUTPUT_ROOT
         )
         input_dir = input_dir.replace("//", "/")
-        output_dir = f"{'/'.join(project['OutputLocation'].split('/')[:-1])}/"
+        location = project["OutputLocation"]
+        output_path = (
+            Path(location) if location.endswith("/") else Path(location).parent
+        )
+        output_dir = f"{output_path}/"
         output_dir = output_dir.replace(CACHE_OUTPUT_ROOT, self._staging_dir)
         print(project["ID"])
         project_name = _project_name(input_dir)
-        marker = f"{self._merge_dir}{project_name}/.merging"
+        marker = Path(self._merge_dir) / project_name / ".merging"
         print(marker)
-        if os.path.isfile(marker):
+        if marker.is_file():
             print("Currently being bundled")
             return True
 
@@ -214,7 +227,7 @@ class ProjectBundler:
 
 
 def _count_running_wrappers(user_name: str) -> int:
-    """Count wrapper processes using the existing shell command."""
+    """Count wrapper processes owned by the supplied user."""
     command = (
         f"echo `ps all -u {user_name} | grep MCBundle_wrapper.py "
         "| grep -v grep | wc -l`"
@@ -223,7 +236,7 @@ def _count_running_wrappers(user_name: str) -> int:
 
 
 def main(argv: Sequence[str]) -> None:
-    """Bundle pending projects unless the existing process limit is exceeded."""
+    """Bundle pending projects when the wrapper count permits it."""
     runner_name = pwd.getpwuid(os.getuid())[0]
     process_count = _count_running_wrappers(runner_name)
     print(f"numprocesses_running: {process_count}")

@@ -12,6 +12,7 @@ import subprocess
 import sys
 import time
 from multiprocessing import Process
+from pathlib import Path
 from typing import Any, List, Mapping, Sequence, TypeVar
 
 import MySQLdb
@@ -47,7 +48,7 @@ Item = TypeVar("Item")
 
 
 def remote_file_exists(host: str, path: str) -> bool:
-    """Test a remote file via SSH, retaining the existing failure behavior."""
+    """Return whether the remote file check succeeds over SSH."""
     status = subprocess.call(["ssh", host, f"test -f {shlex.quote(path)}"])
     if status == 0:
         return True
@@ -63,7 +64,7 @@ class OutputFileLocator:
         self._user_name = user_name
 
     def exists(self, root_location: str, expected_file: str) -> bool:
-        """Check a file using the existing command and storage-search order."""
+        """Check file existence in configured storage locations, in search order."""
         subdirectory = "hddm"
         if expected_file.split(".")[-1] == "root":
             subdirectory = "root/monitoring_hists"
@@ -96,10 +97,13 @@ class OutputFileLocator:
             print("FILE FOUND VIA PELICAN")
 
         local_path = (
-            f"/osgpool/halld/{self._user_name}/REQUESTEDMC_OUTPUT/{relative_path}"
+            Path("/osgpool/halld")
+            / self._user_name
+            / "REQUESTEDMC_OUTPUT"
+            / relative_path.lstrip("/")
         )
         found = (
-            os.path.isfile(local_path)
+            local_path.is_file()
             or any(
                 remote_file_exists(
                     f"{self._user_name}@dtn1902", f"{root}{relative_path}"
@@ -117,7 +121,7 @@ class OutputFileLocator:
 def expected_output_files(
     job: Mapping[str, Any], project: Mapping[str, Any]
 ) -> List[str]:
-    """Build the existing output names from the job and project save flags."""
+    """Build output filenames from the job and project save flags."""
     standard_name = (
         f"{str(job['RunNumber']).zfill(6)}_{str(job['FileNumber']).zfill(3)}"
     )
@@ -164,10 +168,10 @@ class JobCompletionChecker:
         self._file_locator = OutputFileLocator(user_name)
 
     def check(self, assignments: Sequence[Mapping[str, Any]]) -> None:
-        """Retain the separate lookup and completion-update database sessions."""
+        """Look up attempts and update status in separate database sessions."""
         connection = MySQLdb.connect(host=DB_HOST, user=DB_USER, db=DB_NAME)
         update_cursor = connection.cursor(MySQLdb.cursors.DictCursor)
-        output_root = f"/osgpool/halld/{self._user_name}/REQUESTEDMC_OUTPUT/"
+        output_root = Path("/osgpool/halld") / self._user_name / "REQUESTEDMC_OUTPUT"
         print(f"checking {len(assignments)}")
         for attempt in assignments:
             self._lookup_cursor.execute(
@@ -178,10 +182,11 @@ class JobCompletionChecker:
                 f"SELECT * From Project Where ID = {job['Project_ID']}"
             )
             project = self._lookup_cursor.fetchall()[0]
-            location_parts = project["OutputLocation"].split("/")
-            for _root, directories, _files in os.walk(
-                f"{output_root}{location_parts[-2]}"
-            ):
+            location = project["OutputLocation"]
+            output_path = (
+                Path(location) if location.endswith("/") else Path(location).parent
+            )
+            for _root, directories, _files in os.walk(output_root / output_path.name):
                 directories[:] = [
                     directory for directory in directories if directory[0] != "."
                 ]
@@ -215,7 +220,7 @@ def check_job_files_for_completion(assignments: Sequence[Mapping[str, Any]]) -> 
 
 
 def split_round_robin(items: Sequence[Item], parts: int) -> List[List[Item]]:
-    """Distribute items across the existing number of worker assignments."""
+    """Distribute items across worker assignments in round-robin order."""
     assignments: List[List[Item]] = [[] for _ in range(parts)]
     for index, item in enumerate(items):
         assignments[index % parts].append(item)
@@ -230,7 +235,7 @@ class JobObserver:
         self._host_name = host_name
 
     def run(self) -> None:
-        """Monitor repeatedly, retaining the existing break-on-exception behavior."""
+        """Monitor repeatedly; print exceptions and stop when an iteration fails."""
         while True:
             try:
                 self._monitor_once()
@@ -272,7 +277,7 @@ class JobObserver:
 
 
 def _count_running_observers(user_name: str) -> int:
-    """Count observer processes using the existing shell command."""
+    """Count observer processes owned by the supplied user."""
     command = (
         f"echo `ps all -u {user_name} | grep MCObserver.py | grep -v grep | wc -l`"
     )

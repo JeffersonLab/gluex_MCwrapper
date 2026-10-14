@@ -8,6 +8,7 @@ import pwd
 import socket
 import subprocess
 import sys
+from pathlib import Path
 from typing import Sequence
 
 import MySQLdb
@@ -33,7 +34,7 @@ except BaseException:
 
 
 class DroneRun:
-    """Record a dispatcher run and its outcome using an existing database session."""
+    """Record a dispatcher run and its outcome using the supplied database session."""
 
     def __init__(
         self,
@@ -64,10 +65,9 @@ class DroneRun:
     def _run_dispatcher(self, run_id: int) -> None:
         """Launch autolaunch mode and print its captured standard output."""
         try:
-            command = (
-                f"{os.environ['MCWRAPPER_CENTRAL']}"
-                "/Utilities/MCDispatcher.py autolaunch"
-            )
+            central_dir = os.environ["MCWRAPPER_CENTRAL"]
+            dispatcher = Path(central_dir or "/") / "Utilities" / "MCDispatcher.py"
+            command = f"{dispatcher} autolaunch"
             print(command)
             output, _stderr = subprocess.Popen(
                 command.split(" "),
@@ -92,7 +92,7 @@ class DroneRun:
 
 
 def _count_running_drones(user_name: str) -> int:
-    """Count drone processes for the user using the existing shell command."""
+    """Count drone processes owned by the supplied user."""
     command = f"echo `ps all -u {user_name} | grep MCDrone.py | grep -v grep | wc -l`"
     output = subprocess.check_output([command], shell=True).strip()
     return int(output)
@@ -104,7 +104,7 @@ def main(argv: Sequence[str]) -> None:
     process_count = _count_running_drones(runner_name)
     print(process_count)
 
-    stop_requested = os.path.isfile(f"/osgpool/halld/{runner_name}/.ALLSTOP")
+    stop_requested = (Path("/osgpool/halld") / runner_name / ".ALLSTOP").is_file()
     if stop_requested:
         print("ALL STOP DETECTED")
 

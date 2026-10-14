@@ -6,6 +6,7 @@ from array import array
 from dataclasses import dataclass
 from datetime import datetime
 from optparse import OptionParser
+from pathlib import Path
 from typing import Any, Optional, Sequence, TextIO
 
 import ccdb
@@ -19,7 +20,7 @@ PARTICLE_PDG_IDS = (2212, 211, -211)
 
 @dataclass
 class GeneratorSettings:
-    """Command-line settings and beam limits, retaining the existing defaults."""
+    """Command-line settings and photon-beam energy limits."""
 
     event_count: int = 10000
     run_number: int = 30496
@@ -86,7 +87,7 @@ def write_hddm_event(
 def pair_spectrometer_acceptance(
     coordinates: Sequence[float], parameters: Sequence[float]
 ) -> float:
-    """Evaluate the existing pair-spectrometer acceptance used by ROOT's TF1."""
+    """Evaluate pair-spectrometer acceptance for ROOT's TF1."""
     energy = coordinates[0]
     minimum = parameters[1]
     maximum = parameters[2]
@@ -98,7 +99,7 @@ def pair_spectrometer_acceptance(
 
 
 def get_flux_from_ccdb(run_number: int, energy_min: float, energy_max: float) -> TH1D:
-    """Read the existing CCDB assignments and correct the TAGH untagged flux."""
+    """Read CCDB assignments and correct the TAGH untagged flux."""
     flux = TH1D(
         "flux",
         "flux; Photon Beam Energy (GeV); Flux (# photons on target)",
@@ -122,7 +123,7 @@ def get_flux_from_ccdb(run_number: int, energy_min: float, energy_max: float) ->
         endpoint = provider.get_assignment(
             "/PHOTON_BEAM/endpoint_energy", run_number, variation, calibration_time
         ).constant_set.data_table
-        # Keep the TAGM lookups: their absence originally prevented generation too.
+        # TAGM calibration assignments are required for event generation.
         provider.get_assignment(
             "/PHOTON_BEAM/pair_spectrometer/lumi/tagm/untagged",
             run_number,
@@ -182,7 +183,7 @@ def get_flux_from_ccdb(run_number: int, energy_min: float, energy_max: float) ->
 
 
 class DiagnosticHistograms:
-    """Own the existing monitoring histograms and their fill and drawing order."""
+    """Collect monitoring histograms and draw diagnostic canvases."""
 
     def __init__(self) -> None:
         self.beam_energy = TH1D("eGamma", " ; E_{#gamma} ", 1000, 0.0, 12.0)
@@ -213,7 +214,7 @@ class DiagnosticHistograms:
     def fill(
         self, energy: float, transfer: float, momenta: Sequence[TLorentzVector]
     ) -> None:
-        """Fill the original mass, transfer, Dalitz, and momentum distributions."""
+        """Fill mass, transfer, Dalitz, and momentum distributions."""
         proton, positive_pion, negative_pion = momenta
         self.beam_energy.Fill(energy)
         self.proton_pip_mass.Fill((positive_pion + proton).M())
@@ -228,7 +229,7 @@ class DiagnosticHistograms:
         self.pim_momentum.Fill(negative_pion.Theta(), negative_pion.Vect().Mag())
 
     def draw(self) -> None:
-        """Draw both diagnostic canvases with the existing layout and ROOT names."""
+        """Draw diagnostic canvases containing the monitoring histograms."""
         self._mass_canvas = TCanvas("can", "Plot", 1000, 600)
         self._mass_canvas.Divide(3, 2)
         for pad, histogram, option in (
@@ -256,7 +257,7 @@ class DiagnosticHistograms:
 
 
 class ThreeBodyGenerator:
-    """Generate accepted events and write the existing HDDM and optional ASCII data."""
+    """Generate accepted events and write HDDM and optional ASCII records."""
 
     def __init__(
         self,
@@ -275,7 +276,7 @@ class ThreeBodyGenerator:
         self._phase_space = TGenPhaseSpace()
         self._histograms = DiagnosticHistograms()
         self._transfer_weight = TF1("tslope", "[0]*exp(-1.0*[1]*x)", 0.0, 1.0)
-        # Keep the dormant Breit-Wigner functions and their original parameters.
+        # Breit-Wigner weights are configured but not applied during sampling.
         self._rho_weight = TF1("bsrho", "[0]*TMath::BreitWigner(x,[1],[2])", 0, 1.5)
         self._delta_weight = TF1("bsDelta", "[0]*TMath::BreitWigner(x,[1],[2])", 0, 1.5)
         self._transfer_weight.SetParameters(1, settings.transfer_slope)
@@ -283,7 +284,7 @@ class ThreeBodyGenerator:
         self._delta_weight.SetParameters(0.23, 1.232, 0.15)
 
     def run(self) -> None:
-        """Retain sampling order, event weights, cuts, and zero-based numbering."""
+        """Sample weighted events, apply cuts, and number accepted events from zero."""
         event_number = 0
         settings = self._settings
         while event_number < settings.event_count:
@@ -344,7 +345,7 @@ class ThreeBodyGenerator:
 
 
 def _parse_settings(argv: Sequence[str]) -> GeneratorSettings:
-    """Parse the existing value-taking options, including --ascii and --diag."""
+    """Parse value-taking options, including --ascii and --diag."""
     parser = OptionParser(
         usage="phasespace3body.py --nevents Nevents --run RunNumber --out OutputFile"
     )
@@ -416,9 +417,9 @@ def _parse_settings(argv: Sequence[str]) -> GeneratorSettings:
 
 
 def _read_beam_configuration(settings: GeneratorSettings) -> None:
-    """Read TEMPBEAMCONFIG, retaining default or partially read limits on failure."""
+    """Read TEMPBEAMCONFIG; leave unread energy limits at their defaults."""
     try:
-        with open("TEMPBEAMCONFIG") as beam_config:
+        with Path("TEMPBEAMCONFIG").open() as beam_config:
             for line in beam_config.readlines():
                 items = line.strip().split(" ")
                 if items[0] == "PhotonBeamLowEnergy":
@@ -438,7 +439,7 @@ def main(argv: Sequence[str]) -> None:
     _read_beam_configuration(settings)
     output_stream = hddm_s.ostream(settings.output_path)
     ascii_output = (
-        open(settings.output_path.replace(".hddm", ".ascii"), "w")
+        Path(settings.output_path.replace(".hddm", ".ascii")).open("w")
         if settings.write_ascii
         else None
     )
