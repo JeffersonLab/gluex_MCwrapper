@@ -1,14 +1,17 @@
 """Shared MCwrapper workflow, attempt, merger, and utility run codes.
 
 The namespaces describe separate fields: Project.Tested, Attempts.Status,
-Attempts.ExitCode, the merger's return value, and utility run tracking. Database
-NULL values have field-specific meanings and are distinct from numeric codes.
+Attempts.ExitCode, dispatcher test results, the merger's return value, and utility
+run tracking. Database NULL values have field-specific meanings and are distinct
+from numeric codes.
 """
 
 
 class ProjectStatus:
     """Workflow codes stored in Project.Tested, beyond the initial test result."""
 
+    RETRY_EXCLUDED = -4
+    """Negative project code excluded by the dispatcher's automatic retry query."""
     TEST_FAILED = -1
     """The dispatcher could not successfully test the project configuration."""
     UNTESTED = 0
@@ -48,6 +51,8 @@ class AttemptStatus:
     inputs. Codes 6 and 7 describe both scheduler states and local input handling.
     """
 
+    UNCLASSIFIED = -1
+    """The dispatcher retries this sentinel and can normalize it to COMPLETED."""
     IDLE = 1
     """The scheduler is waiting to start the job."""
     RUNNING = 2
@@ -87,6 +92,17 @@ class ExitCode:
     """The attempt is absent from the queue and Condor returned an empty history."""
     RANDOM_TRIGGER_INITIALIZATION_FAILED = 1000
     """Worker initialization could not find its random-trigger mix-in file."""
+
+
+class ProjectTestResult:
+    """Dispatcher test outcomes; nonnegative integers are success-marker offsets."""
+
+    FAILURE = -1
+    """The test failed or its output did not contain the success marker."""
+    POSTPROCESSING_FAILED = -3
+    """One or more generator postprocessing files could not be staged."""
+    ALREADY_PASSED = "Success"
+    """Existing project jobs allow a worker to skip its test run."""
 
 
 class MergerResult:
