@@ -1,354 +1,457 @@
-# 
-import os,sys
-from ROOT import TFile,TH1F,TH1D,TH2D,TF1,TLorentzVector,TGenPhaseSpace,TCanvas,gRandom
+"""Generate proton, pi+, and pi- phase-space events with CCDB beam flux."""
+
+import os
+import sys
 from array import array
-from optparse import OptionParser
+from dataclasses import dataclass
 from datetime import datetime
+from optparse import OptionParser
+from pathlib import Path
+from typing import Any, Optional, Sequence, TextIO
+
 import ccdb
-from ccdb import Directory, TypeTable, Assignment, ConstantSet
+import hddm_s
+from ROOT import TF1, TH1D, TH2D, TCanvas, TGenPhaseSpace, TLorentzVector, gRandom
 
-# for directly writing to HDDM
-import hddm_s, fileinput, re
+PARTICLE_MASSES = (0.93827, 0.13957, 0.13957)
+PARTICLE_GEANT_IDS = (14, 8, 9)
+PARTICLE_PDG_IDS = (2212, 211, -211)
 
-# write events directly to HDDM file
-def WriteHDDM(hddm_output, particlesP4, particlesGeantID, particlesPDGID):
-    
-    rea = pev[0].addReactions(1)
-    bea = rea[0].addBeams(1)
-    bea[0].type = 1
-    prop = bea[0].addPropertiesList()
-    prop[0].charge = 0
-    prop[0].mass = 0.0
-    mom = bea[0].addMomenta(1)
-    mom[0].E = E
-    mom[0].px = 0
-    mom[0].py = 0
-    mom[0].pz = E
 
-    tar = rea[0].addTargets(1)
-    tar[0].type = 14
-    mom = tar[0].addMomenta(1)
-    mom[0].E = 0.93827231
-    mom[0].px = 0
-    mom[0].py = 0
-    mom[0].pz = 0
-    
-    vtx = rea[0].addVertices(1)
-    ori = vtx[0].addOrigins(1)
+@dataclass
+class GeneratorSettings:
+    """Command-line settings and photon-beam energy limits."""
 
-    for i, (P4, GeantID, PDGID) in enumerate(zip(particlesP4, particlesGeantID, particlesPDGID)):
-        pro = vtx[0].addProducts(1)
-        pro[0].decayVertex = 0
-        pro[0].id = i + 1
-        pro[0].mech = 0 # 0xdeadface
-        pro[0].parentid = 0
-        pro[0].pdgtype = PDGID
-        pro[0].type = GeantID
-        mom = pro[0].addMomenta(1)
-        mom[0].E = float(P4.E())
-        mom[0].px = float(P4.Px())
-        mom[0].py = float(P4.Py())
-        mom[0].pz = float(P4.Pz())
+    event_count: int = 10000
+    run_number: int = 30496
+    output_path: str = "gen_output.hddm"
+    seed: int = 0
+    write_ascii: bool = False
+    diagnostic: bool = False
+    energy_min: float = 8.2
+    energy_max: float = 8.8
+    transfer_min: float = 0.0
+    transfer_max: float = 1.5
+    transfer_slope: float = 0.0
+    mass_min: float = 0.0
+    mass_max: float = 1.7
 
-# compute PS acceptance function with parameters from CCDB
-def PSAcceptance(x, par):
 
-    min = par[1]
-    max = par[2]
+def write_hddm_event(
+    physics_events: Sequence[Any],
+    beam_energy: float,
+    momenta: Sequence[TLorentzVector],
+    geant_ids: Sequence[int],
+    pdg_ids: Sequence[int],
+) -> None:
+    """Populate a physics event using explicit beam energy and particle momenta."""
+    reactions = physics_events[0].addReactions(1)
+    beams = reactions[0].addBeams(1)
+    beams[0].type = 1
+    properties = beams[0].addPropertiesList()
+    properties[0].charge = 0
+    properties[0].mass = 0.0
+    momentum = beams[0].addMomenta(1)
+    momentum[0].E = beam_energy
+    momentum[0].px = 0
+    momentum[0].py = 0
+    momentum[0].pz = beam_energy
 
-    if x[0] > 2.*min and x[0] < min + max:
-        return par[0]*(1-2.*min/x[0])
-    elif x[0] >= min + max:
-        return par[0]*(2.*max/x[0] - 1)
+    targets = reactions[0].addTargets(1)
+    targets[0].type = 14
+    momentum = targets[0].addMomenta(1)
+    momentum[0].E = 0.93827231
+    momentum[0].px = 0
+    momentum[0].py = 0
+    momentum[0].pz = 0
 
-    return 0.
+    vertices = reactions[0].addVertices(1)
+    vertices[0].addOrigins(1)
+    for index, (particle, geant_id, pdg_id) in enumerate(
+        zip(momenta, geant_ids, pdg_ids)
+    ):
+        products = vertices[0].addProducts(1)
+        products[0].decayVertex = 0
+        products[0].id = index + 1
+        products[0].mech = 0
+        products[0].parentid = 0
+        products[0].pdgtype = pdg_id
+        products[0].type = geant_id
+        momentum = products[0].addMomenta(1)
+        momentum[0].E = float(particle.E())
+        momentum[0].px = float(particle.Px())
+        momentum[0].py = float(particle.Py())
+        momentum[0].pz = float(particle.Pz())
 
-# get untagged flux from CCDB to seed event generation
-def GetFluxCCDB(run, Emin, Emax):
 
-    hflux_ccdb = TH1D("flux", "flux; Photon Beam Energy (GeV); Flux (# photons on target)", 5000, Emin, Emax)
-    
-    VARIATION = "default"
-    CALIBTIME = datetime.now()
-    CALIBTIME_USER = CALIBTIME
-    CALIBTIME_ENERGY = CALIBTIME
+def pair_spectrometer_acceptance(
+    coordinates: Sequence[float], parameters: Sequence[float]
+) -> float:
+    """Evaluate pair-spectrometer acceptance for ROOT's TF1."""
+    energy = coordinates[0]
+    minimum = parameters[1]
+    maximum = parameters[2]
+    if energy > 2.0 * minimum and energy < minimum + maximum:
+        return parameters[0] * (1 - 2.0 * minimum / energy)
+    if energy >= minimum + maximum:
+        return parameters[0] * (2.0 * maximum / energy - 1)
+    return 0.0
 
-    sqlite_connect_str = os.getenv('CCDB_CONNECTION')
-    if sqlite_connect_str == "":
-        print("No CCDB_CONNECTION, defaulting to MYSQL connection for flux determination")
-        sqlite_connect_str = "mysql://ccdb_user@hallddb.jlab.org/ccdb"
 
-    ccdb_conn = ccdb.AlchemyProvider()                           # this class has all CCDB manipulation functions
-    ccdb_conn.connect(sqlite_connect_str)                        # use usual connection string to connect to database
-    ccdb_conn.authentication.current_user_name = "root_generator_user"   # to have a name in logs
-
-    photon_endpoint = array('d')
-    tagm_tagged_flux = array('d')
-    tagm_scaled_energy = array('d')
-    tagh_tagged_flux = array('d')
-    tagh_scaled_energy = array('d')
+def get_flux_from_ccdb(run_number: int, energy_min: float, energy_max: float) -> TH1D:
+    """Read CCDB assignments and correct the TAGH untagged flux."""
+    flux = TH1D(
+        "flux",
+        "flux; Photon Beam Energy (GeV); Flux (# photons on target)",
+        5000,
+        energy_min,
+        energy_max,
+    )
+    variation = "default"
+    calibration_time = datetime.now()
+    connection_string = os.getenv("CCDB_CONNECTION")
+    if connection_string == "":
+        print(
+            "No CCDB_CONNECTION, defaulting to MYSQL connection for flux determination"
+        )
+        connection_string = "mysql://ccdb_user@hallddb.jlab.org/ccdb"
+    provider = ccdb.AlchemyProvider()
+    provider.connect(connection_string)
+    provider.authentication.current_user_name = "root_generator_user"
 
     try:
-        photon_endpoint_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/endpoint_energy", run, VARIATION, CALIBTIME_ENERGY)
-        photon_endpoint = photon_endpoint_assignment.constant_set.data_table
-
-        tagm_untagged_flux_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/pair_spectrometer/lumi/tagm/untagged", run, VARIATION, CALIBTIME)
-        tagm_untagged_flux = tagm_untagged_flux_assignment.constant_set.data_table
-        tagm_scaled_energy_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/microscope/scaled_energy_range", run, VARIATION, CALIBTIME_ENERGY)
-        tagm_scaled_energy_table = tagm_scaled_energy_assignment.constant_set.data_table
-        
-        tagh_untagged_flux_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/pair_spectrometer/lumi/tagh/untagged", run, VARIATION, CALIBTIME)
-        tagh_untagged_flux = tagh_untagged_flux_assignment.constant_set.data_table
-        tagh_scaled_energy_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/hodoscope/scaled_energy_range", run, VARIATION, CALIBTIME_ENERGY)
-        tagh_scaled_energy_table = tagh_scaled_energy_assignment.constant_set.data_table
-
-        PS_accept_assignment = ccdb_conn.get_assignment("/PHOTON_BEAM/pair_spectrometer/lumi/PS_accept", run, VARIATION, CALIBTIME)
-        PS_accept = PS_accept_assignment.constant_set.data_table
-    except:
-        print "Missing flux for run = %d, contact jrsteven@jlab.org" % run
+        endpoint = provider.get_assignment(
+            "/PHOTON_BEAM/endpoint_energy", run_number, variation, calibration_time
+        ).constant_set.data_table
+        # TAGM calibration assignments are required for event generation.
+        provider.get_assignment(
+            "/PHOTON_BEAM/pair_spectrometer/lumi/tagm/untagged",
+            run_number,
+            variation,
+            calibration_time,
+        ).constant_set.data_table
+        provider.get_assignment(
+            "/PHOTON_BEAM/microscope/scaled_energy_range",
+            run_number,
+            variation,
+            calibration_time,
+        ).constant_set.data_table
+        untagged_flux = provider.get_assignment(
+            "/PHOTON_BEAM/pair_spectrometer/lumi/tagh/untagged",
+            run_number,
+            variation,
+            calibration_time,
+        ).constant_set.data_table
+        scaled_energies = provider.get_assignment(
+            "/PHOTON_BEAM/hodoscope/scaled_energy_range",
+            run_number,
+            variation,
+            calibration_time,
+        ).constant_set.data_table
+        acceptance_parameters = provider.get_assignment(
+            "/PHOTON_BEAM/pair_spectrometer/lumi/PS_accept",
+            run_number,
+            variation,
+            calibration_time,
+        ).constant_set.data_table
+    except BaseException:
+        print(f"Missing flux for run = {run_number}, contact jrsteven@jlab.org")
         sys.exit(0)
 
-    # PS acceptance correction
-    fPSAcceptance = TF1("PSAcceptance", PSAcceptance, 2.0, 12.0, 3)
-    fPSAcceptance.SetParameters(float(PS_accept[0][0]), float(PS_accept[0][1]), float(PS_accept[0][2]))
-
-    # fill histogram
-    for tagh_flux, tagh_scaled_energy in zip(tagh_untagged_flux, tagh_scaled_energy_table):
-        tagh_energy = float(photon_endpoint[0][0])*(float(tagh_scaled_energy[1])+float(tagh_scaled_energy[2]))/2.
-        psAccept = fPSAcceptance.Eval(tagh_energy)
-        if psAccept <= 0.0:
+    acceptance_function = TF1(
+        "PSAcceptance", pair_spectrometer_acceptance, 2.0, 12.0, 3
+    )
+    acceptance_function.SetParameters(
+        float(acceptance_parameters[0][0]),
+        float(acceptance_parameters[0][1]),
+        float(acceptance_parameters[0][2]),
+    )
+    for tagh_flux, scaled_energy in zip(untagged_flux, scaled_energies):
+        energy = (
+            float(endpoint[0][0])
+            * (float(scaled_energy[1]) + float(scaled_energy[2]))
+            / 2.0
+        )
+        acceptance = acceptance_function.Eval(energy)
+        if acceptance <= 0.0:
             continue
+        bin_number = flux.FindBin(energy)
+        previous_content = flux.GetBinContent(bin_number)
+        current_content = float(tagh_flux[1]) / acceptance
+        flux.SetBinContent(bin_number, previous_content + current_content)
+    return flux
 
-        bin_energy = hflux_ccdb.FindBin(tagh_energy)
-        previous_bincontent = hflux_ccdb.GetBinContent(bin_energy)
-        current_bincontent = float(tagh_flux[1]) / psAccept
-        new_bincontent = previous_bincontent + current_bincontent
-        hflux_ccdb.SetBinContent(bin_energy, new_bincontent)
 
-    return hflux_ccdb
-    
-#################################
-# Begin main generator function #
-#################################
+class DiagnosticHistograms:
+    """Collect monitoring histograms and draw diagnostic canvases."""
 
-# Defaults
-Nevents = 10000
-event = 0;
-run = 30496
-outfile_name = "gen_output.hddm"
-seed = 0
-write_ascii = False
-diagnostic = False
+    def __init__(self) -> None:
+        self.beam_energy = TH1D("eGamma", " ; E_{#gamma} ", 1000, 0.0, 12.0)
+        self.proton_pip_mass = TH1D("mProtonPip", " ;M(p#pi^{+}) ", 200, 0.0, 4.0)
+        self.proton_pim_mass = TH1D("mProtonPim", " ;M(p#pi^{-}) ", 200, 0.0, 4.0)
+        self.pion_pair_mass = TH1D("mPiPi", " ;M(#pi#pi) ", 200, 0.0, 4.0)
+        self.transfer = TH1D("tPhiPiPi", " ;t ", 100, 0.0, 10.0)
+        self.dalitz = TH2D(
+            "dalitz",
+            " ; M^{2}(#pi#pi) ; M^{2}(p#pi)",
+            200,
+            0,
+            20,
+            200,
+            0,
+            20,
+        )
+        self.proton_momentum = TH2D(
+            "PVsThetaProton", " ; Momentum (GeV); #theta", 100, 0, 3.14, 100, 0, 10
+        )
+        self.pip_momentum = TH2D(
+            "PVsThetaPip", " ; Momentum (GeV); #theta", 100, 0, 3.14, 100, 0, 10
+        )
+        self.pim_momentum = TH2D(
+            "PVsThetaPim", " ; Momentum (GeV); #theta", 100, 0, 3.14, 100, 0, 10
+        )
 
-Emin = 8.2
-Emax = 8.8
-tmin = 0.0
-tmax = 1.5
-tslope = 0.0
-Mmin = 0.0
-Mmax = 1.7
+    def fill(
+        self, energy: float, transfer: float, momenta: Sequence[TLorentzVector]
+    ) -> None:
+        """Fill mass, transfer, Dalitz, and momentum distributions."""
+        proton, positive_pion, negative_pion = momenta
+        self.beam_energy.Fill(energy)
+        self.proton_pip_mass.Fill((positive_pion + proton).M())
+        self.proton_pim_mass.Fill((negative_pion + proton).M())
+        self.pion_pair_mass.Fill((positive_pion + negative_pion).M())
+        self.transfer.Fill(abs(transfer))
+        self.dalitz.Fill(
+            (positive_pion + negative_pion).M2(), (positive_pion + proton).M2()
+        )
+        self.proton_momentum.Fill(proton.Theta(), proton.Vect().Mag())
+        self.pip_momentum.Fill(positive_pion.Theta(), positive_pion.Vect().Mag())
+        self.pim_momentum.Fill(negative_pion.Theta(), negative_pion.Vect().Mag())
 
-# Define command line options
-parser = OptionParser(usage = "phasespace3body.py --nevents Nevents --run RunNumber --out OutputFile")
-parser.add_option("-n","--nevents", dest="Nevents", help="Number of events to generate")
-parser.add_option("-r","--run", dest="run", help="RunNumber used to generate events")
-parser.add_option("-o","--out", dest="out", help="Output HDDM filename")
-parser.add_option("-t","--tslope", dest="tslope", help="Exponential slope for -t")
-parser.add_option("-s","--seed", dest="seed", help="Random number seed")
-parser.add_option("-a","--ascii", dest="write_ascii", help="Write ASCII output file")
-parser.add_option("-d","--diag", dest="diag", help="Plot diagnostic histograms")
-parser.add_option("--mmax", dest="mmax", help="Maximum mass")
-parser.add_option("--mmin", dest="mmin", help="Minimum mass")
-parser.add_option("--tmax", dest="tmax", help="Maximum -t")
-parser.add_option("--tmin", dest="tmin", help="Minimum -t")
+    def draw(self) -> None:
+        """Draw diagnostic canvases containing the monitoring histograms."""
+        self._mass_canvas = TCanvas("can", "Plot", 1000, 600)
+        self._mass_canvas.Divide(3, 2)
+        for pad, histogram, option in (
+            (1, self.beam_energy, ""),
+            (2, self.transfer, ""),
+            (3, self.dalitz, "colz"),
+            (4, self.proton_pip_mass, ""),
+            (5, self.pion_pair_mass, ""),
+            (6, self.proton_pim_mass, ""),
+        ):
+            self._mass_canvas.cd(pad)
+            if option:
+                histogram.Draw(option)
+            else:
+                histogram.Draw()
+        self._mass_canvas.Update()
+        self._momentum_canvas = TCanvas("canKin", "PlotKin", 1000, 300)
+        self._momentum_canvas.Divide(3, 1)
+        for pad, histogram in enumerate(
+            (self.proton_momentum, self.pip_momentum, self.pim_momentum), start=1
+        ):
+            self._momentum_canvas.cd(pad)
+            histogram.Draw("colz")
+        self._momentum_canvas.Update()
 
-(options, args) = parser.parse_args(sys.argv)
 
-if not options.Nevents or not options.run:
-    parser.print_help()
-    sys.exit(0)
-    
-if options.Nevents:
-    Nevents = int(options.Nevents)
-if options.run:
-    run = int(options.run)
-if options.out:
-    outfile_name = str(options.out)
-if options.seed:
-    seed = int(options.seed)
-if options.write_ascii:
-    write_ascii = True
-if options.diag:
-    diagnostic = True
-if options.mmax:
-    Mmax = float(options.mmax)
-if options.mmin:
-    Mmin = float(options.mmin)
-if options.tmax:
-    tmax = float(options.tmax)
-if options.tmin:
-    tmin = float(options.tmin)
-if options.tslope:
-    tslope = float(options.tslope)
+class ThreeBodyGenerator:
+    """Generate accepted events and write HDDM and optional ASCII records."""
 
-# read beam configuration file to set Emin and Emax
-try:
-    with open("TEMPBEAMCONFIG") as beam_config:
-        lines = beam_config.readlines() # list containing lines of file
-        for line in lines:
-            line = line.strip()
-            items = line.split(" ")
-            if items[0] == "PhotonBeamLowEnergy": Emin=float(items[1])
-            if items[0] == "PhotonBeamHighEnergy": Emax=float(items[1])
-except:
-    print("Beam configuration file not available, using default Emin=%0.2f and Emax=%0.2f" % (Emin,Emax))
+    def __init__(
+        self,
+        settings: GeneratorSettings,
+        flux: TH1D,
+        output_stream: "hddm_s.ostream",
+        ascii_output: Optional[TextIO] = None,
+    ) -> None:
+        self._settings = settings
+        self._flux = flux
+        self._output_stream = output_stream
+        self._ascii_output = ascii_output
+        self._target = TLorentzVector(0.0, 0.0, 0.0, 0.93827)
+        self._masses = array("d", PARTICLE_MASSES)
+        self._momenta = [TLorentzVector() for _ in PARTICLE_MASSES]
+        self._phase_space = TGenPhaseSpace()
+        self._histograms = DiagnosticHistograms()
+        self._transfer_weight = TF1("tslope", "[0]*exp(-1.0*[1]*x)", 0.0, 1.0)
+        # Breit-Wigner weights are configured but not applied during sampling.
+        self._rho_weight = TF1("bsrho", "[0]*TMath::BreitWigner(x,[1],[2])", 0, 1.5)
+        self._delta_weight = TF1("bsDelta", "[0]*TMath::BreitWigner(x,[1],[2])", 0, 1.5)
+        self._transfer_weight.SetParameters(1, settings.transfer_slope)
+        self._rho_weight.SetParameters(0.23, 0.77, 0.15)
+        self._delta_weight.SetParameters(0.23, 1.232, 0.15)
 
-# setup output file
-outfile_hddm = hddm_s.ostream(outfile_name)
-if write_ascii:
-    outfile = open(outfile_name.replace(".hddm",".ascii"),"w");
+    def run(self) -> None:
+        """Sample weighted events, apply cuts, and number accepted events from zero."""
+        event_number = 0
+        settings = self._settings
+        while event_number < settings.event_count:
+            energy = self._flux.GetRandom()
+            if energy < settings.energy_min or energy > settings.energy_max:
+                continue
+            beam = TLorentzVector(0.0, 0.0, energy, energy)
+            total_momentum = beam + self._target
+            self._phase_space.SetDecay(total_momentum, len(self._masses), self._masses)
+            weight = self._phase_space.Generate()
+            for index in range(len(self._masses)):
+                self._momenta[index] = self._phase_space.GetDecay(index)
+            proton, positive_pion, _negative_pion = self._momenta
+            transfer = ((proton + positive_pion) - self._target).M2()
+            if settings.transfer_slope > 0:
+                weight *= self._transfer_weight.Eval(abs(transfer))
+            if gRandom.Uniform() > weight:
+                continue
+            if (
+                abs(transfer) > settings.transfer_max
+                or abs(transfer) < settings.transfer_min
+            ):
+                continue
+            if (positive_pion + proton).M() > settings.mass_max or (
+                positive_pion + proton
+            ).M() < settings.mass_min:
+                continue
+            self._histograms.fill(energy, transfer, self._momenta)
+            self._write_event(event_number, energy)
+            if event_number % 5000 == 0:
+                print(f"generated {event_number} events")
+            event_number += 1
+        if settings.diagnostic:
+            self._histograms.draw()
 
-# set random number seed
-gRandom.SetSeed(seed)
+    def _write_event(self, event_number: int, energy: float) -> None:
+        event = hddm_s.HDDM()
+        physics_events = event.addPhysicsEvents(1)
+        physics_events[0].runNo = int(self._settings.run_number)
+        physics_events[0].eventNo = int(event_number)
+        write_hddm_event(
+            physics_events, energy, self._momenta, PARTICLE_GEANT_IDS, PARTICLE_PDG_IDS
+        )
+        self._output_stream.write(event)
+        if self._ascii_output is None:
+            return
+        self._ascii_output.write(
+            f"{self._settings.run_number} {event_number} {len(self._masses)}\n"
+        )
+        for particle, geant_id, charge in zip(
+            self._momenta, PARTICLE_GEANT_IDS, ("+1", "+1", "-1")
+        ):
+            self._ascii_output.write(
+                f"0 {geant_id} {particle.M():f} {charge} "
+                f"{particle.Px():f} {particle.Py():f} "
+                f"{particle.Pz():f} {particle.E():f}\n"
+            )
 
-# get run-specific flux from CCDB
-hflux = GetFluxCCDB(run, Emin, Emax)
 
-# proton target
-target = TLorentzVector(0.0, 0.0, 0.0, 0.93827)
+def _parse_settings(argv: Sequence[str]) -> GeneratorSettings:
+    """Parse value-taking options, including --ascii and --diag."""
+    parser = OptionParser(
+        usage="phasespace3body.py --nevents Nevents --run RunNumber --out OutputFile"
+    )
+    parser.add_option(
+        "-n",
+        "--nevents",
+        dest="event_count",
+        metavar="NEVENTS",
+        help="Number of events to generate",
+    )
+    parser.add_option(
+        "-r",
+        "--run",
+        dest="run_number",
+        metavar="RUN",
+        help="RunNumber used to generate events",
+    )
+    parser.add_option(
+        "-o", "--out", dest="output_path", metavar="OUT", help="Output HDDM filename"
+    )
+    parser.add_option(
+        "-t",
+        "--tslope",
+        dest="transfer_slope",
+        metavar="TSLOPE",
+        help="Exponential slope for -t",
+    )
+    parser.add_option("-s", "--seed", dest="seed", help="Random number seed")
+    parser.add_option(
+        "-a", "--ascii", dest="write_ascii", help="Write ASCII output file"
+    )
+    parser.add_option(
+        "-d",
+        "--diag",
+        dest="diagnostic",
+        metavar="DIAG",
+        help="Plot diagnostic histograms",
+    )
+    parser.add_option("--mmax", dest="mass_max", metavar="MMAX", help="Maximum mass")
+    parser.add_option("--mmin", dest="mass_min", metavar="MMIN", help="Minimum mass")
+    parser.add_option("--tmax", dest="transfer_max", metavar="TMAX", help="Maximum -t")
+    parser.add_option("--tmin", dest="transfer_min", metavar="TMIN", help="Minimum -t")
+    options, _args = parser.parse_args(list(argv))
+    if not options.event_count or not options.run_number:
+        parser.print_help()
+        sys.exit(0)
+    settings = GeneratorSettings()
+    if options.event_count:
+        settings.event_count = int(options.event_count)
+    if options.run_number:
+        settings.run_number = int(options.run_number)
+    if options.output_path:
+        settings.output_path = str(options.output_path)
+    if options.seed:
+        settings.seed = int(options.seed)
+    settings.write_ascii = bool(options.write_ascii)
+    settings.diagnostic = bool(options.diagnostic)
+    for name in (
+        "mass_max",
+        "mass_min",
+        "transfer_max",
+        "transfer_min",
+        "transfer_slope",
+    ):
+        value = getattr(options, name)
+        if value:
+            setattr(settings, name, float(value))
+    return settings
 
-# define final state particles
-masses = array( 'd', [0.93827, 0.13957, 0.13957] )
-particlesP4 = [TLorentzVector(), TLorentzVector(), TLorentzVector()]
-particlesGeantID = [14, 8, 9]
-particlesPDGID = [2212, 211, -211]
-nParticles = len(masses)
 
-# setup phasespace generator
-psGen = TGenPhaseSpace()
+def _read_beam_configuration(settings: GeneratorSettings) -> None:
+    """Read TEMPBEAMCONFIG; leave unread energy limits at their defaults."""
+    try:
+        with Path("TEMPBEAMCONFIG").open() as beam_config:
+            for line in beam_config.readlines():
+                items = line.strip().split(" ")
+                if items[0] == "PhotonBeamLowEnergy":
+                    settings.energy_min = float(items[1])
+                if items[0] == "PhotonBeamHighEnergy":
+                    settings.energy_max = float(items[1])
+    except BaseException:
+        print(
+            "Beam configuration file not available, using default "
+            f"Emin={settings.energy_min:0.2f} and Emax={settings.energy_max:0.2f}"
+        )
 
-# setup histograms for monitoring
-eGamma = TH1D( "eGamma", " ; E_{#gamma} ", 1000, 0.0, 12.0)
-mProtonPip = TH1D( "mProtonPip", " ;M(p#pi^{+}) ", 200, 0.0, 4.0 )
-mProtonPim = TH1D( "mProtonPim", " ;M(p#pi^{-}) ", 200, 0.0, 4.0 )
-mPiPi = TH1D( "mPiPi", " ;M(#pi#pi) ", 200, 0.0, 4.0 )
-tPhiPiPi = TH1D( "tPhiPiPi", " ;t ", 100, 0.0, 10.0 )
-dalitz = TH2D( "dalitz", " ; M^{2}(#pi#pi) ; M^{2}(p#pi)", 200, 0, 20, 200, 0, 20)
-pVsThetaProton = TH2D( "PVsThetaProton", " ; Momentum (GeV); #theta", 100, 0, 3.14, 100, 0, 10)
-pVsThetaPip = TH2D( "PVsThetaPip", " ; Momentum (GeV); #theta", 100, 0, 3.14, 100, 0, 10)
-pVsThetaPim = TH2D( "PVsThetaPim", " ; Momentum (GeV); #theta", 100, 0, 3.14, 100, 0, 10)
 
-# optional weighting functions
-ftslope = TF1( "tslope", "[0]*exp(-1.0*[1]*x)", 0.0, 1.0 )
-fbwrho = TF1( "bsrho", "[0]*TMath::BreitWigner(x,[1],[2])", 0, 1.5)
-fbwDelta = TF1( "bsDelta", "[0]*TMath::BreitWigner(x,[1],[2])", 0, 1.5)
-ftslope.SetParameters(1,tslope);
-fbwrho.SetParameters(0.23,0.77,0.15);
-fbwDelta.SetParameters(0.23,1.232,0.15);
+def main(argv: Sequence[str]) -> None:
+    """Read settings and flux, generate events, and draw optional diagnostics."""
+    settings = _parse_settings(argv)
+    _read_beam_configuration(settings)
+    output_stream = hddm_s.ostream(settings.output_path)
+    ascii_output = (
+        Path(settings.output_path.replace(".hddm", ".ascii")).open("w")
+        if settings.write_ascii
+        else None
+    )
+    gRandom.SetSeed(settings.seed)
+    flux = get_flux_from_ccdb(
+        settings.run_number, settings.energy_min, settings.energy_max
+    )
+    generator = ThreeBodyGenerator(settings, flux, output_stream, ascii_output)
+    generator.run()
+    if ascii_output is not None:
+        ascii_output.close()
 
-# generate events
-while event<Nevents:
-    
-    E = hflux.GetRandom()
-    if E<Emin or E > Emax:
-        continue
-    
-    beam = TLorentzVector(0.0, 0.0, E, E)
-    w = beam + target;
-    psGen.SetDecay(w, nParticles, masses);
-    weight = psGen.Generate();
-    
-    for i in range(nParticles):
-        particlesP4[i] = psGen.GetDecay(i)
-        if i==0: pProton = particlesP4[i]
-        if i==1: pPip = particlesP4[i]
-        if i==2: pPim = particlesP4[i]
-    
-    t = ((pProton + pPip) - target).M2();
-    
-    # some optional accept/reject cases to weight by BWs or -t slope
-    if tslope > 0:
-        weight *= ftslope.Eval(abs(t));
-        
-    # BW weighting optional (add command line switches)
-    # weight *= fbwrho.Eval((*pPip+*pPim).M()); # rho
-    # weight *= fbwrho.Eval((*pPip+*pProton).M()); # Delta
-    
-    # accept/reject events by weight
-    if gRandom.Uniform() > weight:
-        continue
-        
-    # apply -t cut
-    if abs(t) > tmax or abs(t) < tmin:
-        continue
-        
-    # apply M(p pi+) cut
-    if (pPip+pProton).M() > Mmax or (pPip+pProton).M() < Mmin:
-        continue
 
-    eGamma.Fill( E );
-    mProtonPip.Fill( ( pPip + pProton ).M() );
-    mProtonPim.Fill( ( pPim + pProton ).M() );
-    mPiPi.Fill( ( pPip + pPim ).M() );
-    tPhiPiPi.Fill( abs(t) );
-    dalitz.Fill( ( pPip + pPim ).M2(), ( pPip + pProton ).M2() );
-    pVsThetaProton.Fill( pProton.Theta(), pProton.Vect().Mag() );
-    pVsThetaPip.Fill( pPip.Theta(), pPip.Vect().Mag() );
-    pVsThetaPim.Fill( pPim.Theta(), pPim.Vect().Mag() );
-    
-    # write events to HDDM file directly
-    event_hddm = hddm_s.HDDM()
-    pev = event_hddm.addPhysicsEvents(1)
-    pev[0].runNo = int(run)
-    pev[0].eventNo = int(event)
-    WriteHDDM(pev, particlesP4, particlesGeantID, particlesPDGID)
-    outfile_hddm.write(event_hddm)
-
-    if write_ascii:
-        # write events in ASCII format for genr8_2_hddm format
-        outfile.write("%d %d %d\n" % (run, event, nParticles))
-        outfile.write("0 14 %f +1 %f %f %f %f\n" % (pProton.M(), pProton.Px(), pProton.Py(), pProton.Pz(), pProton.E())) 
-        outfile.write("0 8 %f +1 %f %f %f %f\n" % (pPip.M(), pPip.Px(), pPip.Py(), pPip.Pz(), pPip.E()))
-        outfile.write("0 9 %f -1 %f %f %f %f\n" % (pPim.M(), pPim.Px(), pPim.Py(), pPim.Pz(), pPim.E()))
-
-    if event % 5000 == 0:
-        print("generated %d events" % event)
-        
-    event = event + 1
-    # end of event generation loop
-
-# draw monitoring histograms (if requested)
-if diagnostic:
-    can = TCanvas( "can", "Plot", 1000, 600 )
-    can.Divide(3,2)
-    
-    can.cd(1)
-    eGamma.Draw()
-    can.cd(2)
-    tPhiPiPi.Draw()
-    can.cd(3)
-    dalitz.Draw("colz")
-    can.cd(4)
-    mProtonPip.Draw()
-    can.cd(5)
-    mPiPi.Draw()
-    can.cd(6)
-    mProtonPim.Draw()
-    
-    can.Update()
-    
-    canKin = TCanvas( "canKin", "PlotKin", 1000, 300 )
-    canKin.Divide(3,1)
-    
-    canKin.cd(1)
-    pVsThetaProton.Draw("colz")
-    canKin.cd(2)
-    pVsThetaPip.Draw("colz")
-    canKin.cd(3)
-    pVsThetaPim.Draw("colz")
-    
-    canKin.Update()
-
-# close ASCII file (if requested)
-if write_ascii:
-    outfile.close()
+if __name__ == "__main__":
+    main(sys.argv[1:])

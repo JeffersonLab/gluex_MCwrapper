@@ -1,283 +1,335 @@
-#!/usr/bin/python3.6
-try:
-    import rcdb
-except:
-    pass
-import MySQLdb
-import sys
-import datetime
-import os.path
-import time
-from optparse import OptionParser
-from PIL import Image
+#!/usr/bin/env python3
+"""Analyze project attempts and export Plotly distributions and failure charts."""
+
 import argparse
-try:
-    import subprocess
-    from subprocess import call
-    from subprocess import Popen, PIPE
-    import socket
-    import pprint
-    import smtplib
-    from email.message import EmailMessage
-    from multiprocessing import Process, Queue
-except:
-    pass
-import plotly.express as px
-import plotly.graph_objs as go
-import plotly.figure_factory as ff
-import plotly
-from plotly.subplots import make_subplots
+import datetime
+import sys
+from pathlib import Path
+from typing import Any, List, Sequence, Union
+
+import MySQLdb
 import pandas as pd
+import plotly
+import plotly.express as px
+from mc_status import ExitCode, ProjectStatus
 
-MCWRAPPER_BOT_HOME="/u/group/halld/gluex_MCwrapper/"
-dbhost = "hallddb.jlab.org"
-dbuser = 'mcuser'
-dbpass = ''
-dbname = 'gluex_mc'
+DB_HOST = "hallddb.jlab.org"
+DB_USER = "mcuser"
+DB_NAME = "gluex_mc"
+EXIT_CODE_LABELS = {
+    ExitCode.RANDOM_TRIGGER_NOT_FOUND: "Random trigger not found",
+    ExitCode.RANDOM_TRIGGER_DOES_NOT_EXIST: "Random trigger does not exist",
+    ExitCode.OUTPUT_NOT_RETURNED: "Output data not returned",
+    None: "Still Running",
+    ExitCode.SUCCESS: "Successfully completed",
+}
 
-conn=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
-curs=conn.cursor(MySQLdb.cursors.DictCursor)
+ProjectId = Union[int, str]
 
-
-def getAverage(numlist):
-    summ=0
-    denom=0
-    listlen=len(numlist)
-    for i in range(0,listlen):
-        denom+=numlist[i]
-        summ+=i*numlist[i]
-
-    if denom != 0:
-        print("Avg number of attempts: ", float(summ)/float(denom))
-        return float(summ)/float(denom)
-    else:
-        print("Can't compute Average as it is nan")
-        return 0.
+database_connection = MySQLdb.connect(host=DB_HOST, user=DB_USER, db=DB_NAME)
+database_cursor = database_connection.cursor(MySQLdb.cursors.DictCursor)
 
 
-def getNumStartDistribution(ID, makePlot,extraConstraint="",outputLoc="./MCAnalyze_out/"):
-    print("Getting the distributions of attempts for project",ID)
-    count_q="SELECT NumStarts as Starts from Attempts where NumStarts is NOT NULL && Job_ID in (SELECT ID from Jobs where Project_ID IN (SELECT ID FROM Project where ID="+str(ID)
-    if(extraConstraint != ""):
-        count_q+=" && "+extraConstraint
-    count_q+=")) GROUP BY Job_ID;"
-
-    print(count_q)
-    curs.execute(count_q) 
-    rows=curs.fetchall()
-    print("Obtained",len(rows),"Entries")
-    rawarr=[]
-    count_arr=[]
-    xbins=[]
-    maxval=0
-
-    for row in rows:
-        if(row["Starts"] > maxval):
-            maxval=row["Starts"]
-
-    for i in range (0,maxval+1):
-        count_arr.append(0)
-        xbins.append(i)
-    for entry in rows:
-        rawarr.append(entry["Starts"])
-        count_arr[entry["Starts"]]+=1
-
-    if(makePlot):
-        df=pd.DataFrame(rawarr,columns=["Starts"])
-        fig = px.histogram(df,x="Starts",nbins=len(count_arr))
-        plotly.offline.plot(fig,filename=outputLoc+"StartsDistribution_"+str(ID)+".html",image = 'png', image_filename=outputLoc+"StartsDistribution_"+str(ID))
-
-    print(count_arr)
-
-    #return getAverage(count_arr)
+def weighted_average(counts: Sequence[int]) -> float:
+    """Compute and print the mean of values represented by frequency counts."""
+    total_count = sum(counts)
+    weighted_total = sum(value * count for value, count in enumerate(counts))
+    if total_count != 0:
+        average = float(weighted_total) / float(total_count)
+        print("Avg number of attempts: ", average)
+        return average
+    print("Can't compute Average as it is nan")
+    return 0.0
 
 
-def getAttemptDistribution(ID, makePlot,extraConstraint="",outputLoc="./MCAnalyze_out/"):
-    print("Getting the distributions of attempts for project",ID)
-    count_q="SELECT COUNT(*) as AttemptsCount from Attempts where Job_ID in (SELECT ID from Jobs where Project_ID IN (SELECT ID FROM Project where ID="+str(ID)
-    if(extraConstraint != ""):
-        count_q+=" && "+extraConstraint
-    count_q+=")) GROUP BY Job_ID;"
-
-    print(count_q)
-    curs.execute(count_q) 
-    rows=curs.fetchall()
-    print("Obtained",len(rows),"Entries")
-    rawarr=[]
-    count_arr=[]
-    xbins=[]
-    maxval=0
-
-    for row in rows:
-        if(row["AttemptsCount"] > maxval):
-            maxval=row["AttemptsCount"]
-
-    for i in range (0,maxval+1):
-        count_arr.append(0)
-        xbins.append(i)
-    for entry in rows:
-        rawarr.append(entry["AttemptsCount"])
-        count_arr[entry["AttemptsCount"]]+=1
-
-    if(makePlot):
-        df=pd.DataFrame(rawarr,columns=["Attempts_Count"])
-        fig = px.histogram(df,x="Attempts_Count",nbins=len(count_arr))
-        plotly.offline.plot(fig,filename=outputLoc+"CountDistribution_"+str(ID)+".html",image = 'png', image_filename=outputLoc+"CountDistribution_"+str(ID))
-
-    print(count_arr)
-
-    return getAverage(count_arr)
+def _count_frequencies(values: Sequence[int]) -> List[int]:
+    """Count integer values, including a zero bin for empty input."""
+    maximum = max(0, max(values, default=0))
+    counts = [0] * (maximum + 1)
+    for value in values:
+        counts[value] += 1
+    return counts
 
 
-def getAttemptFailurePie(ID,extraConstraint="",fileName="failurePie_Total",outputLoc="./MCAnalyze_out/"):
-    print("Getting the Failure Pie for project ",ID)
-    count_q="SELECT ProgramFailed as pf,COUNT(*) as AttemptsCount from Attempts where ProgramFailed is not NULL && Job_ID in (SELECT ID from Jobs where Project_ID IN (SELECT ID FROM Project where ID>"+str(ID)
+class ProjectAnalyzer:
+    """Query project activity and export charts using the supplied cursor."""
 
-    if(extraConstraint != ""):
-        count_q+=" && "+extraConstraint
-    count_q+=")) GROUP BY ProgramFailed;"
+    def __init__(
+        self,
+        cursor: "MySQLdb.cursors.DictCursor",
+        output_dir: str = "./MCAnalyze_out/",
+    ) -> None:
+        self._cursor = cursor
+        self._output_prefix = output_dir
 
-    print(count_q)
-    curs.execute(count_q) 
-    rows=curs.fetchall()
-    print("Obtained",len(rows),"Entries")
-    df=pd.DataFrame(rows)
-    if(len(rows)==0):
-        df=pd.DataFrame(columns=["pf","AttemptsCount"])
-    print("df created")
-    Null_count_q="SELECT ExitCode as pf,COUNT(*) as AttemptsCount from Attempts where ProgramFailed is NULL && Job_ID in (SELECT ID from Jobs where Project_ID IN (SELECT ID FROM Project where ID>"+str(ID)
-    if(extraConstraint != ""):
-        Null_count_q+=" && "+extraConstraint
-    Null_count_q+=")) GROUP BY ExitCode;"
+    def analyze_start_distribution(
+        self, project_id: ProjectId, make_plot: bool, extra_constraint: str = ""
+    ) -> None:
+        """Print the distribution of recorded job starts and optionally plot it."""
+        self._analyze_distribution(project_id, make_plot, extra_constraint, starts=True)
 
-    curs.execute(Null_count_q) 
-    nullrows=curs.fetchall()
+    def analyze_attempt_distribution(
+        self, project_id: ProjectId, make_plot: bool, extra_constraint: str = ""
+    ) -> float:
+        """Print the attempt distribution, optionally plot it, and return its mean."""
+        counts = self._analyze_distribution(
+            project_id, make_plot, extra_constraint, starts=False
+        )
+        return weighted_average(counts)
 
-    for row in nullrows:
-        if row["pf"]==232:
-            row["pf"]="Random trigger not found"
-        elif row["pf"]==-232:
-            row["pf"]="Random trigger does not exist"
-        elif row["pf"]==404:
-            row["pf"]="Output data not returned"
-        elif row["pf"] is None:
-            row["pf"]="Still Running"
-        elif row["pf"]==0:
-            row["pf"]="Successfully completed"
+    def _project_selection(
+        self, project_id: ProjectId, extra_constraint: str, comparison: str = "="
+    ) -> str:
+        """Build a Project subquery with an optional caller-supplied filter."""
+        query = f"SELECT ID FROM Project WHERE ID {comparison} {project_id}"
+        if extra_constraint != "":
+            query = f"{query} && {extra_constraint}"
+        return query
 
-    print(nullrows)
-    df2=pd.DataFrame(nullrows)
-    print("df2 created")
-    DF=pd.concat([df,df2])
-    print("concat completed")
+    def _analyze_distribution(
+        self,
+        project_id: ProjectId,
+        make_plot: bool,
+        extra_constraint: str,
+        starts: bool,
+    ) -> List[int]:
+        print("Getting the distributions of attempts for project", project_id)
+        if starts:
+            selection = "NumStarts AS Starts"
+            condition = "NumStarts IS NOT NULL && "
+            value_key = plot_column = "Starts"
+            file_prefix = "StartsDistribution_"
+        else:
+            selection = "COUNT(*) AS AttemptsCount"
+            condition = ""
+            value_key = "AttemptsCount"
+            plot_column = "Attempts_Count"
+            file_prefix = "CountDistribution_"
+        project_selection = self._project_selection(project_id, extra_constraint)
+        query = (
+            f"SELECT {selection} FROM Attempts "
+            f"WHERE {condition}Job_ID IN ("
+            "SELECT ID FROM Jobs "
+            f"WHERE Project_ID IN ({project_selection})"
+            ") "
+            "GROUP BY Job_ID;"
+        )
+        print(query)
+        self._cursor.execute(query)
+        rows = self._cursor.fetchall()
+        print("Obtained", len(rows), "Entries")
+        values = [row[value_key] for row in rows]
+        counts = _count_frequencies(values)
+        if make_plot:
+            frame = pd.DataFrame(values, columns=[plot_column])
+            figure = px.histogram(frame, x=plot_column, nbins=len(counts))
+            self._write_plot(figure, f"{file_prefix}{project_id}")
+        print(counts)
+        return counts
 
-    titleString="Failure Blame For "
+    def _write_plot(
+        self,
+        figure: "plotly.graph_objs.Figure",
+        file_name: str,
+        image_name: str = "",
+    ) -> None:
+        """Write an HTML plot with PNG export settings."""
+        plotly.offline.plot(
+            figure,
+            filename=str(self._plot_path(f"{file_name}.html")),
+            image="png",
+            image_filename=str(self._plot_path(image_name or file_name)),
+        )
 
-    if(int(ID)==0):
-        titleString+="All Projects"
+    def _plot_path(self, name: str) -> Path:
+        """Apply the literal export prefix before pathlib normalizes the result."""
+        return Path(f"{self._output_prefix}{name}")
 
-    if(extraConstraint != ""):
-        titleString+=" passing "+extraConstraint
+    def plot_failure_breakdown(
+        self,
+        project_id: ProjectId,
+        extra_constraint: str = "",
+        file_name: str = "failurePie_Total",
+    ) -> None:
+        """Plot failure programs and exit codes for the selected project range."""
+        print("Getting the Failure Pie for project ", project_id)
+        project_selection = self._project_selection(
+            project_id, extra_constraint, comparison=">"
+        )
+        query = (
+            "SELECT ProgramFailed AS pf, COUNT(*) AS AttemptsCount FROM Attempts "
+            "WHERE ProgramFailed IS NOT NULL "
+            "&& Job_ID IN ("
+            "SELECT ID FROM Jobs "
+            f"WHERE Project_ID IN ({project_selection})"
+            ") "
+            "GROUP BY ProgramFailed;"
+        )
+        print(query)
+        self._cursor.execute(query)
+        rows = self._cursor.fetchall()
+        print("Obtained", len(rows), "Entries")
+        failures = pd.DataFrame(rows)
+        if len(rows) == 0:
+            failures = pd.DataFrame(columns=["pf", "AttemptsCount"])
+        print("df created")
 
-    titleString+=" ("+ str(df['AttemptsCount'].sum()+df2['AttemptsCount'].sum()) +" Attempts) "
+        exit_code_query = (
+            "SELECT ExitCode AS pf, COUNT(*) AS AttemptsCount FROM Attempts "
+            "WHERE ProgramFailed IS NULL "
+            "&& Job_ID IN ("
+            "SELECT ID FROM Jobs "
+            f"WHERE Project_ID IN ({project_selection})"
+            ") "
+            "GROUP BY ExitCode;"
+        )
+        self._cursor.execute(exit_code_query)
+        exit_code_rows = self._cursor.fetchall()
+        for row in exit_code_rows:
+            row["pf"] = EXIT_CODE_LABELS.get(row["pf"], row["pf"])
+        print(exit_code_rows)
+        exit_codes = pd.DataFrame(exit_code_rows)
+        print("df2 created")
+        combined = pd.concat([failures, exit_codes])
+        print("concat completed")
 
-    fig = px.pie(DF, values='AttemptsCount', names='pf', title=titleString)
-    fig.update_traces(textposition='inside', textinfo='percent+label')
-    plotly.offline.plot(fig,filename=outputLoc+fileName+".html",image = 'png', image_filename=outputLoc+fileName)
+        title = "Failure Blame For "
+        if int(project_id) == 0:
+            title = f"{title}All Projects"
+        if extra_constraint != "":
+            title = f"{title} passing {extra_constraint}"
+        attempt_count = (
+            failures["AttemptsCount"].sum() + exit_codes["AttemptsCount"].sum()
+        )
+        title = f"{title} ({attempt_count} Attempts) "
+        figure = px.pie(combined, values="AttemptsCount", names="pf", title=title)
+        figure.update_traces(textposition="inside", textinfo="percent+label")
+        self._write_plot(figure, file_name)
 
+    def analyze(
+        self, project_id: str, xaxis_key: str, extra_constraint: str = ""
+    ) -> None:
+        """Analyze one project or a filtered collection of projects."""
+        if int(project_id) != 0:
+            print("Analyzing project #", project_id)
+            self.analyze_attempt_distribution(project_id, True)
+            self.analyze_start_distribution(project_id, True)
+            self.plot_failure_breakdown(
+                0, f"ID = {project_id}", f"failurePie_Proj{project_id}"
+            )
+        else:
+            self._analyze_all_projects(project_id, xaxis_key, extra_constraint)
 
-def main(argv):
-    ap = argparse.ArgumentParser()
-
-    ap.add_argument("-P", "--projectID", required=True,
-    help="The ID number of the project to be analyzed")
-
-    ap.add_argument("-x", "--xaxis", required=False,
-    help="the x axis key for the avg attempts per job")
-
-    ap.add_argument("-e", "--extraConstraint", required=False,
-    help="an added constraint agains the Project table")
-
-    ap.add_argument("-o", "--outputloc", required=False,
-    help="path to the output directory")
-
-    args = vars(ap.parse_args())
-
-    extraConstraint=""
-
-    if(not args["extraConstraint"] is None):
-        extraConstraint=args["extraConstraint"]
-
-    outputLoc="./"
-
-    if(not args["outputloc"] is None):
-        outputLoc=args["outputloc"]
-
-    outputLoc+="MCAnalyze_out/"
-
-    subprocess.call("mkdir -p "+outputLoc,shell=True)
-
-    ProjectID=args["projectID"]
-    Xaxis_key=args["xaxis"]
-
-    if int(ProjectID) != 0:
-        print("Analyzing project #",ProjectID)
-        getAttemptDistribution(ProjectID,True,outputLoc=outputLoc)
-        getNumStartDistribution(ProjectID,True,outputLoc=outputLoc)
-        getAttemptFailurePie(0,"ID="+str(ProjectID),"failurePie_Proj"+str(ProjectID),outputLoc)
-
-    else:
+    def _analyze_all_projects(
+        self, project_id: str, xaxis_key: str, extra_constraint: str
+    ) -> None:
         print("Total analysis")
-        weightedAvg_arr=[]
-        getAll_q="SELECT * FROM Project WHERE Tested>0 "
-        if(extraConstraint != ""):
-            getAll_q+=" && "+extraConstraint
-        getAll_q+=" Order by ID asc"
-
-        print(getAll_q)
-        curs.execute(getAll_q) 
-        rows=curs.fetchall()
-        Totaldf = pd.DataFrame(rows)
-        x_arr=[]
-
+        query = f"SELECT * FROM Project WHERE Tested > {ProjectStatus.UNTESTED} "
+        if extra_constraint != "":
+            query = f"{query} && {extra_constraint}"
+        query = f"{query} ORDER BY ID ASC"
+        print(query)
+        self._cursor.execute(query)
+        rows = self._cursor.fetchall()
+        projects = pd.DataFrame(rows)
+        x_values: List[Any] = []
+        averages: List[float] = []
         for row in rows:
-            if(not row[Xaxis_key]):
-                x_arr.append("NA")
+            x_values.append(row[xaxis_key] if row[xaxis_key] else "NA")
+            averages.append(self.analyze_attempt_distribution(row["ID"], False))
+        projects["avg_attempts_per_jobs"] = averages
+        title = "All Projects Status>0"
+        if extra_constraint != "":
+            title = f"Projects passing {extra_constraint}"
+        if str(x_values[0]).isnumeric() or isinstance(x_values[0], datetime.datetime):
+            figure = px.scatter(x=x_values, y=averages)
+            figure.update_layout(
+                yaxis_type="log",
+                xaxis_title=xaxis_key,
+                yaxis_title="avg_attempts_per_jobs",
+                title=title,
+            )
+        else:
+            figure = px.histogram(
+                projects, x=xaxis_key, y="avg_attempts_per_jobs", histfunc="avg"
+            )
+        self._write_plot(
+            figure, "CountDistribution_Total", "AvgCountDistribution_Total"
+        )
+        print("XAxis:", xaxis_key)
+        if "Set" not in xaxis_key:
+            self.plot_failure_breakdown(project_id, extra_constraint)
+            return
+
+        self._cursor.execute(f"SELECT DISTINCT {xaxis_key} FROM Project")
+        rows = self._cursor.fetchall()
+        for row in rows:
+            print(row)
+            key = row[xaxis_key] if row[xaxis_key] is not None else "NULL"
+            print("KEY:", key)
+            if key != "NULL":
+                constraint = f'{xaxis_key} = "{key}"'
             else:
-                x_arr.append(row[Xaxis_key])
-            weightedAvg_arr.append(getAttemptDistribution(row["ID"],False))
-        #print(weightedAvg_arr)
-        Totaldf["avg_attempts_per_jobs"]= weightedAvg_arr
-        #print("is numeric?",str(x_arr[0]).isnumeric())
-        titleString="All Projects Status>0"
-        if(extraConstraint != ""):
-            titleString="Projects passing "+extraConstraint
-        if(str(x_arr[0]).isnumeric() or isinstance(x_arr[0],datetime.datetime)):
-            fig = px.scatter(x=x_arr, y=weightedAvg_arr)
-            fig.update_layout(yaxis_type="log",xaxis_title=Xaxis_key,yaxis_title="avg_attempts_per_jobs",title=titleString)
-        else:
-            fig = px.histogram(Totaldf,x=Xaxis_key,y="avg_attempts_per_jobs", histfunc='avg')
+                constraint = f"{xaxis_key} IS {key}"
+            self.plot_failure_breakdown(project_id, constraint, f"FailurePie_{key}")
 
-        plotly.offline.plot(fig,filename=outputLoc+"/CountDistribution_Total"+".html",image = 'png', image_filename=outputLoc+"/AvgCountDistribution_Total")
 
-        print("XAxis:",Xaxis_key)
-        if("Set" not in Xaxis_key):
-            getAttemptFailurePie(ProjectID,extraConstraint,"failurePie_Total",outputLoc)
-        else:
-            vset_q="SELECT DISTINCT "+Xaxis_key+" FROM Project"
-            curs.execute(vset_q) 
-            rows=curs.fetchall()
-            for row in rows:
-                print(row)
-                key="NULL"
-                if(not row[Xaxis_key] is None):
-                    key=row[Xaxis_key]
-                print("KEY:",key)
-                if key != "NULL":
-                    getAttemptFailurePie(ProjectID,Xaxis_key+"=\""+key+"\"","FailurePie_"+key,outputLoc)
-                else:
-                    getAttemptFailurePie(ProjectID,Xaxis_key+" is "+key,"FailurePie_"+key,outputLoc)
+def _analysis_output_directory(prefix: str) -> Path:
+    """Append MCAnalyze_out to the -o prefix to form the output directory."""
+    return Path(f"{prefix}MCAnalyze_out")
+
+
+def _parse_args() -> argparse.Namespace:
+    """Parse project selection, plot constraints, and the output prefix."""
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-P",
+        "--projectID",
+        dest="project_id",
+        metavar="PROJECTID",
+        required=True,
+        help="The ID number of the project to be analyzed",
+    )
+    parser.add_argument(
+        "-x",
+        "--xaxis",
+        dest="xaxis_key",
+        metavar="XAXIS",
+        required=False,
+        help="the x axis key for the avg attempts per job",
+    )
+    parser.add_argument(
+        "-e",
+        "--extraConstraint",
+        dest="extra_constraint",
+        metavar="EXTRACONSTRAINT",
+        required=False,
+        default="",
+        help="an added constraint agains the Project table",
+    )
+    parser.add_argument(
+        "-o",
+        "--outputloc",
+        dest="output_dir",
+        metavar="OUTPUTLOC",
+        required=False,
+        type=_analysis_output_directory,
+        default="./",
+        help="path to the output directory",
+    )
+    return parser.parse_args()
+
+
+def main(argv: Sequence[str]) -> None:
+    """Analyze projects selected by the process command line."""
+    args = _parse_args()
+    try:
+        args.output_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as error:
+        print(error, file=sys.stderr)
+    analyzer = ProjectAnalyzer(database_cursor, f"{args.output_dir}/")
+    analyzer.analyze(args.project_id, args.xaxis_key, args.extra_constraint)
 
 
 if __name__ == "__main__":
-   main(sys.argv[1:])
+    main(sys.argv[1:])

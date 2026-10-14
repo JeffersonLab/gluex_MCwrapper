@@ -1,296 +1,299 @@
 #!/usr/bin/env python3
-##########################################################################################################################
-#
-# 2017/03 Thomas Britton
-#
-#   Options:
-#      MC variation can be changed by supplying "variation=xxxxx" option otherwise default: mc
-#      the number of events to be generated per file (except for any remainder) can be set by "per_file=xxxx" default: 1000
-#
-#      If the user does not want genr8, geant, smearing, reconstruction to be performed the sequence will be terminated at the first instance of genr8=0,geant=0,mcsmear=0,recon=0 default: all on
-#      Similarly, if the user wishes to retain the files created by any step you can supply the cleangenr8=0, cleangeant=0, cleanmcsmear=0, or cleanrecon=0 options.  By default all but the reconstruction files #      are cleaned. 
-#
-#      The reconstruction step is multi-threaded, for this step, if enabled, the script will use 4 threads.  This threading can be changed with the "numthreads=xxx" option 
-#
-#      By default the job will run interactively in the local directory.  If the user wishes to submit the jobs to swif the option "swif=1" must be supplied.
-#
-# SWIF DOCUMENTATION:
-# https://scicomp.jlab.org/docs/swif
-# https://scicomp.jlab.org/docs/swif-cli
-# https://scicomp.jlab.org/help/swif/add-job.txt #consider phase!
-#
-##########################################################################################################################
-import MySQLdb
-#import MySQLdb.cursors
-from os import environ
-from optparse import OptionParser
-import os.path
-#import mysql.connector
-import time
-import os
-import getpass
-import sys
-import re
-import subprocess
-from subprocess import call
-from subprocess import Popen, PIPE
-import socket
-import glob
-import json
-import time
-from datetime import timedelta
-from datetime import datetime
-import smtplib
-from email.message import EmailMessage
-from multiprocessing import Process
-import random
-import pipes
-import random
-import pwd
+"""Monitor OSG attempts and mark those with all expected output files as complete."""
 
-MCWRAPPER_BOT_HOST_NAME=str(socket.gethostname())
-dbhost = "hallddb.jlab.org"
-dbuser = 'mcuser'
-dbpass = ''
-dbname = 'gluex_mc'
+# Originally written by Thomas Britton, March 2017.
+
+import os
+import pwd
+import random
+import shlex
+import socket
+import subprocess
+import sys
+import time
+from multiprocessing import Process
+from pathlib import Path
+from typing import Any, List, Mapping, Sequence, TypeVar
+
+import MySQLdb
+from mc_status import DATA_UNVERIFIED, AttemptStatus, ExitCode, ProjectStatus
+
+HOST_NAME = str(socket.gethostname())
+DB_HOST = "hallddb.jlab.org"
+DB_USER = "mcuser"
+DB_NAME = "gluex_mc"
+ALLOWED_USERS = ("tbritton", "mcwrap")
+WORKER_COUNT = 10
+PELICAN_SERVER = "osdf://jlab-osdf/gluex/osgpool/REQUESTEDMC_OUTPUT/"
+REMOTE_OUTPUT_ROOTS = (
+    "/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/",
+    "/mss/halld/gluex_simulations/REQUESTED_MC/",
+    "/work/halld/gluex_simulations/REQUESTED_MC/",
+)
 
 try:
-    dbcnx=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
-    dbcursor=dbcnx.cursor(MySQLdb.cursors.DictCursor)
-except:
-    print("WARNING: CANNOT CONNECT TO DATABASE.  JOBS WILL NOT BE CONTROLLED OR MONITORED")
-    pass
+    database_connection = MySQLdb.connect(host=DB_HOST, user=DB_USER, db=DB_NAME)
+    database_cursor = database_connection.cursor(MySQLdb.cursors.DictCursor)
+except BaseException:
+    print(
+        "WARNING: CANNOT CONNECT TO DATABASE.  JOBS WILL NOT BE CONTROLLED OR MONITORED"
+    )
 
-runner_name=pwd.getpwuid( os.getuid() )[0]
-
-if( not (runner_name=="tbritton" or runner_name=="mcwrap")):
+runner_name = pwd.getpwuid(os.getuid())[0]
+if runner_name not in ALLOWED_USERS:
     print("ERROR: You must be tbritton or mcwrap to run this script")
     sys.exit(1)
 
+Item = TypeVar("Item")
 
-def exists_remote(host, path):
-    """Test if a file exists at path on a host accessible with SSH."""
-    status = subprocess.call(
-        ['ssh', host, 'test -f {}'.format(pipes.quote(path))])
+
+def remote_file_exists(host: str, path: str) -> bool:
+    """Return whether the remote file check succeeds over SSH."""
+    status = subprocess.call(["ssh", host, f"test -f {shlex.quote(path)}"])
     if status == 0:
         return True
     if status == 1:
         return False
-    raise Exception('SSH failed')
+    raise Exception("SSH failed")
 
 
-def CheckForFile(rootLoc,expFile):
-    found=False
-    subloc="hddm"
-    parse_expFile=expFile.split(".")
-    #print(parse_expFile[len(parse_expFile)-1])
-    if(parse_expFile[len(parse_expFile)-1]=="root"):
-        subloc="root/monitoring_hists"
+class OutputFileLocator:
+    """Check expected output files through Pelican, local storage, and SSH."""
 
-    os.environ["BEARER_TOKEN_FILE"]="/var/run/user/10967/bt_u10967"
-    os.environ["XDG_RUNTIME_DIR"]="/run/user/10967"
+    def __init__(self, user_name: str) -> None:
+        self._user_name = user_name
 
-    token_str='eval `ssh-agent`; /usr/bin/ssh-add;'
-    agent_kill_str="; ssh-agent -k"
+    def exists(self, root_location: str, expected_file: str) -> bool:
+        """Check file existence in configured storage locations, in search order."""
+        subdirectory = "hddm"
+        if expected_file.split(".")[-1] == "root":
+            subdirectory = "root/monitoring_hists"
 
-    PELICAN_SERVER="osdf://jlab-osdf/gluex/osgpool/REQUESTEDMC_OUTPUT/"
-    file_check="pelican object ls "+PELICAN_SERVER+rootLoc+"/"+subloc+"/"+expFile
+        os.environ["BEARER_TOKEN_FILE"] = "/var/run/user/10967/bt_u10967"
+        os.environ["XDG_RUNTIME_DIR"] = "/run/user/10967"
+        token_setup = "eval `ssh-agent`; /usr/bin/ssh-add;"
+        agent_cleanup = "; ssh-agent -k"
+        relative_path = f"{root_location}/{subdirectory}/{expected_file}"
+        file_check = f"pelican object ls {PELICAN_SERVER}{relative_path}"
+        command = f"{token_setup}{file_check}{agent_cleanup}"
+        print(command)
+        environment = os.environ.copy()
+        process = subprocess.Popen(
+            command,
+            env=environment,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            bufsize=-1,
+            shell=True,
+            close_fds=True,
+        )
+        output, errors = process.communicate()
+        print("check for file:", file_check)
+        pelican_found = f"Failure getting {PELICAN_SERVER}" not in errors.decode(
+            "utf-8"
+        ) and expected_file in output.decode("utf-8")
+        if pelican_found:
+            print("FILE FOUND VIA PELICAN")
 
-    print(token_str+file_check+agent_kill_str)
-    my_env=os.environ.copy()
-
-    p = Popen(token_str+file_check+agent_kill_str, env=my_env ,stdin=PIPE,stdout=PIPE, stderr=PIPE,bufsize=-1,shell=True,close_fds=True)
-    output, errors = p.communicate()
-
-    print("check for file:",file_check)
-    #print("output:",output)
-    #print("errors:",errors)
-
-    pelican_found=False
-
-    if "Failure getting "+PELICAN_SERVER not in str(errors, 'utf-8') and expFile in str(output, 'utf-8'):
-        print("FILE FOUND VIA PELICAN")
-        pelican_found=True
-
-    #if(os.path.isfile('/osgpool/halld/tbritton/REQUESTEDMC_OUTPUT/'+rootLoc+"/"+subloc+"/"+expFile) or os.path.isfile('/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) or os.path.isfile('/mss/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) ):
-    if(os.path.isfile('/osgpool/halld/'+runner_name+'/REQUESTEDMC_OUTPUT/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote(runner_name+'@dtn1902','/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote(runner_name+'@dtn1902','/mss/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) or exists_remote(runner_name+'@dtn1902','/work/halld/gluex_simulations/REQUESTED_MC/'+rootLoc+"/"+subloc+"/"+expFile) or pelican_found):
-        found=True
-    else:
-        print(rootLoc+"/"+subloc+"/"+expFile+"   NOT FOUND")
-
-    print("File found?",found)
-    return found
-
-
-def checkJobFilesForCompletion(comp_assignment):
-    #OutstandingProjectsQuery="SELECT * FROM Project WHERE (Is_Dispatched != '0' && Tested != '-1' && Tested != '2' ) && Notified is NULL"
-    #dbcursor.execute(OutstandingProjectsQuery)
-    #OutstandingProjects=dbcursor.fetchall()
-    dbcnx_comp=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
-    dbcursor_comp=dbcnx_comp.cursor(MySQLdb.cursors.DictCursor)
-    outdir_root="/osgpool/halld/"+runner_name+"/REQUESTEDMC_OUTPUT/"
-    print("checking "+str(len(comp_assignment)))
-    for attempt in comp_assignment:#OutstandingProjects:
-
-        jobinfoq="SELECT * from Jobs where ID="+str(attempt["Job_ID"])
-        dbcursor.execute(jobinfoq)
-        job = dbcursor.fetchall()[0]
-
-        projq="SELECT * From Project Where ID="+str(job["Project_ID"])
-        dbcursor.execute(projq)
-        proj = dbcursor.fetchall()[0]
-
-        locparts=proj['OutputLocation'].split("/")
-
-        #print("~~~~~~~~~~~~~~~~~~")
-        #print("ProjID:",proj['ID'])
-        files=[]
-        dirs=[]
-        #print locparts[len(locparts)-2]
-        for r, dirs, files in os.walk(outdir_root+locparts[len(locparts)-2]) : 
-            files = [f for f in files if not f[0] == '.']
-            dirs[:] = [d for d in dirs if not d[0] == '.']
-
-        #print("NumFiles:",len(files))
-        #print(dirs)
-
-        #DISTINCT ID ------in query below
-
-        #print(fulfilledJobs)
-
-        #print("Jobs fulfilled:",str(len(fulfilledJobs)))
-        if(proj["Tested"]==2 or proj["Tested"]==3):
-            continue
-
-        rootLoc=proj['OutputLocation'].split("REQUESTED_MC")[1]#.replace("/","")
-        nullify_list=[]
-
-        #print("Data already Verified?",job['DataVerified'])
-        if(job['DataVerified'] !=0 ):
-            continue
-
-        STANDARD_NAME=str(job['RunNumber']).zfill(6)+'_'+str(job['FileNumber']).zfill(3)
-        if(proj['Generator']!="file:"):
-            STANDARD_NAME=proj['Generator']+'_'+STANDARD_NAME
-            #print(STANDARD_NAME)
-
-        #check if postprocessor is being run
-        postproc_append=""
-        if(proj['GenPostProcessing'] != None and proj['GenPostProcessing'] != ""):
-            print("Postprocessing:",proj['GenPostProcessing'])
-            postproc_append="_"+proj['GenPostProcessing'].split(":")[0]
-
-        Expected_returned_files=[]
-
-        if(str(proj['RunGeneration'])=="1" and str(proj['SaveGeneration'])=="1" and str(proj['Generator'])!="particle_gun"):
-            Expected_returned_files.append(STANDARD_NAME+postproc_append+".hddm")
-
-        if(str(proj['RunGeant'])=="1" and str(proj['SaveGeant'])=="1"):
-            Expected_returned_files.append(STANDARD_NAME+'_geant'+str(proj['GeantVersion'])+postproc_append+'.hddm')
-
-        if(str(proj['RunSmear'])=="1" and str(proj['SaveSmear'])=="1"):
-            Expected_returned_files.append(STANDARD_NAME+'_geant'+str(proj['GeantVersion'])+'_smeared'+postproc_append+'.hddm')
-
-        if(str(proj['RunReconstruction'])=="1" and str(proj['SaveReconstruction'])=="1"):
-            Expected_returned_files.append('dana_rest_'+STANDARD_NAME+postproc_append+'.hddm')
-            Expected_returned_files.append('hd_root_'+STANDARD_NAME+postproc_append+'.root')
-
-        found_AllexpFile=True
-
-        for expFile in Expected_returned_files:
-            #print(expFile)
-            #print("checking for",expFile,"@",rootLoc)
-            found=CheckForFile(rootLoc,expFile)
-            if not found:
-                #print(expFile+"   NOT FOUND!!!!")
-                found_AllexpFile=False
-                break
-
-        if found_AllexpFile:
-
-            Update_q="UPDATE Attempts Set Status=44,ExitCode=0 where ID="+str(attempt["ID"])
-            print(Update_q)
-            dbcursor_comp.execute(Update_q)
-            dbcnx_comp.commit()
-
-        else:
-            continue
+        local_path = (
+            Path("/osgpool/halld")
+            / self._user_name
+            / "REQUESTEDMC_OUTPUT"
+            / relative_path.lstrip("/")
+        )
+        found = (
+            local_path.is_file()
+            or any(
+                remote_file_exists(
+                    f"{self._user_name}@dtn1902", f"{root}{relative_path}"
+                )
+                for root in REMOTE_OUTPUT_ROOTS
+            )
+            or pelican_found
+        )
+        if not found:
+            print(f"{relative_path}   NOT FOUND")
+        print("File found?", found)
+        return found
 
 
-def array_split(lst,n):
-    to_return=[]
-    for i in range(0,n):
-        to_return.append([])
+def expected_output_files(
+    job: Mapping[str, Any], project: Mapping[str, Any]
+) -> List[str]:
+    """Build output filenames from the job and project save flags."""
+    standard_name = (
+        f"{str(job['RunNumber']).zfill(6)}_{str(job['FileNumber']).zfill(3)}"
+    )
+    if project["Generator"] != "file:":
+        standard_name = f"{project['Generator']}_{standard_name}"
+    postprocessor_suffix = ""
+    if project["GenPostProcessing"] is not None and project["GenPostProcessing"] != "":
+        print("Postprocessing:", project["GenPostProcessing"])
+        postprocessor_suffix = f"_{project['GenPostProcessing'].split(':')[0]}"
 
-    for count, ele in enumerate(lst):
-        #print(ele)
-        index=count%n
-        #print(index)
-        to_return[index].append(ele)
+    files = []
+    if (
+        str(project["RunGeneration"]) == "1"
+        and str(project["SaveGeneration"]) == "1"
+        and str(project["Generator"]) != "particle_gun"
+    ):
+        files.append(f"{standard_name}{postprocessor_suffix}.hddm")
+    if str(project["RunGeant"]) == "1" and str(project["SaveGeant"]) == "1":
+        files.append(
+            f"{standard_name}_geant{project['GeantVersion']}{postprocessor_suffix}.hddm"
+        )
+    if str(project["RunSmear"]) == "1" and str(project["SaveSmear"]) == "1":
+        files.append(
+            f"{standard_name}_geant{project['GeantVersion']}"
+            f"_smeared{postprocessor_suffix}.hddm"
+        )
+    if (
+        str(project["RunReconstruction"]) == "1"
+        and str(project["SaveReconstruction"]) == "1"
+    ):
+        files.append(f"dana_rest_{standard_name}{postprocessor_suffix}.hddm")
+        files.append(f"hd_root_{standard_name}{postprocessor_suffix}.root")
+    return files
 
-    #print(count)
-    #print(len(to_return))
 
-    return to_return
+class JobCompletionChecker:
+    """Check job outputs and commit completed-attempt status updates."""
+
+    def __init__(
+        self, lookup_cursor: "MySQLdb.cursors.DictCursor", user_name: str
+    ) -> None:
+        self._lookup_cursor = lookup_cursor
+        self._user_name = user_name
+        self._file_locator = OutputFileLocator(user_name)
+
+    def check(self, assignments: Sequence[Mapping[str, Any]]) -> None:
+        """Look up attempts and update status in separate database sessions."""
+        connection = MySQLdb.connect(host=DB_HOST, user=DB_USER, db=DB_NAME)
+        update_cursor = connection.cursor(MySQLdb.cursors.DictCursor)
+        output_root = Path("/osgpool/halld") / self._user_name / "REQUESTEDMC_OUTPUT"
+        print(f"checking {len(assignments)}")
+        for attempt in assignments:
+            self._lookup_cursor.execute(
+                f"SELECT * FROM Jobs WHERE ID = {attempt['Job_ID']}"
+            )
+            job = self._lookup_cursor.fetchall()[0]
+            self._lookup_cursor.execute(
+                f"SELECT * FROM Project WHERE ID = {job['Project_ID']}"
+            )
+            project = self._lookup_cursor.fetchall()[0]
+            location = project["OutputLocation"]
+            output_path = (
+                Path(location) if location.endswith("/") else Path(location).parent
+            )
+            for _root, directories, _files in os.walk(output_root / output_path.name):
+                directories[:] = [
+                    directory for directory in directories if directory[0] != "."
+                ]
+            if project["Tested"] in (
+                ProjectStatus.STOPPED,
+                ProjectStatus.CANCEL_REQUESTED,
+            ):
+                continue
+            root_location = project["OutputLocation"].split("REQUESTED_MC")[1]
+            if job["DataVerified"] != DATA_UNVERIFIED:
+                continue
+            files = expected_output_files(job, project)
+            all_files_found = all(
+                self._file_locator.exists(root_location, file_name)
+                for file_name in files
+            )
+            if all_files_found:
+                query = (
+                    f"UPDATE Attempts SET Status = {AttemptStatus.OUTPUTS_FOUND}, "
+                    f"ExitCode = {ExitCode.SUCCESS} "
+                    f"WHERE ID = {attempt['ID']}"
+                )
+                print(query)
+                update_cursor.execute(query)
+                connection.commit()
 
 
-########################################################## MAIN ##########################################################
+def check_job_files_for_completion(assignments: Sequence[Mapping[str, Any]]) -> None:
+    """Module-level multiprocessing entry point for completion checks."""
+    JobCompletionChecker(database_cursor, runner_name).check(assignments)
 
-def main(argv):
 
-    runnum=0
-    runmax=-1
-    spawnNum=10
-    numOverRide=False
+def split_round_robin(items: Sequence[Item], parts: int) -> List[List[Item]]:
+    """Distribute items across worker assignments in round-robin order."""
+    assignments: List[List[Item]] = [[] for _ in range(parts)]
+    for index, item in enumerate(items):
+        assignments[index % parts].append(item)
+    return assignments
 
-    if(len(argv) !=0):
-        numOverRide=True
 
-    numprocesses_running=subprocess.check_output(["echo `ps all -u "+runner_name+" | grep MCObserver.py | grep -v grep | wc -l`"], shell=True)
+class JobObserver:
+    """Fetch eligible attempts and schedule their completion-check workers."""
 
-    print(int(numprocesses_running))
-    if(int(numprocesses_running) <2 or numOverRide):
-        while(runnum<runmax or runmax==-1):
-            runnum=runnum+1
+    def __init__(self, cursor: "MySQLdb.cursors.DictCursor", host_name: str) -> None:
+        self._cursor = cursor
+        self._host_name = host_name
 
+    def run(self) -> None:
+        """Monitor repeatedly; print exceptions and stop when an iteration fails."""
+        while True:
             try:
-                queryosgjobs="SELECT * from Attempts WHERE BatchSystem='OSG' && SubmitHost=\""+MCWRAPPER_BOT_HOST_NAME+"\" && Status !='4' && Status !='3' && Status!= '6' && Status != '5' && Status != '44';"# || (Status='4' && ExitCode != 0 && ProgramFailed is NULL) ORDER BY ID desc;"
-                #print queryosgjobs
-                dbcursor.execute(queryosgjobs)
-                Alljobs = list(dbcursor.fetchall())
-                #print(Alljobs[:5])
-                random.shuffle(Alljobs)
-                #print(Alljobs[:5])
-                Monitoring_assignments=array_split(Alljobs,spawnNum)
-                spawns=[]
-                for i in range(0,spawnNum):
-                    time.sleep(random.randint(1,spawnNum))
-                    print("block "+str(i))
-                    print(len(Monitoring_assignments[i]))
-                    if(len(Monitoring_assignments[i])>0):
-                        p=Process(target=checkJobFilesForCompletion,args=(Monitoring_assignments[i],))
-                        p.daemon = True
-                        spawns.append(p)
-
-                    #p.join()
-
-                for i in range(0,len(spawns)):
-                    #print("join "+str(i))
-                    time.sleep(random.randint(1,spawnNum))
-                    spawns[i].start()
-
-                #time.sleep(2)
-                for i in range(0,len(spawns)):
-                    if spawns[i].is_alive():
-                        #print("join "+str(i))
-                        spawns[i].join()
-
-            except Exception as e:
-                print(e)
+                self._monitor_once()
+            except Exception as error:
+                print(error)
                 break
 
-    dbcnx.close()
+    def _monitor_once(self) -> None:
+        query = (
+            "SELECT * FROM Attempts "
+            "WHERE BatchSystem = 'OSG' "
+            f'&& SubmitHost = "{self._host_name}" '
+            f"&& Status != '{AttemptStatus.COMPLETED}' "
+            f"&& Status != '{AttemptStatus.REMOVED}' "
+            f"&& Status != '{AttemptStatus.INACTIVE}' "
+            f"&& Status != '{AttemptStatus.HELD}' "
+            f"&& Status != '{AttemptStatus.OUTPUTS_FOUND}';"
+        )
+        self._cursor.execute(query)
+        jobs = list(self._cursor.fetchall())
+        random.shuffle(jobs)
+        assignments = split_round_robin(jobs, WORKER_COUNT)
+        workers = []
+        for index, assignment in enumerate(assignments):
+            time.sleep(random.randint(1, WORKER_COUNT))
+            print(f"block {index}")
+            print(len(assignment))
+            if assignment:
+                worker = Process(
+                    target=check_job_files_for_completion, args=(assignment,)
+                )
+                worker.daemon = True
+                workers.append(worker)
+        for worker in workers:
+            time.sleep(random.randint(1, WORKER_COUNT))
+            worker.start()
+        for worker in workers:
+            if worker.is_alive():
+                worker.join()
+
+
+def _count_running_observers(user_name: str) -> int:
+    """Count observer processes owned by the supplied user."""
+    command = (
+        f"echo `ps all -u {user_name} | grep MCObserver.py | grep -v grep | wc -l`"
+    )
+    return int(subprocess.check_output([command], shell=True))
+
+
+def main(argv: Sequence[str]) -> None:
+    """Observe attempts when permitted; any argument overrides the process limit."""
+    override_process_limit = bool(argv)
+    process_count = _count_running_observers(runner_name)
+    print(process_count)
+    if process_count < 2 or override_process_limit:
+        JobObserver(database_cursor, HOST_NAME).run()
+    database_connection.close()
 
 
 if __name__ == "__main__":
-   main(sys.argv[1:])
+    main(sys.argv[1:])
