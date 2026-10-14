@@ -1,0 +1,6 @@
+[MakeMC.{sh,csh}]
+indent_style = space
+indent_size = 4
+
+[MakeMC.sh]
+shell_variant = bash
