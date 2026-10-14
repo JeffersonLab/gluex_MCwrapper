@@ -32,9 +32,12 @@ COMPLETED_STATUS = {
 }
 RETRY_STATUS = {running: pending for pending, running in BUNDLING_STATUS.items()}
 PENDING_PROJECTS_QUERY = (
-    f"SELECT * FROM Project WHERE (Tested = {ProjectStatus.BUNDLE_PENDING} "
+    "SELECT * FROM Project "
+    f"WHERE (Tested = {ProjectStatus.BUNDLE_PENDING} "
     f"OR Tested = {ProjectStatus.DECLARED_BUNDLE_PENDING}) "
-    "AND Notified is NULL order by ID asc LIMIT 1"
+    "AND Notified IS NULL "
+    "ORDER BY ID ASC "
+    "LIMIT 1"
 )
 
 try:

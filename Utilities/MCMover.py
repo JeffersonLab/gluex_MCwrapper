@@ -72,7 +72,7 @@ class MoverRun:
         end_time_assignment = "EndTime = NOW(), " if succeeded else ""
         self._cursor.execute(
             f"UPDATE MCMover SET {end_time_assignment}Status = '{status}' "
-            f"where ID = {run_id}"
+            f"WHERE ID = {run_id}"
         )
         self._connection.commit()
 

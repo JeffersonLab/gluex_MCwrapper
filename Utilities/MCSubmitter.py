@@ -213,19 +213,23 @@ class JobSubmitter:
                 return
             print("about to bundle")
             query = (
-                "select ID, FileNumber from Jobs where Project_ID in "
-                f"(SELECT Project_ID from Jobs where ID = {job['ID']}) "
-                "and RunNumber in "
-                f"(SELECT RunNumber from Jobs where ID = {job['ID']}) "
-                "and NumEvts in "
-                f"(SELECT NumEvts from Jobs where ID = {job['ID']}) "
-                f"and IsActive = {JOB_ACTIVE};"
+                "SELECT ID, FileNumber FROM Jobs "
+                "WHERE Project_ID IN ("
+                "SELECT Project_ID FROM Jobs "
+                f"WHERE ID = {job['ID']}) "
+                "AND RunNumber IN ("
+                "SELECT RunNumber FROM Jobs "
+                f"WHERE ID = {job['ID']}) "
+                "AND NumEvts IN ("
+                "SELECT NumEvts FROM Jobs "
+                f"WHERE ID = {job['ID']}) "
+                f"AND IsActive = {JOB_ACTIVE};"
             )
             self._cursor.execute(query)
             bundle_jobs = self._cursor.fetchall()
             print("bundled:", len(bundle_jobs))
             self._cursor.execute(
-                f"SELECT * FROM Project where ID = {job['Project_ID']}"
+                f"SELECT * FROM Project WHERE ID = {job['Project_ID']}"
             )
             project = self._cursor.fetchall()[0]
             run_number = job["RunNumber"]
@@ -280,8 +284,8 @@ class JobSubmitter:
 
     def _events_per_file(self, project: Mapping[str, Any]) -> int:
         query = (
-            "SELECT PerFile from Generator_perfiles "
-            f'where GenName = "{project["Generator"]}";'
+            "SELECT PerFile FROM Generator_perfiles "
+            f'WHERE GenName = "{project["Generator"]}";'
         )
         self._cursor.execute(query)
         rows = self._cursor.fetchall()
@@ -364,9 +368,9 @@ class SubmitterRun:
                 self._connection.commit()
             try:
                 self._cursor.execute(
-                    "UPDATE MCSubmitter SET EndTime = NOW(), "
-                    f'Status = "{RunStatus.SUCCESS}" '
-                    f"where ID = {run_rows[0]['MAX(ID)']}"
+                    "UPDATE MCSubmitter "
+                    f'SET EndTime = NOW(), Status = "{RunStatus.SUCCESS}" '
+                    f"WHERE ID = {run_rows[0]['MAX(ID)']}"
                 )
                 self._connection.commit()
             except Exception as error:
@@ -376,7 +380,7 @@ class SubmitterRun:
             print(error)
             self._cursor.execute(
                 f'UPDATE MCSubmitter SET Status = "{RunStatus.FAIL}" '
-                f"where ID = {run_rows[0]['MAX(ID)']}"
+                f"WHERE ID = {run_rows[0]['MAX(ID)']}"
             )
             self._connection.commit()
 
@@ -384,11 +388,16 @@ class SubmitterRun:
         query = (
             "SELECT UName, RunNumber, FileNumber, Tested, NumEvts, BKG, Notified, "
             "Jobs.ID, Project_ID, Priority, IsActive FROM Jobs "
-            "INNER JOIN Project ON Jobs.Project_ID = Project.ID "
-            "INNER JOIN Users ON Project.user_id = Users.id "
-            "LEFT JOIN Attempts ON Jobs.ID = Attempts.Job_ID "
-            f"WHERE Tested = {ProjectStatus.READY} AND Notified IS NULL "
-            f"AND IsActive = {JOB_ACTIVE} AND Attempts.Job_ID IS NULL "
+            "INNER JOIN Project "
+            "ON Jobs.Project_ID = Project.ID "
+            "INNER JOIN Users "
+            "ON Project.user_id = Users.id "
+            "LEFT JOIN Attempts "
+            "ON Jobs.ID = Attempts.Job_ID "
+            f"WHERE Tested = {ProjectStatus.READY} "
+            "AND Notified IS NULL "
+            f"AND IsActive = {JOB_ACTIVE} "
+            "AND Attempts.Job_ID IS NULL "
             "ORDER BY Priority DESC"
         )
         if BLOCK_SIZE != 1:

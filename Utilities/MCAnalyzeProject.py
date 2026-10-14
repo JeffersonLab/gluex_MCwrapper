@@ -81,7 +81,7 @@ class ProjectAnalyzer:
         self, project_id: ProjectId, extra_constraint: str, comparison: str = "="
     ) -> str:
         """Build a Project subquery with an optional caller-supplied filter."""
-        query = f"SELECT ID FROM Project where ID {comparison} {project_id}"
+        query = f"SELECT ID FROM Project WHERE ID {comparison} {project_id}"
         if extra_constraint != "":
             query = f"{query} && {extra_constraint}"
         return query
@@ -95,21 +95,24 @@ class ProjectAnalyzer:
     ) -> List[int]:
         print("Getting the distributions of attempts for project", project_id)
         if starts:
-            selection = "NumStarts as Starts"
-            condition = "NumStarts is NOT NULL && "
+            selection = "NumStarts AS Starts"
+            condition = "NumStarts IS NOT NULL && "
             value_key = plot_column = "Starts"
             file_prefix = "StartsDistribution_"
         else:
-            selection = "COUNT(*) as AttemptsCount"
+            selection = "COUNT(*) AS AttemptsCount"
             condition = ""
             value_key = "AttemptsCount"
             plot_column = "Attempts_Count"
             file_prefix = "CountDistribution_"
+        project_selection = self._project_selection(project_id, extra_constraint)
         query = (
-            f"SELECT {selection} from Attempts where {condition}Job_ID in "
-            "(SELECT ID from Jobs where Project_ID IN ("
-            f"{self._project_selection(project_id, extra_constraint)}"
-            ")) GROUP BY Job_ID;"
+            f"SELECT {selection} FROM Attempts "
+            f"WHERE {condition}Job_ID IN ("
+            "SELECT ID FROM Jobs "
+            f"WHERE Project_ID IN ({project_selection})"
+            ") "
+            "GROUP BY Job_ID;"
         )
         print(query)
         self._cursor.execute(query)
@@ -154,10 +157,13 @@ class ProjectAnalyzer:
             project_id, extra_constraint, comparison=">"
         )
         query = (
-            "SELECT ProgramFailed as pf, COUNT(*) as AttemptsCount from Attempts "
-            "where ProgramFailed is not NULL && Job_ID in "
-            "(SELECT ID from Jobs where Project_ID IN ("
-            f"{project_selection})) GROUP BY ProgramFailed;"
+            "SELECT ProgramFailed AS pf, COUNT(*) AS AttemptsCount FROM Attempts "
+            "WHERE ProgramFailed IS NOT NULL "
+            "&& Job_ID IN ("
+            "SELECT ID FROM Jobs "
+            f"WHERE Project_ID IN ({project_selection})"
+            ") "
+            "GROUP BY ProgramFailed;"
         )
         print(query)
         self._cursor.execute(query)
@@ -169,10 +175,13 @@ class ProjectAnalyzer:
         print("df created")
 
         exit_code_query = (
-            "SELECT ExitCode as pf, COUNT(*) as AttemptsCount from Attempts "
-            "where ProgramFailed is NULL && Job_ID in "
-            "(SELECT ID from Jobs where Project_ID IN ("
-            f"{project_selection})) GROUP BY ExitCode;"
+            "SELECT ExitCode AS pf, COUNT(*) AS AttemptsCount FROM Attempts "
+            "WHERE ProgramFailed IS NULL "
+            "&& Job_ID IN ("
+            "SELECT ID FROM Jobs "
+            f"WHERE Project_ID IN ({project_selection})"
+            ") "
+            "GROUP BY ExitCode;"
         )
         self._cursor.execute(exit_code_query)
         exit_code_rows = self._cursor.fetchall()
@@ -218,7 +227,7 @@ class ProjectAnalyzer:
         query = f"SELECT * FROM Project WHERE Tested > {ProjectStatus.UNTESTED} "
         if extra_constraint != "":
             query = f"{query} && {extra_constraint}"
-        query = f"{query} Order by ID asc"
+        query = f"{query} ORDER BY ID ASC"
         print(query)
         self._cursor.execute(query)
         rows = self._cursor.fetchall()
@@ -261,7 +270,7 @@ class ProjectAnalyzer:
             if key != "NULL":
                 constraint = f'{xaxis_key} = "{key}"'
             else:
-                constraint = f"{xaxis_key} is {key}"
+                constraint = f"{xaxis_key} IS {key}"
             self.plot_failure_breakdown(project_id, constraint, f"FailurePie_{key}")
 
 

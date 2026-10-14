@@ -127,7 +127,7 @@ class MCStatistics:
 
     def print_total_output_size(self) -> None:
         """Print the total output size in decimal terabytes."""
-        self._cursor.execute("SELECT TotalSizeOut From Project;")
+        self._cursor.execute("SELECT TotalSizeOut FROM Project;")
         rows = self._cursor.fetchall()
         total_bytes = 0.0
         for project in rows:
@@ -140,9 +140,10 @@ class MCStatistics:
     def show_user_project_shares(self, graph: bool = True) -> None:
         """Print per-user project and event totals, optionally displaying pie charts."""
         query = (
-            "SELECT UName, NumEvents From Project "
+            "SELECT UName, NumEvents FROM Project "
             "WHERE Submit_Time > DATE('2024-01-01') "
-            f"AND Notified = {PROJECT_NOTIFIED} ORDER BY Submit_Time;"
+            f"AND Notified = {PROJECT_NOTIFIED} "
+            "ORDER BY Submit_Time;"
         )
         self._cursor.execute(query)
         rows = self._cursor.fetchall()
@@ -186,7 +187,7 @@ class MCStatistics:
         """Plot elapsed times for attempts with both start and completion times."""
         query = (
             "SELECT UNIX_TIMESTAMP(Start_Time), UNIX_TIMESTAMP(Completed_Time) "
-            "From Attempts;"
+            "FROM Attempts;"
         )
         self._cursor.execute(query)
         rows = self._cursor.fetchall()
@@ -204,8 +205,8 @@ class MCStatistics:
     def plot_attempt_start_times(self) -> None:
         """Print recorded CPU time and plot attempt start times."""
         query = (
-            "SELECT UNIX_TIMESTAMP(Start_Time), CPUTime "
-            "From Attempts where CPUTime != 0;"
+            "SELECT UNIX_TIMESTAMP(Start_Time), CPUTime FROM Attempts "
+            "WHERE CPUTime != 0;"
         )
         self._cursor.execute(query)
         rows = self._cursor.fetchall()
@@ -224,7 +225,8 @@ class MCStatistics:
         query = (
             "SELECT UName, Submit_Time, NumEvents FROM Project "
             "WHERE Submit_Time > DATE('2024-01-01') "
-            f"AND Notified = {PROJECT_NOTIFIED} ORDER BY Submit_Time;"
+            f"AND Notified = {PROJECT_NOTIFIED} "
+            "ORDER BY Submit_Time;"
         )
         self._cursor.execute(query)
         points = _weekly_requested_events(self._cursor.fetchall())
@@ -240,8 +242,9 @@ class MCStatistics:
     def plot_running_locations(self) -> None:
         """Display site-share and weekly job-count charts."""
         query = (
-            "SELECT RunningLocation, Start_Time, WallTime, CPUTime, RAMUsed, ExitCode "
-            f"FROM Attempts WHERE Start_Time > DATE('{START_DATE.isoformat()}') "
+            "SELECT RunningLocation, Start_Time, WallTime, CPUTime, RAMUsed, "
+            "ExitCode FROM Attempts "
+            f"WHERE Start_Time > DATE('{START_DATE.isoformat()}') "
             "ORDER BY Start_Time;"
         )
         self._cursor.execute(query)

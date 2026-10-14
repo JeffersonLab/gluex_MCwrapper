@@ -45,7 +45,7 @@ class AttemptStatus:
     Codes 1 through 7 follow HTCondor's JobStatus values:
     https://htcondor.readthedocs.io/en/25.0/codes-other-values/job-status-codes.html
     MCwrapper also uses 6 and 7 locally when handling missing random-trigger
-    inputs. These overlapping meanings are preserved, not reinterpreted.
+    inputs. Codes 6 and 7 describe both scheduler states and local input handling.
     """
 
     IDLE = 1
@@ -73,12 +73,20 @@ class ExitCode:
 
     SUCCESS = 0
     """Execution completed successfully."""
+    BEAM_FLUX_EMPTY = 101
+    """The photon-beam flux integral is zero in the requested energy range."""
     RANDOM_TRIGGER_NOT_FOUND = 232
     """The random-trigger input was not found by the worker."""
-    RANDOM_TRIGGER_DOES_NOT_EXIST = -232
-    """Monitoring determined that the required random-trigger input does not exist."""
+    RANDOM_TRIGGER_AVAILABLE = -232
+    """Monitoring found the random-trigger input reported missing by the worker."""
+    RANDOM_TRIGGER_DOES_NOT_EXIST = RANDOM_TRIGGER_AVAILABLE
+    """Alias for the monitored random-trigger availability outcome."""
     OUTPUT_NOT_RETURNED = 404
     """Execution ended but expected output data was not returned."""
+    CONDOR_RECORD_MISSING = 999
+    """The attempt is absent from the queue and Condor returned an empty history."""
+    RANDOM_TRIGGER_INITIALIZATION_FAILED = 1000
+    """Worker initialization could not find its random-trigger mix-in file."""
 
 
 class MergerResult:
@@ -103,7 +111,11 @@ class RunStatus:
 
 JOB_ACTIVE = 1
 """Jobs.IsActive value included in active-job queries."""
+JOB_INACTIVE = 0
+"""Jobs.IsActive value excluding a job from active-job queries."""
 DATA_UNVERIFIED = 0
 """Jobs.DataVerified value indicating outputs still need verification."""
+DATA_VERIFIED = 1
+"""Jobs.DataVerified value indicating every expected output was found."""
 PROJECT_NOTIFIED = 1
 """Project.Notified value indicating completion notification was recorded."""

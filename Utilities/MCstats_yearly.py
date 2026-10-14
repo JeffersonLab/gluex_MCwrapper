@@ -20,27 +20,37 @@ QUERIES: Dict[str, str] = {
     "projects": (
         "SELECT COUNT(*) AS project_count, SUM(NumEvents) AS requested_events, "
         "COUNT(DISTINCT UName) AS unique_users FROM Project "
-        "WHERE Submit_Time >= %s AND Submit_Time < %s"
+        "WHERE Submit_Time >= %s "
+        "AND Submit_Time < %s"
     ),
     "active_jobs": (
         "SELECT COUNT(*) AS active_jobs FROM Jobs "
-        "INNER JOIN Project ON Jobs.Project_ID = Project.ID "
-        "WHERE Project.Submit_Time >= %s AND Project.Submit_Time < %s "
+        "INNER JOIN Project "
+        "ON Jobs.Project_ID = Project.ID "
+        "WHERE Project.Submit_Time >= %s "
+        "AND Project.Submit_Time < %s "
         f"AND Jobs.IsActive = {JOB_ACTIVE}"
     ),
     "cpu_time": (
         "SELECT SUM(TIME_TO_SEC(Attempts.CPUTime)) AS cpu_seconds FROM Attempts "
-        "INNER JOIN Jobs ON Jobs.ID = Attempts.Job_ID "
-        "INNER JOIN Project ON Project.ID = Jobs.Project_ID "
-        "WHERE Project.Submit_Time >= %s AND Project.Submit_Time < %s"
+        "INNER JOIN Jobs "
+        "ON Jobs.ID = Attempts.Job_ID "
+        "INNER JOIN Project "
+        "ON Project.ID = Jobs.Project_ID "
+        "WHERE Project.Submit_Time >= %s "
+        "AND Project.Submit_Time < %s"
     ),
     "average_attempts": (
-        "SELECT AVG(attempt_count) AS average_attempts FROM "
-        "(SELECT COUNT(Attempts.ID) AS attempt_count FROM Jobs "
-        "INNER JOIN Project ON Project.ID = Jobs.Project_ID "
-        "LEFT JOIN Attempts ON Attempts.Job_ID = Jobs.ID "
-        f"WHERE Jobs.IsActive = {JOB_ACTIVE} AND Project.Submit_Time >= %s "
-        "AND Project.Submit_Time < %s GROUP BY Jobs.ID) AS attempt_counts"
+        "SELECT AVG(attempt_count) AS average_attempts FROM ("
+        "SELECT COUNT(Attempts.ID) AS attempt_count FROM Jobs "
+        "INNER JOIN Project "
+        "ON Project.ID = Jobs.Project_ID "
+        "LEFT JOIN Attempts "
+        "ON Attempts.Job_ID = Jobs.ID "
+        f"WHERE Jobs.IsActive = {JOB_ACTIVE} "
+        "AND Project.Submit_Time >= %s "
+        "AND Project.Submit_Time < %s "
+        "GROUP BY Jobs.ID) AS attempt_counts"
     ),
 }
 

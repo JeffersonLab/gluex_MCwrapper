@@ -175,11 +175,11 @@ class JobCompletionChecker:
         print(f"checking {len(assignments)}")
         for attempt in assignments:
             self._lookup_cursor.execute(
-                f"SELECT * from Jobs where ID = {attempt['Job_ID']}"
+                f"SELECT * FROM Jobs WHERE ID = {attempt['Job_ID']}"
             )
             job = self._lookup_cursor.fetchall()[0]
             self._lookup_cursor.execute(
-                f"SELECT * From Project Where ID = {job['Project_ID']}"
+                f"SELECT * FROM Project WHERE ID = {job['Project_ID']}"
             )
             project = self._lookup_cursor.fetchall()[0]
             location = project["OutputLocation"]
@@ -205,9 +205,9 @@ class JobCompletionChecker:
             )
             if all_files_found:
                 query = (
-                    f"UPDATE Attempts Set Status = {AttemptStatus.OUTPUTS_FOUND}, "
+                    f"UPDATE Attempts SET Status = {AttemptStatus.OUTPUTS_FOUND}, "
                     f"ExitCode = {ExitCode.SUCCESS} "
-                    f"where ID = {attempt['ID']}"
+                    f"WHERE ID = {attempt['ID']}"
                 )
                 print(query)
                 update_cursor.execute(query)
@@ -245,7 +245,8 @@ class JobObserver:
 
     def _monitor_once(self) -> None:
         query = (
-            "SELECT * from Attempts WHERE BatchSystem = 'OSG' "
+            "SELECT * FROM Attempts "
+            "WHERE BatchSystem = 'OSG' "
             f'&& SubmitHost = "{self._host_name}" '
             f"&& Status != '{AttemptStatus.COMPLETED}' "
             f"&& Status != '{AttemptStatus.REMOVED}' "
