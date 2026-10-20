@@ -217,7 +217,7 @@ def AutoLaunch(RUNNING_LIMIT_OVERRIDE):
     RetryAllJobs(RUNNING_LIMIT_OVERRIDE)
     #return
     print("TESTING...")
-    query = "SELECT ID,Email,VersionSet,Tested,UName FROM Project WHERE (Tested = 0) && Dispatched_Time is NULL ORDER BY (SELECT Priority from Users where name=UName) DESC LIMIT 10;"
+    query = "SELECT ID,Email,VersionSet,Tested,UName FROM Project WHERE (Tested = 0) && (Dispatched_Time is NULL) ORDER BY (SELECT Priority from Users where name=UName) DESC LIMIT 10;"
     print(query)
     curs.execute(query) 
     rows=curs.fetchall()
@@ -352,13 +352,13 @@ def RetryJobsFromProject(ID, countLim):
             #print row["Status"]
             #print row["ExitCode"]
             #print "=========================="
-            if (row["Status"] == "4" and row["ExitCode"] != 0) or row["Status"] == "3" or row["Status"]=="5" or row["Status"]=="-1":
+            if (row["Status"] == "4" and row["ExitCode"] != 0) or row["Status"] == "3":
                 print("Retrying OSG job: ",row["Job_ID"])
                 if ( countLim ):
                     countq="SELECT Count(Job_ID) from Attempts where Job_ID="+str(row["Job_ID"])
                     curs.execute(countq)
                     count=curs.fetchall()
-                    if int(count[0]["Count(Job_ID)"]) > 15 :
+                    if int(count[0]["Count(Job_ID)"]) > 15 and 0:
                         j=j+1
                         print("Job above count limit")
                         continue

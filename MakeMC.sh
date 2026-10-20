@@ -393,6 +393,13 @@ else
 	export APPTAINER_BIND="$APPTAINER_BIND,/gluex_install/"
 	export SINGULARITY_BIND=$APPTAINER_BIND
 fi
+
+# nested containers lose /etc/hosts on some sites; bind an explicit empty one
+export CUSTOM_HOSTS_FILE="$PWD/hosts"
+: > "$CUSTOM_HOSTS_FILE"
+export APPTAINER_BIND="$APPTAINER_BIND,$CUSTOM_HOSTS_FILE:/etc/hosts"
+export SINGULARITY_BIND=$APPTAINER_BIND
+
 #echo "APPTAINER_BIND: $APPTAINER_BIND"
 #echo "SINGULARITY_BIND: $SINGULARITY_BIND"
 
@@ -2325,6 +2332,7 @@ fi
 rm -rf .hdds_tmp_*
 rm -rf ccdb.sqlite
 rm -rf rcdb.sqlite
+rm -f "$CUSTOM_HOSTS_FILE"
 
 if [[ "$gen_pre" != "file" && "$GENERATOR" != "gen_ee_hb" && "$GENR" == "1" ]]; then
 	mv $PWD/*.conf $OUTDIR/configurations/generation/

@@ -11,6 +11,7 @@ from subprocess import Popen, PIPE
 import socket
 import pprint
 import pwd
+import fcntl
 
 dbhost = "hallddb.jlab.org"
 dbuser = 'mcuser'
@@ -153,7 +154,9 @@ def WritePayloadConfig(order,foundConfig,batch_system):
 
 
 def SubmitList(SubList,job_IDs_submitted):
+    """Returns how many jobs were newly handed to gluex_MC.py in this pass."""
     print("Submitting SubList")
+    already_handled=len(job_IDs_submitted)
     row_index=0
     list_to_Submit=list(SubList)
     #print("element 0 is "+str(list_to_Submit[0]))
@@ -181,7 +184,7 @@ def SubmitList(SubList,job_IDs_submitted):
         print("percent full is "+str(percent_full))
         if percent_full > 75.0:
             print("Node is too full to submit new jobs")
-            return
+            return len(job_IDs_submitted)-already_handled
 
         print("about to bundle")
         bundled=False
@@ -279,6 +282,7 @@ def SubmitList(SubList,job_IDs_submitted):
         row_index+=1
         #if(bundled):
         #    break
+    return len(job_IDs_submitted)-already_handled
 
 
 def decideSystem(row):
@@ -345,12 +349,16 @@ def main(argv):
         print("ALL STOP DETECTED")
         exit(1)
 
-    numprocesses_running=subprocess.check_output(["echo `ps all -u "+runner_name+" | grep MCSubmitter.py | grep -v grep | wc -l`"], shell=True)
-    #print(args)
+    # a second submitter would see the same attempt-less jobs and submit them again
+    lock=open("/tmp/MCSubmitter_"+runner_name+".lock","w")
+    try:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        conn.close()
+        return
 
     job_IDs_submitted=[]
-    print(numprocesses_running)
-    if(int(numprocesses_running) <3):
+    if(True):
         try:
             curs.execute("INSERT INTO MCSubmitter (Host,StartTime,Status) VALUES ('"+str(socket.gethostname())+"', NOW(), 'Running' )")
             conn.commit()
@@ -397,7 +405,11 @@ def main(argv):
                     more_sub=False
                     break
 
-                SubmitList(rows,job_IDs_submitted)
+                # rows that never got an Attempt (failed submit, full disk) come back every pass: stop instead of spinning
+                if SubmitList(rows,job_IDs_submitted) == 0:
+                    print("No progress this pass; stopping until the next cron run")
+                    more_sub=False
+                    break
                 #Must do the following commit even through gluex_MC.py does one.  Else the above query is cached and does not update properly
                 conn.commit()
             try:

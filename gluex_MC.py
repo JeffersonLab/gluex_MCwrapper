@@ -1345,7 +1345,7 @@ def main(argv):
         # RESOURCES for swif jobs
         NCORES     = "8"               # Number of CPU cores
         DISK       = "10GB"            # Max Disk usage
-        RAM        = "20GB"            # Max RAM usage
+        RAM        = "4GB"            # Max RAM usage
         TIMELIMIT  = "300minutes"      # Max walltime
         OS         = "el9"        # Specify CentOS65 machines
 

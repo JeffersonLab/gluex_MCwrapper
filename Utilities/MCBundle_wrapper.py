@@ -138,7 +138,7 @@ def BundleFiles(inputdir,output,merge_dir):
 def main(argv):
     runner_name=pwd.getpwuid( os.getuid() )[0]
     numprocesses_running=subprocess.check_output(["echo `ps all -u "+runner_name+" | grep MCBundle_wrapper.py | grep -v grep | wc -l`"], shell=True)
-    spawnNum=4
+    spawnNum=2
     print(f"numprocesses_running: {int(numprocesses_running)}")
 
     hostname = subprocess.check_output(["hostname"], shell=True).decode().strip()
