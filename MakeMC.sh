@@ -268,7 +268,7 @@ elif [[ -f /usr/lib64/libXrdPosixPreload.so && "$BKGFOLDSTR" != "None" && "$GENR
 		#echo "Executing command: xrdfs $XRD_RANDOMS_URL ls /gluex/mcwrap/random_triggers/$RANDBGTAG/run${formatted_runNumber}_random.hddm | wc -l"
 		#xrdfs $XRD_RANDOMS_URL ls /gluex/mcwrap/random_triggers/$RANDBGTAG/run${formatted_runNumber}_random.hddm | wc -l
 		#export con_test=$(xrdfs $XRD_RANDOMS_URL ls /gluex/mcwrap/random_triggers/$RANDBGTAG/run${formatted_runNumber}_random.hddm)
-		echo "random trigger connection test: $con_test"
+		echo "random trigger POSIX Preload connection test: $con_test"
 		echo xrdfs $XRD_RANDOMS_URL ls $RANDOMS_PREPEND/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm
 		echo "random trigger connection test2: $contest"
 		if [[ $con_test != "r" && $contest == 0 ]]; then
