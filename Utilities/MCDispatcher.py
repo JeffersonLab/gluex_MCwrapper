@@ -217,7 +217,7 @@ def AutoLaunch(RUNNING_LIMIT_OVERRIDE):
     RetryAllJobs(RUNNING_LIMIT_OVERRIDE)
     #return
     print("TESTING...")
-    query = "SELECT ID,Email,VersionSet,Tested,UName FROM Project WHERE (Tested = 0) && (Dispatched_Time is NULL) ORDER BY (SELECT Priority from Users where name=UName) DESC LIMIT 10;"
+    query = "SELECT ID,Email,VersionSet,Tested,UName FROM Project WHERE (Tested = 0) ORDER BY (SELECT Priority from Users where name=UName) DESC LIMIT 10;"
     print(query)
     curs.execute(query) 
     rows=curs.fetchall()
@@ -277,7 +277,7 @@ def DispatchProject(ID,SYSTEM,PERCENT):
 
 def RetryAllJobs(rlim=False):
     print("retrying all jobs. rlim="+str(rlim))
-    query= "SELECT ID,Notified FROM Project where Completed_Time is NULL && Is_Dispatched=1.0 && Tested!=2 && Tested!=4 && Tested!=-4 && Tested!=3;"
+    query= "SELECT ID,Notified FROM Project where Completed_Time is NULL && Is_Dispatched=1.0 && Tested!=2 && Tested!=4 && Tested!=-4 && Tested!=3 && Tested!=0 && Tested!=-1;"
     print(query)
     curs.execute(query) 
     rows=curs.fetchall()
@@ -622,14 +622,8 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
 
     already_passed_q="SELECT COUNT(*) from Jobs where Project_ID="+str(ID)
     curs.execute(already_passed_q)
-    already_passed=curs.fetchall()
-
-    if(already_passed[0]["COUNT(*)"]>0):
-        updatequery="UPDATE Project SET Tested=1, OutputLocation=\""+new_full_dirname+"\" WHERE ID="+str(ID)+";"
-        curs.execute(updatequery)
-        conn.commit()
-        STATUS="Success"
-        return STATUS
+    # retest of a dispatched (e.g. resumed) project: test again but never dispatch a second set of Jobs
+    already_dispatched=curs.fetchall()[0]["COUNT(*)"]>0
 
     output="Dispatch_Failure"
     errors="Dispatch_Failure"
@@ -879,7 +873,9 @@ def ParallelTestProject(results_q,index,row,ID,versionSet,commands_to_call=""):
     curs.execute(ProjTest_q) 
     ProjTest_r=curs.fetchall()
     Status_Check=ProjTest_r[0]['Tested']
-    if(Status_Check==1):
+    if(Status_Check==1 and already_dispatched):
+        print("YAY TESTED (already dispatched, not dispatching again)")
+    elif(Status_Check==1):
         #print "TEST success"
         #EMAIL SUCCESS AND DISPATCH
         print("YAY TESTED")

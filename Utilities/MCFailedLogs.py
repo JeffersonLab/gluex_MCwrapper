@@ -4,7 +4,8 @@
 # MCFailedLogs.py -- collect the stdout/stderr of failed attempts
 #
 #   Finds attempts that failed inside a time window (default: the last 24 hours), asks condor_history where each one's
-#   stdout/stderr went, and copies them into a folder as P<project>_J<job>_A<attempt>.out / .err, plus a manifest.tsv.
+#   stdout/stderr went, and copies them into a folder as P<project>_J<job>_A<attempt>.out / .err, plus a manifest.tsv,
+#   then packs the folder into <folder>.tar.gz.
 #   Failure modes match the Dashboard Health tab: condor, missing output, randoms (retried), lost (status N),
 #   the failing program (hd_root, mcsmear, ...) or "exit N".
 #
@@ -29,6 +30,7 @@ import shutil
 import socket
 import subprocess
 import sys
+import tarfile
 import time
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
@@ -43,6 +45,7 @@ dbname = "gluex_mc"
 
 runner_name = pwd.getpwuid(os.getuid())[0]
 DTN_PREFIX = runner_name + "@dtn1902:/cache/halld/gluex_simulations/REQUESTED_MC/"
+LOGS_DEST = runner_name + "@ifarm2401:/group/halld/www/halldweb-rh9/html/REQUESTEDMC_LOGS/"
 HISTORY_ATTRS = ["ClusterId", "ProcId", "Out", "Err", "Iwd", "ExitCode", "JobStatus", "EnteredCurrentStatus"]
 HISTORY_SINCE_MARGIN = 2 * 86400  # seconds of slack before the oldest attempt's Creation_Time
 MAX_EXPLICIT_CLUSTERS = 200       # above this the condor_history constraint becomes a ClusterId range
@@ -126,7 +129,8 @@ def fetch_failed(cur, args, since, until, db_now):
     wanted = [m.lower() for m in args.mode or []]
     for r in cur.fetchall():
         r["Mode"] = failure_mode(r["Status"], r["ExitCode"], r["ProgramFailed"])
-        if wanted and not any(w in r["Mode"].lower() for w in wanted):
+        mode = r["Mode"].lower()
+        if wanted and not (mode in wanted if args.exact_mode else any(w in mode for w in wanted)):
             continue
         rows.append(r)
     return rows
@@ -242,6 +246,34 @@ def safe_name(s):
     return re.sub(r"[^A-Za-z0-9_.()-]+", "_", s).strip("_") or "unknown"
 
 
+def default_name(args, since, until):
+    """e.g. failed_1h_P4944_hd_root_exit255_20261028-1400"""
+    parts = [safe_name(args.tag)] if args.tag else []
+    parts.append("failed")
+    if not args.since:
+        parts.append("%gh" % args.hours)
+    parts += ["P%d" % p for p in args.project or []]
+    parts += [safe_name(m) for m in args.mode or []]
+    parts += ["exit%d" % e for e in args.exit_code or []]
+    if args.any_host:
+        parts.append("allhosts")
+    if args.limit:
+        parts.append("last%d" % args.limit)
+    if args.since:
+        parts.append(since.strftime("%Y%m%d-%H%M") + "_to")
+    parts.append(until.strftime("%Y%m%d-%H%M"))
+    return "_".join(parts)
+
+
+def write_result(path, **result):
+    if not path:
+        return
+    tmp = path + ".tmp"
+    with open(tmp, "w") as fh:
+        json.dump(result, fh, default=str)
+    os.replace(tmp, path)
+
+
 ########################################################### MAIN ###########################################################
 
 def parse_time(s):
@@ -260,6 +292,7 @@ def main():
     flt = ap.add_argument_group("filters")
     flt.add_argument("--mode", action="append",
                      help="failure mode to keep, case-insensitive substring (e.g. hd_root, condor, \"missing output\", \"exit 255\"); repeatable")
+    flt.add_argument("--exact-mode", action="store_true", help="--mode must equal the whole failure mode (as the Dashboard shows it)")
     flt.add_argument("--exit-code", type=int, action="append", help="exit code to keep; repeatable")
     flt.add_argument("--project", type=int, action="append", help="project ID to keep; repeatable")
     flt.add_argument("--any-host", action="store_true", help="include attempts submitted from other hosts (their history may not be here)")
@@ -269,6 +302,10 @@ def main():
     out.add_argument("--group-by-mode", action="store_true", help="put each failure mode in its own subfolder")
     out.add_argument("--list-modes", action="store_true", help="print failure modes and counts, copy nothing")
     out.add_argument("--dry-run", action="store_true", help="resolve log locations and print them, copy nothing")
+    out.add_argument("--send-to", default=LOGS_DEST, help="scp destination for the tarball (default %s)" % LOGS_DEST)
+    out.add_argument("--no-send", action="store_true", help="keep the tarball local, do not scp it")
+    out.add_argument("--tag", help="prefix for the default folder/tarball name (e.g. R42)")
+    out.add_argument("--result-json", help="write a JSON summary (counts, tarball, remote path) here on success")
     ap.add_argument("--workers", type=int, default=8, help="parallel copies / condor_history retries (default 8)")
     ap.add_argument("--no-confirm", action="store_true", help="skip per-job condor_history retries for jobs the bulk query missed")
     ap.add_argument("--scan-days", type=int, default=10,
@@ -293,14 +330,17 @@ def main():
     log("%d failed attempts in %d modes" % (len(attempts), len(modes)))
     for mode, n in modes.most_common():
         print("  %7d  %s" % (n, mode))
-    if args.list_modes or not attempts:
+    if args.list_modes:
+        return
+    if not attempts:
+        write_result(args.result_json, attempts=0, modes={})
         return
 
     if shutil.which("condor_history") is None:
         sys.exit("condor_history not found: run this on the submit host")
     ads = history_ads(attempts, args.workers, not args.no_confirm)
 
-    dest_root = args.out or "failed_logs_%s_to_%s" % (since.strftime("%Y%m%d-%H%M"), until.strftime("%Y%m%d-%H%M"))
+    dest_root = args.out or default_name(args, since, until)
     plan = []
     for a in attempts:
         ad = ads.get(a["ID"], {})
@@ -341,7 +381,22 @@ def main():
         got[err_res] += 1
     log("copied in %.1fs: %d local, %d from dtn1902, %d missing (of %d files)"
         % (time.time() - t0, got["local"], got["dtn"], got["missing"], 2 * len(results)))
+    tar_path = os.path.abspath(dest_root.rstrip("/")) + ".tar.gz"
+    with tarfile.open(tar_path, "w:gz") as tar:
+        tar.add(dest_root, arcname=os.path.basename(os.path.abspath(dest_root)))
     log("output: %s (see %s)" % (os.path.abspath(dest_root), manifest))
+    log("tarball: %s" % tar_path)
+
+    sent_to = None
+    if not args.no_send:
+        rc, _, err = run_cmd(["scp", "-q", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", tar_path, args.send_to], 1800)
+        if rc != 0:
+            sys.exit("scp to %s failed (rc=%s): %s" % (args.send_to, rc, err.strip()[:500]))
+        sent_to = args.send_to + os.path.basename(tar_path) if args.send_to.endswith(("/", ":")) else args.send_to
+        log("sent to %s" % sent_to)
+    write_result(args.result_json, attempts=len(attempts), modes=dict(modes), files_local=got["local"],
+                 files_dtn=got["dtn"], files_missing=got["missing"], folder=os.path.abspath(dest_root),
+                 tarball=tar_path, sent_to=sent_to)
 
 
 if __name__ == "__main__":

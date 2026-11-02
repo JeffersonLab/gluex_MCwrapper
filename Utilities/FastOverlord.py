@@ -60,7 +60,7 @@ OSGPOOL_OUTPUT = "/osgpool/halld/" + runner_name + "/REQUESTEDMC_OUTPUT/"
 CONDOR_ATTRS = [
     "ClusterId", "ProcId", "JobStatus", "NumJobStarts", "ExitCode", "JobFinishedHookDone",
     "RemoteWallClockTime", "RemoteUserCpu", "JobStartDate", "ImageSize_RAW", "ImageSize",
-    "TransferInputSizeMB", "RemoteHost", "LastRemoteHost", "HoldReasonCode", "TransferInput",
+    "TransferInputSizeMB", "RemoteHost", "LastRemoteHost", "HoldReasonCode", "HoldReason", "TransferInput",
     "LastPublicClaimId", "Out", "EnteredCurrentStatus",
 ]
 
@@ -296,6 +296,8 @@ def queue_update(ad):
 
     deactivate = False
     if status == 5:
+        if ad.get("HoldReason"):
+            fields["ProgramFailed"] = str(ad["HoldReason"])
         found = True
         for f in str(ad.get("TransferInput", "")).split(","):
             if "_random.hddm" in f:
@@ -360,6 +362,8 @@ def history_update(ad, attempt, ctx):
     fields["RunningLocation"] = str(ad.get("LastRemoteHost", "NULL"))
 
     if status == 5:
+        if ad.get("HoldReason"):
+            fields["ProgramFailed"] = str(ad["HoldReason"])
         found = False
         for f in str(ad.get("TransferInput", "")).split(","):
             if ".hddm" in f:
@@ -378,7 +382,7 @@ def history_update(ad, attempt, ctx):
                 status = 6
                 deactivate = True
 
-    if exit_code is not None and str(exit_code) != "0":
+    if exit_code is not None and str(exit_code) != "0" and "ProgramFailed" not in fields:
         failed = ctx.failed_program(ad.get("Out", ""))
         if failed is not None:
             fields["ProgramFailed"] = failed
@@ -802,7 +806,7 @@ def _check_project(proj, cur, w, dry):
 
 
 def check_completion(cur, workers, dry):
-    cur.execute("SELECT * FROM Project WHERE (Is_Dispatched != '0' && Tested != '-1' && Tested != '2') && Notified IS NULL")
+    cur.execute("SELECT * FROM Project WHERE (Is_Dispatched != '0' && Tested != '-1' && Tested != '0' && Tested != '2') && Notified IS NULL")
     projects = cur.fetchall()
     log("checking %d projects for completion" % len(projects))
     if not projects:
