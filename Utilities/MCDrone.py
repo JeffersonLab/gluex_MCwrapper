@@ -87,7 +87,7 @@ def main(argv):
     if(len(argv) !=0):
         numOverRide=True
 
-    numprocesses_running=subprocess.check_output(["echo `ps all -u "+runner_name+" | grep MCDrone.py | grep -v grep | wc -l`"], shell=True).strip()
+    numprocesses_running=subprocess.check_output(["echo `ps all -u "+runner_name+" | grep MCDrone.py | grep -v grep | grep -v defunct | wc -l`"], shell=True).strip()
 
     print(int(numprocesses_running))
     ALLSTOP=False

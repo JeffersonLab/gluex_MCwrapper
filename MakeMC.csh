@@ -352,12 +352,28 @@ else
 	setenv APPTAINER_BIND "/gluex_install/"
 endif
 
+# csh can't keep a spaced JANA_CALIB_CONTEXT as one word through $runX, so gxrun is called via a bash helper
+# usage: $GXRUN_CMD <os> <envfile> cmd args...   (reads the env vars at call time)
+set GXRUN_CMD="$PWD/gxrun_cmd.sh"
+cat > "$GXRUN_CMD" << 'GXRUN_EOF'
+#!/bin/bash
+cntr_os=$1
+envfile=$2
+shift 2
+exec /gluex_install/gxrun/gxrun -os "$cntr_os" \
+	--env "JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND" \
+	-v "$envfile" \
+	env "JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT" "CCDB_CONNECTION=$CCDB_CONNECTION" "JANA_CALIB_URL=$JANA_CALIB_URL" "RCDB_CONNECTION=$RCDB_CONNECTION" \
+	"$@"
+'GXRUN_EOF'
+chmod +x "$GXRUN_CMD"
+
 # Define running command for generation, needed to run inside a container
 set runGen=''
 if ( "$GENERATOR_OS" == "CENTOS7" ) then
-	set runGen="/gluex_install/gxrun/gxrun -os 7 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v $RUNNING_ENVIRONMENT"
+	set runGen="$GXRUN_CMD 7 $RUNNING_ENVIRONMENT"
 else if ( "$GENERATOR_OS" == "ALMA9" && "$runningOS" != "Linux_Alma9-x86_64-gcc11.5.0-cntr" && "$runningOS" != "Linux_Alma9-x86_64-gcc11.5.0" ) then
-	set runGen="/gluex_install/gxrun/gxrun -os 9 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v $RUNNING_ENVIRONMENT"
+	set runGen="$GXRUN_CMD 9 $RUNNING_ENVIRONMENT"
 endif
 echo "============================"
 echo "running command:"
@@ -367,9 +383,9 @@ echo "============================"
 # defining running command for postprocessing, needed to run inside a container
 set runPostgen=''
 if ( "$POSTGEN_OS" == "CENTOS7" ) then
-	set runPostgen="/gluex_install/gxrun/gxrun -os 7 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v $RUNNING_ENVIRONMENT"
+	set runPostgen="$GXRUN_CMD 7 $RUNNING_ENVIRONMENT"
 else if ( "$POSTGEN_OS" == "ALMA9" && "$runningOS" != "Linux_Alma9-x86_64-gcc11.5.0-cntr" && "$runningOS" != "Linux_Alma9-x86_64-gcc11.5.0" ) then
-	set runPostgen="/gluex_install/gxrun/gxrun -os 9 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v $RUNNING_ENVIRONMENT"
+	set runPostgen="$GXRUN_CMD 9 $RUNNING_ENVIRONMENT"
 endif
 echo "============================"
 echo "running command:"
@@ -379,9 +395,9 @@ echo "============================"
 # defining running command for simulation, needed to run inside a container
 set runSim=''
 if ( "$SIMULATION_OS" == "CENTOS7" ) then
-	set runSim="/gluex_install/gxrun/gxrun -os 7 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v $RUNNING_ENVIRONMENT"
+	set runSim="$GXRUN_CMD 7 $RUNNING_ENVIRONMENT"
 else if ( "$SIMULATION_OS" == "ALMA9" && "$runningOS" != "Linux_Alma9-x86_64-gcc11.5.0-cntr" && "$runningOS" != "Linux_Alma9-x86_64-gcc11.5.0" ) then
-	set runSim="/gluex_install/gxrun/gxrun -os 9 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v $RUNNING_ENVIRONMENT"
+	set runSim="$GXRUN_CMD 9 $RUNNING_ENVIRONMENT"
 endif
 echo "============================"
 echo "running command:"
@@ -391,9 +407,9 @@ echo "============================"
 # defining running command, needed to run inside a container
 set runSmear=''
 if ( "$MCSMEAR_OS" == "CENTOS7" ) then
-	set runSmear="/gluex_install/gxrun/gxrun -os 7 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v $RUNNING_ENVIRONMENT"
+	set runSmear="$GXRUN_CMD 7 $RUNNING_ENVIRONMENT"
 else if ( "$MCSMEAR_OS" == "ALMA9" && "$runningOS" != "Linux_Alma9-x86_64-gcc11.5.0-cntr" && "$runningOS" != "Linux_Alma9-x86_64-gcc11.5.0" ) then
-	set runSmear="/gluex_install/gxrun/gxrun -os 9 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v $RUNNING_ENVIRONMENT"
+	set runSmear="$GXRUN_CMD 9 $RUNNING_ENVIRONMENT"
 endif
 echo "============================"
 echo "running command:"
@@ -524,7 +540,7 @@ if ( $gen_pre_rcdb != "file" || ( "$BGTAGONLY_OPTION" == "1" || "$BKGFOLDSTR" ==
 
 	set colsize=`$runGen rcnd $RUN_NUMBER collimator_diameter | tail -n1 | awk '{print $1}' | sed -r 's/.{2}$//' | sed -e 's/\.//g'`
 
-	if ( "$colsize" == "B" || "$colsize" == "R" || "$JANA_CALIB_CONTEXT" != "variation=mc" ) then
+	if ( "$colsize" == "B" || "$colsize" == "R" || "$VERSION" != "mc" ) then
 		set colsize="50"
 	endif
 	echo "Colimator size set..."
@@ -1951,9 +1967,9 @@ else
 		# defining running command, needed to run inside a container
 		set runRecon=''
 		if ( "$RECON_OS" == "CENTOS7" ) then
-			set runRecon="/gluex_install/gxrun/gxrun -os 7 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v $ENVIRONMENT"
+			set runRecon="$GXRUN_CMD 7 $ENVIRONMENT"
 		else if ( "$RECON_OS" == "ALMA9" && "$runningOS" != "Linux_Alma9-x86_64-gcc11.5.0-cntr" && "$runningOS" != "Linux_Alma9-x86_64-gcc11.5.0" ) then
-			set runRecon="/gluex_install/gxrun/gxrun -os 9 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v $ENVIRONMENT"
+			set runRecon="$GXRUN_CMD 9 $ENVIRONMENT"
 		endif
 		echo "============================"
 		echo "running command:"
@@ -2097,9 +2113,9 @@ else
 			# defining running command, needed to run inside a container
 			set runAna=''
 			if ( "$ANA_OS" == "CENTOS7" ) then
-				set runAna="/gluex_install/gxrun/gxrun -os 7 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v "$ANAENVIRONMENT
+				set runAna="$GXRUN_CMD 7 $ANAENVIRONMENT"
 			else if ( "$ANA_OS" == "ALMA9" && "$runningOS" != "Linux_Alma9-x86_64-gcc11.5.0-cntr" && "$runningOS" != "Linux_Alma9-x86_64-gcc11.5.0" ) then
-				set runAna="/gluex_install/gxrun/gxrun -os 9 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v "$ANAENVIRONMENT
+				set runAna="$GXRUN_CMD 9 $ANAENVIRONMENT"
 			endif
 			echo "============================"
 			echo "running command:"
@@ -2251,6 +2267,7 @@ endif #end "if ( "$GENERATOR" == "geantBEAM" )"
 rm -rf .hdds_tmp_*
 rm -rf ccdb.sqlite
 rm -rf rcdb.sqlite
+rm -f "$GXRUN_CMD"
 
 if ( "$gen_pre" != "file" && "$GENERATOR" != "gen_ee_hb" && "$GENR" == "1" ) then
 	mv $PWD/*.conf $OUTDIR/configurations/generation/

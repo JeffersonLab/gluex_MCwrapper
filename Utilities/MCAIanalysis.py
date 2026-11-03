@@ -7,18 +7,19 @@
 #
 #   * extracts into --workdir (default /tmp/mcwrap, created 0700); refuses members that would land outside it
 #   * the model cannot read this host's disk, so the text of the logs is sent along with the prompt:
-#     a summary of manifest.tsv (counts per failure mode / project / exit code) plus --samples-per-mode attempts
-#     of each mode; without a manifest every file is sent (each head+tail truncated to --per-file chars,
-#     everything to --max-chars)
+#     manifest.tsv first (untruncated), then the attempts' logs round-robin across failure modes so every mode is
+#     represented before the budget runs out (each head+tail truncated to --per-file chars, everything to --max-chars)
 #   * report: <workdir>/AIanalysis_<untarred dir>.txt, emailed from <this account>@jlab.org through localhost SMTP
 #   * needs DELPHI_PAT in the environment
 #   * progress goes to stderr with timestamps; the reply is streamed and a heartbeat reports elapsed time/chars
+#   * self-healing (--attempts): context overflow -> fewer logs, empty answer -> more reply tokens, network -> back off
 #   * --request-id N: stage is written to LogRequests.AnalysisRequested for the dashboard
 #     (3 reading logs, 4 model analyzing, 5 emailing, 6 emailed, -1 failed + reason appended to Message)
 #
 ##########################################################################################################################
 import argparse
 import csv
+import http.client
 import json
 import os
 import pwd
@@ -31,24 +32,27 @@ import threading
 import time
 import urllib.error
 import urllib.request
-from collections import Counter, OrderedDict
+from collections import OrderedDict
 from email.message import EmailMessage
 
 DELPHI_URL = "https://api.delphi.jlab.org/v1/chat/completions"
 DEFAULT_MODEL = "jlab/qwen3.8-27b" #"azure_ai/claude-sonnet-5-5"
 EMAIL_RE = re.compile(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$")
-PROMPT = ("Analyze the failed MCwrapper job logs from {folder}. Its manifest.tsv lists {total} failed attempts in "
-          "{nmodes} failure modes; a summary of the manifest comes first. The logs are a subsample: only up to "
-          "{per_mode} representative attempt(s) per failure mode are included (.out = stdout, .err = stderr), so weigh "
-          "each mode by its count in the manifest, not by how many logs you see. For each failure mode diagnose the "
+PROMPT = ("Analyze the failed MCwrapper job logs from {folder}. Its manifest.tsv, listing every failed attempt and its "
+          "failure mode, comes first; read it before the logs. In event there are a large number of logs, which may cause max_tokens to be exceeded, subsample each failure mode ensuring each failure mode is represented. For each failure mode diagnose the "
           "underlying problem and supply possible corrective actions, then write a report which summarizes all of your "
-          "findings. Ignore any warnings unrelated to the underlying problems. Include a haiku based off the summary at "
-          "the end of the email")
-PROMPT_ALL = ("Analyze the log files in {folder}. diagnose any problems and supply possible corrective actions "
-              "and write a report which summarizes all of your findings. Ignore any warnings unrelated to the underlying "
-              "problems. Include a haiku based off the summary at the end of the email")
+          "findings. Ignore any warnings unrelated to the underlying problems. This summary should be terse and to the point; avoid uneccessary repetition, just show the excerpts and codes etc that are directly pertinent to the diagnosis. make sure the suggested fixes are clear and visible"
+          "Include a haiku based off the summary at the end of the email")
+
 HEARTBEAT = 15
 REQUEST_ID = None
+
+
+class Retry(Exception):
+    """A Delphi failure worth another attempt; kind is 'context', 'transient' or 'empty'."""
+    def __init__(self, kind, msg):
+        Exception.__init__(self, msg)
+        self.kind = kind
 
 
 def log(msg):
@@ -134,23 +138,53 @@ def read_text(path, per_file):
 
 
 def collect_logs(folder, per_file, max_chars):
-    parts, total, skipped = [], 0, []
+    paths = []
     for dirpath, dirnames, filenames in os.walk(folder):
         dirnames.sort()
-        for fn in sorted(filenames):
-            path = os.path.join(dirpath, fn)
-            rel = os.path.relpath(path, folder)
-            text = read_text(path, per_file)
-            if text is None:
-                skipped.append(rel + " (binary)")
-                continue
-            block = "===== %s =====\n%s\n" % (rel, text)
-            if total + len(block) > max_chars:
-                skipped.append(rel + " (size budget)")
-                continue
-            parts.append(block)
-            total += len(block)
-    log("including %d files (%d chars, ~%dk tokens); skipped %d" % (len(parts), total, total // 4000, len(skipped)))
+        paths.extend(os.path.join(dirpath, fn) for fn in sorted(filenames))
+    manifest = os.path.join(folder, "manifest.tsv")
+    mode_of = {}
+    if manifest in paths:
+        paths.remove(manifest)
+        with open(manifest, newline="") as fh:
+            rows = list(csv.DictReader(fh, delimiter="\t"))
+        by_mode = OrderedDict()
+        for r in rows:
+            by_mode.setdefault(r.get("mode") or "?", []).append(r.get("file") or "")
+        nmodes = len(by_mode)
+        # most prevalent mode first; attempts whose logs were not copied would waste a mode's turn
+        present = set(paths)
+        by_mode = OrderedDict((m, [f for f in files if any(os.path.join(folder, f + e) in present for e in (".out", ".err"))])
+                              for m, files in sorted(by_mode.items(), key=lambda kv: -len(kv[1])))
+        ordered, rnd = [], 0
+        while any(rnd < len(files) for files in by_mode.values()):
+            for mode, files in by_mode.items():
+                if rnd < len(files):
+                    for ext in (".out", ".err"):
+                        p = os.path.join(folder, files[rnd] + ext)
+                        if p in paths and p not in mode_of:
+                            ordered.append(p)
+                            mode_of[p] = mode
+            rnd += 1
+        paths = [manifest] + ordered + [p for p in paths if p not in mode_of]
+        log("manifest: %d attempts in %d modes; logs interleaved across modes, most prevalent first" % (len(rows), nmodes))
+    else:
+        log("no manifest.tsv in %s" % folder)
+    parts, total, skipped = [], 0, []
+    for path in paths:
+        rel = os.path.relpath(path, folder)
+        text = read_text(path, max_chars if path == manifest else per_file)
+        if text is None:
+            skipped.append(rel + " (binary)")
+            continue
+        label = "%s (mode %s)" % (rel, mode_of[path]) if path in mode_of else rel
+        block = "===== %s =====\n%s\n" % (label, text)
+        if total + len(block) > max_chars:
+            skipped.append(rel + " (size budget)")
+            continue
+        parts.append(block)
+        total += len(block)
+    log("including %d files (%d chars, ~%dk tokens); skipped %d" % (len(parts), total, total // 2000, len(skipped)))
     for s in skipped[:10]:
         log("  skipped " + s)
     if len(skipped) > 10:
@@ -158,63 +192,6 @@ def collect_logs(folder, per_file, max_chars):
     if skipped:
         parts.append("===== not included =====\n" + "\n".join(skipped) + "\n")
     return "".join(parts)
-
-
-def table(title, counter, total):
-    rows = ["%7d  %5.1f%%  %s" % (n, 100.0 * n / total, k) for k, n in counter.most_common()]
-    return "%s\n%s\n" % (title, "\n".join(rows))
-
-
-def collect_sampled(folder, per_mode, per_file, max_chars):
-    """(text, prompt fields) from manifest.tsv plus per_mode sample attempts per mode, or None without a manifest."""
-    manifest = os.path.join(folder, "manifest.tsv")
-    if not os.path.isfile(manifest):
-        return None
-    with open(manifest, newline="") as fh:
-        rows = list(csv.DictReader(fh, delimiter="\t"))
-    if not rows:
-        return None
-    total = len(rows)
-    modes = Counter(r["mode"] for r in rows)
-    summary = ["===== manifest.tsv summary (%d failed attempts) =====\n" % total,
-               table("by failure mode:", modes, total),
-               table("by project:", Counter("P" + r["project"] for r in rows), total),
-               table("by exit code:", Counter(r["exit_code"] or "none" for r in rows), total),
-               table("by mode and project:", Counter("%s | P%s" % (r["mode"], r["project"]) for r in rows), total)]
-    text = "\n".join(summary)
-
-    # attempts with both logs copied first, so the sample is not wasted on missing files
-    by_mode = OrderedDict((m, []) for m, _ in modes.most_common())
-    for r in sorted(rows, key=lambda r: (r.get("out_copied") == "missing") + (r.get("err_copied") == "missing")):
-        by_mode[r["mode"]].append(r)
-    root = os.path.realpath(folder)
-    parts, used, sampled, skipped = [text], len(text), 0, []
-    for mode, mrows in by_mode.items():
-        for r in mrows[:per_mode]:
-            header = ("===== sample for mode %r (%d of %d attempts): %s  project %s exit %s status %s completed %s =====\n"
-                      % (mode, modes[mode], total, r["file"], r["project"], r["exit_code"], r["status"], r["completed"]))
-            body = []
-            for ext in (".out", ".err"):
-                path = os.path.realpath(os.path.join(root, r["file"] + ext))
-                if os.path.commonpath([root, path]) != root or not os.path.isfile(path):
-                    body.append("--- %s%s: not available ---\n" % (r["file"], ext))
-                    continue
-                content = read_text(path, per_file)
-                body.append("--- %s%s ---\n%s\n" % (r["file"], ext, content if content is not None else "(binary)"))
-            block = header + "".join(body)
-            if used + len(block) > max_chars:
-                skipped.append("%s (%s)" % (r["file"], mode))
-                continue
-            parts.append(block)
-            used += len(block)
-            sampled += 1
-    log("manifest: %d attempts in %d modes; sending %d sample attempts (%d chars, ~%dk tokens), %d dropped for size"
-        % (total, len(modes), sampled, used, used // 4000, len(skipped)))
-    for s in skipped[:10]:
-        log("  dropped " + s)
-    if skipped:
-        parts.append("===== samples dropped for size =====\n" + "\n".join(skipped) + "\n")
-    return "".join(parts), {"total": total, "nmodes": len(modes), "per_mode": per_mode}
 
 
 def heartbeat(stop, t0, state):
@@ -261,7 +238,7 @@ def ask_delphi(pat, model, prompt, logs, max_tokens):
                         break
                     obj = json.loads(data)
                     if obj.get("error"):
-                        die("Delphi stream error: %s" % json.dumps(obj["error"])[:1000])
+                        raise Retry("transient", "Delphi stream error: %s" % json.dumps(obj["error"])[:1000])
                     usage = obj.get("usage") or usage
                     choices = obj.get("choices") or [{}]
                     delta = choices[0].get("delta") or {}
@@ -274,9 +251,15 @@ def ask_delphi(pat, model, prompt, logs, max_tokens):
                     chunks.append(piece)
                     state["chars"] += len(piece)
     except urllib.error.HTTPError as e:
-        die("Delphi returned HTTP %d: %s" % (e.code, e.read().decode("utf-8", "replace")[:1000]))
-    except (urllib.error.URLError, socket.timeout) as e:
-        die("could not reach Delphi after %.0fs: %s" % (time.time() - t0, getattr(e, "reason", e)))
+        text = e.read().decode("utf-8", "replace")[:1000]
+        msg = "Delphi returned HTTP %d: %s" % (e.code, text)
+        if "ContextWindowExceeded" in text or "maximum context length" in text:
+            raise Retry("context", msg)
+        if e.code == 429 or e.code >= 500:
+            raise Retry("transient", msg)
+        die(msg)
+    except (urllib.error.URLError, socket.timeout, ConnectionError, http.client.HTTPException) as e:
+        raise Retry("transient", "could not reach Delphi after %.0fs: %s" % (time.time() - t0, getattr(e, "reason", e)))
     finally:
         stop.set()
     reply = "".join(chunks)
@@ -284,9 +267,9 @@ def ask_delphi(pat, model, prompt, logs, max_tokens):
     log("reply complete: %d chars, %d chars of reasoning, finish_reason=%s in %.1fs%s"
         % (len(reply), state["reasoning"], finish, time.time() - t0, tokens))
     if not reply.strip():
-        hint = "; it ran out of reply tokens, raise --max-tokens" if finish == "length" else ""
-        die("the model returned an empty answer (finish_reason=%s, %d chars of reasoning%s)%s"
-            % (finish, state["reasoning"], tokens, hint))
+        raise Retry("empty" if finish == "length" else "transient",
+                    "the model returned an empty answer (finish_reason=%s, %d chars of reasoning%s)"
+                    % (finish, state["reasoning"], tokens))
     if finish == "length":
         log("WARNING: the answer was cut off at --max-tokens")
         reply += "\n\n[report truncated: the model hit its reply token limit]"
@@ -318,14 +301,23 @@ def main():
     ap.add_argument("email", help="address to send the report to")
     ap.add_argument("--model", default=DEFAULT_MODEL, help="Delphi model id (default %s)" % DEFAULT_MODEL)
     ap.add_argument("--workdir", default="/tmp/mcwrap", help="extraction/report directory (default /tmp/mcwrap)")
-    ap.add_argument("--per-file", type=int, default=20000, help="max chars sent per log file (default 20000)")
-    ap.add_argument("--max-chars", type=int, default=400000, help="max chars of logs sent in total (default 400000)")
-    ap.add_argument("--samples-per-mode", type=int, default=1, help="sample attempts sent per failure mode (default 1)")
-    ap.add_argument("--max-tokens", type=int, default=32000, help="max tokens in the model's reply, reasoning included (default 16000)")
+    ap.add_argument("--per-file", type=int, default=10000, help="max chars sent per log file (default 10000)")
+    ap.add_argument("--context-tokens", type=int, default=163840, help="model context window (default 163840, jlab/qwen3.8-27b)")
+    ap.add_argument("--max-chars", type=int, help="max chars of logs sent in total (default: what fits in "
+                    "--context-tokens minus --max-tokens at 2 chars/token, less 10%%)")
+    ap.add_argument("--max-tokens", type=int, default=60000, help="max tokens in the model's reply, reasoning included (default 60000)")
     ap.add_argument("--request-id", type=int, help="LogRequests.ID whose AnalysisRequested stage to update")
+    ap.add_argument("--attempts", type=int, default=5, help="Delphi attempts before giving up (default 5); a context "
+                    "overflow resends 60%% of the logs, an answer lost to reasoning gets 1.5x --max-tokens, "
+                    "network/5xx errors back off and resend")
     args = ap.parse_args()
     global REQUEST_ID
     REQUEST_ID = args.request_id
+    if args.max_chars is None:
+        # 280k chars of R26 logs exceeded 103.8k tokens, i.e. < 2.7 chars/token
+        args.max_chars = int((args.context_tokens - args.max_tokens) * 2 * 0.9)
+    if args.max_chars <= 0:
+        die("--max-tokens %d leaves no room for logs in a %d-token context" % (args.max_tokens, args.context_tokens))
 
     pat = os.environ.get("DELPHI_PAT")
     if not pat:
@@ -342,21 +334,34 @@ def main():
     folder = safe_extract(args.tarball, args.workdir)
     name = os.path.basename(folder)
 
-    log("[2/4] reading the manifest and sampling logs")
-    sampled = collect_sampled(folder, args.samples_per_mode, args.per_file, args.max_chars)
-    if sampled:
-        logs, fields = sampled
-        prompt = PROMPT.format(folder=folder, **fields)
-    else:
-        log("no manifest.tsv; sending every file")
-        logs = collect_logs(folder, args.per_file, args.max_chars)
-        prompt = PROMPT_ALL.format(folder=folder)
-    if not logs:
-        die("no readable files in %s" % folder)
-
-    log("[3/4] asking the model for an analysis (this can take minutes)")
-    set_stage(4)
-    analysis = ask_delphi(pat, args.model, prompt, logs, args.max_tokens)
+    log("[2/4] reading the manifest and logs")
+    prompt = PROMPT.format(folder=folder)
+    max_chars, max_tokens = args.max_chars, args.max_tokens
+    analysis = None
+    for attempt in range(1, args.attempts + 1):
+        logs = collect_logs(folder, args.per_file, max_chars)
+        if not logs:
+            die("no readable files in %s" % folder)
+        log("[3/4] asking the model for an analysis, attempt %d of %d (this can take minutes)" % (attempt, args.attempts))
+        set_stage(4)
+        try:
+            analysis = ask_delphi(pat, args.model, prompt, logs, max_tokens)
+            break
+        except Retry as e:
+            if attempt == args.attempts:
+                die("%s (gave up after %d attempts)" % (e, attempt))
+            if e.kind == "context":
+                max_chars = int(max_chars * 0.6)
+                log("context overflow; retrying with %d chars of logs: %s" % (max_chars, str(e)[:200]))
+            elif e.kind == "empty":
+                max_tokens = min(int(max_tokens * 1.5), args.context_tokens // 2)
+                max_chars = min(max_chars, int((args.context_tokens - max_tokens) * 2 * 0.9))
+                log("reasoning used every reply token; retrying with %d reply tokens and %d chars of logs"
+                    % (max_tokens, max_chars))
+            else:
+                wait = 30 * attempt
+                log("%s; retrying in %ds" % (str(e)[:300], wait))
+                time.sleep(wait)
     report_path = os.path.join(args.workdir, "AIanalysis_%s.txt" % name)
     with open(report_path, "w") as fh:
         fh.write(analysis + "\n")

@@ -9,9 +9,9 @@ if [[ -f /osgpool/halld/$running_user/.ALLSTOP ]]; then
 fi
 
 echo `ps all -u $running_user | grep MCDrone.sh`
-echo `ps all -u $running_user | grep MCDrone.sh | grep -v grep | wc -l`
+echo `ps all -u $running_user | grep MCDrone.sh | grep -v grep | grep -v defunct | wc -l`
 
-if [[ `ps all -u $running_user | grep MCDrone.sh | grep -v grep | wc -l` == 2 ]]; then
+if [[ `ps all -u $running_user | grep MCDrone.sh | grep -v grep | grep -v defunct | wc -l` == 2 ]]; then
     cd /tmp/ #/volatile/halld/home/tbritton/
     echo "sourcing"
     source /osgpool/halld/$running_user/local_setup.sh
