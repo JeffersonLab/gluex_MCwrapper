@@ -1319,7 +1319,7 @@ def main(argv):
         BGFOLD="DEFAULT"
         RANDOM_NUM_EVT=-1
         RANDBGTAG="none"
-        RANDBGRATE=1.0
+        RANDBGRATE=1
         SMEAR_NOTAG="0"
 
         CUSTOM_MAKEMC="DEFAULT"
