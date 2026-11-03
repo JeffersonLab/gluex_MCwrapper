@@ -1298,6 +1298,7 @@ def WritePayloadConfig(order,foundConfig,jobID=-1):
 
     splitlist=order["OutputLocation"].split("/")
     MCconfig_file.write("WORKFLOW_NAME="+splitlist[len(splitlist)-2]+"\n")
+    MCconfig_file.write("CALIBTIME="+order["Submit_Time"].strftime("%Y-%m-%d-%H-%M-%S")+"\n")
     MCconfig_file.write(order["Config_Stub"]+"\n")
     MinE=str(order["GenMinE"])
     if len(MinE) > 5:

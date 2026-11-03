@@ -1025,7 +1025,7 @@ def PSAcceptance(x, par0, par1, par2):
     return 0.
 
 
-def calcFluxCCDB(ccdb_conn, run, emin, emax):
+def calcFluxCCDB(ccdb_conn, run, emin, emax, calibtime):
 
         # Temporary workaround for 2025-01 Run Period.
         # There are only 209 runs with random trigger files, but 824 runs that satisfy the default RCDB query.
@@ -1048,7 +1048,7 @@ def calcFluxCCDB(ccdb_conn, run, emin, emax):
 
         flux = 0.
         VARIATION = "default"
-        CALIBTIME = datetime.now()
+        CALIBTIME = calibtime
         CALIBTIME_USER = CALIBTIME
         CALIBTIME_ENERGY = CALIBTIME
 
@@ -1111,11 +1111,11 @@ def calcFluxCCDB(ccdb_conn, run, emin, emax):
         return flux
 
 
-def calcTaggedFluxCCDB(ccdb_conn, run, emin, emax):
+def calcTaggedFluxCCDB(ccdb_conn, run, emin, emax, calibtime):
 
         flux = 0.
         VARIATION = "default"
-        CALIBTIME = datetime.now()
+        CALIBTIME = calibtime
         CALIBTIME_USER = CALIBTIME
         CALIBTIME_ENERGY = CALIBTIME
 
@@ -1211,6 +1211,7 @@ def calcTaggedFluxCCDB(ccdb_conn, run, emin, emax):
 
 def showhelp():
         helpstring= "variation=%s where %s is a valid jana_calib_context variation string (default is \"mc\")\n"
+        helpstring+= " calibtime=YYYY-MM-DD-hh-mm-ss selects CCDB constants as of that time (default is the request time)\n"
         helpstring+= " per_file=%i where %i is the number of events you want per file/job (default is 10000)\n"
         helpstring+= " base_file_number=%i where %i is the starting number of the files/jobs (default is 0)\n"
         helpstring+= " numthreads=%i sets the number of threads to use to %i.  Note that this will overwrite the NCORES set in MC.config\n"
@@ -1229,6 +1230,7 @@ def showhelp():
 ########################################################## MAIN ##########################################################
 
 def main(argv):
+        REQUEST_CALIBTIME = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
         parser_usage = "gluex_MC.py config_file Run_Number/Range num_events [all other options]\n\n where [all other options] are:\n\n "
         parser_usage += showhelp()
         parser = OptionParser(usage = parser_usage)
@@ -1354,10 +1356,10 @@ def main(argv):
         TO_BUNDLE=False
         #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         VERSION  = "mc"
-        CALIBTIME="notime"
-        RECON_VERSION="mc"
+        CALIBTIME=REQUEST_CALIBTIME
+        RECON_VERSION=None
         RECON_CALIBTIME="notime"
-        ANA_VERSION="mc"
+        ANA_VERSION=None
         ANA_CALIBTIME="notime"
         BASEFILENUM=0
         PERFILE=10000
@@ -1563,6 +1565,8 @@ def main(argv):
                         RECON_VERSION=rm_comments[0].strip()
                 elif str(parts[0]).upper()=="RECON_CALIBTIME" :
                         RECON_CALIBTIME=rm_comments[0].strip()
+                elif str(parts[0]).upper()=="CALIBTIME" :
+                        CALIBTIME=rm_comments[0].strip()
                 elif str(parts[0]).upper()=="ANA_VERSION" :
                         ANA_VERSION=rm_comments[0].strip()
                 elif str(parts[0]).upper()=="ANA_CALIBTIME" :
@@ -1649,7 +1653,6 @@ def main(argv):
                                 argfound=1
 
                                 VERSION=flag[1]
-                                CALIBTIME="notime"
  #                               for part in range(2,len(flag)):
   #                                      VERSION+="="+flag[part]
                         if flag[0]=="calibtime":
@@ -1710,6 +1713,19 @@ def main(argv):
                                         TO_BUNDLE=True
                         if argfound==0:
                                 print( "WARNING OPTION: "+argu+" NOT FOUND!")
+
+        # Preserve compatibility with legacy "notime" values.
+        if CALIBTIME == "notime":
+                CALIBTIME = REQUEST_CALIBTIME
+        CCDB_CALIBTIME = ccdb.path_utils.parse_time(CALIBTIME)
+        if RECON_CALIBTIME == "notime":
+                RECON_CALIBTIME = CALIBTIME
+        if ANA_CALIBTIME == "notime":
+                ANA_CALIBTIME = CALIBTIME
+        if RECON_VERSION is None:
+                RECON_VERSION = VERSION
+        if ANA_VERSION is None:
+                ANA_VERSION = RECON_VERSION
 
         if VERSION == "mc_cpp":
                 print("ERROR: variation=mc_cpp is deprecated and not supported. Please use variation=mc, and in your MC.config set EXPERIMENT=CPP.")
@@ -2054,9 +2070,9 @@ def main(argv):
                                 # compute flux in generated beam energy range
                                 flux = 0
                                 if CCDB_FLUX_MCWRAPPER=="tagged":
-                                    flux = calcTaggedFluxCCDB(ccdb_conn, runs, float(MIN_GEN_ENERGY), float(MAX_GEN_ENERGY)) / 1.e9
+                                    flux = calcTaggedFluxCCDB(ccdb_conn, runs, float(MIN_GEN_ENERGY), float(MAX_GEN_ENERGY), CCDB_CALIBTIME) / 1.e9
                                 else:
-                                    flux = calcFluxCCDB(ccdb_conn, runs, float(MIN_GEN_ENERGY), float(MAX_GEN_ENERGY)) / 1.e9
+                                    flux = calcFluxCCDB(ccdb_conn, runs, float(MIN_GEN_ENERGY), float(MAX_GEN_ENERGY), CCDB_CALIBTIME) / 1.e9
                                 print(flux)
                                 fluxes.append(flux)
                                 flux_sum = flux_sum + flux
