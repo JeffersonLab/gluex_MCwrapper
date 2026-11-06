@@ -329,7 +329,7 @@ def checkProjectsForCompletion(comp_assignment):
             dbcnx_comp=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
             dbcursor_comp=dbcnx_comp.cursor(MySQLdb.cursors.DictCursor)
 
-            if (proj["Tested"]!=100 and proj["Tested"]!=21 and proj["Tested"]!=41 and proj["Tested"]!=40 and proj["Tested"]!=400 and proj["Tested"]!=20):
+            if (proj["Tested"]!=100 and proj["Tested"]!=21 and proj["Tested"]!=41 and proj["Tested"]!=40 and proj["Tested"]!=400 and proj["Tested"]!=20 and proj["Tested"]!=22 and proj["Tested"]!=42):
                 updateProjectStatus_tobundle_q="Update Project Set Tested=20 where ID="+str(proj['ID'])+";"
                 dbcursor_comp.execute(updateProjectStatus_tobundle_q)
                 dbcnx_comp.commit()

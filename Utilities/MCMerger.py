@@ -17,6 +17,9 @@ from functools import reduce
 import sys
 import subprocess
 import argparse
+import glob
+import json
+import tempfile
 from collections import defaultdict
 import MySQLdb
 
@@ -50,17 +53,42 @@ def add_bash(func):
     return func
 
 
+def check_root_merge(output, files):
+    """Compare entries in every output tree with the sum of its input trees."""
+    macro = os.path.join(os.path.dirname(os.path.abspath(__file__)), "check_root_merge.C")
+    with tempfile.NamedTemporaryFile(mode="w") as file_list:
+        file_list.write("\n".join(files) + "\n")
+        file_list.flush()
+        return subprocess.run(["root", "-l", "-b", "-q",
+                               macro + "(" + json.dumps(output) + "," + json.dumps(file_list.name) + ")"]).returncode
+
+
+def merge_root(output, pattern, checkpoint):
+    files = sorted(glob.glob(pattern))
+    if not files:
+        print("No ROOT inputs match " + pattern)
+        return 1
+    if os.path.isfile(checkpoint) and os.path.isfile(output):
+        if check_root_merge(output, files) == 0:
+            return 0
+    if subprocess.run(["rm", "-f", checkpoint]).returncode != 0:
+        return 1
+    with tempfile.NamedTemporaryFile(mode="w") as file_list:
+        file_list.write("\n".join(files) + "\n")
+        file_list.flush()
+        success = subprocess.run(["hadd", "-v", "1", "-f", output, "@" + file_list.name])
+    if success.returncode != 0:
+        return success.returncode
+    return check_root_merge(output, files)
+
+
 @add_bash
 def bash_root(name_map, path, mc_dir):
     """Merge root files in mc_dir."""
     return_code = 0
-    #check if the file .bash_root exists in the cwd directory.  IF it does skip the step and return 0
     print("Path: ", path)
     root_path=path.split("//")[0]
     print("Root path: ", root_path)
-    if os.path.isfile(path.split("//")[0]+"/.bash_root"):
-        print("Skipping bash_root step")
-        return return_code
 
     checkpointpath = root_path + "/.checkpoints/root/"
 
@@ -77,22 +105,20 @@ def bash_root(name_map, path, mc_dir):
                 return_code += subprocess.run([f"mkdir -p {path + '/' + dir_type + '/' +  fold_name}"], shell=True).returncode
                 return_code += subprocess.run([f"mkdir -p {checkpointpath + '/' + dir_type + '/' +  fold_name}"], shell=True).returncode
                 for run in name_map["trees"][tup]["run_nums"]:
-                    if os.path.isfile(checkpointpath + '/' + dir_type + '/' +  fold_name + '/' + tup[0] + run + tup[1] + '.done'):
-                        continue
                     # success = subprocess.run([f"/home/mcwrap/tools/hadd -v 1 -f {path + '/' + dir_type + '/' +  fold_name + '/' + tup[0] + run + tup[1]} {mc_dir + '/' + 'root' + '/' +  dir_type + '/' + tup[0]+run}*{tup[1]}"], shell=True)
-                    success = subprocess.run([f"hadd -v 1 -f {path + '/' + dir_type + '/' +  fold_name + '/' + tup[0] + run + tup[1]} {mc_dir + '/' + 'root' + '/' +  dir_type + '/' + tup[0]+run}*{tup[1]}"], shell=True)
+                    success = merge_root(path + '/' + dir_type + '/' + fold_name + '/' + tup[0] + run + tup[1],
+                                         mc_dir + '/root/' + dir_type + '/' + tup[0] + run + '*' + tup[1],
+                                         checkpointpath + '/' + dir_type + '/' + fold_name + '/' + tup[0] + run + tup[1] + '.done')
                     # success = subprocess.run([f"/home/mcwrap/sw/root-6.32.20-gcc11.5.0/bin/hadd -v 1 -f {path + '/' + dir_type + '/' +  fold_name + '/' + tup[0] + run + tup[1]} {mc_dir + '/' + 'root' + '/' +  dir_type + '/' + tup[0]+run}*{tup[1]}"], shell=True)
-                    return_code += success.returncode
-                    if success.returncode == 0:
-                        open(checkpointpath + '/' + dir_type + '/' +  fold_name + '/' + tup[0] + run + tup[1] + '.done', 'a').close()
+                    if success != 0:
+                        return success
+                    open(checkpointpath + '/' + dir_type + '/' +  fold_name + '/' + tup[0] + run + tup[1] + '.done', 'a').close()
                      #   good_runs.append(run)
         elif dir_type == "monitoring_hists":
             subprocess.run([f"mkdir -p {path + dir_type}"] , shell=True)
             subprocess.run([f"mkdir -p {checkpointpath + dir_type}"] , shell=True)
             for tup in name_map[dir_type].keys():
                 for run in name_map[dir_type][tup]["run_nums"]:
-                    if os.path.isfile(checkpointpath + '/' + dir_type + '/' +  tup[0] + run + tup[1] + '.tar.done'):
-                        continue
                     success = subprocess.run([f"tar cvf {path + '/' + dir_type + '/' +  tup[0] + run + tup[1]}.tar {mc_dir + '/' + 'root' + '/' +  dir_type + '/' + tup[0]+run}*{tup[1]}"], shell=True)
                     return_code += success.returncode
                     if success.returncode == 0:
@@ -102,14 +128,14 @@ def bash_root(name_map, path, mc_dir):
             subprocess.run([f"mkdir -p {checkpointpath + dir_type}"] , shell=True)
             for tup in name_map[dir_type].keys():
                 for run in name_map[dir_type][tup]["run_nums"]:
-                    if os.path.isfile(checkpointpath + '/' + dir_type + '/' +  tup[0] + run + tup[1] + '.done'):
-                        continue
                     # success = subprocess.run([f"/home/mcwrap/tools/hadd -v 1 -f {path + '/' + dir_type + '/' +  tup[0] + run + tup[1]} {mc_dir + '/' + 'root' + '/' +  dir_type + '/' + tup[0]+run}*{tup[1]}"], shell=True)
-                    success = subprocess.run([f"hadd -v 1 -f {path + '/' + dir_type + '/' +  tup[0] + run + tup[1]} {mc_dir + '/' + 'root' + '/' +  dir_type + '/' + tup[0]+run}*{tup[1]}"], shell=True)
+                    success = merge_root(path + '/' + dir_type + '/' + tup[0] + run + tup[1],
+                                         mc_dir + '/root/' + dir_type + '/' + tup[0] + run + '*' + tup[1],
+                                         checkpointpath + '/' + dir_type + '/' + tup[0] + run + tup[1] + '.done')
                     # success = subprocess.run([f"/home/mcwrap/sw/root-6.32.20-gcc11.5.0/bin/hadd -v 1 -f {path + '/' + dir_type + '/' +  tup[0] + run + tup[1]} {mc_dir + '/' + 'root' + '/' +  dir_type + '/' + tup[0]+run}*{tup[1]}"], shell=True)
-                    return_code += success.returncode
-                    if success.returncode == 0:
-                        open(checkpointpath + '/' + dir_type + '/' +  tup[0] + run + tup[1] + '.done', 'a').close()
+                    if success != 0:
+                        return success
+                    open(checkpointpath + '/' + dir_type + '/' +  tup[0] + run + tup[1] + '.done', 'a').close()
 
     #if return_code=0 create empty file .bash_root in cwd directory
     if return_code==0:
@@ -124,9 +150,6 @@ def bash_hddm_merge(name_map, path, mc_dir):
     """Merge hddm files in mc_dir using the merge_hddm.py script."""
     return_code = 0
 
-    if os.path.isfile(path + dir_type+"/.bash_hddm_merge"):
-        print("Skipping bash_hddm_merge step")
-        return return_code
     checkpointpath = path.split("//")[0] + "/.checkpoints/hddm/"
 
     MCWRAPPER_BOT_HOME="/scigroup/mcwrapper/gluex_MCwrapper/"
@@ -135,16 +158,21 @@ def bash_hddm_merge(name_map, path, mc_dir):
     for tup in name_map.keys():
         for run in name_map[tup]["run_nums"]:
             print(f"hddm add {run}",flush=True)
-            if os.path.isfile(checkpointpath + tup[0] + run + tup[1] + '.done'):
-                continue
-            success =  subprocess.run([f"python2 "+MCWRAPPER_BOT_HOME+f"/Utilities/merge_hddm.py {path + tup[0] + run + tup[1]} {mc_dir + '/hddm/' + tup[0] + run}*{tup[1]}"], shell=True)
-            return_code += success.returncode
-            if success.returncode == 0:
-                open(checkpointpath + tup[0] + run + tup[1] + '.done', 'a').close()
+            output = path + tup[0] + run + tup[1]
+            files = sorted(glob.glob(mc_dir + '/hddm/' + tup[0] + run + '*' + tup[1]))
+            if not files:
+                return 1
+            command = ["python2", MCWRAPPER_BOT_HOME + "/Utilities/merge_hddm.py", output] + files
+            if subprocess.run(["rm", "-f", checkpointpath + tup[0] + run + tup[1] + '.done']).returncode != 0:
+                return 1
+            success = subprocess.run(command)
+            if success.returncode != 0:
+                return success.returncode
+            open(checkpointpath + tup[0] + run + tup[1] + '.done', 'a').close()
 
     if return_code==0:
         print("Creating .bash_hddm_merge file in "+path)
-        open(path + dir_type+"/.bash_hddm_merge", 'a').close()
+        open(path.split("//")[0]+"/.bash_hddm_merge", 'a').close()
 
     return return_code
 
@@ -153,9 +181,6 @@ def bash_hddm_merge(name_map, path, mc_dir):
 def bash_hddm(name_map, path, mc_dir):
     """Bundle hddm files in mc_dir using tar."""
     return_code = 0
-    if os.path.isfile(path.split("//")[0]+"/.bash_hddm"):
-        print("Skipping bash_hddm step")
-        return return_code
 
     checkpointpath = path.split("//")[0] + "/.checkpoints/hddm/"
     print("Checkpoint path: ", checkpointpath)
@@ -164,8 +189,6 @@ def bash_hddm(name_map, path, mc_dir):
     subprocess.run([f"mkdir -p {checkpointpath}"] , shell=True)
     for tup in name_map.keys():
         for run in name_map[tup]["run_nums"]:
-            if os.path.isfile(checkpointpath + tup[0] + run + tup[1] + '.tar.done'):
-                continue
             #success = subprocess.run([f"tar cvf {path + tup[0] + run + tup[1]}.tar {mc_dir + '/'  +  'hddm' + '/' +   tup[0] + run}_*{tup[1]}"], shell=True)
             
             file_list=[]
@@ -175,7 +198,7 @@ def bash_hddm(name_map, path, mc_dir):
                 if match:
                     file_list.append(fname)
             if len(file_list) < 1:
-                continue
+                return 1
             
             bundle_command=f"tar cvf {path + tup[0] + run + tup[1]}.tar"
             for fname in file_list:
@@ -198,9 +221,6 @@ def bash_hddm(name_map, path, mc_dir):
 def bash_configurations(name_map, path, mc_dir):
     """Bundle config files in mc_dir."""
     return_code = 0
-    if os.path.isfile(path.split("//")[0]+"/.bash_configurations"):
-        print("Skipping bash_configurations step")
-        return return_code
 
     checkpointpath = path.split("//")[0] + "/.checkpoints/configurations/"
     print("Checkpoint path: ", checkpointpath)
@@ -210,8 +230,6 @@ def bash_configurations(name_map, path, mc_dir):
         subprocess.run([f"mkdir -p {checkpointpath + dir_type}"] , shell=True)
         for tup in name_map[dir_type].keys():
             for run in name_map[dir_type][tup]["run_nums"]:
-                if os.path.isfile(checkpointpath + '/' + dir_type + '/' + tup[0] + run + tup[1] + '.tar.done'):
-                    continue
                 success = subprocess.run([f"tar cvf {path + '/' + dir_type + '/' + tup[0] + run + tup[1]}.tar {mc_dir + '/' + 'configurations' + '/' +  dir_type + '/' +   tup[0] + run}_*{tup[1]}"], shell=True)
                 return_code += success.returncode
                 if success.returncode == 0:
@@ -273,19 +291,17 @@ def recurse_name_map(name_map, path, mc_dir, hddm=False):
         if type(k) is not str:
             print(f"{k} is not a string! Continue recurse_name_map...")
             continue
-        if k=="hddm" and hddm==True:
-            k = "hddm_merge"
-        if ("bash_" + k) in bash.keys():
+        action = "bash_hddm_merge" if k=="hddm" and hddm==True else "bash_" + k
+        if action in bash.keys():
             dir_type = re.split("/", path)[-1]
-            return_code += bash["bash_" + k](name_map[k], path+k+"/", mc_dir)
+            success = bash[action](name_map[k], path+k+"/", mc_dir)
+            if success != 0:
+                return success
     return return_code
 
 
 def bundle(name_map, mc_dir, temp_dir, hddm=False):
-    """
-    Traverse mc_dir via name_map and perform bash actions as appropriate.
-    After all actions are complete, tar up the output.
-    """
+    """Bundle outputs into the staging directory."""
 
     return_code = 0
     if temp_dir is None:
@@ -302,28 +318,31 @@ def bundle(name_map, mc_dir, temp_dir, hddm=False):
     print("INITIAL BUNDLE STEP DONE")
     good_runs = []
     if temp_dir is None:
-        bundle_success = recurse_name_map(name_map, f"{mc_dir + '/' + 'output/' }", mc_dir, hddm)
+        bundle_success = recurse_name_map(name_map, mc_dir.rstrip(os.sep) + "//output/", mc_dir, hddm)
     else:
-        bundle_success = recurse_name_map(name_map, f"{temp_dir + '/output/' }", mc_dir, hddm)
-    return_code += bundle_success
-    if temp_dir is None:
-        return_code += subprocess.run([f"tar cvf {mc_dir + '/' +  'output.tar'} {mc_dir + '/' + 'output/' } --remove-files"], shell = True).returncode
-    else:
-        return_code += subprocess.run([f"tar cvf {temp_dir + '/' + 'output.tar'} {temp_dir + '/output/'} --remove-files"], shell = True).returncode
+        bundle_success = recurse_name_map(name_map, temp_dir.rstrip(os.sep) + "//output/", mc_dir, hddm)
+    if bundle_success != 0:
+        return bundle_success
     return return_code
 
 
 def move(mc_dir, temp_dir, out_dir):
-    """
-    Move the bundled up mc_dir into out_dir and remove the temporary output
-    from mc_dir.
-    """
-    subprocess.run(f"mkdir -p {out_dir}", shell=True)
-    n_strip_components = mc_dir.strip(os.sep).count(os.sep) + 1
-    if temp_dir is None:
-        success = subprocess.run([f"mv {mc_dir + '/' + 'output.tar' } {out_dir}; cd {out_dir}; tar xvf output.tar --strip-components={n_strip_components}; rm output.tar"], shell=True)
-    else:
-        success = subprocess.run([f"mv {temp_dir + '/' + 'output.tar' } {out_dir}; cd {out_dir}; tar xvf output.tar --strip-components={n_strip_components}; rm output.tar"], shell=True)
+    """Publish the output directory on the same filesystem."""
+    source = os.path.join(temp_dir if temp_dir is not None else mc_dir, "output")
+    out_dir = out_dir.rstrip(os.sep)
+    destination = out_dir if os.path.exists(out_dir) else os.path.dirname(os.path.abspath(out_dir))
+    if os.stat(source).st_dev != os.stat(destination).st_dev:
+        print("Staging and destination must be on the same filesystem; keeping staged files.")
+        return 1
+    if os.path.exists(out_dir) and os.listdir(out_dir):
+        print("Destination already contains files; keeping staged files.")
+        return 1
+    identity = os.stat(source)
+    success = subprocess.run(["mv", "-T", source, out_dir])
+    if success.returncode == 0:
+        published = os.stat(out_dir)
+        if (identity.st_dev, identity.st_ino) != (published.st_dev, published.st_ino):
+            return 1
     return success.returncode
 
 
@@ -367,52 +386,54 @@ def check_success(name_map, output_path):
     #merged_file_no = sum([len(files) for r, d, files in os.walk(output_path)])
     print(f"Number of unique files output is {merged_file_no}")
 
-    return mc_file_no == merged_file_no
+    return mc_file_no > 0 and mc_file_no == merged_file_no
 
 
 def main(args):
-
-    if args.tempdir is None:
-        if os.path.isfile(args.output_path+"/.merging"):
-            print("Merging already in progress.  Exiting.")
-            return -666
-        print("Creating .merging file")
-        open(args.output_path+"/.merging", 'a').close()
-    else:
-        print("Tempdir: ", args.tempdir)
-        if os.path.isfile(args.tempdir+"/.merging"):
-            print("Merging already in progress.  Exiting.")
-            return -666
-        print("Creating .merging file")
-        open(args.tempdir+"/.merging", 'a').close()
-
-    print("args: ", args)
-
-    input_path = args.input_path
-    output_path = args.output_path
-
     if args.P:
         curs.execute("SELECT * FROM Project WHERE ID=%s",args.P)
         proj=curs.fetchone()
-        input_path= proj["OutputLocation"].replace("/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/","/work/halld/gluex_simulations/REQUESTED_MC/")
-        output_path="/".join(proj["OutputLocation"].split("/")[:-1])+"/"
+        args.input_path = proj["OutputLocation"].replace("/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/","/work/halld/gluex_simulations/REQUESTED_MC/")
+        args.output_path = "/".join(proj["OutputLocation"].split("/")[:-1])+"/"
 
+    if args.tempdir is None:
+        args.tempdir = args.output_path.rstrip(os.sep) + ".mergetemp/"
+    args.tempdir = os.path.normpath(args.tempdir)
+    if subprocess.run(["mkdir", "-p", args.tempdir]).returncode != 0:
+        return 1
+    lockfile = os.path.join(args.tempdir, ".merging")
+    try:
+        open(lockfile, 'x').close()
+    except FileExistsError:
+        print("Merging already in progress.  Exiting.")
+        # EX_TEMPFAIL: merge already running.
+        return 75
+    try:
+        return bundle_project(args)
+    finally:
+        subprocess.run(["rm", "-f", lockfile])
+
+
+def input_snapshot(path):
+    files = {}
+    for directory, dirs, names in os.walk(path):
+        for name in names:
+            filename = os.path.join(directory, name)
+            info = os.stat(filename)
+            files[filename] = (info.st_dev, info.st_ino, info.st_size, info.st_mtime)
+    return files
+
+
+def bundle_project(args):
+    print("args: ", args)
     print(f"Moving from: {args.input_path} to {args.output_path}")
-    if args.f==False:
-
-        if args.tempdir is None:
-            searchpath = args.input_path
-        else:
-            searchpath = args.tempdir
-
-        for path, dirs, files in os.walk(searchpath):
-            if "output" in dirs:
-                print("The directory in the input path might already be in the process of bundling. Use the -f flag to clear out and start fresh.")
-                for path, dirs, files in os.walk(args.output_path):
-                    for existing_dir in ["configurations", "root", "hddm"]:
-                        if existing_dir in dirs:
-                            print("Output path might already contain bundled files. Use the -f flag to clear out and start fresh.")
-                            return -1
+    input_path = os.path.realpath(args.input_path)
+    for path in (args.tempdir, args.output_path):
+        path = os.path.realpath(path)
+        if path == input_path or path.startswith(input_path + os.sep) or input_path.startswith(path + os.sep):
+            print("Input, staging, and destination must be separate directories.")
+            return 1
+    original_files = input_snapshot(args.input_path)
     print("INPUT:",args.input_path)
     name_map = get_directory_structure(args.input_path)
     dir_type = re.split("/", args.input_path.rstrip(os.sep))[-1]
@@ -422,28 +443,30 @@ def main(args):
 
     print(name_map.keys())
     bundle_success = bundle(name_map[dir_type], args.input_path.rstrip(os.sep), args.tempdir, args.hddm)
+    if bundle_success != 0:
+        print(f"Bundling failed with error code {bundle_success}; keeping inputs and staged files.")
+        return 2
+    staged_output = os.path.join(args.tempdir, "output")
+    if not check_success(name_map, staged_output) or original_files != input_snapshot(args.input_path):
+        print("Staged output validation failed or inputs changed; keeping inputs and staged files.")
+        return 3
     move_success = move(args.input_path, args.tempdir, args.output_path)
-    final_success = bundle_success + move_success
-    success_check = check_success(name_map, args.output_path)
-
-    print(f"bundle_success: {bundle_success}, move_success: {move_success}, final_success: {final_success}, success_check: {success_check}")
-
-    if final_success == 0 and success_check:
-        print("Bundling and moving completed succesfully")
-
-        if args.noclean==False:
-            print(f"Removing {args.input_path}.")
-            subprocess.run([f"rm -r {args.input_path}"], shell=True)
-    else:
-        print(f"Bundling and moving failed with error code {final_success}.")
-
-    print(f"Returning final_success: {final_success}")
-    return final_success
+    if move_success != 0:
+        print(f"Publishing failed with error code {move_success}; keeping inputs and staged files.")
+        return 4
+    if not check_success(name_map, args.output_path) or original_files != input_snapshot(args.input_path):
+        print("Published output validation failed or inputs changed; keeping inputs.")
+        return 3
+    print("Bundling and moving completed succesfully")
+    if args.noclean==False:
+        print(f"Removing {args.input_path}.")
+        return subprocess.run(["rm", "-r", args.input_path]).returncode
+    return 0
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Bundle and move MCwrapper outputs to another directory.")
-    parser.add_argument("-f", action="store_true", help="Force overwrite of any potential existing output.")
+    parser.add_argument("-f", action="store_true", help="Legacy option; published output is never overwritten.")
     parser.add_argument("input_path", type=dir_path, help="The input path for directory to be merged.")
     parser.add_argument("output_path", type=dir_path, help="The output path for the merged directory.")
     parser.add_argument("-hddm", action="store_true", help="Use the Python hddm interfaces to merge hddm files instead of bundling with tar. Warning: may be very slow.")
