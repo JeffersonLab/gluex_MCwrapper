@@ -359,11 +359,12 @@ fi
 export JANA_GEOMETRY_URL="ccdb:///$GEOMETRY_CCDB_PATH"
 
 RCDBVERSIONPARTS=($(echo "$RCDB_VERSION" | tr '.' ' '))
-RCDBMAJOR="${RCDBVERSIONPARTS[0]}"
-RCDBMINOR="${RCDBVERSIONPARTS[1]}"
+# digits only, defaulted to 0, compared in base 10 so parts like "08" are not read as octal
+RCDBMAJOR="${RCDBVERSIONPARTS[0]//[^0-9]/}"
+RCDBMINOR="${RCDBVERSIONPARTS[1]//[^0-9]/}"
 RCDBFILE="rcdb.sqlite"
 echo "RCDB_VERSION is $RCDB_VERSION (major $RCDBMAJOR, minor $RCDBMINOR)"
-if [[ "$RCDBMAJOR" -eq 0 && "$RCDBMINOR" -lt 8 ]]; then
+if [[ $((10#${RCDBMAJOR:-0})) -eq 0 && $((10#${RCDBMINOR:-0})) -lt 8 ]]; then
 	echo "RCDB needs a version 1 sqlite file"
 	RCDBFILE="rcdb_v1.sqlite"
 	RCDB_CONNECTION="mysql://rcdb@hallddb.jlab.org/rcdb"
@@ -2175,10 +2176,10 @@ else
 			fi
 
 			RCDBVERSIONPARTS=($(echo "$RCDB_VERSION" | tr '.' ' '))
-			RCDBMAJOR="${RCDBVERSIONPARTS[0]}"
-			RCDBMINOR="${RCDBVERSIONPARTS[1]}"
+			RCDBMAJOR="${RCDBVERSIONPARTS[0]//[^0-9]/}"
+			RCDBMINOR="${RCDBVERSIONPARTS[1]//[^0-9]/}"
 			RCDBFILE="rcdb.sqlite"
-			if [[ "$RCDBMAJOR" -eq 0 && "$RCDBMINOR" -lt 8 ]]; then
+			if [[ $((10#${RCDBMAJOR:-0})) -eq 0 && $((10#${RCDBMINOR:-0})) -lt 8 ]]; then
 				echo "RCDB needs a version 1 sqlite file"
 				RCDBFILE="rcdb_v1.sqlite"
 			fi

@@ -41,7 +41,7 @@ EMAIL_RE = re.compile(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$")
 PROMPT = ("Analyze the failed MCwrapper job logs from {folder}. Its manifest.tsv, listing every failed attempt and its "
           "failure mode, comes first; read it before the logs. In event there are a large number of logs, which may cause max_tokens to be exceeded, subsample each failure mode ensuring each failure mode is represented. For each failure mode diagnose the "
           "underlying problem and supply possible corrective actions, then write a report which summarizes all of your "
-          "findings. Ignore any warnings unrelated to the underlying problems. This summary should be terse and to the point; avoid uneccessary repetition, just show the excerpts and codes etc that are directly pertinent to the diagnosis. make sure the suggested fixes are clear and visible"
+          "findings. Ignore any warnings unrelated to the underlying problems. This summary should be terse and to the point; avoid uneccessary repetition, just show the excerpts and codes etc that are directly pertinent to the diagnosis. make sure the suggested fixes are clear and visible. The report should not use markdown and be natively formatted for email; use font size, color, boldness, underline, etc.  Remember, not all email clients render HTML so avoid using it."
           "Include a haiku based off the summary at the end of the email")
 
 HEARTBEAT = 15

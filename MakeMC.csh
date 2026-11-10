@@ -317,9 +317,9 @@ setenv JANA_GEOMETRY_URL "ccdb:///$GEOMETRY_CCDB_PATH"
 #xrdcopy $XRD_RANDOMS_URL/ccdb.sqlite ./
 #setenv CCDB_CONNECTION sqlite:///$PWD/ccdb.sqlite
 #setenv JANA_CALIB_URL ${CCDB_CONNECTION}
-set RCDBVERSIONPARTS=(`echo $RCDB_VERSION | tr '.' ' '`)
-set RCDBMAJOR=$RCDBVERSIONPARTS[1]
-set RCDBMINOR=$RCDBVERSIONPARTS[2]
+# awk +0 gives base-10 integers ("08" -> 8, missing part -> 0); some csh builds reject "08" as octal
+set RCDBMAJOR=`echo "$RCDB_VERSION" | awk -F. '{print $1+0}'`
+set RCDBMINOR=`echo "$RCDB_VERSION" | awk -F. '{print $2+0}'`
 set RCDBFILE="rcdb.sqlite"
 echo "RCDB_VERSION is $RCDB_VERSION (major $RCDBMAJOR, minor $RCDBMINOR)"
 if ( $RCDBMAJOR == 0 && $RCDBMINOR < 8 ) then
@@ -2088,9 +2088,8 @@ else
 				setenv JANA_CALIB_CONTEXT "$anawholecontext"
 			endif
 
-			set RCDBVERSIONPARTS=(`echo $RCDB_VERSION | tr '.' ' '`)
-			set RCDBMAJOR=$RCDBVERSIONPARTS[1]
-			set RCDBMINOR=$RCDBVERSIONPARTS[2]
+			set RCDBMAJOR=`echo "$RCDB_VERSION" | awk -F. '{print $1+0}'`
+			set RCDBMINOR=`echo "$RCDB_VERSION" | awk -F. '{print $2+0}'`
 			set RCDBFILE="rcdb.sqlite"
 			if ( $RCDBMAJOR == 0 && $RCDBMINOR < 8 ) then
 				echo "RCDB needs a version 1 sqlite file"
