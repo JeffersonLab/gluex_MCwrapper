@@ -1879,8 +1879,8 @@ else
 				set JANA_TIMEOUT_STR="-PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400"
 			endif
 			
-			echo "$runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1"\+"$fold_skip_num"
-			$runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
+			echo "$runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"$RANDBGRATE"\+"$fold_skip_num"
+			$runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:$RANDBGRATE\+$fold_skip_num
 			set mcsmear_return_code=$status
 
 		else

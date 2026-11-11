@@ -1960,8 +1960,8 @@ else
 				export JANA_TIMEOUT_STR="-PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400"
 			fi
 			
-			echo $runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
-			$runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
+			echo $runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:$RANDBGRATE\+$fold_skip_num
+			$runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:$RANDBGRATE\+$fold_skip_num
 			mcsmear_return_code=$?
 		else
 			#trust the user and use their string
