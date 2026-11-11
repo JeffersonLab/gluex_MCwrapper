@@ -16,6 +16,10 @@
 #     stamped Downloaded, or --expire-days after completion if never downloaded; Purged records when
 #   * AnalysisRequested rows: once the tarball is shipped, MCAIanalysis.py is run on ANALYSIS_HOST over ssh in the
 #     background and emails its report to RequestedBy@jlab.org (log: <workdir>/R<id>_analysis.log, kept on failure)
+#   * single-project requests for a project with Tested=-1: its test-failure email (FAIL_MAIL) is shipped next to the
+#     tarball as R<id>_failmail.log (it is the ResultPath when there is no tarball) and is included in any AI analysis
+#   * a dashboard "AI analyze" on a finished row sets AnalysisRequested=1 (and AnalysisBy, who gets the report); any
+#     librarian claims it (1 -> 2, atomically) and runs MCAIanalysis.py on the already-shipped result file
 #
 #   Loops forever. Cron it every minute as a watchdog (on each submit host, as the production account):
 #     * * * * * python3 /scigroup/mcwrapper/gluex_MCwrapper/Utilities/MCLogLibrarian.py >> ~/MCLogLibrarian.log 2>&1
@@ -63,6 +67,9 @@ PURGE_EVERY = 600
 PURGE_BATCH = 50
 RESULT_DIR = "REQUESTEDMC_LOGS"  # the only remote directory cleanup will delete from
 TARBALL_RE = re.compile(r"^[A-Za-z0-9_.()+-]+\.tar\.gz$")
+MAIL_RE = re.compile(r"^R\d+_failmail\.log$")
+FAIL_MAIL = "/osgpool/halld/" + runner_name + "/REQUESTED_FAIL_MAILS/email_%d.log"  # written by MCDispatcher.py
+LOGS_DEST = runner_name + "@ifarm2401:/group/halld/www/halldweb-rh9/html/REQUESTEDMC_LOGS/"  # = MCFailedLogs.py default
 SSH_TARGET_RE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_.-]*@[A-Za-z0-9][A-Za-z0-9.-]*$")
 USERNAME_RE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_.-]*$")
 
@@ -209,8 +216,23 @@ def read_json(path):
         return None
 
 
+def result_name_ok(name):
+    return bool(TARBALL_RE.match(name) or MAIL_RE.match(name))
+
+
+def mail_name(rid):
+    return "R%d_failmail.log" % rid
+
+
+def sibling_mail(result_path, rid):
+    """Where request rid's failure email sits when result_path is its tarball (same directory, same host)."""
+    target, sep, path = result_path.partition(":")
+    path = os.path.join(os.path.dirname(path if sep else result_path), mail_name(rid))
+    return target + ":" + path if sep else path
+
+
 def remove_result(result_path, workdir):
-    """Delete a shipped (user@host:/.../REQUESTEDMC_LOGS/x.tar.gz) or local (under workdir) tarball; True if gone."""
+    """Delete a shipped (user@host:/.../REQUESTEDMC_LOGS/x) or local (under workdir) result file; True if gone."""
     target, sep, path = result_path.partition(":")
     if not sep:
         path = os.path.realpath(result_path)
@@ -227,7 +249,7 @@ def remove_result(result_path, workdir):
         return True
     norm = os.path.normpath(path)
     if (not SSH_TARGET_RE.match(target) or norm != path or not path.startswith("/")
-            or os.path.basename(os.path.dirname(path)) != RESULT_DIR or not TARBALL_RE.match(os.path.basename(path))):
+            or os.path.basename(os.path.dirname(path)) != RESULT_DIR or not result_name_ok(os.path.basename(path))):
         log("cleanup: refusing unexpected result path %r" % result_path)
         return False
     try:
@@ -242,11 +264,11 @@ def remove_result(result_path, workdir):
     return True
 
 
-def shipped_tarball(result_path):
-    """Remote path of a shipped user@host:/.../REQUESTEDMC_LOGS/x.tar.gz, or None if it is not one."""
+def shipped_result(result_path):
+    """Remote path of a shipped user@host:/.../REQUESTEDMC_LOGS/x (tarball or failure email), or None."""
     target, sep, path = (result_path or "").partition(":")
     if (not sep or not SSH_TARGET_RE.match(target) or not path.startswith("/") or os.path.normpath(path) != path
-            or os.path.basename(os.path.dirname(path)) != RESULT_DIR or not TARBALL_RE.match(os.path.basename(path))):
+            or os.path.basename(os.path.dirname(path)) != RESULT_DIR or not result_name_ok(os.path.basename(path))):
         return None
     return path
 
@@ -260,6 +282,11 @@ class Job(object):
         self.reqdir = reqdir
         self.requested_by = req["RequestedBy"]
         self.analysis = bool(req.get("AnalysisRequested"))
+        try:
+            projects = json_list(req["Projects"], "Projects", as_project)
+        except BadRequest:
+            projects = []
+        self.project = projects[0] if len(projects) == 1 else None
         self.logpath = os.path.join(reqdir, "MCFailedLogs.log")
         self.result_json = os.path.join(reqdir, "result.json")
         self.started = time.time()
@@ -347,21 +374,46 @@ class Librarian(object):
             cur.execute("SELECT * FROM LogRequests WHERE ID=%s", (row["ID"],))
             self.start(cur, cur.fetchone())
 
+    def ship_fail_mail(self, cur, job):
+        """scp a Tested=-1 project's failure email next to the tarballs; (remote path or None, note for Message)."""
+        if job.project is None:
+            return None, ""
+        cur.execute("SELECT Tested FROM Project WHERE ID=%s", (job.project,))
+        row = cur.fetchone()
+        if not row or str(row["Tested"]) != "-1":
+            return None, ""
+        src = FAIL_MAIL % job.project
+        if not os.path.isfile(src):
+            return None, "; no failure email at " + src
+        dest = self.args.send_to or LOGS_DEST
+        if not dest.endswith(("/", ":")):
+            dest = dest.rsplit("/", 1)[0] + "/"
+        dest += mail_name(job.rid)
+        try:
+            rc = subprocess.run(["scp", "-q", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", src, dest],
+                                stdin=subprocess.DEVNULL, capture_output=True, timeout=300)
+        except (OSError, subprocess.TimeoutExpired) as e:
+            return None, "; could not copy failure email: %s" % e
+        if rc.returncode != 0:
+            return None, "; could not copy failure email: %s" % rc.stderr.decode("utf-8", "replace").strip()[:300]
+        return dest, "; test-failure email copied"
+
     def complete(self, cur, job, rc):
         result = read_json(job.result_json)
         if rc == 0 and result is not None:
             n = int(result.get("attempts") or 0)
             copied = int(result.get("files_local") or 0) + int(result.get("files_dtn") or 0)
             missing = int(result.get("files_missing") or 0)
+            mail, note = self.ship_fail_mail(cur, job)
             if n == 0:
-                msg, path = "no failed attempts matched", None
+                msg, path = "no failed attempts matched", mail
             else:
                 msg = "%d attempts, %d files copied, %d missing" % (n, copied, missing)
                 path = result.get("sent_to") or result.get("tarball")
             self.finish(cur, job.rid, "done", NAttempts=n, NFilesCopied=copied if n else 0, NFilesMissing=missing,
-                        ResultPath=path, Message=msg)
-            if job.analysis and n:
-                self.start_analysis(cur, job.rid, path, job.requested_by)
+                        ResultPath=path, Message=msg + note)
+            if job.analysis and path:
+                self.start_analysis(cur, job.rid, path, job.requested_by, mail if mail != path else None)
             elif job.analysis:
                 cur.execute("UPDATE LogRequests SET AnalysisRequested=0 WHERE ID=%s", (job.rid,))
             if not self.args.keep and (n == 0 or result.get("sent_to")):
@@ -376,12 +428,17 @@ class Librarian(object):
         cur.execute("UPDATE LogRequests SET AnalysisRequested=-1, Message=CONCAT(IFNULL(Message, ''), %s) "
                     "WHERE ID=%s AND AnalysisRequested BETWEEN 1 AND 5", ("\nAI analysis failed: " + reason[:500], rid))
 
-    def start_analysis(self, cur, rid, result_path, requested_by):
+    def start_analysis(self, cur, rid, result_path, requested_by, extra=None):
         """Fire-and-forget MCAIanalysis.py on ANALYSIS_HOST; reaped later by reap_analyses."""
-        path = shipped_tarball(result_path)
-        if path is None:
-            self.analysis_failed(cur, rid, "%r is not a shipped tarball" % result_path)
+        # claim first: another librarian may be starting the same row
+        cur.execute("UPDATE LogRequests SET AnalysisRequested=2 WHERE ID=%s AND AnalysisRequested=1", (rid,))
+        if cur.rowcount != 1:
             return
+        path = shipped_result(result_path)
+        if path is None:
+            self.analysis_failed(cur, rid, "%r is not a shipped result file" % result_path)
+            return
+        extra_path = shipped_result(extra) if extra else None
         if not USERNAME_RE.match(requested_by or ""):
             self.analysis_failed(cur, rid, "bad RequestedBy %r" % requested_by)
             return
@@ -389,6 +446,8 @@ class Librarian(object):
         # non-interactive ssh does not read ~/.bash_profile, so fall back to the PAT file
         remote = ('DELPHI_PAT="${DELPHI_PAT:-$(cat ~/.config/delphi/pat 2>/dev/null)}" python3 %s %s %s --request-id=%d'
                   % (shlex.quote(AI_ANALYSIS), shlex.quote(path), shlex.quote(email), rid))
+        if extra_path:
+            remote += " --extra=" + shlex.quote(extra_path)
         logpath = os.path.join(self.args.workdir, "R%d_analysis.log" % rid)
         try:
             with open(logpath, "w") as fh:
@@ -399,8 +458,18 @@ class Librarian(object):
             self.analysis_failed(cur, rid, "could not start ssh: %s" % e)
             return
         self.analyses[rid] = (proc, logpath)
-        cur.execute("UPDATE LogRequests SET AnalysisRequested=2 WHERE ID=%s AND AnalysisRequested=1", (rid,))
         log("request %d: AI analysis of %s started on %s for %s (pid %d)" % (rid, path, ANALYSIS_HOST, email, proc.pid))
+
+    def start_requested_analyses(self, cur):
+        """Analyses asked for after the request finished (dashboard "AI analyze")."""
+        cur.execute("SELECT ID, ResultPath, RequestedBy, AnalysisBy, Message FROM LogRequests "
+                    "WHERE Status='done' AND AnalysisRequested=1 AND ResultPath IS NOT NULL AND Purged IS NULL "
+                    "ORDER BY ID LIMIT %s", (self.args.max_parallel,))
+        for r in cur.fetchall():
+            extra = None
+            if TARBALL_RE.match(os.path.basename(r["ResultPath"])) and "test-failure email copied" in (r["Message"] or ""):
+                extra = sibling_mail(r["ResultPath"], r["ID"])
+            self.start_analysis(cur, r["ID"], r["ResultPath"], r["AnalysisBy"] or r["RequestedBy"], extra)
 
     def reap_analyses(self, cur):
         for rid, (proc, logpath) in list(self.analyses.items()):
@@ -449,11 +518,15 @@ class Librarian(object):
         self.next_purge = time.time() + PURGE_EVERY
         cur.execute("SELECT ID, ResultPath, Downloaded FROM LogRequests "
                     "WHERE Status='done' AND ResultPath IS NOT NULL AND Purged IS NULL AND ClaimedBy=%s "
+                    "AND AnalysisRequested NOT BETWEEN 1 AND 5 "
                     "AND (Downloaded < NOW() - INTERVAL %s HOUR OR Completed_Time < NOW() - INTERVAL %s DAY) "
                     "ORDER BY ID LIMIT %s",
                     (MY_HOST, self.args.purge_after, self.args.expire_days, PURGE_BATCH))
         for r in cur.fetchall():
-            if remove_result(r["ResultPath"], self.args.workdir):
+            paths = [r["ResultPath"]]
+            if TARBALL_RE.match(os.path.basename(r["ResultPath"])):
+                paths.append(sibling_mail(r["ResultPath"], r["ID"]))
+            if all([remove_result(p, self.args.workdir) for p in paths]):
                 cur.execute("UPDATE LogRequests SET Purged=NOW() WHERE ID=%s", (r["ID"],))
                 log("request %d: removed %s (%s)" % (r["ID"], r["ResultPath"], "downloaded" if r["Downloaded"] else "expired"))
 
@@ -464,6 +537,10 @@ class Librarian(object):
             self.check_jobs(cur)
             if claim:
                 self.claim(cur)
+                try:
+                    self.start_requested_analyses(cur)
+                except MySQLdb.Error as e:
+                    log("requested analyses skipped: %s" % e)
             self.beat(cur)
             try:
                 self.purge(cur)

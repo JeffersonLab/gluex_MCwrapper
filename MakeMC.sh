@@ -847,7 +847,7 @@ if [[ ("$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" ==
 			if [[ "$MAKE_MC_USING_XROOTD" == "0" ]]; then
 				bkglocstring="/srv""/run$formatted_runNumber""_random.hddm"
 			else
-				bkglocstring="$XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber""_random.hddm"
+				bkglocstring="$XRD_RANDOMS_URL/$RANDOMS_PREPEND/random_triggers/$RANDBGTAG/run$formatted_runNumber""_random.hddm"
 			fi
 		else
 			bkglocstring=$rand_bkg_loc"/run$formatted_runNumber""_random.hddm"
@@ -858,7 +858,7 @@ if [[ ("$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" ==
 			if [[ "$MAKE_MC_USING_XROOTD" == "0" ]]; then
 				bkglocstring="/srv""/run$formatted_runNumber""_random.hddm"
 			else
-				bkglocstring="$XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber""_random.hddm"
+				bkglocstring="$XRD_RANDOMS_URL/$RANDOMS_PREPEND/random_triggers/$RANDBGTAG/run$formatted_runNumber""_random.hddm"
 			fi
 		else
 			bkglocstring="/work/osgpool/halld/random_triggers/"$RANDBGTAG"/run"$formatted_runNumber"_random.hddm"

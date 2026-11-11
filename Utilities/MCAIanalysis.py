@@ -4,7 +4,9 @@
 # MCAIanalysis.py -- untar a failed-log tarball, have a Delphi-hosted model diagnose it, email the report
 #
 #   MCAIanalysis.py /path/to/failed_logs_X.tar.gz someone@jlab.org [--model M] [--workdir /tmp/mcwrap]
+#   MCAIanalysis.py /path/to/R42_failmail.log someone@jlab.org      a plain text file is analyzed as the only log
 #
+#   * --extra FILE (repeatable): text files (e.g. a test-failure email) sent ahead of the logs
 #   * extracts into --workdir (default /tmp/mcwrap, created 0700); refuses members that would land outside it
 #   * the model cannot read this host's disk, so the text of the logs is sent along with the prompt:
 #     manifest.tsv first (untruncated), then the attempts' logs round-robin across failure modes so every mode is
@@ -297,8 +299,9 @@ def send_report(to_addr, report_path, name):
 
 def main():
     ap = argparse.ArgumentParser(description="AI analysis of an MCwrapper failed-log tarball, emailed as a report.")
-    ap.add_argument("tarball", help="path to the .tar(.gz) of logs")
+    ap.add_argument("tarball", help="path to the .tar(.gz) of logs, or a single text file")
     ap.add_argument("email", help="address to send the report to")
+    ap.add_argument("--extra", action="append", default=[], help="text file sent ahead of the logs; repeatable")
     ap.add_argument("--model", default=DEFAULT_MODEL, help="Delphi model id (default %s)" % DEFAULT_MODEL)
     ap.add_argument("--workdir", default="/tmp/mcwrap", help="extraction/report directory (default /tmp/mcwrap)")
     ap.add_argument("--per-file", type=int, default=10000, help="max chars sent per log file (default 10000)")
@@ -324,22 +327,38 @@ def main():
         die("DELPHI_PAT is not set")
     if not EMAIL_RE.match(args.email):
         die("bad email address %r" % args.email)
-    if not os.path.isfile(args.tarball) or not tarfile.is_tarfile(args.tarball):
-        die("not a tar file: %s" % args.tarball)
+    if not os.path.isfile(args.tarball):
+        die("no such file: %s" % args.tarball)
+    is_tar = tarfile.is_tarfile(args.tarball)
+    for path in [p for p in args.extra if not os.path.isfile(p)]:
+        log("skipping missing --extra %s" % path)
+    args.extra = [p for p in args.extra if os.path.isfile(p)]
+    for path in [args.tarball] * (not is_tar) + args.extra:
+        if not os.path.isfile(path) or read_text(path, 1) is None:
+            die("not a text file: %s" % path)
 
     t0 = time.time()
     set_stage(3)
-    log("[1/4] extracting %s (%s)" % (args.tarball, human(os.path.getsize(args.tarball))))
     os.makedirs(args.workdir, mode=0o700, exist_ok=True)
-    folder = safe_extract(args.tarball, args.workdir)
-    name = os.path.basename(folder)
+    if is_tar:
+        log("[1/4] extracting %s (%s)" % (args.tarball, human(os.path.getsize(args.tarball))))
+        folder = safe_extract(args.tarball, args.workdir)
+        name = os.path.basename(folder)
+    else:
+        log("[1/4] %s is a text file; nothing to extract" % args.tarball)
+        folder, name = args.tarball, os.path.basename(args.tarball)
+    extra = "".join("===== %s =====\n%s\n" % (os.path.basename(p), read_text(p, args.per_file)) for p in args.extra)
 
     log("[2/4] reading the manifest and logs")
     prompt = PROMPT.format(folder=folder)
     max_chars, max_tokens = args.max_chars, args.max_tokens
     analysis = None
     for attempt in range(1, args.attempts + 1):
-        logs = collect_logs(folder, args.per_file, max_chars)
+        if is_tar:
+            logs = collect_logs(folder, args.per_file, max_chars - len(extra))
+        else:
+            logs = "===== %s =====\n%s\n" % (name, read_text(folder, max(1, max_chars - len(extra))))
+        logs = extra + logs
         if not logs:
             die("no readable files in %s" % folder)
         log("[3/4] asking the model for an analysis, attempt %d of %d (this can take minutes)" % (attempt, args.attempts))
