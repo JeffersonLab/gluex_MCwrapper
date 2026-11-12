@@ -237,8 +237,9 @@ if ( -f /usr/lib64/libXrdPosixPreload.so && "$BKGFOLDSTR" != "None" && "$GENR" !
 		if ( $con_test != "r" && $contest == 0 ) then
 			echo "JLAB Connection test failed. Falling back to UConn ...."
 			#echo "attempting to copy the needed file from an alternate source..."
-			setenv XRD_RANDOMS_URL root://nod25.phys.uconn.edu/Gluex/rawdata/
-			if ( `ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1` != "r" ) then
+			setenv XRD_RANDOMS_URL root://nod25.phys.uconn.edu
+			setenv RANDOMS_PREPEND /Gluex/rawdata
+			if ( `ls $XRD_RANDOMS_URL/$RANDOMS_PREPEND/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1` != "r" ) then
 				echo "Cannot connect to the file. Disabling xrootd...."
 				setenv MAKE_MC_USING_XROOTD 0
 			endif
@@ -666,7 +667,7 @@ echo "Analysis   "$ANA_OS
 echo "=======SOFTWARE USED======="
 echo "MCwrapper version v"$MCWRAPPER_VERSION
 echo "MCwrapper location" $MCWRAPPER_CENTRAL
-echo "Streaming via xrootd? "$MAKE_MC_USING_XROOTD "Event Count: "$RANDOM_TRIG_NUM_EVT
+echo "XRootD available for random-trigger download? "$MAKE_MC_USING_XROOTD "Event Count: "$RANDOM_TRIG_NUM_EVT
 echo "BC "$USER_BC
 echo "python "$USER_PYTHON
 echo `$runGen which $GENERATOR | tail -n1`
@@ -816,7 +817,7 @@ if ( ("$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" == 
 	endif
 
 
-	if ( ! -f $bkglocstring && "$MAKE_MC_USING_XROOTD" == "0" ) then
+	if ( ( ! -f "$bkglocstring" || ! -r "$bkglocstring" ) && "$MAKE_MC_USING_XROOTD" == "0" ) then
 		echo "something went wrong with initialization"
 		echo "Could not find mix-in file "$bkglocstring
 		exit 1000
@@ -1811,6 +1812,21 @@ else
 			echo $geant_file
 			cp $geant_file ./$STANDARD_NAME'_geant'$GEANTVER'.hddm'
 		endif
+		set random_url=""
+		if ( "$bkglocstring" =~ root://* ) then
+			set random_url="$bkglocstring"
+		else if ( ( "$BKGFOLDSTR" == "DEFAULT" || "$BKGFOLDSTR" == "Random" ) && $MAKE_MC_USING_XROOTD == 1 && ( ! -f "$bkglocstring" || ! -r "$bkglocstring" ) ) then
+			set random_url="$XRD_RANDOMS_URL/$RANDOMS_PREPEND/random_triggers/$RANDBGTAG/run${formatted_runNumber}_random.hddm"
+		endif
+		if ( "$random_url" != "" ) then
+			set bkglocstring="./run${formatted_runNumber}_random.hddm"
+			env -u LD_PRELOAD xrdcp --force "$random_url" "$bkglocstring"
+			if ( $status != 0 ) then
+				echo "Could not stage random-trigger file $random_url" >>& /dev/stderr
+				rm -f "$bkglocstring"
+				exit 1
+			endif
+		endif
 		if ( "$BKGFOLDSTR" == "BeamPhotons" || "$BKGFOLDSTR" == "None" || "$BKGFOLDSTR" == "TagOnly" ) then
 			echo "running MCsmear without folding in random background"
 			
@@ -1850,15 +1866,9 @@ else
 				set JANA_TIMEOUT_STR="-PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400"
 			endif
 			
-			if ( $MAKE_MC_USING_XROOTD == 0 ) then
-				echo "$runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"$RANDBGRATE""+"$fold_skip_num
-				$runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:$RANDBGRATE\+$fold_skip_num
-				set mcsmear_return_code=$status
-			else
-				echo "$runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $XRD_RANDOMS_URL/$RANDOMS_PREPEND/random_triggers/$RANDBGTAG/run$formatted_runNumber"\_"random.hddm:$RANDBGRATE"\+"$fold_skip_num"
-				$runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $XRD_RANDOMS_URL/$RANDOMS_PREPEND/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm\:$RANDBGRATE\+$fold_skip_num
-				set mcsmear_return_code=$status
-			endif
+			echo "$runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"$RANDBGRATE""+"$fold_skip_num
+			$runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:$RANDBGRATE\+$fold_skip_num
+			set mcsmear_return_code=$status
 
 		else if ( "$bkgloc_pre" == "loc:" ) then
 			rm -f count.py
@@ -1897,6 +1907,8 @@ else
 			$runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $BKGFOLDSTR
 			set mcsmear_return_code=$status
 		endif
+
+		if ( "$random_url" != "" ) rm -f "$bkglocstring"
 
 		if ( $mcsmear_return_code != 0 ) then
 			echo
