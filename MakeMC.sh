@@ -724,7 +724,7 @@ echo "MCwrapper version v"$MCWRAPPER_VERSION
 echo "MCwrapper location" $MCWRAPPER_CENTRAL
 echo "LDPRELOAD: " $LD_PRELOAD
 echo "Streaming via pelican? "$MAKE_MC_USING_PELICAN
-echo "XRootD available for random-trigger download? "$MAKE_MC_USING_XROOTD "Event Count: "$RANDOM_TRIG_NUM_EVT
+echo "Streaming via xrootd? "$MAKE_MC_USING_XROOTD "Event Count: "$RANDOM_TRIG_NUM_EVT
 echo "BC "$USER_BC
 echo "python "$USER_PYTHON
 echo `$runGen which $GENERATOR | tail -n1`
@@ -869,7 +869,7 @@ if [[ ("$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" ==
 		fi
 	fi
 
-	if [[ ( ! -f $bkglocstring || ! -r $bkglocstring ) && "$MAKE_MC_USING_XROOTD" == "0" && "$MAKE_MC_USING_PELICAN" == "0" ]]; then
+	if [[ ! -f $bkglocstring && "$MAKE_MC_USING_XROOTD" == "0" && "$MAKE_MC_USING_PELICAN" == "0" ]]; then
 		echo "something went wrong with initialization"
 		echo "Could not find mix-in file "$bkglocstring
 		exit 1000
@@ -1865,10 +1865,10 @@ else
 			cp $geant_file ./$STANDARD_NAME'_geant'$GEANTVER'.hddm'
 		fi
 		random_url=
-		if [[ $MAKE_MC_USING_PELICAN == 0 ]]; then
+		if [[ $MAKE_MC_USING_XROOTD == 1 && $MAKE_MC_USING_PELICAN == 0 ]]; then
 			if [[ $bkglocstring == root://* ]]; then
 				random_url=$bkglocstring
-			elif [[ ( $BKGFOLDSTR == DEFAULT || $BKGFOLDSTR == Random ) && $MAKE_MC_USING_XROOTD == 1 && ( ! -f $bkglocstring || ! -r $bkglocstring ) ]]; then
+			elif [[ ( $BKGFOLDSTR == DEFAULT || $BKGFOLDSTR == Random ) && ( ! -f $bkglocstring || ! -r $bkglocstring ) ]]; then
 				random_url="$XRD_RANDOMS_URL/$RANDOMS_PREPEND/random_triggers/$RANDBGTAG/run${formatted_runNumber}_random.hddm"
 			fi
 		fi

@@ -667,7 +667,7 @@ echo "Analysis   "$ANA_OS
 echo "=======SOFTWARE USED======="
 echo "MCwrapper version v"$MCWRAPPER_VERSION
 echo "MCwrapper location" $MCWRAPPER_CENTRAL
-echo "XRootD available for random-trigger download? "$MAKE_MC_USING_XROOTD "Event Count: "$RANDOM_TRIG_NUM_EVT
+echo "Streaming via xrootd? "$MAKE_MC_USING_XROOTD "Event Count: "$RANDOM_TRIG_NUM_EVT
 echo "BC "$USER_BC
 echo "python "$USER_PYTHON
 echo `$runGen which $GENERATOR | tail -n1`
@@ -817,7 +817,7 @@ if ( ("$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" == 
 	endif
 
 
-	if ( ( ! -f "$bkglocstring" || ! -r "$bkglocstring" ) && "$MAKE_MC_USING_XROOTD" == "0" ) then
+	if ( ! -f $bkglocstring && "$MAKE_MC_USING_XROOTD" == "0" ) then
 		echo "something went wrong with initialization"
 		echo "Could not find mix-in file "$bkglocstring
 		exit 1000
@@ -1812,11 +1812,15 @@ else
 			echo $geant_file
 			cp $geant_file ./$STANDARD_NAME'_geant'$GEANTVER'.hddm'
 		endif
+		# Set to 1 to restore automatic direct streaming after XRootD is fixed.
+		set stream_randoms=0
 		set random_url=""
-		if ( "$bkglocstring" =~ root://* ) then
-			set random_url="$bkglocstring"
-		else if ( ( "$BKGFOLDSTR" == "DEFAULT" || "$BKGFOLDSTR" == "Random" ) && $MAKE_MC_USING_XROOTD == 1 && ( ! -f "$bkglocstring" || ! -r "$bkglocstring" ) ) then
-			set random_url="$XRD_RANDOMS_URL/$RANDOMS_PREPEND/random_triggers/$RANDBGTAG/run${formatted_runNumber}_random.hddm"
+		if ( $stream_randoms == 0 && $MAKE_MC_USING_XROOTD == 1 ) then
+			if ( "$bkglocstring" =~ root://* ) then
+				set random_url="$bkglocstring"
+			else if ( ( "$BKGFOLDSTR" == "DEFAULT" || "$BKGFOLDSTR" == "Random" ) && ( ! -f "$bkglocstring" || ! -r "$bkglocstring" ) ) then
+				set random_url="$XRD_RANDOMS_URL/$RANDOMS_PREPEND/random_triggers/$RANDBGTAG/run${formatted_runNumber}_random.hddm"
+			endif
 		endif
 		if ( "$random_url" != "" ) then
 			set bkglocstring="./run${formatted_runNumber}_random.hddm"
@@ -1866,9 +1870,15 @@ else
 				set JANA_TIMEOUT_STR="-PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400"
 			endif
 			
-			echo "$runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"$RANDBGRATE""+"$fold_skip_num
-			$runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:$RANDBGRATE\+$fold_skip_num
-			set mcsmear_return_code=$status
+			if ( $MAKE_MC_USING_XROOTD == 0 || $stream_randoms == 0 ) then
+				echo "$runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"$RANDBGRATE""+"$fold_skip_num
+				$runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:$RANDBGRATE\+$fold_skip_num
+				set mcsmear_return_code=$status
+			else
+				echo "$runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $XRD_RANDOMS_URL/$RANDOMS_PREPEND/random_triggers/$RANDBGTAG/run$formatted_runNumber"\_"random.hddm:$RANDBGRATE"\+"$fold_skip_num"
+				$runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $XRD_RANDOMS_URL/$RANDOMS_PREPEND/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm\:$RANDBGRATE\+$fold_skip_num
+				set mcsmear_return_code=$status
+			endif
 
 		else if ( "$bkgloc_pre" == "loc:" ) then
 			rm -f count.py
