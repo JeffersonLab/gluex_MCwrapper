@@ -98,10 +98,12 @@ def BundleFiles(inputdir,output,merge_dir):
     projectName = inputdir.split("/")[-2] if inputdir[-1]=="/" else inputdir.split("/")[-1]
     mkdircommand="mkdir -p " + merge_dir + projectName
     print(mkdircommand)
-    subprocess.call(mkdircommand.split(" "))
+    if subprocess.call(mkdircommand.split(" ")) != 0:
+        return "ERROR"
     mkdircommand="mkdir -p " + output
     print(mkdircommand)
-    subprocess.call(mkdircommand.split(" "))
+    if subprocess.call(mkdircommand.split(" ")) != 0:
+        return "ERROR"
     hostname = subprocess.check_output(["hostname"], shell=True).decode().strip()
     if hostname == "dtn2303.jlab.org" or hostname == "ifarm2402.jlab.org":
         python_cmd = "/usr/bin/python3"
@@ -111,28 +113,19 @@ def BundleFiles(inputdir,output,merge_dir):
     bundlecommand = python_cmd + " " + MCWRAPPER_BOT_HOME + "/Utilities/MCMerger.py -tempdir " + merge_dir + projectName + "/ " + inputdir + " " + output + " -noclean"
     print("BUNDLING WITH",bundlecommand)
     try:
-        suboutput = subprocess.check_output(shlex.split(bundlecommand), stderr=subprocess.STDOUT)
-        #find the number after "Returning final_success:"
-        out = int(re.findall(r"Returning final_success: (\d+)", suboutput.decode('utf-8'))[0])
-        
-        print("subprocess output", out)
-        if out==-666:
-            print("Bundling ongoing")
-            return "ONGOING"
-        print("Bundler return code", out)
-        subprocess.run([f"rm {merge_dir}/{projectName}/.merging"], shell=True)
-        if out==0:
-            return "SUCCESS"
-        else:
-            with open("/scratch/mcwrap/mergetemp/"+projectName+"_"+str(datetime.now().strftime("%Y_%m_%d-%p%I_%M_%S"))+".log", "w") as log:
-                log.write(suboutput.decode('utf-8'))
-            return "ERROR"
-    except subprocess.CalledProcessError as e:
-        print(e.output)
-        with open("/scratch/mcwrap/mergetemp/"+projectName+"_"+str(datetime.now().strftime("%Y_%m_%d-%p%I_%M_%S"))+"_2.log", "w") as log:
-            log.write(e.output.decode('utf-8'))
-        subprocess.run([f"rm {merge_dir}/{projectName}/.merging"], shell=True)
+        suboutput = subprocess.run(shlex.split(bundlecommand), stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    except OSError as error:
+        print(error)
         return "ERROR"
+    print("Bundler return code", suboutput.returncode)
+    if suboutput.returncode == 75:
+        return "ONGOING"
+    if suboutput.returncode == 0:
+        return "SUCCESS"
+    print(suboutput.stdout.decode('utf-8', errors='replace'))
+    with open(merge_dir+projectName+"_"+str(datetime.now().strftime("%Y_%m_%d-%p%I_%M_%S"))+".log", "w") as log:
+        log.write(suboutput.stdout.decode('utf-8', errors='replace'))
+    return "ERROR"
 
 
 def main(argv):
@@ -143,13 +136,6 @@ def main(argv):
 
     hostname = subprocess.check_output(["hostname"], shell=True).decode().strip()
     print("Hostname:",hostname)
-
-    if hostname == "dtn2303.jlab.org":
-        merge_dir = "/export/halld/mcwrap/mergetemp/"
-    elif hostname == "ifarm2402.jlab.org":
-        merge_dir = "/scratch/mcwrap/mergetemp/"
-    else:
-        merge_dir = "/osgpool/halld/mcwrap/mergetemp/"
 
     if hostname == "dtn2303.jlab.org" or hostname == "ifarm2402.jlab.org":
         staging_dir = "/work/osgpool/halld//REQUESTED_MC/"
@@ -184,6 +170,8 @@ def main(argv):
             outputlocation="/".join(proj["OutputLocation"].split("/")[:-1])+"/"
             # outputlocation=outputlocation.replace("/lustre19/","/lustre24/")
             outputlocation=outputlocation.replace("/lustre19/expphy/cache/halld/gluex_simulations/REQUESTED_MC/",staging_dir)  # cache is now read-only, use staging directory
+            # Stage on the destination filesystem.
+            merge_dir = os.path.dirname(outputlocation.rstrip(os.sep)) + "/.mergetemp/"
             #update project status
             print(proj["ID"])
 
@@ -239,13 +227,8 @@ def main(argv):
             elif(out=="ONGOING"):
                 print("Bundling ongoing. Will try again later, if needed.")
             else:
-                #update project status
-                rebundle=int(proj["Tested"])
-
-                if rebundle==41:
-                    rebundle=40
-                elif rebundle==21:
-                    rebundle=20
+                # 22/42: bundle failed; reset to 20/40 to retry.
+                rebundle = 22 if runbundle==21 else 42
 
                 update_q="UPDATE Project SET Tested="+str(rebundle)+" WHERE ID="+str(proj["ID"])
                 dbcursor.execute(update_q)
