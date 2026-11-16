@@ -9,22 +9,23 @@ import sys
 
 def merge(files, out):
     """Merge HDDM files. Select the REST or simulation HDDM interface based on file name."""
-    if "rest" in files[0]:
-        fout=hddm_r.ostream(out)
-        fout.compression = hddm_r.k_z_compression
-        for f in files: 
-            for entry in hddm_r.istream(f):
-                fout.write(entry)
-    else:
-        fout=hddm_s.ostream(out)
-        fout.compression = hddm_s.k_z_compression
-        for f in files: 
-            for entry in hddm_s.istream(f):
-                fout.write(entry)
+    hddm = hddm_r if "rest" in files[0] else hddm_s
+    events = 0
+    fout=hddm.ostream(out)
+    fout.compression = hddm.k_z_compression
+    for f in files:
+        for entry in hddm.istream(f):
+            fout.write(entry)
+            events += 1
+    # Close before reading back.
+    del fout
+    actual = sum(1 for entry in hddm.istream(out))
+    print("HDDM records: expected {0}, got {1}".format(events, actual))
+    return 0 if actual == events else 1
 
 
 def main(args):
-    merge(args.files, args.output)
+    return merge(args.files, args.output)
 
 
 if __name__ == "__main__":

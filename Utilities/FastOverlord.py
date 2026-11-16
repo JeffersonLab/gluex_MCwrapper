@@ -75,7 +75,7 @@ HISTORY_SINCE_MARGIN = 2 * 86400  # seconds of slack before the oldest missing a
 DB_BATCH = 1000
 
 # Old Tested values that mean "already past completion bookkeeping"
-TESTED_NO_REBUNDLE = (100, 21, 41, 40, 400, 20)
+TESTED_NO_REBUNDLE = (100, 21, 41, 40, 400, 20, 22, 42)
 
 
 def log(*a):
