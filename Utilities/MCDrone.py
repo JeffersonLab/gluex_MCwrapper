@@ -65,8 +65,12 @@ def DroneDo(id):
     try:
         drone_directive=os.environ["MCWRAPPER_CENTRAL"]+"/Utilities/MCDispatcher.py autolaunch"
         print(drone_directive)
-        return_out, return_err=subprocess.Popen(drone_directive.split(" "), stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=os.environ).communicate()
+        proc=subprocess.Popen(drone_directive.split(" "), stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=os.environ)
+        return_out, return_err=proc.communicate()
         print(return_out)
+        if proc.returncode != 0:
+            print(return_err)
+            raise subprocess.CalledProcessError(proc.returncode, drone_directive)
         #retcode=subprocess.call(drone_directive.split(" "))
     except subprocess.CalledProcessError as exc:
         dbcursor.execute("UPDATE MCDrone SET Status='Fail' where ID="+str(id))
@@ -83,7 +87,7 @@ def main(argv):
     if(len(argv) !=0):
         numOverRide=True
 
-    numprocesses_running=subprocess.check_output(["echo `ps all -u "+runner_name+" | grep MCDrone.py | grep -v grep | wc -l`"], shell=True).strip()
+    numprocesses_running=subprocess.check_output(["echo `ps all -u "+runner_name+" | grep MCDrone.py | grep -v grep | grep -v defunct | wc -l`"], shell=True).strip()
 
     print(int(numprocesses_running))
     ALLSTOP=False

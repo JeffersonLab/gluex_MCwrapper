@@ -237,8 +237,9 @@ if ( -f /usr/lib64/libXrdPosixPreload.so && "$BKGFOLDSTR" != "None" && "$GENR" !
 		if ( $con_test != "r" && $contest == 0 ) then
 			echo "JLAB Connection test failed. Falling back to UConn ...."
 			#echo "attempting to copy the needed file from an alternate source..."
-			setenv XRD_RANDOMS_URL root://nod25.phys.uconn.edu/Gluex/rawdata/
-			if ( `ls $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1` != "r" ) then
+			setenv XRD_RANDOMS_URL root://nod25.phys.uconn.edu
+			setenv RANDOMS_PREPEND /Gluex/rawdata
+			if ( `ls $XRD_RANDOMS_URL/$RANDOMS_PREPEND/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm | head -c 1` != "r" ) then
 				echo "Cannot connect to the file. Disabling xrootd...."
 				setenv MAKE_MC_USING_XROOTD 0
 			endif
@@ -317,9 +318,9 @@ setenv JANA_GEOMETRY_URL "ccdb:///$GEOMETRY_CCDB_PATH"
 #xrdcopy $XRD_RANDOMS_URL/ccdb.sqlite ./
 #setenv CCDB_CONNECTION sqlite:///$PWD/ccdb.sqlite
 #setenv JANA_CALIB_URL ${CCDB_CONNECTION}
-set RCDBVERSIONPARTS=(`echo $RCDB_VERSION | tr '.' ' '`)
-set RCDBMAJOR=$RCDBVERSIONPARTS[1]
-set RCDBMINOR=$RCDBVERSIONPARTS[2]
+# awk +0 gives base-10 integers ("08" -> 8, missing part -> 0); some csh builds reject "08" as octal
+set RCDBMAJOR=`echo "$RCDB_VERSION" | awk -F. '{print $1+0}'`
+set RCDBMINOR=`echo "$RCDB_VERSION" | awk -F. '{print $2+0}'`
 set RCDBFILE="rcdb.sqlite"
 echo "RCDB_VERSION is $RCDB_VERSION (major $RCDBMAJOR, minor $RCDBMINOR)"
 if ( $RCDBMAJOR == 0 && $RCDBMINOR < 8 ) then
@@ -352,12 +353,30 @@ else
 	setenv APPTAINER_BIND "/gluex_install/"
 endif
 
+# Forward the spaced context outside gxrun, which flattens its arguments.
+# usage: $GXRUN_CMD <os> <envfile> cmd args...   (reads the env vars at call time)
+set GXRUN_CMD="$PWD/gxrun_cmd.sh"
+cat > "$GXRUN_CMD" << 'GXRUN_EOF'
+#!/bin/bash
+cntr_os=$1
+envfile=$2
+shift 2
+export SINGULARITYENV_JANA_CALIB_CONTEXT="$JANA_CALIB_CONTEXT"
+export APPTAINERENV_JANA_CALIB_CONTEXT="$JANA_CALIB_CONTEXT"
+exec /gluex_install/gxrun/gxrun -os "$cntr_os" \
+	--env "CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND" \
+	-v "$envfile" \
+	env "CCDB_CONNECTION=$CCDB_CONNECTION" "JANA_CALIB_URL=$JANA_CALIB_URL" "RCDB_CONNECTION=$RCDB_CONNECTION" \
+	"$@"
+'GXRUN_EOF'
+chmod +x "$GXRUN_CMD"
+
 # Define running command for generation, needed to run inside a container
 set runGen=''
 if ( "$GENERATOR_OS" == "CENTOS7" ) then
-	set runGen="/gluex_install/gxrun/gxrun -os 7 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v $RUNNING_ENVIRONMENT"
+	set runGen="$GXRUN_CMD 7 $RUNNING_ENVIRONMENT"
 else if ( "$GENERATOR_OS" == "ALMA9" && "$runningOS" != "Linux_Alma9-x86_64-gcc11.5.0-cntr" && "$runningOS" != "Linux_Alma9-x86_64-gcc11.5.0" ) then
-	set runGen="/gluex_install/gxrun/gxrun -os 9 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v $RUNNING_ENVIRONMENT"
+	set runGen="$GXRUN_CMD 9 $RUNNING_ENVIRONMENT"
 endif
 echo "============================"
 echo "running command:"
@@ -367,9 +386,9 @@ echo "============================"
 # defining running command for postprocessing, needed to run inside a container
 set runPostgen=''
 if ( "$POSTGEN_OS" == "CENTOS7" ) then
-	set runPostgen="/gluex_install/gxrun/gxrun -os 7 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v $RUNNING_ENVIRONMENT"
+	set runPostgen="$GXRUN_CMD 7 $RUNNING_ENVIRONMENT"
 else if ( "$POSTGEN_OS" == "ALMA9" && "$runningOS" != "Linux_Alma9-x86_64-gcc11.5.0-cntr" && "$runningOS" != "Linux_Alma9-x86_64-gcc11.5.0" ) then
-	set runPostgen="/gluex_install/gxrun/gxrun -os 9 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v $RUNNING_ENVIRONMENT"
+	set runPostgen="$GXRUN_CMD 9 $RUNNING_ENVIRONMENT"
 endif
 echo "============================"
 echo "running command:"
@@ -379,9 +398,9 @@ echo "============================"
 # defining running command for simulation, needed to run inside a container
 set runSim=''
 if ( "$SIMULATION_OS" == "CENTOS7" ) then
-	set runSim="/gluex_install/gxrun/gxrun -os 7 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v $RUNNING_ENVIRONMENT"
+	set runSim="$GXRUN_CMD 7 $RUNNING_ENVIRONMENT"
 else if ( "$SIMULATION_OS" == "ALMA9" && "$runningOS" != "Linux_Alma9-x86_64-gcc11.5.0-cntr" && "$runningOS" != "Linux_Alma9-x86_64-gcc11.5.0" ) then
-	set runSim="/gluex_install/gxrun/gxrun -os 9 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v $RUNNING_ENVIRONMENT"
+	set runSim="$GXRUN_CMD 9 $RUNNING_ENVIRONMENT"
 endif
 echo "============================"
 echo "running command:"
@@ -391,9 +410,9 @@ echo "============================"
 # defining running command, needed to run inside a container
 set runSmear=''
 if ( "$MCSMEAR_OS" == "CENTOS7" ) then
-	set runSmear="/gluex_install/gxrun/gxrun -os 7 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v $RUNNING_ENVIRONMENT"
+	set runSmear="$GXRUN_CMD 7 $RUNNING_ENVIRONMENT"
 else if ( "$MCSMEAR_OS" == "ALMA9" && "$runningOS" != "Linux_Alma9-x86_64-gcc11.5.0-cntr" && "$runningOS" != "Linux_Alma9-x86_64-gcc11.5.0" ) then
-	set runSmear="/gluex_install/gxrun/gxrun -os 9 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v $RUNNING_ENVIRONMENT"
+	set runSmear="$GXRUN_CMD 9 $RUNNING_ENVIRONMENT"
 endif
 echo "============================"
 echo "running command:"
@@ -524,7 +543,7 @@ if ( $gen_pre_rcdb != "file" || ( "$BGTAGONLY_OPTION" == "1" || "$BKGFOLDSTR" ==
 
 	set colsize=`$runGen rcnd $RUN_NUMBER collimator_diameter | tail -n1 | awk '{print $1}' | sed -r 's/.{2}$//' | sed -e 's/\.//g'`
 
-	if ( "$colsize" == "B" || "$colsize" == "R" || "$JANA_CALIB_CONTEXT" != "variation=mc" ) then
+	if ( "$colsize" == "B" || "$colsize" == "R" || "$VERSION" != "mc" ) then
 		set colsize="50"
 	endif
 	echo "Colimator size set..."
@@ -776,7 +795,7 @@ if ( ("$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" == 
 			if ( "$MAKE_MC_USING_XROOTD" == "0" ) then
 				set	bkglocstring="/srv""/run$formatted_runNumber""_random.hddm"
 			else
-				set	bkglocstring="$XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm"
+				set	bkglocstring="$XRD_RANDOMS_URL/$RANDOMS_PREPEND/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm"
 			endif
 		else
 			set bkglocstring=$rand_bkg_loc"/run$formatted_runNumber""_random.hddm"
@@ -787,7 +806,7 @@ if ( ("$BKGFOLDSTR" == "DEFAULT" || "$bkgloc_pre" == "loc:" || "$BKGFOLDSTR" == 
 			if ( "$MAKE_MC_USING_XROOTD" == "0" ) then
 				set	bkglocstring="/srv""/run$formatted_runNumber""_random.hddm"
 			else
-				set	bkglocstring="$XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm"
+				set	bkglocstring="$XRD_RANDOMS_URL/$RANDOMS_PREPEND/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm"
 			endif
 		else
 			set bkglocstring="/work/osgpool/halld/random_triggers/"$RANDBGTAG"/run"$formatted_runNumber"_random.hddm"
@@ -1793,6 +1812,25 @@ else
 			echo $geant_file
 			cp $geant_file ./$STANDARD_NAME'_geant'$GEANTVER'.hddm'
 		endif
+		# Set to 1 to restore automatic direct streaming after XRootD is fixed.
+		set stream_randoms=0
+		set random_url=""
+		if ( $stream_randoms == 0 && $MAKE_MC_USING_XROOTD == 1 ) then
+			if ( "$bkglocstring" =~ root://* ) then
+				set random_url="$bkglocstring"
+			else if ( ( "$BKGFOLDSTR" == "DEFAULT" || "$BKGFOLDSTR" == "Random" ) && ( ! -f "$bkglocstring" || ! -r "$bkglocstring" ) ) then
+				set random_url="$XRD_RANDOMS_URL/$RANDOMS_PREPEND/random_triggers/$RANDBGTAG/run${formatted_runNumber}_random.hddm"
+			endif
+		endif
+		if ( "$random_url" != "" ) then
+			set bkglocstring="./run${formatted_runNumber}_random.hddm"
+			env -u LD_PRELOAD xrdcp --force "$random_url" "$bkglocstring"
+			if ( $status != 0 ) then
+				echo "Could not stage random-trigger file $random_url" >>& /dev/stderr
+				rm -f "$bkglocstring"
+				exit 1
+			endif
+		endif
 		if ( "$BKGFOLDSTR" == "BeamPhotons" || "$BKGFOLDSTR" == "None" || "$BKGFOLDSTR" == "TagOnly" ) then
 			echo "running MCsmear without folding in random background"
 			
@@ -1832,13 +1870,13 @@ else
 				set JANA_TIMEOUT_STR="-PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400"
 			endif
 			
-			if ( $MAKE_MC_USING_XROOTD == 0 ) then
+			if ( $MAKE_MC_USING_XROOTD == 0 || $stream_randoms == 0 ) then
 				echo "$runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"$RANDBGRATE""+"$fold_skip_num
 				$runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:$RANDBGRATE\+$fold_skip_num
 				set mcsmear_return_code=$status
 			else
-				echo "$runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber"\_"random.hddm:$RANDBGRATE"\+"$fold_skip_num"
-				$runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $XRD_RANDOMS_URL/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm\:$RANDBGRATE\+$fold_skip_num
+				echo "$runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $XRD_RANDOMS_URL/$RANDOMS_PREPEND/random_triggers/$RANDBGTAG/run$formatted_runNumber"\_"random.hddm:$RANDBGRATE"\+"$fold_skip_num"
+				$runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $XRD_RANDOMS_URL/$RANDOMS_PREPEND/random_triggers/$RANDBGTAG/run$formatted_runNumber\_random.hddm\:$RANDBGRATE\+$fold_skip_num
 				set mcsmear_return_code=$status
 			endif
 
@@ -1861,8 +1899,8 @@ else
 				set JANA_TIMEOUT_STR="-PTHREAD_TIMEOUT_FIRST_EVENT=6400 -PTHREAD_TIMEOUT=6400"
 			endif
 			
-			echo "$runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"1"\+"$fold_skip_num"
-			$runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:1\+$fold_skip_num
+			echo "$runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME"\_"geant$GEANTVER"\_"smeared.hddm $STANDARD_NAME"\_"geant$GEANTVER.hddm $bkglocstring"\:"$RANDBGRATE"\+"$fold_skip_num"
+			$runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $bkglocstring\:$RANDBGRATE\+$fold_skip_num
 			set mcsmear_return_code=$status
 
 		else
@@ -1879,6 +1917,8 @@ else
 			$runSmear mcsmear $MCSMEAR_Flags $JANA_TIMEOUT_STR -o$STANDARD_NAME\_geant$GEANTVER\_smeared.hddm $STANDARD_NAME\_geant$GEANTVER.hddm $BKGFOLDSTR
 			set mcsmear_return_code=$status
 		endif
+
+		if ( "$random_url" != "" ) rm -f "$bkglocstring"
 
 		if ( $mcsmear_return_code != 0 ) then
 			echo
@@ -1951,9 +1991,9 @@ else
 		# defining running command, needed to run inside a container
 		set runRecon=''
 		if ( "$RECON_OS" == "CENTOS7" ) then
-			set runRecon="/gluex_install/gxrun/gxrun -os 7 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v $ENVIRONMENT"
+			set runRecon="$GXRUN_CMD 7 $ENVIRONMENT"
 		else if ( "$RECON_OS" == "ALMA9" && "$runningOS" != "Linux_Alma9-x86_64-gcc11.5.0-cntr" && "$runningOS" != "Linux_Alma9-x86_64-gcc11.5.0" ) then
-			set runRecon="/gluex_install/gxrun/gxrun -os 9 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v $ENVIRONMENT"
+			set runRecon="$GXRUN_CMD 9 $ENVIRONMENT"
 		endif
 		echo "============================"
 		echo "running command:"
@@ -2070,9 +2110,8 @@ else
 				setenv JANA_CALIB_CONTEXT "$anawholecontext"
 			endif
 
-			set RCDBVERSIONPARTS=(`echo $RCDB_VERSION | tr '.' ' '`)
-			set RCDBMAJOR=$RCDBVERSIONPARTS[1]
-			set RCDBMINOR=$RCDBVERSIONPARTS[2]
+			set RCDBMAJOR=`echo "$RCDB_VERSION" | awk -F. '{print $1+0}'`
+			set RCDBMINOR=`echo "$RCDB_VERSION" | awk -F. '{print $2+0}'`
 			set RCDBFILE="rcdb.sqlite"
 			if ( $RCDBMAJOR == 0 && $RCDBMINOR < 8 ) then
 				echo "RCDB needs a version 1 sqlite file"
@@ -2097,9 +2136,9 @@ else
 			# defining running command, needed to run inside a container
 			set runAna=''
 			if ( "$ANA_OS" == "CENTOS7" ) then
-				set runAna="/gluex_install/gxrun/gxrun -os 7 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v "$ANAENVIRONMENT
+				set runAna="$GXRUN_CMD 7 $ANAENVIRONMENT"
 			else if ( "$ANA_OS" == "ALMA9" && "$runningOS" != "Linux_Alma9-x86_64-gcc11.5.0-cntr" && "$runningOS" != "Linux_Alma9-x86_64-gcc11.5.0" ) then
-				set runAna="/gluex_install/gxrun/gxrun -os 9 --env JANA_CALIB_CONTEXT=$JANA_CALIB_CONTEXT,CCDB_CONNECTION=$CCDB_CONNECTION,JANA_CALIB_URL=$JANA_CALIB_URL,RCDB_CONNECTION=$RCDB_CONNECTION,LD_PRELOAD=$LD_PRELOAD,XRD_RANDOMS_URL=$XRD_RANDOMS_URL,RANDOMS_PREPEND=$RANDOMS_PREPEND -v "$ANAENVIRONMENT
+				set runAna="$GXRUN_CMD 9 $ANAENVIRONMENT"
 			endif
 			echo "============================"
 			echo "running command:"
@@ -2251,6 +2290,7 @@ endif #end "if ( "$GENERATOR" == "geantBEAM" )"
 rm -rf .hdds_tmp_*
 rm -rf ccdb.sqlite
 rm -rf rcdb.sqlite
+rm -f "$GXRUN_CMD"
 
 if ( "$gen_pre" != "file" && "$GENERATOR" != "gen_ee_hb" && "$GENR" == "1" ) then
 	mv $PWD/*.conf $OUTDIR/configurations/generation/

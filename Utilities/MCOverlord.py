@@ -329,7 +329,7 @@ def checkProjectsForCompletion(comp_assignment):
             dbcnx_comp=MySQLdb.connect(host=dbhost, user=dbuser, db=dbname)
             dbcursor_comp=dbcnx_comp.cursor(MySQLdb.cursors.DictCursor)
 
-            if (proj["Tested"]!=100 and proj["Tested"]!=21 and proj["Tested"]!=41 and proj["Tested"]!=40 and proj["Tested"]!=400 and proj["Tested"]!=20):
+            if (proj["Tested"]!=100 and proj["Tested"]!=21 and proj["Tested"]!=41 and proj["Tested"]!=40 and proj["Tested"]!=400 and proj["Tested"]!=20 and proj["Tested"]!=22 and proj["Tested"]!=42):
                 updateProjectStatus_tobundle_q="Update Project Set Tested=20 where ID="+str(proj['ID'])+";"
                 dbcursor_comp.execute(updateProjectStatus_tobundle_q)
                 dbcnx_comp.commit()
@@ -990,7 +990,7 @@ def main(argv):
             lastid = dbcursor.fetchall()
             #print lastid
             try:
-                queryosgjobs="SELECT * from Attempts WHERE BatchSystem='OSG' && SubmitHost=\""+MCWRAPPER_BOT_HOST_NAME+"\" && Status !='4' && Status !='3' && Status!= '6' && Status != '5';"# && Job_ID NOT IN (SELECT ID from Jobs where Project_ID=1932 );"# || (Status='4' && ExitCode != 0 && ProgramFailed is NULL) ORDER BY ID desc;"
+                queryosgjobs="SELECT * from Attempts WHERE BatchSystem='OSG' && SubmitHost=\""+MCWRAPPER_BOT_HOST_NAME+"\" && Status !='4' && Status !='3' && Status!= '6';"# && Job_ID NOT IN (SELECT ID from Jobs where Project_ID=1932 );"# || (Status='4' && ExitCode != 0 && ProgramFailed is NULL) ORDER BY ID desc;"
                 print(queryosgjobs)
                 dbcursor.execute(queryosgjobs)
                 Alljobs = list(dbcursor.fetchall())
