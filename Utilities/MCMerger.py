@@ -19,6 +19,7 @@ import subprocess
 import argparse
 import glob
 import json
+import tarfile
 import tempfile
 from collections import defaultdict
 import MySQLdb
@@ -51,6 +52,27 @@ def add_bash(func):
     """Add decorated function to the bash action dictionary."""
     bash[func.__name__] = func
     return func
+
+
+def archive_run(files, archive_path, checkpoint_dir):
+    """Write a run archive and mark it complete after it is in place."""
+    if not files:
+        print(f"No inputs for {archive_path}")
+        return 1
+
+    archive_name = os.path.basename(archive_path)
+    try:
+        with tempfile.TemporaryDirectory(dir=os.path.dirname(archive_path)) as temp_dir:
+            temp_archive = os.path.join(temp_dir, archive_name)
+            with tarfile.open(temp_archive, "w", format=tarfile.GNU_FORMAT) as archive:
+                for filename in files:
+                    archive.add(filename)
+            os.replace(temp_archive, archive_path)
+        open(os.path.join(checkpoint_dir, archive_name + ".done"), 'a').close()
+    except (OSError, tarfile.TarError) as error:
+        print(f"Could not bundle {archive_path}: {error}")
+        return 1
+    return 0
 
 
 def check_root_merge(output, files):
@@ -115,14 +137,15 @@ def bash_root(name_map, path, mc_dir):
                     open(checkpointpath + '/' + dir_type + '/' +  fold_name + '/' + tup[0] + run + tup[1] + '.done', 'a').close()
                      #   good_runs.append(run)
         elif dir_type == "monitoring_hists":
-            subprocess.run([f"mkdir -p {path + dir_type}"] , shell=True)
-            subprocess.run([f"mkdir -p {checkpointpath + dir_type}"] , shell=True)
+            input_dir = os.path.join(mc_dir, "root", dir_type)
+            output_dir = os.path.join(path, dir_type)
+            checkpoint_dir = os.path.join(checkpointpath, dir_type)
             for tup in name_map[dir_type].keys():
                 for run in name_map[dir_type][tup]["run_nums"]:
-                    success = subprocess.run([f"tar cvf {path + '/' + dir_type + '/' +  tup[0] + run + tup[1]}.tar {mc_dir + '/' + 'root' + '/' +  dir_type + '/' + tup[0]+run}*{tup[1]}"], shell=True)
-                    return_code += success.returncode
-                    if success.returncode == 0:
-                        open(checkpointpath + '/' + dir_type + '/' +  tup[0] + run + tup[1] + '.tar.done', 'a').close()
+                    pattern = glob.escape(tup[0] + run) + "*" + glob.escape(tup[1])
+                    files = sorted(glob.glob(os.path.join(glob.escape(input_dir), pattern)))
+                    archive_path = os.path.join(output_dir, f"{tup[0]}{run}{tup[1]}.tar")
+                    return_code += archive_run(files, archive_path, checkpoint_dir)
         else:
             subprocess.run([f"mkdir -p {path + dir_type}"] , shell=True)
             subprocess.run([f"mkdir -p {checkpointpath + dir_type}"] , shell=True)
@@ -179,36 +202,28 @@ def bash_hddm_merge(name_map, path, mc_dir):
 
 @add_bash
 def bash_hddm(name_map, path, mc_dir):
-    """Bundle hddm files in mc_dir using tar."""
+    """Bundle hddm files in mc_dir into per-run archives."""
     return_code = 0
 
     checkpointpath = path.split("//")[0] + "/.checkpoints/hddm/"
+    input_dir = os.path.join(mc_dir, "hddm")
     print("Checkpoint path: ", checkpointpath)
 
-    subprocess.run([f"mkdir -p {path}"] , shell=True)
-    subprocess.run([f"mkdir -p {checkpointpath}"] , shell=True)
+    os.makedirs(path, exist_ok=True)
+    os.makedirs(checkpointpath, exist_ok=True)
     for tup in name_map.keys():
         for run in name_map[tup]["run_nums"]:
-            #success = subprocess.run([f"tar cvf {path + tup[0] + run + tup[1]}.tar {mc_dir + '/'  +  'hddm' + '/' +   tup[0] + run}_*{tup[1]}"], shell=True)
-            
-            file_list=[]
             pattern = re.compile(rf"^{re.escape(tup[0])}{re.escape(run)}_(\d{{3,4}}){re.escape(tup[1])}$")
-            for fname in os.listdir(mc_dir + '/hddm/'):
-                match = pattern.match(fname)
-                if match:
-                    file_list.append(fname)
-            if len(file_list) < 1:
+            files = [
+                os.path.join(input_dir, filename)
+                for filename in os.listdir(input_dir)
+                if pattern.match(filename)
+            ]
+            if not files:
                 return 1
-            
-            bundle_command=f"tar cvf {path + tup[0] + run + tup[1]}.tar"
-            for fname in file_list:
-                bundle_command = bundle_command + f" {mc_dir}/hddm/{fname}"
-            #print(bundle_command)
-            
-            success = subprocess.run(bundle_command, shell=True)
-            return_code += success.returncode
-            if success.returncode == 0:
-                open(checkpointpath + tup[0] + run + tup[1] + '.tar.done', 'a').close()
+
+            archive_path = os.path.join(path, f"{tup[0]}{run}{tup[1]}.tar")
+            return_code += archive_run(files, archive_path, checkpointpath)
 
     if return_code==0:
         print("Creating .bash_hddm file in "+path)
@@ -226,14 +241,17 @@ def bash_configurations(name_map, path, mc_dir):
     print("Checkpoint path: ", checkpointpath)
 
     for dir_type in name_map.keys():
-        subprocess.run([f"mkdir -p {path + dir_type}"] , shell=True)
-        subprocess.run([f"mkdir -p {checkpointpath + dir_type}"] , shell=True)
+        input_dir = os.path.join(mc_dir, "configurations", dir_type)
+        output_dir = os.path.join(path, dir_type)
+        checkpoint_dir = os.path.join(checkpointpath, dir_type)
+        os.makedirs(output_dir, exist_ok=True)
+        os.makedirs(checkpoint_dir, exist_ok=True)
         for tup in name_map[dir_type].keys():
             for run in name_map[dir_type][tup]["run_nums"]:
-                success = subprocess.run([f"tar cvf {path + '/' + dir_type + '/' + tup[0] + run + tup[1]}.tar {mc_dir + '/' + 'configurations' + '/' +  dir_type + '/' +   tup[0] + run}_*{tup[1]}"], shell=True)
-                return_code += success.returncode
-                if success.returncode == 0:
-                    open(checkpointpath + '/' + dir_type + '/' + tup[0] + run + tup[1] + '.tar.done', 'a').close()
+                pattern = glob.escape(tup[0] + run) + "_*" + glob.escape(tup[1])
+                files = sorted(glob.glob(os.path.join(glob.escape(input_dir), pattern)))
+                archive_path = os.path.join(output_dir, f"{tup[0]}{run}{tup[1]}.tar")
+                return_code += archive_run(files, archive_path, checkpoint_dir)
     
     if return_code==0:
         print("Creating .bash_configurations file in "+path)
